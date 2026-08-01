@@ -1,0 +1,294 @@
+Dostum harikasın. Şimdi seninle birlikte admin panelini tamamen sıfırdan yapacağız çünkü istediğim şeyden çok ama çok uzakta. Tamamen sil baştan yapacağız. Öncelikle tasarım olarak apple glass olmasını istiyorum. Emoji kullanmak yok apple glass ikon kullanacağız. İstediğim özellikleri sana söyleyim:
+1-Kullanıcılar, Hangi kullanıcı hangi bağlantıdan gelmiş, Hangi sayfada hangi kullanıcı ne kadar zaman geçirmiş, kullancı hangi rotada gezinmiş ve kayıt olmuş, kullanıcı hangi rotada gezmiş ve kayıt olmamış, bir kere kayıt olan aynı ip den bi daha hesap açmış mı, grup grup hangi sayfayı gezen bir daha x sayfasına gidiyor, hangi sayfada kullanıcılar siteden çıkıyor sayfa sayfa siteden çıkmalar kullanıcılar, hangi sayfada kullanıcılar ne kadar duruyor, toplam sayfada yapılan etkinlikler tıklamalar, hangi butonlara üretim araçlarına modellere kullanıcıalr daha cok tıklıyor tercih ediyor, kullanıcılardan toplanan tek tek feedbackler, kullanıcı analizleri potansiyel müşteri olma ihtimali olan kullanıcılara mail kapmyanları kupon kodu kampyanları
+2-admin onayı gerektiren şeylerin onayı, takibi, analizleri, feedbackler oranları grafikler takipler, kupon kodu sistemi, toplanan maiiler soğuk mail kampyanları, promosyon sistemleri, yarışmalar, görevler, referans programı gibi verilereine ihtiyaç duyduğumuz herşeyin takibi analizi gereken herşeyi, günlük haftalık aylık mrr net gelir, kullanıcı sayısı, abonelik iptan eden sayısı, abonelik sayısı, modelller listesi, model bazlı karlar, kullanıcılara abonelik tanımlama, reklam kapmayanları reklam takipleri en ufak detayına kadar, birebir gerçek dünya haritasında ülke bazlı şehir bazlı kullanıcılar, anlık aktif kullanıcı sayısı oranları gün içinde en aktif saatler ve sayfalar, saatlik, günlük haftalık, aylık, yıllık harcanan krediler satılan krediler, provieder api maliyetleri güncel anlık, uçtan uca kullanıcı detay sayfaları, ip ler şphrli davranış takipleri kullanıcı güven skorları otomatik sistemle birlikte, ip ban kalıcı ban engelleme uzaklaştırma, bakım onarım ekranları yöentme düzeltme, aksiyonlar, mail kamyanlarının takibi analizleri yeni kapmya cart curt hepsi, tüm abonelikler yönetme güncelleme takip etme, planların kredilerin yönetimi takibi güncelleme, Manuel işlemler: iade, plan upgrade/downgrade, süre uzatma, ücretsiz abonelik verme
+Stripe/iyzico webhook log'ları ve başarısız ödeme retry takibi, Chargeback / dispute listesi
+Fatura ve vergi raporları (ülke bazlı KDV), Kredi ledger (her hareket: satın alma, harcama, iade, bonus, referans, expire), Model başına kredi maliyeti tablosu — panelden değiştirilebilir olmalı (provider fiyatı değişince deploy beklemeyeceksin), Toplu kredi dağıtımı (kampanya, özür, influencer), earn sayfası ile gereken heeerşey ilgili herşey, Başarısız generation'da otomatik kredi iadesi kuralları + manuel iade, Kredi bakiyesi anomali raporu (negatife düşenler, aşırı bakiye), Tüm job'lar: kullanıcı, model, prompt, durum, süre, kredi, gerçek API maliyeti, filtreler detaylıca, Aksiyon: job iptal, yeniden çalıştır (ücretsiz), öncelik ver, kredi iade et, Kuyruk görünümü: bekleyen sayısı, ortalama bekleme süresi, tier bazlı öncelik, Hata log'ları provider yanıtıyla birlikte (debug için şart), Output önizleme (video/görsel) — moderasyon ve destek için, Model kataloğu: aç/kapat, hangi tier'a açık, kredi fiyatı, sıralama, badge ("new", "pro only"), Model başına marj raporu — hangi model para kaybettiriyor anında görünsün, Provider failover ayarı (biri düşerse diğerine yönlendir), Rate limit / eşzamanlılık ayarları, Provider bakiyesi ve harcama alarmı, Otomatik flag kuyruğu: NSFW, ünlü yüzü, şiddet, telif, Manuel inceleme ekranı: onayla / kaldır / kullanıcıyı uyar / banla, Prompt blocklist ve regex kuralları (panelden düzenlenebilir), Kullanıcı ihbar (report) kuyruğu, Tekrarlayan ihlalciler listesi, DMCA / hak sahibi talep takibi, Referans ağacı görünümü, kim kimi getirdi, Ödül kuralları (panelden ayarlanabilir: X kredi / % komisyon), Fraud tespiti: self-referral, sahte hesap zinciri, aynı ödeme yöntemi, Bekleyen/ödenen ödüller, manuel onay ekranı, Kupon/promo kod yönetimi (indirim, bonus kredi, kullanım limiti, süre, tek kullanıcı), UTM/kaynak bazlı kayıt ve gelir raporu (Meta, TikTok, organik hesaplar), Influencer/affiliate paneli: kime kaç kredi verildi, ne kadar dönüş geldi, Landing page A/B test sonuçları, E-posta/push kampanya gönderimi + segment oluşturucu, Funnel: ziyaret → kayıt → ilk generation → ilk ödeme, Cohort retention (haftalık/aylık), LTV, CAC, LTV/CAC oranı, payback süresi, Churn analizi + iptal sebepleri, Kullanıcı başına ortalama kredi tüketimi (tier bazlı) — fiyatlamayı buna göre ayarlarsın, Ülke/dil/cihaz kırılımı, CSV/Excel export (her raporda), Ticket sistemi veya Intercom/Crisp entegrasyonu, Kullanıcı detayına tek tıkla geçiş, Sık sorunlar için hazır aksiyon butonları (kredi iade et + mail at), Preset & template yönetimi (Higgsfield'ın en güçlü tarafı bu — panelden eklenebilir olmalı), Showcase/galeri: öne çıkarılacak işleri seçme, hangi preseti kim ne kadar kullanmış neler ne kadar tecih ediliyor, Blog/SEO sayfaları, Duyuru banner'ı, changelog, bakım modu, Servis sağlık durumu (API, DB, kuyruk, storage, CDN)
+Storage kullanımı ve maliyeti + eski dosya temizleme kuralı
+Error log ve exception takibi
+Cron/background job durumu
+Webhook yeniden gönderme, Admin rolleri: super admin, destek, moderatör, finans (görsel-only)
+Audit log — kim ne zaman ne yaptı (özellikle kredi ekleme ve ban)
+Admin hesaplarında 2FA zorunlu
+IP whitelist (opsiyonel ama iyi olur), Feature flag: yeni modeli %10 kullanıcıya aç, sonra hepsine
+Global limitler: günlük max generation, dosya boyutu, eşzamanlı job
+Bakım modu, kayıt kapatma
+Yasal metinler (ToS, gizlilik) versiyonlama, Ortalama Job Süresi · Başarı Oranı %, Yeni kayıt / yeni abone / churn kombo grafiği, Tier bazlı abone dağılımı (stacked area), Saatlik generation hacmi (heatmap: gün × saat) → peak kapasite planlaması için, En çok kredi harcayan 10 kullanıcı (bu ay), Aktif alarm kutusu (kırmızı/sarı/turuncu/yeşil), 1.2 Live Ops (Gerçek Zamanlı)
+
+5 saniyede bir refresh (SSE veya polling):
+
+Kuyruktaki job sayısı (tier bazlı kırılım) + ortalama bekleme süresi
+Şu an işlenen job sayısı / provider kapasitesi
+Son 5 dk: başlatılan / tamamlanan / başarısız job
+Provider latency (p50/p95/p99) — provider bazlı
+Hata oranı (son 15 dk), 5xx sayısı
+Aktif kullanıcı sayısı (canlı), 1.3 Finansal Özet
+P&L tablosu (aylık): Brüt gelir → İadeler → Net gelir → Provider maliyeti → Storage/CDN → Stripe komisyonu → Reklam harcaması → Net kâr
+Reklam harcaması manuel giriş veya Meta/Google API'den (Supermetrics ile)
+Kohort bazlı geri ödeme (payback) grafiği
+Nakit akış projeksiyonu (mevcut MRR + churn tahminiyle 6 ay)
+Provider bakiye durumları ve tahmini tükenme tarihi, Kayıt tarihi aralığı, son aktiflik, 	Profil bilgileri, cihaz/tarayıcı, dil, TZ, doğrulama durumu, notlar (admin notu ekleme), etiketler (VIP, riskli, influencer), 	Mevcut plan, başlangıç/yenileme tarihi, ödeme yöntemi (son 4 hane), plan geçmişi timeline, iptal sebebi, 	Bakiye, hareket ledger'ı (tarih, tip, miktar, sonrası bakiye, sebep, işlemi yapan), grafiği, Grid görünüm (thumbnail), model, kredi, süre, durum filtresi, her birinin detayına gitme, Tüm transaction'lar, faturalar (PDF indir), iadeler, chargeback'ler, Kimi getirdi (ağaç), kim getirdi, kazanılan ödüller, fraud skoru, Flag geçmişi, uyarılar, ban kayıtları, ihbar edilen içerikleri, Geçmiş ticket'lar, son mesajlar, tüm ticket mesajları, Login geçmişi (IP, cihaz, konum), oturum listesi, kritik aksiyonlar (şifre değişimi, email değişimi), Bu kullanıcı üzerinde adminlerin yaptığı tüm işlemler, Kredi ekle/çıkar → sebep zorunlu, ledger'a "manual_adjustment" olarak düşer
+Tier değiştir (ücretsiz upgrade / downgrade), süre uzat
+Abonelik iptal et / yeniden başlat
+İade yap (tam/kısmi) → Stripe API çağrısı
+Şifre sıfırlama maili gönder · Email doğrulamayı manuel onayla
+Impersonate (kullanıcı olarak giriş) → zaman sınırlı token (15 dk), audit log'a düşer, kullanıcıya bildirim gider (yasal açıdan önerilir)
+Ban / Suspend (süreli) / Shadowban / Uyarı gönder
+Tüm oturumları kapat
+Hesabı anonimleştir (KVKK silme)
+Etiket ekle, admin notu yaz, Aynı IP/cihaz parmak iziyle N+ hesap
+Disposable/geçici email domain'i
+VPN/proxy/datacenter IP
+Kayıttan sonra anormal hızlı kredi tüketimi
+Aynı ödeme kartıyla çoklu hesap
+Self-referral şüphesi (aynı cihaz zinciri)
+Chargeback geçmişi
+Kupon/promo suistimali (aynı kişi çoklu kupon), Veri indirme talepleri (kullanıcının tüm verisini ZIP olarak üret)
+Silme talepleri → kuyruk, onay, anonimleştirme (finansal kayıtlar yasal saklama süresi için kalır, PII temizlenir)
+Talep SLA takibi (30 gün), Kolonlar: Kullanıcı · Plan · Durum · Başlangıç · Sonraki yenileme · Tutar · Ödeme yöntemi · Yenileme sayısı · MRR katkısı · İptal tarihi/sebebi
+
+Filtreler: durum (active/trialing/past_due/canceled/paused), plan, yenileme tarihi aralığı, ödeme sağlayıcı
+
+Aksiyonlar: iptal et (hemen / dönem sonu), duraklat, yeniden başlat, plan değiştir (proration hesabı göster), yenileme tarihini kaydır, indirim uygula, İsim, açıklama, sıralama, görünürlük (public/gizli/legacy)
+Fiyat: aylık, yıllık (ve ülke bazlı fiyatlandırma tablosu)
+Verilen kredi miktarı, kredi yenileme davranışı (devreder / devretmez)
+Erişilebilir modeller (checkbox listesi) → premium video modellerini üst tier'a kilitleme burada
+Limitler: eşzamanlı job, günlük job, max çözünürlük, max video süresi, kuyruk önceliği (1-10)
+Özellikler: watermark var/yok, ticari kullanım, API erişimi, öncelikli destek
+Trial ayarı: gün sayısı, kart gerekli mi
+Stripe price ID eşleşmesi, İade talep kuyruğu (kullanıcıdan gelen) → onay/red akışı
+Yapılan iadeler listesi, sebep kategorisi (teknik hata / memnuniyetsizlik / yanlışlıkla / fraud)
+Chargeback yönetimi: dispute listesi, kanıt yükleme (kullanım log'u otomatik derlensin), son tarih uyarısı
+İade oranı metriği (chargeback oranı %1'i geçerse Stripe risk uyarısı — panelde alarm), Ödeme başarısız olan abonelikler + kaçıncı deneme
+Otomatik retry takvimi (1. gün, 3. gün, 5. gün, 7. gün → iptal)
+Gönderilen hatırlatma mailleri
+Kurtarma oranı metriği
+Manuel: yeniden dene, süre tanı, iptal et, Ülke bazlı KDV/VAT oranları tablosu (düzenlenebilir)
+Global e-Arşiv fatura entegrasyonu durumu
+Aylık vergi raporu (ülke × tutar × vergi)
+Fatura şablonu ayarları, şirket bilgileri, 4.2 Kredi Paketleri
+
+Tek seferlik satın alınan paketler: isim, kredi miktarı, fiyat, bonus %, görünürlük, sıralama, ülke bazlı fiyat "En popüler" rozeti, süreli indirim, Toplu satın alımlar workspace enterprise görüşmeleri baiylikler, 4.5 İade Kuralları
+
+Otomatik kredi iadesi hangi durumlarda yapılsın:
+
+Job failed ise → %100 otomatik
+Job timeout ise → %100 otomatik
+Provider hatası (5xx) → %100 otomatik
+Kullanıcı iptal ettiyse → kısmi/hiç (ayarlanabilir)
+İçerik moderasyondan döndüyse → iade yok (ayarlanabilir) Her kural için toggle + oran., 4.6 Bakiye Anomalileri
+Negatif bakiyeli hesaplar
+Anormal yüksek bakiye (satın almadan)
+Ledger toplamı ≠ mevcut bakiye olan hesaplar (tutarlılık kontrolü, günlük cron)
+Hızlı tüketim uyarısı (1 saatte X kredi üstü), 5.2 Job Detay Sayfası
+Output önizleme (video player / görsel)
+Input: prompt (tam metin), negative prompt, referans görsel/video, tüm parametreler (seed, steps, cfg, çözünürlük, süre, aspect ratio, fps)
+Timeline: created → queued → sent to provider → processing → completed (her adımın timestamp'i ve süresi)
+Provider request/response payload (JSON, katlanabilir)
+Hata mesajı + stack trace
+Maliyet kırılımı: provider ücreti, storage, alınan kredi, net marj
+Kullanıcının o anki bakiyesi ve tier'ı
+Moderasyon skorları (NSFW, violence, celebrity match)
+Aksiyonlar: yeniden çalıştır (ücretsiz) · farklı provider'la çalıştır · iptal et · kredi iade et · output'u sil · moderasyona gönder · kullanıcıya mesaj at
+5.3 Canlı Kuyruk
+Kuyruk listesi, öncelik sırasıyla (tier priority'ye göre)
+Her job: bekleme süresi, tahmini başlama
+Tier bazlı kuyruk uzunluğu grafiği
+Manuel öncelik verme (VIP kullanıcı şikayet ettiğinde)
+Kuyruk temizleme (stuck job'ları toplu iptal + iade)
+Eşzamanlılık limiti ayarı (provider bazlı)
+5.4 Başarısızlar & Stuck
+Son 24 saatte fail olan job'lar, hata koduna göre gruplu (hangi hata kaç kere)
+10 dakikadan uzun süredir processing olanlar (stuck)
+Toplu aksiyonlar: hepsini retry et, hepsine kredi iade et
+Hata trend grafiği — bir provider bozulduğunda buradan anlarsın
+5.5 Performans Raporu, 6.1 Model Kataloğu
+
+Her model kaydı:
+
+Kimlik: slug, görünen isim, açıklama, kategori (text-to-video / image-to-video / text-to-image / upscale / lipsync / audio), thumbnail, örnek çıktı videosu
+Erişim: aktif mi, hangi tier'lara açık, beta mı, rozet (NEW / PRO / HOT), sıralama
+Fiyat: kredi maliyeti (parametreye göre değişken tablo: 5sn=X kredi, 10sn=Y kredi, 1080p=+Z)
+Provider eşleşmesi: birincil provider + endpoint + model ID, yedek provider'lar (sıralı)
+Parametreler: kullanıcıya gösterilecek input alanları (JSON schema) — çözünürlük seçenekleri, süre limitleri, varsayılan değerler
+Limitler: max eşzamanlı, günlük limit (tier bazlı), timeout süresi
+Maliyet: provider birim maliyeti (USD), hesaplanan marj
+İstatistik: son 30 gün kullanım, başarı oranı, ortalama süre, toplam gelir, toplam maliyet, net katkı
+
+Aksiyonlar: aç/kapat (anında), tier erişimini değiştir, fiyat güncelle, A/B test için %X kullanıcıya aç, kopyala (yeni varyant), sırala (drag-drop)
+
+6.2 Provider Yönetimi
+Provider listesi: fal.ai, kie.ai, Replicate, direkt API'ler (Kling, Hailuo, Runway…)
+Her provider: API key (maskeli, rotate butonu), base URL, rate limit, eşzamanlılık limiti, öncelik
+Bakiye takibi + otomatik uyarı eşiği ("$200 altına düşünce Slack'e at")
+Aylık harcama grafiği (provider bazlı)
+Sağlık durumu: son 5 dk başarı oranı, latency, otomatik devre kesici (circuit breaker) durumu
+6.3 Maliyet & Marj Analizi ⭐
+Model × Tier marj matrisi — hangi tier'da hangi model zarar ettiriyor
+Kullanıcı başına ortalama kredi tüketimi vs. ödediği ücret (tier bazlı) → fiyatlama kararı buradan çıkar
+"Ağır kullanıcı" listesi: aldığı abonelikten fazla maliyet üretenler
+Simülasyon aracı: "Kling fiyatı %20 artarsa marjım ne olur?" slider'lı what-if
+Aylık: toplam provider maliyeti / toplam gelir = COGS oranı trendi
+6.4 Failover Kuralları
+Provider A fail ederse → B'ye geç (kaç hatadan sonra, ne kadar süre)
+Circuit breaker eşikleri (hata oranı %X, süre Y sn)
+Otomatik geri dönüş (recovery) kontrolü
+Failover log'u: ne zaman, neden, kaç job etkilendi, 🛡️ MODÜL 7: MODERASYON
+7.1 İnceleme Kuyruğu
+
+Otomatik flag kaynakları: NSFW skoru, şiddet/gore, ünlü yüzü eşleşmesi, çocuk içeriği tespiti, telifli karakter, prompt blocklist eşleşmesi, kullanıcı ihbarı
+
+Ekran: kart görünümü — output önizleme + prompt + kullanıcı + flag sebebi + güven skoru Aksiyonlar (klavye kısayollu): Onayla (A) · Kaldır (R) · Kullanıcıyı uyar (W) · Banla (B) · Üst mercie ilet (E) Kaldırırken: sebep seç + kullanıcıya gidecek mesaj şablonu + kredi iade edilsin mi
+
+Sıralama: güven skoruna göre / bekleme süresine göre / kullanıcı ihlal geçmişine göre SLA: flag'lenen içerik X saat içinde incelenmelidir → geciken sayısı üstte gösterilir
+
+7.2 Kullanıcı İhbarları
+
+İhbar eden, ihbar edilen içerik, sebep kategorisi, açıklama, durum Aynı içeriğe çoklu ihbar → otomatik öne çıkar
+
+7.3 Prompt Blocklist
+Yasaklı kelime/ifade listesi (kategori bazlı: NSFW, ünlü isimleri, marka/IP, şiddet)
+Regex kuralları
+Davranış: engelle / uyar / flag'le ve devam et
+Test aracı: prompt yaz → hangi kurala takılıyor gör
+Ülke/dil bazlı kural setleri
+Yanlış pozitif raporu (kullanıcılar itiraz ettiğinde)
+7.4 İhlal Geçmişi & Yaptırım
+Kullanıcı bazlı ihlal sayacı
+Kademeli yaptırım kuralları: 1. ihlal → uyarı, 2. → 24s askı, 3. → 7 gün, 4. → kalıcı ban (ayarlanabilir)
+Tekrarlayan ihlalci listesi
+İtiraz (appeal) kuyruğu
+7.5 DMCA / Telif
+Gelen talep formu kayıtları
+İçerik kaldırma + karşı bildirim akışı
+Yasal saklama arşivi, 🎁 MODÜL 8: BÜYÜME
+8.1 Referans Sistemi
+Referans ağacı görselleştirme (kim kimi getirdi, kaç kademe)
+Ödül kuralları paneli: davet edene X kredi, davet edilene Y kredi, koşul (ilk job / ilk ödeme sonrası), üst limit
+Bekleyen ödüller → onay kuyruğu (otomatik onay eşiği ayarlanabilir)
+Fraud tespiti: aynı IP/cihaz zinciri, self-referral, hızlı toplu kayıt, aynı ödeme yöntemi
+Metrikler: viral katsayı (K-factor), referansla gelen kullanıcıların LTV'si vs. organik
+8.2 Affiliate / Influencer
+Partner kayıtları: isim, platform, takipçi, komisyon oranı veya sabit ücret
+Özel takip linki + kupon kodu
+Performans: tıklama → kayıt → ödeme → gelir → ödenecek komisyon
+Ödeme takibi (bekleyen/ödenen), fatura yükleme
+ROI hesabı: verilen kredi/ücret vs. getirdiği gelir → hangi influencer değer üretti
+8.3 Kuponlar & Promosyonlar
+
+Her kupon: kod (veya otomatik toplu üretim), tip (% indirim / sabit indirim / bonus kredi / ücretsiz trial uzatma), değer, geçerlilik tarihleri, kullanım limiti (toplam ve kişi başı), hangi planlarda geçerli, minimum tutar, yeni kullanıcı mı herkes mi, ülke kısıtı İstatistik: kullanım sayısı, üretilen gelir, ortalama sepet Toplu kod üretimi (CSV export) — influencer'lara dağıtmak için
+
+8.4 Kampanyalar (Email / Push / In-app)
+Segment seç → şablon seç → gönderim zamanla
+Şablon editörü (değişkenli: {isim}, {kredi}, {tier})
+Otomatik akışlar (drip): hoşgeldin serisi, kredi bitti hatırlatması, win-back, trial bitiyor, upsell
+Metrikler: gönderim, açılma, tıklama, dönüşüm, gelir katkısı
+Unsubscribe yönetimi
+8.5 Attribution / UTM Raporu
+Kaynak × ortam × kampanya kırılımında: kayıt, ilk job, ilk ödeme, gelir, LTV, CAC
+Meta / TikTok / Google reklam harcamalarını çekip yanına koy (Supermetrics MCP veya manuel giriş) → gerçek ROAS
+Organik sosyal hesap ağı takibi (hangi hesap kaç kayıt getirdi — özel link/kod bazlı)
+Landing page bazlı dönüşüm oranı
+Attribution modeli seçimi (first-touch / last-touch)
+📈 MODÜL 9: ANALİTİK
+9.1 Funnel
+
+Ziyaret → Kayıt → Email doğrulama → İlk generation → 3. generation → Ödeme sayfası → İlk ödeme → 2. ay yenileme Her adımda dönüşüm % ve düşüş sayısı. Segment/kaynak/ülke kırılımı. Zaman içinde funnel değişimi.
+
+9.2 Cohort & Retention
+Kayıt haftası/ayı bazlı retention matrisi (D1, D7, D30, D90)
+Gelir cohort'u (kayıt ayına göre kümülatif gelir)
+Abonelik retention (ay ay yenileme oranı)
+Kaynak bazlı cohort karşılaştırma
+9.3 LTV / CAC
+Tier bazlı LTV (gerçekleşen + tahmini)
+Kanal bazlı CAC
+LTV/CAC oranı ve payback süresi (ay)
+Kaynak bazlı kârlılık sıralaması
+9.4 Churn Analizi
+Aylık churn oranı (kullanıcı ve gelir bazlı)
+İptal sebepleri dağılımı (iptal formundaki seçenekler)
+Churn'den önceki davranış paterni (son 30 günde kullanım düşüşü)
+Risk altındaki aboneler listesi (kullanımı düşmüş, yenilemesi yaklaşan) → proaktif kampanya
+Win-back oranı
+9.5 Kullanım Analizi
+Kullanıcı başına ortalama job/ay (tier bazlı)
+Kredi tüketim dağılımı (histogram) — kim ne kadar yakıyor
+Model tercihleri, preset kullanımı
+İlk job'a kadar geçen süre (time-to-value)
+Başarısız ilk deneyim yaşayan kullanıcıların retention'ı (kritik metrik), 9.6 Özel Raporlar
+SQL editörü (read-only replica) — kaydedilmiş sorgular
+Zamanlanmış rapor (haftalık özet → email/Slack)
+Metabase gömme
+🎨 MODÜL 10: İÇERİK (CMS)
+10.1 Preset & Template Yönetimi ⭐
+
+Higgsfield'ın gücü preset'lerde — bu modül ürünün bir parçası, admin'den yönetilmeli.
+
+Preset: isim, kategori, thumbnail, örnek video, altta yatan model, gizli prompt şablonu, parametreler, hangi tier'a açık, sıralama, popülerlik
+Koleksiyonlar/kategoriler yönetimi
+Draft → yayınla akışı, zamanlanmış yayın
+A/B test: iki thumbnail veya iki prompt varyantı
+İstatistik: kullanım sayısı, dönüşüm katkısı
+10.2 Showcase / Galeri
+Kullanıcı çıktılarından öne çıkanları seçme (kullanıcı izniyle)
+Ana sayfa galerisi sıralama
+İçerik havuzu: filtreleyerek kaliteli çıktı bulma (yüksek engagement)
+10.3 Landing & Blog
+SEO sayfaları, blog yazıları, meta bilgiler
+Çok dilli içerik (TR/EN)
+10.4 Duyurular
+In-app banner (hedef segment, tarih aralığı, kapatılabilir mi)
+Changelog / yenilikler modalı
+Bakım modu duyurusu
+10.5 Yasal Metinler
+
+ToS, Gizlilik Politikası, İçerik Politikası — versiyonlama + "yeni versiyonu kabul ettir" akışı
+
+🎧 MODÜL 11: DESTEK
+Ticket listesi (veya Crisp/Intercom gömme) — durum, öncelik, atanan, SLA sayacı
+Ticket detayında kullanıcının tüm bağlamı yan panelde (bakiye, son job'lar, ödemeler)
+Makro aksiyonlar: tek tıkla "kredi iade et + özür maili gönder", "job'u yeniden çalıştır + bilgilendir"
+Hazır yanıt şablonları
+SSS yönetimi
+Destek metrikleri: ilk yanıt süresi, çözüm süresi, ticket hacmi/kategori
+⚙️ MODÜL 12: SİSTEM
+12.1 Servis Sağlığı
+
+API, DB, Redis, queue worker, storage, CDN, her provider → yeşil/sarı/kırmızı + son kontrol zamanı + uptime % Latency grafikleri, hata oranı
+
+12.2 Feature Flag'ler
+Flag adı, açıklama, durum (on/off/partial)
+Hedefleme: % kullanıcı, belirli tier, belirli user ID listesi, ülke
+Değişiklik geçmişi
+Kullanım: yeni modeli önce %5'e aç, metriklere bak, sonra hepsine
+12.3 Global Ayarlar
+Site adı, logo, destek email
+Kayıt açık/kapalı, davetiye modu
+Bakım modu (mesaj + whitelist IP)
+Global limitler: max dosya boyutu, max eşzamanlı job (global), günlük generation tavanı
+Varsayılan dil, desteklenen diller, para birimleri
+Yeni kullanıcıya verilecek bonus kredi
+12.4 Webhook Log'ları
+
+Gelen (Stripe, provider callback) ve giden webhook'lar: payload, yanıt, durum, retry sayısı → manuel yeniden gönderme butonu
+
+12.5 Cron & Background Job'lar
+
+Her zamanlanmış işin adı, son çalışma, süre, durum, sonraki çalışma, manuel tetikleme (kredi yenileme, kredi expire, storage temizlik, rapor gönderimi, tutarlılık kontrolü)
+
+12.6 Storage Yönetimi
+Toplam kullanım, aylık maliyet, büyüme trendi
+Saklama politikası: X gün sonra sil / soğuk depolamaya taşı (tier bazlı farklı olabilir)
+Yetim dosya temizliği
+En çok yer kaplayan kullanıcılar
+CDN bandwidth ve maliyet, 13.3 Admin Güvenliği
+2FA zorunlu (TOTP)
+Oturum süresi limiti, idle timeout
+IP whitelist (opsiyonel)
+Yeni cihazdan giriş bildirimi
+Şüpheli aktivite: kısa sürede çok kredi ekleme, toplu ban → uyarı
+API key yönetimi (servisler arası), rotate ve scope,  bloglar, güncel haberler
+
+...
+
+Bak bunlar benim aklıma gelenler sen en az. bu kadar daha çok şey düşüneceksin en ama en doğru şekilde en mantıklı şekilde. uçtan uca bi admin paneli istiyorum. ve şu da çok önnemli claude arayüzü olan birebir bir ai ekleyeceğiz. Bu ai heerşeyde bilgili yetkili oalcak herşeyi bilecek ve yapabilecek fake değil gerçekten bunu yapacak hani benim herşeyim olacak o ai. çok kapsamlıca bunu yapmanı istiyorum heeeerşeyin kusursuz mükemmel olmasını en ama en ufak bir eksik dahi olmasını istemiyorum. Unutma eeen az benim kadar daha özellik ekleyceksin ve herşeyin detayları olacak akış asla eksik olmayacak herşeyin en kusursuz şekilde olmasını istiyorum ve detaylı kapsamlı ve güzel apple gibi görünüen. Bana bol bol soru sormaktan sakın çekinme en iyi sonucu istiyorum senden. Unutma şuanki admin panelini silip baştan yapacağız

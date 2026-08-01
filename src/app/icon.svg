@@ -1,0 +1,27 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    VAYRA marka işareti.
+    Fikir: "V" harfi aynı zamanda bir OYNATMA (play) üçgeni olarak okunur — 90°
+    döndürülmüş play glifi = aşağı bakan V. Vayra bir üretim stüdyosu; işaret hem
+    baş harfi hem "üret / oynat" eylemini taşıyor. Sağ üstteki kıvılcım noktası AI
+    vurgusu (ürün genelindeki Sparkles diliyle aynı).
+    16px favicon'da bile okunur: tek dolu şekil + tek nokta, ince çizgi yok.
+  -->
+  <defs>
+    <linearGradient id="vg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7de0ff"/>
+      <stop offset="0.55" stop-color="#55d6fd"/>
+      <stop offset="1" stop-color="#1ea8d6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="32" height="32" rx="8.5" fill="url(#vg)"/>
+
+  <!-- Aşağı bakan üçgen = V + play. Koyu glif — mavi üstünde yüksek kontrast. -->
+  <path d="M9.6 10.2h12.8c1.05 0 1.72 1.13 1.2 2.05l-6.4 11.3c-.53.93-1.87.93-2.4 0l-6.4-11.3c-.52-.92.15-2.05 1.2-2.05Z"
+        fill="#002230"/>
+
+  <!-- Kıvılcım noktası — AI vurgusu -->
+  <circle cx="23.4" cy="8.6" r="2.6" fill="#002230"/>
+  <circle cx="23.4" cy="8.6" r="1.2" fill="#c9f4ff"/>
+</svg>

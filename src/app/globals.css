@@ -1,0 +1,1954 @@
+@import "tailwindcss";
+
+/* ============================================================
+   VAYRA — Tasarım Sistemi
+   Yapı: %100 Higgsfield (496 ekran görüntüsünden ölçüldü).
+   Aksan: Vayra cyan (#22d3ee) — Higgsfield'ın lime'ının yerine.
+   Referans: HIGGSFIELD-SPEC.md
+   ============================================================ */
+
+@theme {
+  /* AKSAN — TEK İMZA RENK: camgöbeği-mavi (#55d6fd). Artık her yerde (mobil+desktop)
+     aynı mavi kullanılır; eski lime (#dafd55) tamamen kaldırıldı. Aşağıdaki
+     cyan-glow / vayra-* skalası da maviye çekildi ki glow/buton gölgeleri uyumlu olsun.
+     NOT: .kurumsal-kapsam (beyaz kurumsal alan) kendi lime aksanını korur — kasıtlı. */
+  /* AKSAN — camgöbeği-mavi (#55d6fd). Eski lime (#dafd55) tamamen kaldırıldı;
+     aynı parlaklık/canlılık eğrisi mavide korunuyor (asıl site imza rengi). */
+  --color-aksan: #55d6fd;
+  --color-aksan-parlak: #7de0ff;
+  --color-aksan-koyu: #2fb8e0;
+  /* CTA butonunun alt dudağı (Higgsfield'ın 3D bevel'i) — mavinin koyu tonu */
+  --color-aksan-dudak: #2090b8;
+
+  /* Higgsfield katman merdiveni — düşük kontrast, her yüzey öncekinden ~%3-5 açık.
+     Sert border yerine parlaklık farkıyla ayrım (premium his). */
+  /* HIGGSFIELD DERİNLİK MERDİVENİ — referanstan piksel örneklendi.
+     DIŞA doğru KOYULAŞIR, İÇE doğru AÇILIR:
+       zemin #0f1113 < panel-dış #131517 < panel-iç #1c1e20 < hover #232527
+     Tonlar hafif MAVİMSİ (R<G<B, ~2 birim) — referansın "soğuk/pahalı" hissi.
+     Eskiden merdiven TERSTİ (panel #1c1c1c, iç kutu #101010) ve zemin saf #000'dı;
+     paneller zeminden ayrışmıyor, her şey tek düz siyah blok görünüyordu. */
+  /* HIGGSFIELD DERİNLİK MERDİVENİ — v2 (2026-07-25).
+     ESKİ merdiven farkları çok İNCE'ydi (+4/+9) → "siyah zemin üstüne siyaha-yakın
+     kutu" görünüyordu; kartlar zeminden ayrışmıyordu. Higgsfield referansında zemin
+     daha KOYU, kartlar BELİRGİN açık ve aralarında NET bir parlaklık sıçraması + görünür
+     ince kenarlık var. Değerler referanstan yeniden örneklendi:
+       sayfa zemini  rgb(10,10,11)   #0a0a0b
+       panel gövdesi rgb(26,27,30)   #1a1b1e   (+16 — belirgin ayrışma)
+       panel içi kutu rgb(35,36,39)  #232427   (+9)
+       hover          rgb(44,46,50)  #2c2e32
+     Kartlar artık siyah zeminde net "yüzüyor". */
+  /* Sayfa zemini bir tık AÇILDI (2026-08-01, kullanıcı isteği): önce
+     #0a0a0b ile neredeyse simsiyahtı. Üst navigasyon ~#212326 tonunda
+     olduğu için zemin ondan KOYU kalacak şekilde #15171a seçildi. */
+  --color-zemin: #15171a;        /* 1. kademe — sayfa zemini (en koyu) */
+  --color-yuzey: #1a1b1e;        /* 2. kademe — KUTU DIŞI (panel gövdesi) */
+  --color-yuzey-2: #232427;      /* 3. kademe — KUTU İÇİ */
+  --color-yuzey-3: #2c2e32;      /* 4. kademe — hover / seçili */
+  --color-menu: #1a1b1e;         /* popover — panel gövdesi kademesi (zeminden ayrışır) */
+  --color-kenar: #2e3033;        /* hairline — görünür ince kenarlık */
+  --color-kenar-2: #3a3c40;
+
+  --color-metin: #f2f2f2;
+  --color-metin-2: #9a9a9a;
+  --color-metin-3: #6e6e6e;
+
+  --color-fusya: #ff2d6f;        /* %30 İNDİRİM rozeti */
+  --color-tehlike: #ff453a;      /* Sil */
+
+  /* Geriye dönük uyumluluk — eski cyan sınıfları artık LIME tonlarına eşlenir
+     (tek imza renk kararı: her yer lime). vayra-* skalası lime açık→koyu. */
+  --color-vayra-50: #e6f9ff;
+  --color-vayra-100: #c2eeff;
+  --color-vayra-200: #9ee4ff;
+  --color-vayra-300: #55d6fd;
+  --color-vayra-400: #3ac8f2;
+  --color-vayra-500: #2fb8e0;
+  --color-vayra-600: #2090b8;
+  --color-vayra-700: #196f8f;
+  --color-vayra-800: #145068;
+  --color-vayra-900: #0e3447;
+  /* cyan-glow — 400+ yerde kullanılıyor; artık camgöbeği-mavi (glow gölgeleri mavi). */
+  --color-cyan-glow: #55d6fd;
+  --color-amber-glow: #ffb020;
+  --color-iris-400: #a78bfa;
+  --color-iris-500: #8b5cf6;
+  /* Higgsfield birebir: mavimsi-nötr derinlik merdiveni (R<G<B ~2 birim).
+     Saf siyah DEĞİL — referansta zemin #0f1113, paneller ondan açık. */
+  --color-ink-950: #0a0a0b;
+  --color-ink-900: #1a1b1e;
+  --color-ink-850: #232427;
+  --color-ink-800: #2c2e32;
+  --color-ink-700: #3a3c40;
+  --color-ink-600: #46484c;
+
+  --font-display: var(--font-sans);
+  --font-sans: var(--font-sans);
+  /* Teknik yüzeylerin sesi — nav kanal etiketleri, sayaçlar, ID'ler. */
+  --font-mono: var(--font-mono);
+  --radius-glass: 1.25rem;
+}
+
+:root {
+  /* body'yi GERÇEKTEN boyayan değişken (2026-08-01): zemin bir tık
+     açıldı — üst nav ~#212326 olduğu için ondan koyu kalır. */
+  --bg: #15171a;
+  --fg: #f2f2f2;
+  color-scheme: dark;
+
+  /* --sn-lime TABAN TANIMI — global.
+     Bu set asıl olarak .sinema-kapsam içinde tanımlı, ama Supercomputer
+     (.sc-kapsam) ve bazı global kurallar da var(--sn-lime) kullanıyor.
+     Kapsam dışında tanımsıza düşünce lime aksan hiç render olmuyordu
+     (ör. SC composer'ın gönder butonu renksiz kalıyordu).
+     .sinema-kapsam kendi değerleriyle bunu ezmeye devam eder. */
+  --sn-lime: #55d6fd;
+  --sn-lime-parlak: #7de0ff;
+  --sn-lime-koyu: #2fb8e0;
+  --sn-lime-metin: #0a0a0a;
+}
+
+* {
+  border-color: color-mix(in oklab, white 7%, transparent);
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Kaydırma sınırında lastik-bant "sallanma" hissini kaldır (her yerde) */
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-feature-settings: "cv11", "ss01";
+  overflow-x: hidden;
+  /* Üst/alt sınırda bounce (overscroll) kapalı */
+  overscroll-behavior: none;
+}
+
+/* Tüm iç kaydırma konteynerleri de sınırda esnemesin (panel/galeri/dropdown vb.) */
+.gizli-scroll,
+[class*="overflow-y-auto"],
+[class*="overflow-auto"] {
+  overscroll-behavior: contain;
+}
+
+/* ============================================================
+   HIGGSFIELD İMZA BİLEŞENLERİ
+   ============================================================ */
+
+/* İmza CTA — "Üret ✦ 7". Higgsfield birebir: parlak aksan zemin + KOYU metin
+   (weight 700), dikey gradyan (üst açık→alt koyu), radius 14px, yumuşak aksan glow.
+   Metin ASLA beyaz olmaz — koyu-parlak kontrastı premium hissin ana kaynağı. */
+.hf-cta {
+  background: linear-gradient(180deg, var(--color-aksan-parlak) 0%, var(--color-aksan) 55%, var(--color-aksan-koyu) 100%);
+  color: #071417;
+  border-radius: 14px;
+  font-weight: 700;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 2px 10px color-mix(in srgb, var(--color-aksan) 20%, transparent);
+  transition: filter 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+}
+.hf-cta:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 4px 14px color-mix(in srgb, var(--color-aksan) 30%, transparent);
+}
+.hf-cta:active { transform: translateY(1px); }
+.hf-cta:disabled { opacity: 0.45; filter: grayscale(0.4); box-shadow: none; animation: none; }
+
+/* Üret butonu — APPLE GLASS varyantı. Camsı cyan: yarı saydam aksan dolgu +
+   backdrop-blur + üst cam parıltısı + ince aksan kenar. Opak gradient yerine
+   arkasını hafif geçiren, "liquid glass" his. Metin koyu-net kalır. */
+.hf-cta-glass {
+  position: relative;
+  border-radius: 16px;
+  font-weight: 700;
+  color: #06232a;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--color-aksan-parlak) 82%, transparent) 0%,
+                            color-mix(in srgb, var(--color-aksan) 72%, transparent) 100%);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--color-aksan-parlak) 55%, transparent);
+  /* DIŞ GLOW YOK — sadece cam yüzey + yumuşak derinlik gölgesi (nötr). */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -8px 16px -8px color-mix(in srgb, var(--color-aksan-koyu) 50%, transparent),
+    0 2px 8px -3px rgba(0, 0, 0, 0.4);
+  transition: filter 0.16s ease, transform 0.08s ease, box-shadow 0.16s ease, background 0.16s ease;
+}
+/* üstteki cam parıltısı şeridi */
+.hf-cta-glass::before {
+  content: "";
+  position: absolute; inset: 1px 1px auto 1px; height: 42%;
+  border-radius: 15px 15px 40% 40%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.4), transparent);
+  pointer-events: none;
+}
+.hf-cta-glass:hover {
+  filter: brightness(1.05);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -8px 16px -8px color-mix(in srgb, var(--color-aksan-koyu) 60%, transparent),
+    0 3px 10px -3px rgba(0, 0, 0, 0.45);
+}
+.hf-cta-glass:active { transform: translateY(1px) scale(0.99); }
+.hf-cta-glass:disabled { opacity: 0.45; filter: grayscale(0.4); box-shadow: none; }
+
+/* İkincil pill — "Nasıl yapıldı?" / seçili filtre: BEYAZ dolu, koyu metin, tam pill. */
+.hf-ikincil {
+  background: #ffffff;
+  color: #111114;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: filter 0.15s ease, transform 0.08s ease;
+}
+.hf-ikincil:hover { filter: brightness(0.94); }
+.hf-ikincil:active { transform: translateY(1px); }
+
+/* Kontrol çipi — model/oran/çözünürlük/süre: koyu yarı-şeffaf, ince border, radius 10px. */
+.hf-cip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: var(--color-metin);
+  font-weight: 500;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hf-cip:hover { background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.14); }
+/* Açık popover'lı çip — Higgsfield'da açıkken çip aydınlanır. */
+.hf-cip-aktif { background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.2); }
+
+/* ── Video composer kabuğu (Higgsfield birebir) ───────────────────────
+   Referans: modeller/video/* — kabarık, koyu, apple-glass gövde. */
+.hf-kabuk {
+  /* Opaklık YÜKSEK olmalı: composer galerinin/hero'nun üstünde yüzüyor,
+     saydam bırakılınca arkadaki görseller çipleri okunmaz hale getiriyordu. */
+  background: rgba(24, 25, 27, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(28px) saturate(1.2);
+  -webkit-backdrop-filter: blur(28px) saturate(1.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 16px 48px -12px rgba(0, 0, 0, 0.8);
+}
+
+/* Yükleme kutusu — START/END FRAME, MOTION, CHARACTER, VIDEO REFERANSI */
+.hf-kutu {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hf-kutu:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.16); }
+
+/* Popover yüzeyi — model seçici + çip menüleri (yoğun blur, derin gölge) */
+.hf-pop {
+  background: rgba(30, 32, 34, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  backdrop-filter: blur(30px) saturate(1.2);
+  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+  box-shadow: 0 24px 70px -18px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+/* Sinema seçici modalı — Higgsfield'da YARI SAYDAM: arkadaki hero/composer
+   okunabilir kalır, sadece bulanıklaşır. Opak panel yanlış olur. */
+.hf-cam {
+  background: rgba(26, 27, 29, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(40px) saturate(1.3);
+  -webkit-backdrop-filter: blur(40px) saturate(1.3);
+  box-shadow: 0 30px 90px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Sinema seçici hapları (Tür/Stil/Kamera) — hero videosunun ÜSTÜNDE yüzdükleri
+   için opak zemin şart; `hf-cip`in yarı saydamlığında metin okunmuyordu. */
+.hf-hap {
+  background: rgba(24, 25, 27, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 8px 28px -10px rgba(0, 0, 0, 0.75);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.hf-hap:hover { background: rgba(34, 36, 38, 0.97); border-color: rgba(255, 255, 255, 0.18); }
+.hf-hap-aktif { background: rgba(40, 42, 45, 0.98); border-color: rgba(255, 255, 255, 0.24); }
+
+/* Model listesi marka ikon karesi */
+.hf-marka {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: var(--color-metin-2);
+}
+
+/* Üret butonu — cyan parlama (nabız gibi atan glow) */
+.hf-cta-parlak {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-aksan) 45%, transparent),
+              0 4px 16px color-mix(in srgb, var(--color-aksan) 35%, transparent);
+  animation: hf-cta-nabiz 2.4s ease-in-out infinite;
+}
+.hf-cta-parlak:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-aksan) 60%, transparent),
+              0 6px 24px color-mix(in srgb, var(--color-aksan) 55%, transparent);
+}
+@keyframes hf-cta-nabiz {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-aksan) 45%, transparent),
+                          0 4px 16px color-mix(in srgb, var(--color-aksan) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-aksan) 60%, transparent),
+                          0 6px 26px color-mix(in srgb, var(--color-aksan) 55%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) { .hf-cta-parlak { animation: none; } }
+
+/* Higgsfield başlığı — BÜYÜK HARF, ağır, sıkışık */
+.hf-baslik {
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+}
+
+/* Nokta-matris (LED dot-matrix) yazı — Higgsfield /audio kart adları + preset ekranı birebir.
+   Harfin gövdesi bir nokta ızgarasıyla (radial-gradient) doldurulur ve background-clip:text
+   ile yalnızca harf şekli içinde görünür → LED nokta panosunda yazılıymış etkisi. */
+.hf-led {
+  text-transform: uppercase;
+  font-family: "DejaVu Sans Mono", "Courier New", ui-monospace, monospace;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  background-image: radial-gradient(currentColor 42%, transparent 46%);
+  background-size: 3px 3px;
+  background-repeat: repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Menü / popover yüzeyi — Higgsfield birebir: NEREDEYSE OPAK koyu panel.
+   Arka içeriği yıkamaz; hafif blur sadece kenarları yumuşatır. */
+.menu-surface {
+  background: rgba(38, 40, 43, 0.98);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 24px 60px -12px rgba(0, 0, 0, 0.9),
+    0 0 0 1px rgba(0, 0, 0, 0.6);
+}
+
+/* Logo (platform) menüsü satırı — satırın TAMAMI platformun rengini taşır.
+   Renk `--lm` ile satırda tanımlanır (UstNav LOGO_MENU), buradaki kurallar onu
+   zemin/çerçeve/şeride dağıtır. Durgun halde çok hafif bir renk imâsı vardır ki
+   hover'dan önce de hangi satırın hangi platform olduğu renkten okunsun. */
+.lm-satir {
+  background: color-mix(in srgb, var(--lm) 5%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lm) 12%, transparent);
+}
+.lm-satir + .lm-satir { margin-top: 4px; }
+.lm-satir:hover {
+  background: color-mix(in srgb, var(--lm) 15%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--lm) 38%, transparent),
+    0 6px 22px -10px color-mix(in srgb, var(--lm) 55%, transparent);
+}
+
+/* ============================================================
+   PREMIUM YÜZEY REÇETESİ — Higgsfield "kabarık panel" hissi.
+   Yassı mat kutuları bitirir: dikey gradyan + inset üst-highlight +
+   çift-katman yumuşak gölge. .premium-panel / .premium-cip / hover.
+   ============================================================ */
+.premium-panel {
+  /* Higgsfield birebir: DÜZ OPAK panel. (Eskiden %62 saydam + blur idi; arkayı emip
+     "çamurumsu" gri yapıyordu.) Kabarıklık üst-ışık + çift katman gölgeyle verilir. */
+  background: #1c1e20;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 28px -10px rgba(0, 0, 0, 0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.premium-panel-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 4px 8px rgba(0, 0, 0, 0.35),
+    0 16px 40px -12px rgba(0, 0, 0, 0.62);
+}
+/* İkincil yüzey (çip/input) — panelden bir tık açık, aynı dil */
+.premium-cip {
+  background: linear-gradient(180deg, #1f2123 0%, #17191b 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Apple buzlu-cam çip/buton — küçük pill kontroller için (İyileştir / Ses / Element).
+   Yarı-saydam + arka bulanıklık + üst ışık çizgisi + yumuşak gölge. */
+/* NOT: zemin OPAK ve merdivenin iç-kutu kademesiyle aynı (#1c1e20).
+   Eskiden rgba(255,255,255,.07) idi — panel (#131517) üstünde ~#232527 veriyordu,
+   yani çipler iç kutulardan DAHA AÇIK çıkıp merdiveni ters çeviriyordu. Referansta
+   panel içindeki her yüzey (kutu da çip de) aynı kademede: #1c1e20. */
+.glass-cip {
+  background: #1c1e20;
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+.glass-cip:hover {
+  background: #232527;
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+/* Aktif/seçili durum — aksan rengiyle buzlu-cam */
+.glass-cip-aktif {
+  background: color-mix(in srgb, var(--color-aksan, #22d3ee) 18%, rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid color-mix(in srgb, var(--color-aksan, #22d3ee) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 0 0 1px color-mix(in srgb, var(--color-aksan, #22d3ee) 20%, transparent);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   İKON KUTUSU CAMI — .glass-ikon (+ renkli varyantlar)
+   Ürün genelindeki "kare/yuvarlak ikon kutusu" deseni için. .glass-cip ile
+   aynı buzlu-cam reçetesi; renkli varyantlar zemine kendi renginden hafif bir
+   tint + kendi renginde ince halka ekler (Apple'ın renkli app ikonu hissi).
+   Kullanım:  <span className="glass-ikon glass-ikon-cyan"> <Zap/> </span>
+   Renk seçimi ANLAMA göre: cyan=birincil/AI, lime=başarı/üretim, mor=hız,
+   gök=sınırsız, gül=silme/uyarı, kehribar=kredi/ödül.
+   ══════════════════════════════════════════════════════════════════════ */
+/* İkon kutusu KUTUNUN İÇİNDE durur → bir kademe daha açık (4. kademe). */
+.glass-ikon {
+  background: #232527;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Renkli varyantlar — tek reçete, sadece --gi renk değişkeni değişir. */
+.glass-ikon-cyan,
+.glass-ikon-lime,
+.glass-ikon-mor,
+.glass-ikon-gok,
+.glass-ikon-gul,
+.glass-ikon-kehribar,
+.glass-ikon-yesil {
+  background: color-mix(in srgb, var(--gi) 16%, rgba(255, 255, 255, 0.05));
+  border-color: color-mix(in srgb, var(--gi) 38%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 1px color-mix(in srgb, var(--gi) 14%, transparent);
+  color: var(--gi);
+}
+.glass-ikon-cyan     { --gi: #22d3ee; }
+.glass-ikon-lime     { --gi: var(--sn-lime, #55d6fd); }
+.glass-ikon-mor      { --gi: #a78bfa; }
+.glass-ikon-gok      { --gi: #38bdf8; }
+.glass-ikon-gul      { --gi: #fb7185; }
+.glass-ikon-kehribar { --gi: #fbbf24; }
+.glass-ikon-yesil    { --gi: #34d399; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   DERİNLİK MERDİVENİ YARDIMCILARI — Higgsfield birebir.
+   .panel-dis  → panel gövdesi (#131517), sayfa zemininden bir kademe açık
+   .panel-ic   → panelin İÇİNDEKİ kutular (#1c1e20), panelden bir kademe daha açık
+   Cam yerine OPAK kullanılır: üst üste binen saydam katmanlar merdiveni
+   bulanıklaştırıp "tek düz blok" hissi yaratıyordu.
+   ══════════════════════════════════════════════════════════════════════ */
+/* DİKKAT: burada --sn-* KULLANMA. O set .sinema-kapsam bloğunun içinde
+   tanımlı, yani yalnız Sinema Stüdyosu'nda geçerli. Global bir kuralda
+   var(--sn-yuzey-2) tanımsıza düşer → background: transparent olur ve
+   kutular görünmez hale gelir (merdiven tek düz renge çöker).
+   Global kurallar HER ZAMAN --color-* setini kullanır. */
+.panel-dis {
+  background: var(--color-yuzey);
+  border: 1px solid var(--color-kenar);
+}
+.panel-ic {
+  background: var(--color-yuzey-2);
+  border: 1px solid var(--color-kenar);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.panel-ic-hover:hover { background: var(--color-yuzey-3); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   BEYAZ ZEMİN GÜVENLİĞİ — okunabilirlik koruması.
+   Beyaz dolgulu bir buton/pill üstünde metin AÇIK renk kalırsa yazı kaybolur
+   (aktif sekme pill'leri, "Paylaş" gibi beyaz CTA'lar). Rengi açıkça
+   belirtilmemiş beyaz yüzeylerde metni koyuya zorla; `text-*` sınıfı taşıyan
+   yüzeyler kendi rengini kullanmaya devam eder (bu kural onları ezmez).
+   ══════════════════════════════════════════════════════════════════════ */
+.bg-white:not([class*="text-"]) {
+  color: #0a0a0a;
+}
+
+/* Nav ikonu — pasifken çıplak glif, satırın üstüne gelince cam kutu belirir.
+   (Tailwind özel sınıfa group-hover varyantı uygulayamadığı için burada.) */
+.group\/nav:hover .nav-ikon:not(.glass-ikon) {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* Global iyileştirme: yaygın düz panel deseni (bg-white/2-3 + ince border)
+   olan kutulara otomatik üst-highlight + hacim ver → tek noktadan premium his. */
+[class*="border-white/8"].rounded-xl,
+[class*="border-white/8"].rounded-2xl,
+[class*="border-white/8"].rounded-3xl,
+[class*="border-white/10"].rounded-xl,
+[class*="border-white/10"].rounded-2xl {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 8px 22px -10px rgba(0, 0, 0, 0.5);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   ÇAMUR YASAĞI — yarı-saydam beyaz yüzeyleri OPAK griye zorla.
+   Sebep: rgba(255,255,255,.02-.10) zeminler koyu arka plan üstünde birikince
+   (özellikle üst üste binen katmanlarda) kirli/"çamurlu" gri bir ton üretiyordu.
+   Higgsfield düz opak gri kademeler kullanır. Panel/kart/çip zeminleri artık opak.
+   NOT: medya ÜSTÜ rozetler (bg-black/*), overlay'ler ve .glass/.menu-surface
+   bilinçli olarak hariç — onlarda saydamlık doğru davranış.
+   ══════════════════════════════════════════════════════════════════════ */
+.bg-white\/\[0\.02\] { background-color: #1c1e20 !important; }
+.bg-white\/\[0\.03\] { background-color: #1f2124 !important; }
+.bg-white\/\[0\.04\] { background-color: #222427 !important; }
+.bg-white\/\[0\.05\] { background-color: #1c1e20 !important; }
+.bg-white\/\[0\.06\] { background-color: #1f2123 !important; }
+.bg-white\/\[0\.07\] { background-color: #2b2d30 !important; }
+.bg-white\/5 { background-color: #1c1e20 !important; }
+.bg-white\/6 { background-color: #1f2123 !important; }
+.bg-white\/8 { background-color: #232527 !important; }
+.bg-white\/10 { background-color: #2b2d30 !important; }
+.bg-white\/12 { background-color: #303235 !important; }
+
+/* NOT — Eskiden burada iki GLOBAL `backdrop-filter: blur()` kuralı vardı:
+   ince-border'lı tüm rounded-2xl/3xl panellere ve bg-white/[0.02-0.03] kutulara
+   otomatik buğu uyguluyordu. Bu blur arkadaki içeriği emip yayınca her sayfada
+   "çamurumsu" gri bir zemin oluşuyordu (Higgsfield'de böyle bir şey YOK — paneller
+   düz opak). Kaldırıldı; kabarıklık artık yalnız üst-ışık + gölge ile veriliyor.
+   Gerçekten cam istenen tekil yüzeyler (.menu-surface, .glass-cip) kendi kuralını taşır. */
+
+/* Aksan (LIME) primary butonlara kendi renginde glow + üst parlama → "ışık saçan"
+   Higgsfield primary hissi. bg-cyan-glow kullanan butonları hedefler (renk artık lime). */
+button[class*="bg-cyan-glow"]:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 2px 10px -1px rgba(85, 214, 253, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.16s ease, transform 0.12s ease, filter 0.16s ease;
+}
+button[class*="bg-cyan-glow"]:not(:disabled):hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.36),
+    0 4px 18px -1px rgba(85, 214, 253, 0.55),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+  filter: brightness(1.04);
+}
+/* Gradyan CTA'lar (lime→fuchsia gibi) da alt glow alsın */
+button[class*="from-cyan-glow"]:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 3px 16px -2px rgba(85, 214, 253, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   SİNEMA STÜDYOSU — HIGGSFIELD BİREBİR (lime aksan, sadece bu sayfa)
+   `.sinema-kapsam` ile sarılı alan Higgsfield'ın chartreuse/lime imzasını
+   kullanır. Projenin geri kalanı cyan kalır (kararı: sadece sinema lime).
+   Ölçüldü: higg-cinema/ 149 ekran görüntüsü.
+   ============================================================ */
+.sinema-kapsam {
+  /* Tek imza camgöbeği-mavi (#55d6fd) — GENERATE butonu, seçili tik, rozet, aktif vurgu.
+     Eskiden lime idi; asıl site tek-renk kararı gereği global maviye hizalandı. */
+  --sn-lime: #55d6fd;
+  --sn-lime-parlak: #7de0ff;
+  --sn-lime-koyu: #2fb8e0;
+  --sn-lime-metin: #0a0a0a;   /* mavi üstündeki koyu metin */
+
+  /* Mevcut `aksan` sınıflarını (text-aksan/bg-aksan/border-aksan/ring-aksan) bu sayfada
+     otomatik maviye çevir — böylece composer/modal/tik kodunu tek tek değiştirmeden
+     imza mavi uygulanır. `zemin` de mavi üstü koyu metin olur. */
+  --color-aksan: #55d6fd;
+  --color-aksan-parlak: #7de0ff;
+  --color-aksan-koyu: #2fb8e0;
+  --color-aksan-dudak: #2090b8;
+  --color-zemin: #15171a;
+  /* ══════════════════════════════════════════════════════════════════
+     HIGGSFIELD DERİNLİK MERDİVENİ — referanstan piksel örneklenerek ölçüldü
+     (higg-video/…07.29.30.png; sol composer paneli + galeri alanı taraması).
+
+     Kural: DIŞA doğru KOYULAŞIR, İÇE doğru AÇILIR.
+       sayfa zemini   #0f1113   ← en dış, en koyu
+       panel dış kutu #131517   ← composer gövdesi, galeri zemini
+       panel iç kutu  #1c1e20   ← kare kutular, prompt alanı, çipler
+       çip/hover      #232527 / #2b2d30
+
+     Önceki değerler bu merdiveni TERS kurmuştu (--sn-yuzey #1c1c1c panel dışı
+     iken --sn-yuzey-2 #101010 daha koyuydu) ve zemin saf #000 idi; sonuç:
+     paneller zeminden ayrışmıyor, her şey tek düz siyah görünüyordu.
+     Tonlar ayrıca nötr griydi — referansta hafif MAVİMSİ bir sapma var
+     (R<G<B, ~2 birim), yüzeyler o yüzden "soğuk" ve daha pahalı duruyor.
+     ══════════════════════════════════════════════════════════════════ */
+  --sn-zemin: #15171a;      /* 1. kademe — sayfa zemini */
+  --sn-yuzey: #131517;      /* 2. kademe — KUTU DIŞI */
+  --sn-yuzey-2: #1c1e20;    /* 3. kademe — KUTU İÇİ */
+  --sn-yuzey-3: #232527;    /* 4. kademe — hover / seçili */
+  --sn-cip: #1c1e20;
+  --sn-cip-hover: #232527;
+  --sn-menu: #1c1e20;
+  /* Kenarlıklar OPAK hairline — referansta panel kenarı iç-kutu tonuyla aynı
+     (#232527), yani kenarlık ayrı bir "çizgi rengi" değil, bir kademe yukarısı.
+     Yarı-saydam beyaz (rgba(255,255,255,.1)) koyu zeminde kirli hale yapıyordu. */
+  --sn-kenar: #2b2d30;
+  --sn-kenar-2: #383a3d;
+  --sn-metin: #f3f3f3;
+  --sn-metin-2: #9a9a9a;
+  --sn-metin-3: #6e6e6e;
+}
+
+/* Sinema içinde `aksan` kullanımlarını lime'a çevir (Tailwind arbitrary yerine
+   doğrudan sınıflar). Bu değişkenler sadece .sinema-kapsam altında geçerli. */
+.sinema-kapsam .metin-lime { color: var(--sn-lime); }
+.sinema-kapsam .bg-lime { background: var(--sn-lime); }
+.sinema-kapsam .kenar-lime { border-color: var(--sn-lime); }
+.sinema-kapsam .ring-lime { box-shadow: 0 0 0 1px var(--sn-lime); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   API kapsamı — Geliştirici/API bölümünün imza rengi KIRMIZI (m66).
+   Kullanıcı kararı: API bölümü Vayra kırmızı tonuyla ayrışsın (developer/
+   platform kimliği). Sinema'nın lime override'ı gibi, `aksan` sınıflarını
+   (text-aksan/bg-aksan/border-aksan/ring-aksan + hf-cta/hf-btn/hf-uret)
+   bu kapsamda otomatik kırmızıya çevirir — tek tek kod değiştirmeden.
+   ══════════════════════════════════════════════════════════════════════ */
+.api-kapsam {
+  --color-aksan: #ff3b4e;
+  --color-aksan-parlak: #ff6472;
+  --color-aksan-koyu: #e01e33;
+  --color-aksan-dudak: #b01526;
+  /* aksan üstündeki koyu metin okunur kalsın (kırmızı parlak → koyu metin) */
+  --sn-lime: #ff3b4e;
+  --sn-lime-parlak: #ff6472;
+  --sn-lime-koyu: #e01e33;
+  --sn-lime-metin: #ffffff;
+}
+/* Kırmızı (aksan) zemin üstünde metin BEYAZ olmalı — birçok API butonu koyu
+   `text-zemin`/`text-[#12140c]` kullanıyordu; lime'da koyu metin okunurken
+   kırmızıda okunmaz. bg-aksan taşıyan öğelerde metin/ikonu beyaza zorla. */
+.api-kapsam .bg-aksan,
+.api-kapsam .hf-cta,
+.api-kapsam .hf-uret {
+  color: #ffffff;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SUPERCOMPUTER kapsamı — Higgsfield /supercomputer birebir renk katmanı.
+   Referans: higg-supercomputer/ (167 ekran). Zemin kademeleri panelden karta
+   doğru açılır; aksan lime, promo/fiyat kırmızı-pembe, bildirim rozeti teal.
+   ══════════════════════════════════════════════════════════════════════ */
+.sc-kapsam {
+  /* ── KOYU TEMA (Claude dili) + VAYRA MAVİSİ ──
+     Claude'un varsayılan görünümü koyudur: sıcak-nötr koyu gri yüzeyler
+     (mavimsi/siyah değil), kademeler karta doğru AÇILIR.
+
+     Aksan: koyu zeminde marka mavisi #55d6fd doğrudan kullanılabilir —
+     9.85:1 kontrast verir (krem temada 1.53 ile okunmuyordu, ilişki tersine
+     döndü). Kademeler:
+       --sc-aksan       #55d6fd  9.85:1 → link, ikon, metin
+       --sc-aksan-koyu  #7de0ff 11.08:1 → hover / basılı hâl (daha parlak)
+       --sc-aksan-dolgu #55d6fd         → DOLGU; üstüne KOYU metin gelir
+                                          (dolgu üstünde beyaz 1.69 = okunmaz)
+     --sc-aksan-metin: dolgu üstünde kullanılacak metin rengi. */
+  /* Kademe: panel (en koyu) < zemin < kart < yükselti.
+     Sohbet/sayfa zemini navigasyondan belirgin şekilde AÇIK olmalı — önce
+     ikisi neredeyse eşitti (1.05×) ve sınır kaybolmuştu; artık 1.16×.
+
+     DEĞERLER CLAUDE'DAN BİREBİR (kullanıcı kararı: yüzeyler Claude, aksan
+     marka mavisi kalır). Eski değerlerimiz Claude'a yakındı ama her kademe
+     4–10 birim koyuydu; artık tam eşit. */
+  /* ── KADEME YÖNÜ (önemli) ──
+     Claude'da SOHBET ZEMİNİ en koyudur; sol panel onun ÜSTÜNDE duran, bir
+     tık AÇIK bir yüzeydir. Bizde ilişki tersti (panel en koyu, zemin açık) —
+     bu yüzden "zemin koyulaşsın" her denendiğinde panelle fark kapanıyor ve
+     sidebar sınırı kayboluyordu. Yön düzeltilince zemin gerçekten koyulaşır
+     ve sınır da korunur (panel zemine göre 1.47× açık). */
+  --sc-zemin: #1c1b1a;      /* sayfa / sohbet akışı — EN KOYU kademe */
+  --sc-panel: #201f1e;      /* sol kenar çubuğu — zeminin üstünde, bir tık açık */
+  /* Zemin koyulaşınca (1.47×→1.21×) üst kademeler de birlikte indi; yoksa
+     zemin→kart atlaması 1.85× oluyordu ve kartlar/prompt kutusu zeminden
+     kopuk, havada yüzer gibi duruyordu. Yeni oran 1.51× — Claude'un kendi
+     zemin→kart oranıyla (1.53×) aynı, yalnız tüm zincir bir tık koyu. */
+  --sc-kart: #262624;       /* kart yüzeyi — zeminden açık kademe */
+  --sc-yukselti: #2e2e2c;   /* aktif satır / kabarık kontrol */
+  --sc-cip: #30302e;        /* çip */
+  /* cip-2 #3f3f3d idi: soluk metin orada 4.23:1 (AA altı) kalıyordu. */
+  --sc-cip-2: #353533;      /* dolu çip / ikincil buton */
+  --sc-kenar: #3d3d3a;
+  --sc-metin: #f5f4ef;      /* 13.8:1 — Claude'un kırık-beyazı */
+  --sc-metin-2: #c2c0b6;    /*  8.3:1 */
+  /* metin-3, Claude'un çipi bizimkinden AÇIK olduğu için bir tık açıldı:
+     eski #9a9890 yeni çipte 4.05:1 (AA altı) kalıyordu; #a6a49c → 4.57:1. */
+  --sc-metin-3: #a6a49c;    /*  6.1:1 zemin · 4.6:1 çip — AA */
+  --sc-etiket: #a6a49c;     /* bölüm etiketleri */
+  --sc-aksan: #55d6fd;
+  --sc-aksan-koyu: #7de0ff;
+  --sc-aksan-dolgu: #55d6fd;
+  --sc-aksan-metin: #10233a; /* mavi dolgu ÜSTÜNDEKİ metin (11:1) */
+  /* Seçili satır zemini. Claude'un yüzeyleri eskisinden AÇIK olduğu için
+     bir tık açıldı: eski #17323d yeni sayfa zeminine göre yalnız 1.45×
+     kalıyordu (seçili satır belli olmuyordu); #1c3d4a → 2.12×.
+     Üstündeki metin 10.5:1, aksan 6.8:1, soluk metin 4.6:1 — hepsi AA. */
+  --sc-aksan-zayif: #1c3d4a; /* seçili satır zemini (mavinin koyu soluk hâli) */
+  --sc-promo: #ff6b7d;      /* fiyatlandırma — koyu üstünde okunur kırmızı */
+  --sc-rozet: #1d3a2e;      /* durum rozeti zemini */
+  --sc-rozet-metin: #86e8b4;
+
+  /* Kapsamın KENDİSİNE metin rengi ver — miras zincirini burada keser.
+     Zemin BURADA verilmez: .sc-kapsam sidebar'da da kullanılıyor ve orada
+     yüzey --sc-panel olmalı; zemini kapsama yazmak sidebar'ı bozardı. */
+  color: var(--sc-metin);
+}
+
+/* SC başlık glifi — Claude dili.
+   Higgsfield'ın ALL-CAPS + font-weight:800 "afiş" başlıkları kaldırıldı;
+   Claude başlıkları normal harf düzeninde, orta ağırlıkta ve sakindir. */
+.sc-baslik {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-transform: none;
+  line-height: 1.15;
+}
+/* Bölüm alt etiketi — küçük, harf aralıklı, soluk. */
+.sc-etiket {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sc-etiket);
+}
+
+/* ══════════════ SUPERCOMPUTER COMPOSER (referanslar/modeller birebir) ══════════════
+   Referansta composer, sayfa zemininden yalnızca bir tık açık, yumuşak ve
+   KENARLIKSIZ-hissiyatlı büyük bir yastık. Menüler ise gerçek cam. */
+
+/* PROMPT KUTUSU (SCComposer) — YAPI/davranış birebir korunur; yalnızca RENK
+   Claude'a çekildi (kullanıcı isteği).
+
+   Eski değer rgba(32,33,36,.92) iki yönden ayrışıyordu:
+     · sayfa zemininden KOYU'ydu (0.79×) — Claude'da composer zeminden AÇIK
+       bir yastıktır, üste doğru kabarır.
+     · MAVİMSİ'ydi (B36 > R32) — Claude'un tüm yüzeyleri sıcak-nötr.
+   Artık kart kademesiyle aynı: --sc-kart (#30302e), zemine göre 1.53×.
+
+   Zemin ARTIK OPAK: eski değer yarı saydamdı ve altındaki içerik blur'dan
+   sızıyordu; Claude'un composer'ı opak durur. backdrop-filter bu yüzden
+   kaldırıldı (opak yüzeyde zaten hiçbir şey yapmıyordu, boşuna katman
+   maliyetiydi).
+
+   İçerideki kontroller (.sc-yuvarlak/.sc-hap) beyaz-alfa olduğu için yeni
+   zemine kendiliğinden uyar; ölçüldü: metin 12:1, yer tutucu 5.3:1 — AA. */
+.sc-kabuk {
+  color: #ffffff;
+  /* Yedek: .sc-kabuk portal içinde de kullanılıyor (bkz .sc-menu notu). */
+  background: var(--sc-kart, #262624);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 26px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 54px -16px rgba(0, 0, 0, 0.55);
+}
+
+/* Composer içi yuvarlak ikon butonu (⊕) — ince halka, dolgusuz. */
+.sc-yuvarlak {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.sc-yuvarlak:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Model/mod hapı — composer içinde ve SC sayfalarında kullanılır.
+   Koyu temada ikisi de aynı reçeteyi paylaşır (krem temada ayrıştırmak
+   gerekiyordu; artık gerek yok). */
+.sc-hap {
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  /* Yedek: .sc-hap portal içindeki menülerde de kullanılıyor. */
+  color: var(--sc-metin, #f5f4ef);
+  transition: background 0.16s ease;
+}
+.sc-hap:hover { background: rgba(255, 255, 255, 0.115); }
+
+/* Açılır menü yüzeyi — Claude'da menü, altındaki yüzeyden AÇIK durur.
+   Eski rgba(30,31,34,.82) composer'la aynı iki kusuru taşıyordu: mavimsi
+   (B34 > R30) ve sayfa zemininden koyu (0.75×). Composer artık --sc-kart
+   olduğu için menü ondan da bir kademe açık olmalı — yoksa kutunun içinden
+   açılan menü kutuya gömülü görünüyordu. */
+.sc-menu {
+  /* YEDEKLİ token ŞART: bu menüler createPortal ile document.body'ye
+     taşınıyor ve orada .sc-kapsam yok — çıplak var(--sc-cip) çözülmeyip
+     siyaha düşüyordu (ölçüm: menü #000000). Yedek değer .sc-cip ile aynı. */
+  color: var(--sc-metin, #f5f4ef);
+  background: var(--sc-cip, #30302e);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 28px 72px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* Menü satırındaki marka karesi. */
+.sc-marka-kare {
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Kredi balonundaki üst rozet — hafif yeşile çalan degrade. */
+.sc-kredi-rozet {
+  background:
+    linear-gradient(180deg, rgba(85, 214, 253, 0.1), rgba(85, 214, 253, 0.02)),
+    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Higgsfield GENERATE butonu — düz parlak lime dolgu + KOYU metin (bevel yok,
+   Higgsfield'ın butonu düz mat lime). Radius ~14px, hafif iç parlama.
+   Apple-hissiyatlı: yumuşak spring-benzeri geçiş + hover'da hafif büyüme. */
+.hf-uret {
+  background: var(--sn-lime);
+  color: var(--sn-lime-metin);
+  border-radius: 14px;
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.18s ease, box-shadow 0.18s ease;
+}
+.hf-uret:hover { filter: brightness(1.05); transform: scale(1.015); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 14px color-mix(in srgb, var(--sn-lime) 30%, transparent); }
+
+/* Ses composer bar — Higgsfield birebir: DÜZ OPAK koyu panel (arka bulanıklık YOK; blur
+   arkadaki içeriği emip "çamurumsu" gri yapıyordu). Kabarıklık üst ışık + gölgeyle verilir. */
+.ses-composer {
+  /* TAM OPAK zemin — altına galeri/yazı gelince okunmasın diye şeffaf değil.
+     backdrop-filter YOK: nested backdrop-blur, iç glass-cip panellerinin arkasındaki
+     galeriyi composer'ın içine bulanık yansıtıp "arkadaki içerik sızıyor" hissi veriyordu. */
+  background: #17181a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 20px 60px -10px rgba(0, 0, 0, 0.95);
+}
+/* Ses composer İÇİNDEKİ paneller (döner kadran / giriş / ses ön-ayarı): TAM OPAK.
+   Genel .glass-cip yarı-cam + backdrop-blur; composer içinde bu, arkadaki galeriyi
+   panelin içine yansıtıyordu. Burada opak zemin + blur kapalı → hiçbir şey sızmaz. */
+.ses-composer .glass-cip,
+.ses-composer .glass-cip:hover {
+  background: #202224;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.hf-uret:active { transform: scale(0.985); transition-duration: 0.06s; }
+.hf-uret:disabled { opacity: 0.4; filter: grayscale(0.5); transform: none; box-shadow: none; }
+
+/* Apple-hissiyatlı ikincil buton — yumuşak spring geçiş, hover'da hafif büyüme + press.
+   Higgsfield'ın tüm küçük butonlarının (Değiştir, yükle, çip vb.) dokunuşu. */
+.hf-btn {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.18s ease, border-color 0.18s ease, filter 0.18s ease;
+  will-change: transform;
+}
+.hf-btn:hover { transform: scale(1.02); }
+.hf-btn:active { transform: scale(0.97); transition-duration: 0.06s; }
+
+/* Apple-hissiyatlı KART (Higgsfield preset kartları birebir) — derinlik + yumuşaklık:
+   büyük radius, çok katmanlı yumuşak gölge (havada durma hissi), ince üst-highlight,
+   hover'da hafif YÜKSELME (translateY) + gölge artışı. "Yassı" değil, katmanlı premium. */
+.hf-kart {
+  border-radius: 20px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),        /* üst iç highlight — cam kenar */
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    0 6px 16px -6px rgba(0, 0, 0, 0.5),              /* yumuşak yakın gölge */
+    0 16px 40px -16px rgba(0, 0, 0, 0.6);           /* geniş uzak gölge — havada durma */
+  transition: transform 0.28s cubic-bezier(0.34, 1.4, 0.5, 1), box-shadow 0.28s ease;
+  will-change: transform;
+}
+/* HAREKET YALNIZCA TIKLANABİLİR KARTLARDA.
+   Eskiden `.hf-kart:hover` her `.hf-kart`'ı kaldırıyordu — ama bu sınıf büyük
+   panellere de veriliyor (composer kabuğu, galeri gövdesi, modal). Sonuç: panelin
+   herhangi bir yerine tıklayınca KOCA yüzey zıplıyordu. Artık yükselme/basılma
+   sadece gerçekten etkileşimli olan kartlara uygulanıyor: <button>, <a>, role=button
+   veya açıkça .hf-kart-tiklanabilir işaretlenmiş olanlar. Panel gövdeleri sabit durur;
+   içlerindeki butonlar kendi .hf-btn hareketini yapar. */
+.hf-kart:is(button, a, [role="button"]):hover,
+.hf-kart.hf-kart-tiklanabilir:hover {
+  transform: translateY(-4px) scale(1.012);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 12px 28px -8px rgba(0, 0, 0, 0.55),
+    0 28px 60px -20px rgba(0, 0, 0, 0.7);
+}
+.hf-kart:is(button, a, [role="button"]):active,
+.hf-kart.hf-kart-tiklanabilir:active {
+  transform: translateY(-1px) scale(0.996);
+  transition-duration: 0.08s;
+}
+/* Seçili kart — lime halka + lime tint gölge (yine katmanlı) */
+.hf-kart-secili {
+  box-shadow:
+    0 0 0 2px var(--sn-lime),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 6px 16px -6px rgba(0, 0, 0, 0.5),
+    0 16px 44px -14px color-mix(in srgb, var(--sn-lime) 25%, rgba(0,0,0,0.5));
+}
+
+/* ÜRETİM KARTI HOVER VIGNETTE — Higgsfield birebir.
+   Dört kenardan içeri koyu bant + hafif radial derinlik → merkez berrak kalır,
+   kenarlardaki ikon/araç butonları okunur. Opaklıklar %10 azaltıldı
+   (0.60→0.54, 0.55→0.50, 0.35→0.32) — biraz daha hafif his.
+   Kullanım: kartın içine <span class="uretim-vignette" /> koy (pointer-events-none,
+   varsayılan gizli, .group hover'da belirir). Ana kart .group olmalı. */
+.uretim-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  background:
+    linear-gradient(to top,    rgba(0,0,0,0.54) 0%, transparent 28%),
+    linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, transparent 28%),
+    linear-gradient(to left,   rgba(0,0,0,0.50) 0%, transparent 26%),
+    linear-gradient(to right,  rgba(0,0,0,0.54) 0%, transparent 26%),
+    radial-gradient(130% 130% at 50% 50%, transparent 40%, rgba(0,0,0,0.32) 100%);
+}
+.group:hover .uretim-vignette,
+.group\/kart:hover .uretim-vignette,
+.group\/sk:hover .uretim-vignette { opacity: 1; }
+
+/* Higgsfield başlık glifi (KOK BORU / DIRECT ANYTHING) — ekstra bold sıkışık caps.
+   .hf-baslik zaten global var; sinema hero bunu kullanır. */
+
+/* Cam (medya üstü rayları/pill'ler için) */
+/* .glass — medya ÜSTÜ küçük rozet/pill'ler için (görselin üstünde durur, çamur yapmaz). */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+}
+/* .glass-strong — büyük paneller. Higgsfield birebir: DÜZ OPAK (eskiden blur(32px) +
+   %10 beyaz idi; arkayı emip her yeri "çamurumsu" yapıyordu). */
+.glass-strong {
+  background: #1c1e20;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 36px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Hero'ların noktalı ızgara dokusu (Higgsfield'da ~24px aralık, çok sönük) */
+.hf-nokta-izgara {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Ürün-geneli tutarlı klavye odak halkası (Higgsfield temiz odak hissi).
+   Sadece klavye ile gelince görünür (focus-visible), fareyle tıklamada görünmez.
+
+   METİN ALANLARI TAMAMEN MUAF (input/textarea/contenteditable):
+   Tarayıcılar metin girişi olan alanlarda :focus-visible'ı FARE tıklamasında da
+   tetikler (metin girilecek diye klavye odağı sayarlar). Bu yüzden istem
+   kutusuna tıklayınca istenmeyen cyan çerçeve çıkıyordu. Metin alanında imleç
+   zaten nerede olduğunu gösteriyor — halkaya gerek yok. */
+:where(button, a, select, [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-aksan) 70%, transparent);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Metin girişi olan her şeyde odak halkası KAPALI — her yerde, her temada. */
+input,
+textarea,
+[contenteditable],
+[contenteditable]:focus,
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+.prompt-alan:focus,
+.prompt-alan:focus-visible {
+  outline: none !important;
+}
+/* NOT: box-shadow ve border-color'a DOKUNULMUYOR — projede 41 yerde
+   `focus:border-*` ile kasıtlı ince kenarlık vurgusu var; kaldırılan
+   yalnızca tarayıcının kendi outline halkası. */
+
+/* Higgsfield imza: birincil CTA'da hafif iç parlama + daha net press hissi */
+.hf-cta {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* "Çalışıyor" shimmer'ı — Higgsfield spinner KULLANMAZ, metni parlatır */
+.hf-shimmer {
+  background: linear-gradient(90deg, #6e6e73 25%, #ededf0 50%, #6e6e73 75%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: hf-shimmer 1.6s linear infinite;
+}
+@keyframes hf-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ChatGPT tarzı görsel-üretim animasyonu (madde 13): koyu zemin + yavaş nefes alan
+   ışık + üstten aşağı süzülen parlak tarama çizgisi. */
+.hf-uretiliyor {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(52,194,212,0.1), transparent 70%),
+    linear-gradient(160deg, #16171b, #0d0e11);
+  overflow: hidden;
+  animation: hf-uret-nefes 2.4s ease-in-out infinite;
+}
+@keyframes hf-uret-nefes {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.14); }
+}
+.hf-uretiliyor-tara {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.09) 45%, rgba(52,194,212,0.14) 50%, rgba(255,255,255,0.09) 55%, transparent 100%);
+  transform: translateY(-100%);
+  animation: hf-uret-tara 1.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes hf-uret-tara {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* Şeffaf PNG önizlemesi — damalı zemin */
+.hf-dama {
+  background-image:
+    linear-gradient(45deg, #d4d4d4 25%, transparent 25%),
+    linear-gradient(-45deg, #d4d4d4 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #d4d4d4 75%),
+    linear-gradient(-45deg, transparent 75%, #d4d4d4 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-color: #fff;
+}
+
+/* Metin fade-out maskesi ("devamını oku" ipucu) */
+.hf-fade-alt {
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 55%, transparent 100%);
+}
+
+/* Scrollbar — HER YERDE GİZLİ.
+   Kaydırma tam çalışır, sadece çubuk görünmez (Higgsfield gibi temiz his).
+   Firefox: scrollbar-width:none · Chrome/Safari: ::-webkit-scrollbar display:none.
+   * ve html/body dahil tüm elemanlara uygulanır. */
+*,
+html,
+body {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* eski Edge/IE */
+}
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;                  /* Chrome / Safari / yeni Edge */
+  width: 0;
+  height: 0;
+}
+
+/* Geriye dönük uyumluluk — .gizli-scroll hâlâ çalışsın */
+.gizli-scroll { scrollbar-width: none; }
+.gizli-scroll::-webkit-scrollbar { display: none; }
+
+/* Grain — sinematik doku */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-18px) rotate(1.5deg); }
+}
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ============================================================
+   İSKELET YÜKLEME (skeleton) — içerik gelene kadar gösterilen gri parçalar.
+   Gerçek içeriğin izdüşümü: kutu varsa kutu, yazı varsa çubuk şeklinde kullanılır.
+   Üzerinde SOLDAN SAĞA hafif parıltı (shimmer) akar. Koyu asıl-site zemini için.
+   Kullanım: <div class="iskelet-parca h-4 w-32 rounded" />
+   ============================================================ */
+.iskelet-parca {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(255, 255, 255, 0.05);
+  background-image: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.07) 40%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.07) 60%,
+    transparent 80%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+/* Beyaz (kurumsal) zeminde iskelet — daha koyu gri parçalar. */
+.kurumsal-kapsam .iskelet-parca {
+  background-color: rgba(16, 18, 12, 0.06);
+  background-image: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(16, 18, 12, 0.05) 40%,
+    rgba(16, 18, 12, 0.09) 50%,
+    rgba(16, 18, 12, 0.05) 60%,
+    transparent 80%
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .iskelet-parca { animation: none; }
+}
+
+/* ══════════════ PAZARLAMA STÜDYOSU ══════════════ */
+/* Üretim ızgarasındaki kart-boyutu kaydırıcısı — referansta beyaz yuvarlak topuz. */
+.paz-kaydirici::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+.paz-kaydirici::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+
+/* ============================================================
+   KİTAPLIK (VARLIKLAR) — Higgsfield /asset/all birebir.
+
+   Sayfa `.sinema-kapsam` taşımadığı için aksan CYAN kalıyordu;
+   Higgsfield'ın tüm varlık ekranları LIME imzalıdır. Burada
+   sayfaya özel kapsam açılır — sinema kapsamını içeri almadan
+   (o ayrıca --sn-* merdivenini ve .hf-uret yeşilini getiriyor).
+   ============================================================ */
+.kitaplik-kapsam {
+  /* Marka lime — ölçülen tek doğru değer */
+  --color-aksan: #55d6fd;
+  --color-aksan-parlak: #7ce4fe;
+  --color-aksan-koyu: #3ac2e9;
+  --color-aksan-dudak: #18a8c7;
+  --sn-lime: #55d6fd;
+
+  /* Higgsfield katman merdiveni */
+  --color-zemin: #15171a;   /* sayfa — en dış, en koyu */
+  --color-yuzey: #1c1e21;   /* panel/kart yüzeyi */
+  --color-yuzey-2: #1c1e21;
+  --color-kenar: #28292c;   /* hairline */
+  --color-kenar-2: #303748;
+
+  /* İkincil metin: Higgsfield varlık ekranında iki kademe */
+  --color-metin-2: #8a8b8d;
+  --color-metin-3: #434549;  /* sayaç/bölüm başlığı — kasıtlı çok sönük */
+}
+
+/* Seçim mavisi — checkbox/tik dolgusu. Higgsfield'da seçim LIME DEĞİL,
+   mavidir; lime yalnız marka/CTA rengidir. İkisi asla karışmaz. */
+.kitaplik-kapsam .kt-secim {
+  background: #3f84ed !important;
+  border-color: #3f84ed !important;
+  color: #fff !important;
+}
+
+/* Varlık kartı — düz döşeme. hf-kart'ın 20px radius + 4 katmanlı gölge +
+   hover zıplaması Higgsfield'ın yoğun ızgara hissini bozuyordu. */
+.kt-kart {
+  border-radius: 14px;
+  background: #1c1e21;
+  overflow: hidden;
+  box-shadow: none;
+  transition: none;
+}
+.kt-kart:hover { transform: none; box-shadow: none; }
+
+/* Kart üstü araçlar — yarı saydam yuvarlak (opak kutu değil) */
+.kt-arac {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  border-radius: 9999px;
+}
+.kt-arac:hover { background: rgba(0, 0, 0, 0.62); }
+
+/* ============================================================
+   MOBİL LİME KAPSAMI — Higgsfield mobil web'de aksan renk LİME'dir
+   (masaüstünde bizim marka cyan'ı kalır). Alt tab bar, composer ve
+   tüm mobil çekmeceler bu kapsamı taşır; --color-aksan'ı lime'a çevirir.
+   ============================================================ */
+/* Yalnız mobilde (< sm = 640px) devreye girer; masaüstünde marka cyan'ı korunur.
+   `.mobil-lime` kökü composer/tab bar/başlık gibi zaten mobil-özel bileşenlerde
+   ve `.mobil-lime-sayfa` panel gövdesinde kullanılır. */
+@media (max-width: 639.98px) {
+  .mobil-lime,
+  .mobil-lime-sayfa {
+    --color-aksan: #55d6fd;
+    --color-aksan-parlak: #7ce4fe;
+    --color-aksan-koyu: #3ac2e9;
+    --color-aksan-dudak: #18a8c7;
+    --sn-lime: #55d6fd;
+  }
+}
+
+/* ═══════════ Kredi yükle slider (KrediModal) ═══════════ */
+.kredi-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  outline: none;
+  cursor: pointer;
+}
+.kredi-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  border: 4px solid var(--sn-lime, #55d6fd);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+.kredi-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  border: 4px solid var(--sn-lime, #55d6fd);
+  cursor: pointer;
+}
+
+/* ============================================================
+   VAYRA TOAST (m53) — artık tamamen kendi bileşenimiz.
+   Render + stil src/components/kabuk/VayraToaster.tsx + src/lib/toast.tsx
+   içinde (inline). sonner kaldırıldı; burada CSS gerekmiyor.
+   ============================================================ */
+
+/* ============================================================
+   KURUMSAL KAPSAMI (2026-07-27) — AÇIK/BEYAZ kurumsal alan.
+   `(kurumsal)` route-group'un layout'u `.kurumsal-kapsam` taşır.
+   Uygulamanın koyu diline karşı KASITLI kontrast: beyaz zemin,
+   koyu metin, lime SADECE küçük aksan (rozet/altçizgi/CTA dolgu).
+   Stripe/Linear "about" temiz kurumsal dili: bol beyaz boşluk,
+   ince hairline ayraçlar, minimal gölge. Token'lar burada ezilir
+   ki mevcut `bg-zemin/bg-yuzey/text-metin` kullanan bileşenler de
+   otomatik beyazlaşsın (sinema-kapsam deseni birebir).
+   ============================================================ */
+.kurumsal-kapsam {
+  --color-zemin: #ffffff;          /* sayfa zemini — saf beyaz */
+  --color-yuzey: #ffffff;          /* kart yüzeyi (hairline'la ayrışır) */
+  --color-yuzey-2: #f7f8f7;        /* iç kutu / hafif gri panel */
+  --color-yuzey-3: #eef0ec;        /* hover / seçili */
+  --color-menu: #ffffff;
+  --color-kenar: #e6e8e3;          /* hairline — ince açık ayraç */
+  --color-kenar-2: #d6d9d2;
+
+  --color-metin: #0a0a0b;          /* ana metin — neredeyse siyah */
+  --color-metin-2: #52555a;        /* ikincil metin */
+  --color-metin-3: #83878d;        /* üçüncül / ipucu */
+
+  /* Aksan lime KORUNUR ama beyaz zeminde okunması için CTA üstü koyu metin. */
+  --color-aksan: #cfe93f;          /* beyaz üstünde biraz daha doygun lime */
+  --color-aksan-parlak: #dafd55;
+  --color-aksan-koyu: #b8e02f;
+  --kr-aksan-uzeri: #14160b;       /* lime dolgu üstündeki metin (koyu) */
+  --kr-lime-yumusak: #f4fbdb;      /* lime %12 zemin (rozet arka planı) */
+  --kr-lime-metin: #5c6b16;        /* beyaz üstünde okunur lime-yeşil metin */
+
+  color: var(--color-metin);
+  background: var(--color-zemin);
+}
+
+/* Kurumsal yardımcı sınıfları (kapsam içinde) */
+.kurumsal-kapsam .kr-kart {
+  background: #ffffff;
+  border: 1px solid var(--color-kenar);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(16, 18, 12, 0.04), 0 8px 24px -16px rgba(16, 18, 12, 0.12);
+}
+.kurumsal-kapsam .kr-kart-hover { transition: border-color .18s, box-shadow .18s, transform .18s; }
+.kurumsal-kapsam .kr-kart-hover:hover {
+  border-color: var(--color-kenar-2);
+  box-shadow: 0 2px 4px rgba(16, 18, 12, 0.05), 0 16px 40px -20px rgba(16, 18, 12, 0.18);
+}
+.kurumsal-kapsam .kr-cta {
+  background: var(--color-aksan-parlak);
+  color: var(--kr-aksan-uzeri);
+  transition: filter .18s, transform .18s;
+}
+.kurumsal-kapsam .kr-cta:hover { filter: brightness(1.04); }
+.kurumsal-kapsam .kr-rozet {
+  background: var(--kr-lime-yumusak);
+  color: var(--kr-lime-metin);
+  border: 1px solid #e4f2ad;
+}
+.kurumsal-kapsam .kr-metin-lime { color: var(--kr-lime-metin); }
+.kurumsal-kapsam .kr-ikon {
+  background: var(--kr-lime-yumusak);
+  color: var(--kr-lime-metin);
+  border: 1px solid #e8f4b8;
+}
+/* Kurumsal grid arka plan dokusu (çok hafif, premium his) */
+.kurumsal-kapsam .kr-izgara-arka {
+  background-image:
+    linear-gradient(to right, rgba(16,18,12,0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(16,18,12,0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+/* Kurumsal nav camı — beyaz blur */
+.kurumsal-kapsam .kr-nav-cam {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border-bottom: 1px solid var(--color-kenar);
+}
+
+/* ============================================================
+   ADMIN KAPSAMI (2026-07-27) — kurumsal apple-glass yönetim paneli.
+   (admin) route-group layout'u `.admin-kapsam` taşır. Koyu, premium,
+   camsı yüzeyler + mavi aksan (asıl site #55d6fd ile tutarlı).
+   İzole: kendi zemin merdiveni + glass yardımcı sınıfları.
+   ============================================================ */
+.admin-kapsam {
+  --ad-zemin: #08090b;          /* en koyu — sayfa zemini */
+  --ad-yuzey: #0e1013;          /* panel gövdesi */
+  --ad-yuzey-2: #141619;        /* kart */
+  --ad-yuzey-3: #1b1e22;        /* hover / iç kutu */
+  --ad-kenar: rgba(255,255,255,0.07);
+  --ad-kenar-2: rgba(255,255,255,0.12);
+  --ad-metin: #f4f5f7;
+  --ad-metin-2: #9aa0a8;
+  --ad-metin-3: #646a73;
+  --ad-aksan: #55d6fd;
+  --ad-aksan-yum: rgba(85,214,253,0.12);
+  --ad-basari: #34d399;
+  --ad-uyari: #fbbf24;
+  --ad-tehlike: #f87171;
+  --ad-mor: #a78bfa;
+  --ad-pembe: #f472b6;
+
+  background: var(--ad-zemin);
+  color: var(--ad-metin);
+}
+
+/* Apple-glass kart — yarı saydam yüzey + blur + üst ışık kenarı + derin gölge. */
+.admin-kapsam .ad-glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012));
+  border: 1px solid var(--ad-kenar);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.3),
+    0 12px 32px -16px rgba(0,0,0,0.6);
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+/* OPAK modal/dropdown yüzeyi — overlay üstünde durur, arkası GÖRÜNMEZ.
+   ad-glass saydam olduğu için modal panelde ONU KULLANMA; bunu kullan. */
+.admin-kapsam .ad-panel {
+  background: var(--ad-yuzey-2);
+  border: 1px solid var(--ad-kenar-2);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 1px 2px rgba(0,0,0,0.4),
+    0 24px 64px -20px rgba(0,0,0,0.85);
+}
+.admin-kapsam .ad-glass-hover { transition: border-color .2s, box-shadow .2s, transform .2s; }
+.admin-kapsam .ad-glass-hover:hover {
+  border-color: var(--ad-kenar-2);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.08),
+    0 2px 4px rgba(0,0,0,0.3),
+    0 20px 48px -20px rgba(0,0,0,0.7);
+}
+/* Apple-glass ikon kutusu (emoji yerine lucide) */
+.admin-kapsam .ad-ikon {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  background: var(--ad-aksan-yum);
+  border: 1px solid rgba(85,214,253,0.2);
+  color: var(--ad-aksan);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+/* Aksan dolu buton */
+.admin-kapsam .ad-btn-aksan {
+  background: var(--ad-aksan);
+  color: #04222c;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 10px -2px rgba(85,214,253,0.4);
+  transition: filter .16s, transform .12s;
+}
+.admin-kapsam .ad-btn-aksan:hover:not(:disabled) { filter: brightness(1.06); }
+.admin-kapsam .ad-btn-aksan:active:not(:disabled) { transform: scale(0.97); }
+/* Glass ince buton */
+.admin-kapsam .ad-btn-glass {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--ad-kenar);
+  color: var(--ad-metin);
+  transition: background .16s, border-color .16s;
+}
+.admin-kapsam .ad-btn-glass:hover:not(:disabled) { background: rgba(255,255,255,0.08); border-color: var(--ad-kenar-2); }
+/* İnce ayraç ızgara arka (premium doku) */
+.admin-kapsam .ad-izgara {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+/* Grafik animasyon keyframe'leri */
+@keyframes ad-ciz {
+  from { stroke-dashoffset: var(--uzunluk, 1000); }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ad-bel {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.admin-kapsam .ad-ince-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.admin-kapsam .ad-ince-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 8px; }
+.admin-kapsam .ad-ince-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ══════════════ SÜPER BİLGİSAYAR ŞERİDİ ══════════════
+   Sonsuz sola akan üretim şeridi (components/panel/SCVitrin.tsx).
+
+   Liste iki kez basılır; animasyon tam -50% kaydırınca ikinci kopya
+   birincinin başladığı yerde durur ve döngü dikişsiz görünür.
+   `gap` de kaydırmaya dahil olduğu için translate yüzdesi yeterlidir —
+   piksel hesabı gerekmez.
+
+   JS zamanlayıcı YOK: compositor'da çalışır, sekme arka plandayken
+   tarayıcı kendiliğinden duraklatır. */
+@keyframes sc-serit-kay {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.sc-serit {
+  animation: sc-serit-kay 52s linear infinite;
+  will-change: transform;
+}
+/* Şeridin üstüne gelince dur — kullanıcı bir kareyi incelemek isteyebilir. */
+.group:hover .sc-serit { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-serit { animation: none; }
+}
+
+/* ══════════════ GLASS PANEL (deneme) ══════════════
+   Kullanıcının verdiği glassmorphism reçetesi — /gelistirici/ui'da test
+   ediliyor. Beğenilirse panellerde/butonlarda genel olarak kullanılacak.
+
+   ÖNEMLİ: backdrop-filter yalnızca ARKASINDA gerçek içerik varken görünür.
+   Düz tek renk zemin üstünde hiçbir etkisi olmaz — bu yüzden katalogdaki
+   önizlemesine hareketli bir arka plan konuldu.
+
+   Orijinal reçete beyaz-üstü (light) için ayarlıydı: rgba(255,255,255,.1)
+   dolgu + .3 kenarlık. Vayra koyu temada bu fazla parlak kalıyor; koyu
+   varyantı `.glass-panel-koyu` olarak ayrıca verildi. */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Koyu tema uyarlaması — aynı reçete, Vayra yüzeylerinde okunur değerlerle. */
+.glass-panel-koyu {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(15px) saturate(1.2);
+  -webkit-backdrop-filter: blur(15px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* ─────────── .glass-kenar — büyük KENAR PANELİ camı (sidebar/detay) ───────────
+   Aynı reçetenin BÜYÜK YÜZEY ayarı. Kullanıcı kuralı: "gereken duruma göre
+   şeffaflık ve blur oranıyla oynayacaksın."
+
+   Neden .glass-panel'den farklı:
+   • Dolgu .10 → .045 — 248×850px'lik bir yüzeyde %10 beyaz, panelin kendisini
+     içerikten daha parlak yapıp merdiveni ters çeviriyordu. Küçük bir kartta
+     sorun olmayan değer, büyük yüzeyde göz yorar.
+   • Blur 15px → 28px — arkasındaki aura geniş ve yumuşak; 15px'te renk lekeleri
+     tek tek seçiliyor, "kirli cam" gibi duruyordu. 28px onları tek bir aydınlığa
+     eritir.
+   • Kenarlık .30 → .10 — 850px boyunca uzanan %30'luk bir beyaz çizgi, cam
+     değil ÇERÇEVE gibi okunuyor.
+   • saturate(150%) — arkadaki aksan rengi camdan geçerken solmasın diye.  */
+.glass-kenar {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),   /* üst ışık çizgisi — cam kalınlığı */
+    0 4px 30px rgba(0, 0, 0, 0.35);
+}
+
+/* backdrop-filter desteklemeyen tarayıcıda cam yüzey ŞEFFAF kalıp okunmaz olur:
+   opak bir zemine düş. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-kenar { background: #141416; }
+}
+
+/* Cam yüzeyin ARKASINDAKİ zemin. backdrop-filter yalnızca arkasında gerçek
+   içerik varken görünür; düz #08080a üstünde cam hiçbir şey yapmaz. Kitaplık
+   zemini düz siyah olduğu için sidebar'ın arkasına yumuşak bir renk aurası
+   koyuyoruz — cam bunu bulandırınca efekt GERÇEKTEN görünür olur.
+
+   Şiddeti ÖLÇÜLÜ tutuldu: ilk denemede %26 aksan, camın arkasında rgb(23,60,74)
+   veriyordu — sidebar belirgin MAVİ bir panele dönüşüyordu. Sidebar bir arayüz,
+   dekoratif pano değil; renk sadece camın canlı olduğunu belli edecek kadar. */
+.kitaplik-aura {
+  background:
+    radial-gradient(700px 560px at 4% 8%,   color-mix(in srgb, var(--color-aksan, #22d3ee) 13%, transparent), transparent 72%),
+    radial-gradient(600px 640px at 18% 82%, rgba(167, 139, 250, 0.1), transparent 74%),
+    radial-gradient(460px 420px at 0% 46%,  rgba(79, 209, 165, 0.06), transparent 72%);
+}
+
+/* ══════════════ 3D STÜDYO — "Yakında" ekranı ══════════════
+   Cam paneller .glass-kenar reçetesini kullanır; arkalarında bulandırılacak
+   GERÇEK renk olsun diye sayfaya aura + model sahnesine kendi zemini konur. */
+
+/* Sayfa aurası — sol anlatı tarafı serin (aksan), sağ model tarafı sıcak (mor).
+   Değerler kitaplık aurasıyla aynı ölçüde tutuldu: cam canlı görünsün ama
+   sayfa renkli bir posterе dönüşmesin. */
+.uc-aura {
+  background:
+    radial-gradient(900px 700px at 12% 18%,  color-mix(in srgb, var(--sn-lime, #55d6fd) 11%, transparent), transparent 70%),
+    radial-gradient(760px 680px at 88% 72%,  rgba(167, 139, 250, 0.12), transparent 72%),
+    radial-gradient(600px 520px at 62% 8%,   rgba(79, 209, 165, 0.06), transparent 70%);
+}
+
+/* Model sahnesinin zemini — modelin arkasında duran ışık havuzu.
+   Aurada olduğundan daha yoğun: burası sahnenin odağı, model bunun
+   üstünde "aydınlatılmış" görünmeli. */
+.uc-sahne {
+  background:
+    radial-gradient(70% 60% at 50% 38%, color-mix(in srgb, var(--sn-lime, #55d6fd) 16%, transparent), transparent 72%),
+    radial-gradient(90% 80% at 50% 108%, rgba(167, 139, 250, 0.14), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 60%);
+}
+
+/* Başlıktaki vurgulu satır. background-clip:text ile gradyan metin. */
+.uc-gradyan {
+  background: linear-gradient(96deg, var(--sn-lime, #55d6fd), #a78bfa 62%, #4fd1a5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ══════════════ ORIGINALS — "Yakında" ekranı ══════════════ */
+
+/* Kahraman karesinin üstündeki okunabilirlik örtüsü. Metin gerçek bir yapım
+   karesinin üstünde duruyor; alttan yukarı koyulaşan katman olmadan başlık
+   AA kontrastını tutturamaz. */
+.orig-ortu {
+  background:
+    linear-gradient(180deg, rgba(10, 10, 12, 0.55) 0%, rgba(10, 10, 12, 0.15) 30%, rgba(10, 10, 12, 0.86) 82%, var(--color-zemin, #0a0a0c) 100%),
+    linear-gradient(90deg, rgba(10, 10, 12, 0.7), transparent 62%);
+}
+.orig-gradyan {
+  background: linear-gradient(96deg, #f0a441, #a78bfa 58%, var(--sn-lime, #55d6fd));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ══════════════ CANVAS — "Yakında" ekranı ══════════════ */
+
+.cv-aura {
+  background:
+    radial-gradient(880px 680px at 88% 22%, color-mix(in srgb, var(--sn-lime, #55d6fd) 11%, transparent), transparent 70%),
+    radial-gradient(720px 640px at 10% 78%, rgba(167, 139, 250, 0.11), transparent 72%);
+}
+
+/* Düğüm grafiğinin tuval zemini — Canvas'ın imza nokta ızgarası. */
+.cv-tuval {
+  background:
+    radial-gradient(60% 55% at 50% 42%, rgba(85, 214, 253, 0.09), transparent 72%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.14) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(180deg, #12151c, #0d1015);
+}
+
+.cv-gradyan {
+  background: linear-gradient(96deg, var(--sn-lime, #55d6fd), #a78bfa 60%, #4fd1a5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Bağlantı üzerinde akan ışık — "veri bu yönde akıyor" hissi.
+   strokeDasharray 6/118 → kısa bir parıltı uzun boşlukla dolaşır. */
+@keyframes cv-akis { from { stroke-dashoffset: 124; } to { stroke-dashoffset: 0; } }
+.cv-akis { animation: cv-akis 2.6s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .cv-akis { animation: none; opacity: 0; }
+}
+
+/* ══════════════ PANEL FOOTER ══════════════
+   Kullanıcı referansı: dokulu, renkli, "dolu" duran footer. Referans turuncuydu;
+   Vayra imza rengiyle (cyan) yeniden yorumlandı. */
+.panel-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0c0f12;
+}
+
+/* Zemin dokusu: köşeden yayılan aksan ışıması + çapraz ince tarama çizgileri.
+   Tarama çizgileri çok düşük opaklıkta — referanstaki "kumaş" hissini verir
+   ama metnin okunmasını engellemez. */
+.panel-footer-doku {
+  background:
+    radial-gradient(1100px 460px at 8% 0%,  color-mix(in srgb, var(--sn-lime, #55d6fd) 17%, transparent), transparent 68%),
+    radial-gradient(900px 520px at 82% 110%, rgba(167, 139, 250, 0.13), transparent 70%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.022) 0 2px, transparent 2px 7px);
+}
+
+/* ══════════════ YÜKSELTME SAYFASI ══════════════ */
+
+/* Zemin aurası — cam kartların bulandıracağı renk katmanı.
+   İlk sürümde yalnızca üst 520px'i kaplıyordu; kartlar aşağıda düz siyahta
+   kalınca cam etkisi kayboluyor ve sayfa "zayıf" görünüyordu. Artık tüm
+   kapsamı örtüyor: sol anlatı tarafı serin, sağ kart tarafı mor-yeşil. */
+.yukselt-aura {
+  background:
+    radial-gradient(760px 620px at 6% 6%,   color-mix(in srgb, var(--sn-lime, #55d6fd) 16%, transparent), transparent 66%),
+    radial-gradient(820px 700px at 96% 30%, rgba(167, 139, 250, 0.13), transparent 68%),
+    radial-gradient(700px 640px at 40% 96%, rgba(79, 209, 165, 0.08), transparent 70%);
+}
+
+/* Fiyat rakamı — düz beyaz yerine imza gradyanı; sayfanın odak noktası. */
+.yukselt-fiyat {
+  background: linear-gradient(96deg, #ffffff, color-mix(in srgb, var(--sn-lime, #55d6fd) 65%, #ffffff));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.yukselt-gradyan {
+  background: linear-gradient(96deg, var(--sn-lime, #55d6fd), #a78bfa 62%, #4fd1a5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Kredi özeti kutusu — kart İÇİNDE bir kat daha derin yüzey.
+   İç içe .glass-kenar kullanmıyoruz: nested backdrop-filter yüzeyi çamurlaştırır. */
+.yukselt-kredi-kutu {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Öne çıkan kart (önerilen plan / popüler paket) — aksan halkası + hafif iç ışık.
+   Kartın kendisi .glass-kenar; bu yalnızca vurguyu ekler. */
+.yukselt-onerilen {
+  border-color: color-mix(in srgb, var(--sn-lime, #55d6fd) 38%, transparent) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 0 0 1px color-mix(in srgb, var(--sn-lime, #55d6fd) 16%, transparent),
+    0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* ══════════════ PROJELER SAYFASI ══════════════ */
+
+.projeler-aura {
+  background:
+    radial-gradient(820px 460px at 6% 0%,  color-mix(in srgb, var(--sn-lime, #55d6fd) 13%, transparent), transparent 68%),
+    radial-gradient(760px 480px at 92% 12%, rgba(167, 139, 250, 0.11), transparent 70%);
+}
+
+/* Proje kartı — cam yüzey. Hover'da yükselir; kapak içeride büyür.
+   transform yerine box-shadow + translateY: yalnızca kompozit katman değişir,
+   düzen yeniden hesaplanmaz (kart ızgarası zıplamaz). */
+.proje-kart {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.28s ease, border-color 0.28s ease;
+  will-change: transform;
+}
+.proje-kart:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--sn-lime, #55d6fd) 30%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+/* "Yeni proje" kartı — kesikli çerçeve, ızgaranın ritmini bozmadan davet eder. */
+.proje-yeni-kart {
+  border: 1.5px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.015);
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.proje-yeni-kart:hover {
+  border-color: color-mix(in srgb, var(--sn-lime, #55d6fd) 45%, transparent);
+  background: color-mix(in srgb, var(--sn-lime, #55d6fd) 5%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proje-kart, .proje-kart:hover { transform: none; transition: none; }
+}
+
+/* ══════════════ KART BEĞENİ ROZETİ ══════════════
+   /panel galeri kartlarının sağ üstündeki beğeni. MEDYA ÜSTÜNDE durduğu için
+   .glass-kenar burada yanlış olur: backdrop-filter altındaki parlak kareyi
+   çekip rozeti okunmaz yapıyor. Koyu taban + blur + iç ışık = her görselin
+   üstünde okunur cam. */
+.kart-begeni {
+  background: rgba(10, 12, 14, 0.52);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+.kart-begeni:hover {
+  background: rgba(10, 12, 14, 0.68);
+  border-color: rgba(255, 255, 255, 0.26);
+  transform: scale(1.05);
+}
+
+/* ══ ELEMENT DİLİ (kullanıcı isteği 2026-07-31) ══════════════════════════
+   Element kartındaki tür rozeti ve element modallarındaki alanlar/butonlar
+   cam dile geçti. Rozet MEDYA ÜSTÜNDE durduğu için .glass-kenar'dan daha
+   opak: parlak bir görselin üstünde .glass-kenar kontrastı yok ediyor
+   (daha önce ölçülmüştü: 2.09:1). Bu reçete ~11:1 verir. */
+.el-rozet {
+  background: rgba(10, 12, 14, 0.55);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 2px 10px rgba(0, 0, 0, 0.38);
+}
+
+/* Modal içi cam alan (input/textarea/seçici satırı). Modal zemini opak
+   olduğu için burada blur değil, katmanlı şeffaflık iş görür. */
+.el-alan {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.el-alan:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.16); }
+.el-alan:focus-within {
+  border-color: color-mix(in srgb, var(--color-aksan) 55%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 3px color-mix(in srgb, var(--color-aksan) 14%, transparent);
+}
+
+/* Cam buton — element modallarının ikincil eylemleri (İptal vb.) */
+.el-btn {
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.el-btn:hover { background: rgba(255, 255, 255, 0.12); border-color: rgba(255, 255, 255, 0.2); }
+
+/* ══ SES MOD SEÇİCİ — çeyrek daire (kullanıcı isteği 2026-07-31) ══════════
+   /panel/ses composer'ının SOLUNDA ayrı bir kutu: üç çeyrek-daire dilim,
+   aralarında boşluk. Dilimler bir çemberin çeyrekleri gibi kavisli; iç köşe
+   keskin, dış köşe yuvarlak. `border-radius`ın köşe-başına farklı değer
+   alabilmesi sayesinde tek elemanla çiziliyor (SVG'ye gerek yok). */
+.ses-mod-kutu {
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.ses-dilim {
+  /* Sol-üst köşe keskin (merkez), diğerleri tam yuvarlak → çeyrek daire */
+  border-radius: 6px 100% 100% 100%;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: var(--color-metin-3, rgba(255, 255, 255, 0.5));
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+.ses-dilim:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: scale(1.04);
+}
+.ses-dilim-aktif {
+  background: color-mix(in srgb, var(--color-aksan) 88%, transparent);
+  border-color: color-mix(in srgb, var(--color-aksan) 60%, transparent);
+  color: var(--color-zemin, #0b0b0c);
+  box-shadow: 0 2px 12px color-mix(in srgb, var(--color-aksan) 30%, transparent);
+}
+.ses-dilim-aktif:hover {
+  background: color-mix(in srgb, var(--color-aksan) 96%, transparent);
+  color: var(--color-zemin, #0b0b0c);
+}
+
+/* Katalog önizlemesi için hareketli zemin: cam efektinin GERÇEKTEN çalıştığı
+   görülsün diye arkada renkli lekeler dolaşır (kullanıcı isteği). */
+@keyframes gp-leke-1 { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(60px,-40px) scale(1.25); } }
+@keyframes gp-leke-2 { 0%,100% { transform: translate(0,0) scale(1.1); } 50% { transform: translate(-70px,50px) scale(0.9); } }
+@keyframes gp-leke-3 { 0%,100% { transform: translate(0,0) scale(0.95); } 50% { transform: translate(40px,60px) scale(1.2); } }
+.gp-leke-1 { animation: gp-leke-1 9s ease-in-out infinite; }
+.gp-leke-2 { animation: gp-leke-2 11s ease-in-out infinite; }
+.gp-leke-3 { animation: gp-leke-3 13s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .gp-leke-1, .gp-leke-2, .gp-leke-3 { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   GÖMÜLÜ STÜDYO COMPOSER'I — YATAY ŞERİT (2026-08-02)
+   ------------------------------------------------------------------
+   "Tüm varlıklar" sekmesi 9 stüdyonun GERÇEK bileşenini mount eder
+   (kopya değil, tek kaynak). Stüdyo sayfalarında bazı composer'lar
+   DİKEY sidebar'dır (video, müzik, shorts, explainer, uzun-video);
+   burada alt şeride oturduğu için YATAY olmalı.
+
+   Kural: hiçbir kontrol gizlenmez, yalnız AKIŞ yönü değişir. Dikey
+   kolon → sarmalı yatay satır; sabit genişlik → tam genişlik.
+   Kullanıcı: "hiçbir özelliği kaybetmeden ve bizim stilimize uygun".
+   ═════════════════════════════════════════════════════════════════ */
+
+/* 1) Composer paneli tam genişliğe yayılır, kendi yüksekliğince uzar. */
+.gomulu-studyo aside {
+  width: 100% !important;
+  max-width: none !important;
+  height: auto !important;
+  border: 0 !important;
+  /* Şerit çok uzarsa kendi içinde kayar (bkz. 5b) — kırpma YOK. */
+  max-height: min(72vh, 720px) !important;
+  overflow-y: auto !important;
+  overflow-x: visible !important;
+}
+
+/* 2) Panelin İÇ KOLONU yatay şeride döner: bölümler yan yana dizilir,
+   sığmayınca alt satıra sarar. Dikeyde uzayıp giden panel yerine
+   composer yüksekliğinde derli toplu bir şerit. */
+.gomulu-studyo aside > div {
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: flex-end !important;
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* 3) Şerit içindeki her bölüm doğal genişliğinde durur, gerekiyorsa
+   büyür — hiçbiri ezilmez (özellik kaybı olmaz). */
+.gomulu-studyo aside > div > * {
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+/* 4) Üret/CTA bölümü şeridin SAĞ UCUNDA, tam yükseklikte durur —
+   diğer composer'larımızdaki (görsel/ses) desenin aynısı. */
+.gomulu-studyo aside > div > *:last-child {
+  flex: 0 0 auto;
+  min-width: 160px;
+}
+
+/* 5) Panel içindeki iç scroll alanları serbest bırakılır AMA kaydırma
+   yeteneği KORUNUR: `overflow: hidden` yapılırsa "Gelişmiş" gibi açılır
+   bölümler kırpılıp erişilemez oluyordu (kullanıcı: "müzikte gelişmişi
+   açınca aşağı kaydıramıyorum", 2026-08-02). */
+.gomulu-studyo aside [class*="overflow-y-auto"] {
+  max-height: none !important;
+}
+
+/* 6) Tam-viewport yükseklik kısıtları serbest. */
+.gomulu-studyo [class*="min-h-[calc(100vh"],
+.gomulu-studyo [class*="h-[calc(100vh"] {
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+/* 7) Alta yapışan dock'lar akışa alınır (gömülüyken zaten alttayız).
+   Portal'a çıkan gerçek modaller body altında olduğu için etkilenmez. */
+.gomulu-studyo .fixed,
+.gomulu-studyo .absolute.inset-x-0.bottom-0 {
+  position: static !important;
+  inset: auto !important;
+}
+
+/* 8) ÖNİZLEME kutuları (9:16 shorts, 16:9 explainer, sinema afişi) yatay
+   şeritte TAM GENİŞLİĞE YAYILMAMALI: en-boy oranı yüksekliği patlatıyor
+   (ölçüldü: Shorts 2764px, Explainer 734px). Doğal boyutta, şeridin solunda. */
+.gomulu-studyo aside [class*="aspect-"] {
+  flex: 0 0 auto !important;
+  max-width: 190px !important;
+  max-height: 240px !important;
+  width: auto !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+/* Önizlemeyi saran kutu da büyümesin. */
+.gomulu-studyo aside > div > *:has(> [class*="aspect-["]) {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
