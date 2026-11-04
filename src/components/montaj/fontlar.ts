@@ -1,22 +1,23 @@
-import { Inter, Montserrat, Anton, Bebas_Neue, Playfair_Display, Caveat, Oswald, Space_Grotesk, DM_Serif_Display, Poppins, Archivo_Black, Lobster } from "next/font/google";
+import localFont from "next/font/local";
 import { fontKaydet } from "@/lib/montajMotor";
 
 /**
  * Montaj yazı tipleri — tuval (önizleme + dışa aktarma) gerçek aile adlarıyla çizer.
- * Hepsi Türkçe karakterler için latin-ext içerir.
+ * Dosyalar projede (yazitipi/, Google Fonts tam TTF, Türkçe karakterler dahil): derleme sırasında
+ * Google Fonts'a bağlanılmaz (Vercel derlemesi next/font/google yüzünden kırılıyordu, 2026-11-04).
  */
-const inter = Inter({ subsets: ["latin", "latin-ext"], weight: ["300", "500", "700", "800", "900"], display: "swap" });
-const montserrat = Montserrat({ subsets: ["latin", "latin-ext"], weight: ["500", "700", "900"], display: "swap" });
-const anton = Anton({ subsets: ["latin", "latin-ext"], weight: "400", display: "swap" });
-const bebas = Bebas_Neue({ subsets: ["latin", "latin-ext"], weight: "400", display: "swap" });
-const playfair = Playfair_Display({ subsets: ["latin", "latin-ext"], weight: ["500", "800"], style: ["normal", "italic"], display: "swap" });
-const caveat = Caveat({ subsets: ["latin", "latin-ext"], weight: ["500", "700"], display: "swap" });
-const oswald = Oswald({ subsets: ["latin", "latin-ext"], weight: ["400", "700"], display: "swap" });
-const grotesk = Space_Grotesk({ subsets: ["latin", "latin-ext"], weight: ["500", "700"], display: "swap" });
-const dmSerif = DM_Serif_Display({ subsets: ["latin", "latin-ext"], weight: "400", display: "swap" });
-const poppins = Poppins({ subsets: ["latin", "latin-ext"], weight: ["500", "700", "900"], display: "swap" });
-const archivo = Archivo_Black({ subsets: ["latin", "latin-ext"], weight: "400", display: "swap" });
-const lobster = Lobster({ subsets: ["latin", "latin-ext"], weight: "400", display: "swap" });
+const inter = localFont({ src: [{ path: "./yazitipi/inter-300.ttf", weight: "300", style: "normal" }, { path: "./yazitipi/inter-500.ttf", weight: "500", style: "normal" }, { path: "./yazitipi/inter-700.ttf", weight: "700", style: "normal" }, { path: "./yazitipi/inter-800.ttf", weight: "800", style: "normal" }, { path: "./yazitipi/inter-900.ttf", weight: "900", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Inter
+const montserrat = localFont({ src: [{ path: "./yazitipi/montserrat-500.ttf", weight: "500", style: "normal" }, { path: "./yazitipi/montserrat-700.ttf", weight: "700", style: "normal" }, { path: "./yazitipi/montserrat-900.ttf", weight: "900", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Montserrat
+const anton = localFont({ src: [{ path: "./yazitipi/anton-400.ttf", weight: "400", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Anton
+const bebas = localFont({ src: [{ path: "./yazitipi/bebas-400.ttf", weight: "400", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Bebas Neue
+const playfair = localFont({ src: [{ path: "./yazitipi/playfair-500i.ttf", weight: "500", style: "italic" }, { path: "./yazitipi/playfair-800i.ttf", weight: "800", style: "italic" }, { path: "./yazitipi/playfair-500.ttf", weight: "500", style: "normal" }, { path: "./yazitipi/playfair-800.ttf", weight: "800", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Playfair Display
+const caveat = localFont({ src: [{ path: "./yazitipi/caveat-500.ttf", weight: "500", style: "normal" }, { path: "./yazitipi/caveat-700.ttf", weight: "700", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Caveat
+const oswald = localFont({ src: [{ path: "./yazitipi/oswald-400.ttf", weight: "400", style: "normal" }, { path: "./yazitipi/oswald-700.ttf", weight: "700", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Oswald
+const grotesk = localFont({ src: [{ path: "./yazitipi/grotesk-500.ttf", weight: "500", style: "normal" }, { path: "./yazitipi/grotesk-700.ttf", weight: "700", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Space Grotesk
+const dmSerif = localFont({ src: [{ path: "./yazitipi/dmSerif-400.ttf", weight: "400", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // DM Serif Display
+const poppins = localFont({ src: [{ path: "./yazitipi/poppins-500.ttf", weight: "500", style: "normal" }, { path: "./yazitipi/poppins-700.ttf", weight: "700", style: "normal" }, { path: "./yazitipi/poppins-900.ttf", weight: "900", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Poppins
+const archivo = localFont({ src: [{ path: "./yazitipi/archivo-400.ttf", weight: "400", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Archivo Black
+const lobster = localFont({ src: [{ path: "./yazitipi/lobster-400.ttf", weight: "400", style: "normal" }], display: "swap", fallback: ["system-ui", "sans-serif"] }); // Lobster
 
 export type MontajFont = { id: string; ad: string; tur: "Sans" | "Serif" | "Gösteri" | "El yazısı"; aile: string; agirlik?: number };
 
