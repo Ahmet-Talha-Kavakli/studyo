@@ -6,7 +6,6 @@ import { stemAyir } from "@/lib/saglayicilar/muzik";
 import { MUZIK_KAYNAK_MB } from "@/lib/muzikVeri";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
 
 /** Stem ayırma: { url: "/api/dosya/..." } (kitaplıktaki parça) ya da { kaynak: dataURL, ad }. */
 export async function POST(req: NextRequest) {

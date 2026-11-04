@@ -3,7 +3,6 @@ import { muzikUret, type MuzikIstek } from "@/lib/saglayicilar/muzik";
 import { icerikDenetle } from "@/lib/moderasyon";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
 
 /** Gerçek müzik üretimi. Sağlayıcı bağlı değilse 503 döner; istemci demo moduna geçer. */
 export async function POST(req: NextRequest) {

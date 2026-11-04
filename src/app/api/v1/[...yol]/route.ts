@@ -11,7 +11,6 @@ import {
 } from "@/lib/api/motor";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 /**
  * Vayra API v1 — tek giriş noktası.

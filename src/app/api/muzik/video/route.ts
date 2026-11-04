@@ -3,7 +3,6 @@ import { videodanMuzik } from "@/lib/saglayicilar/muzik";
 import { icerikDenetle } from "@/lib/moderasyon";
 
 export const runtime = "nodejs";
-export const maxDuration = 300;
 
 const EN_FAZLA_MB = 200;
 

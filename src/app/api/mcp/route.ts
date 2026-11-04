@@ -3,7 +3,6 @@ import { MODELLER } from "@/lib/catalog";
 import { MCP_ARACLAR, MCP_SURUMLER, MCP_SUNUCU } from "@/lib/mcp/araclar";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
 
 /**
  * Vayra MCP sunucusu — Model Context Protocol, Streamable HTTP taşıması (JSON yanıt kipi).

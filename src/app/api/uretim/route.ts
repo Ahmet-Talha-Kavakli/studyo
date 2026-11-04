@@ -8,7 +8,6 @@ import { seslendirAkis, seslendirmeAkisiMumkun } from "@/lib/saglayicilar/eleven
 
 export const runtime = "nodejs";
 // 3D/video uzun sürebilir; makul bir üst sınır.
-export const maxDuration = 300;
 
 const GECERLI_TURLER: (UretimTuru | "muzik")[] = ["gorsel", "video", "ses", "3d", "muzik"];
 

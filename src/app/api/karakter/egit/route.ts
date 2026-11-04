@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { loraEgitBaslat, loraSorgula } from "@/lib/saglayicilar/lora";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
 
 /** GET ?jeton= → eğitim durumu · GET (jetonsuz) → { hazir } */
 export async function GET(req: NextRequest) {

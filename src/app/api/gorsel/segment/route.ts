@@ -4,7 +4,6 @@ import { gorselHazirla } from "@/lib/saglayicilar/video";
 import { ciktiKalicilastir } from "@/lib/dosyaDepo";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
 
 export function GET() {
   return NextResponse.json({ hazir: falHazir() });
