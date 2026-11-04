@@ -9,6 +9,10 @@ const nextConfig = {
   // Doğrulama build'i ayrı dizine yazsın ki çalışan dev sunucusunun
   // .next runtime chunk'larını ezip hydration'ı bozmasın (VAYRA_BUILD=1 npm run build).
   distDir: process.env.VAYRA_BUILD ? ".next-build" : ".next",
+  // public/ (1 GB üstü medya) ve yerel veri klasörü sunucu fonksiyonlarına kopyalanmasın: dinamik
+  // path.join(process.cwd(), "public", url) okumaları yüzünden tamamı izleniyor, Vercel de fonksiyonları
+  // 250 MB sınırı için bölüp Hobby planındaki 12 fonksiyon sınırını aşıyordu. Medya CDN'den sunulur.
+  outputFileTracingExcludes: { "*": ["public/**/*", ".veri/**/*", ".next-build/**/*", "scripts/**/*"] },
   // Taşınan sayfalar: eski bağlantılar kalıcı olarak yeni adrese gider.
   async redirects() {
     const tasinan = [
