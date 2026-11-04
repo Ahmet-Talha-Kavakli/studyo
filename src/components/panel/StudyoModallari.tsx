@@ -1,5 +1,10 @@
 "use client";
 
+import { toast } from "@/lib/toast";
+import { useElements, type VElement } from "@/store/useElements";
+import { ElementKapak, TurRozeti, sirala } from "@/components/panel/element/elementMeta";
+import { ElementDuzenleModal } from "@/components/panel/element/ElementDuzenleModal";
+
 /**
  * StudyoModallari — Higgsfield composer modallarının tamamı, BİREBİR.
  *
@@ -44,7 +49,7 @@ function ModalKabuk({
       {acik && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[180] bg-black/55 backdrop-blur-sm" onClick={kapat} />
+            className="perde fixed inset-0 z-[180] bg-black/55 backdrop-blur-sm" onClick={kapat} />
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.98 }} transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
@@ -215,7 +220,7 @@ function Cetvel({
         <input type="range" min={0} max={degerler.length - 1} value={i}
           onChange={(e) => onDeger(degerler[Number(e.target.value)])}
           aria-label={baslik}
-          className="mt-6 h-1 w-full cursor-pointer accent-aksan" />
+          className="mt-6 h-1 w-full cursor-pointer accent-white" />
       </div>
     </div>
   );
@@ -561,11 +566,14 @@ export function YuklemeModal({
 /* 5) VARLIK SEÇİCİ — `+` menüsü (referans: arti/)                     */
 /* ================================================================== */
 export function VarlikSeciciModal({
-  acik, kapat, onSec, elementler, baslangicSekme = "yuklemeler",
+  acik, kapat, onSec, onElementSec, baslangicSekme = "yuklemeler",
 }: {
   acik: boolean; kapat: () => void;
   onSec: (url: string) => void;
-  elementler: { id: string; ad: string; kategori?: string }[];
+  /** Eski çağıranlar için tutulur; elementler doğrudan kütüphaneden okunur. */
+  elementler?: { id: string; ad: string; kategori?: string }[];
+  /** Verilirse element seçimi adla bildirilir (ör. proje özetine @element). Verilmezse elementin ana görseli seçilir. */
+  onElementSec?: (ad: string) => void;
   /** Hangi sekmede açılsın — "/Element" doğrudan Elementler'e düşsün. */
   baslangicSekme?: "yuklemeler" | "elementler" | "uretimler" | "begeni";
 }) {
@@ -598,29 +606,7 @@ export function VarlikSeciciModal({
             <p className="mt-1 text-[15px] text-metin-3">Beğendiklerini işaretleyerek buraya kaydet</p>
           </div>
         ) : sekme === "elementler" ? (
-          <>
-            <div className="mb-3 flex items-center gap-2">
-              <p className="flex-1 text-[14px] text-metin-3">Elementlerim</p>
-              <button className="hf-cip flex h-9 items-center gap-2 rounded-xl px-3 text-[14px] text-metin-2"><SlidersHorizontal className="h-4 w-4" /> Filtre</button>
-              <span className="hf-cip flex h-9 items-center gap-2 rounded-xl px-3 text-[14px] text-metin-3"><Search className="h-4 w-4" /> Ara</span>
-            </div>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
-              <button className="group text-left">
-                <span className="flex aspect-[4/3] w-full items-center justify-center rounded-xl bg-white/[0.05] ring-1 ring-white/10 group-hover:bg-white/[0.09]">
-                  <Plus className="h-6 w-6 text-metin-2" />
-                </span>
-                <span className="mt-2 block text-center text-[14px] font-medium text-metin">Yeni Element</span>
-              </button>
-              {elementler.map((el) => (
-                <button key={el.id} onClick={() => { onSec(`element-${el.ad}`); kapat(); }} className="group text-left">
-                  <span className="block aspect-[4/3] w-full rounded-xl ring-1 ring-white/10 transition-all group-hover:ring-white/40"
-                    style={{ background: onizlemeArka(`el-${el.ad}`, "portre") }} />
-                  <span className="mt-2 block truncate text-[14px] font-medium text-metin">@{el.ad}</span>
-                  <span className="block truncate text-[12px] text-metin-3">{el.kategori ?? "Karakter"}</span>
-                </button>
-              ))}
-            </div>
-          </>
+          <VarlikElementleri onElementSec={onElementSec} onSec={onSec} kapat={kapat} />
         ) : (
           <>
             {sekme === "yuklemeler" && (
@@ -847,8 +833,7 @@ export function YeniProjeModalHF({
             <span className="block text-[15px] font-medium text-metin">Ekibinle çalışmak ister misin?</span>
             <span className="block text-[13.5px] text-metin-3">Kişi davet etmek için planını yükselt</span>
           </span>
-          <button className="shrink-0 rounded-full px-4 py-1.5 text-[14px] font-bold text-zemin"
-            style={{ background: "var(--sn-lime,#55d6fd)" }}>Yükselt</button>
+          <a href="/fiyatlandirma" className="shrink-0 rounded-full bg-white px-4 py-1.5 text-[14px] font-semibold text-[#0a0a0b] transition-transform active:scale-[0.97]">Yükselt</a>
         </div>
         {/* Oluştur — ad boşken pasif */}
         <button onClick={() => { if (ad.trim()) { onOlustur(ad.trim(), ozel); kapat(); } }}
@@ -867,5 +852,50 @@ function Palette2() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7">
       <circle cx="9" cy="9" r="5" /><circle cx="15" cy="9" r="5" /><circle cx="12" cy="15" r="5" />
     </svg>
+  );
+}
+
+
+/** Varlık seçicideki element sekmesi — ortak kütüphane verisiyle; görsel yoksa nedenini söyler. */
+function VarlikElementleri({ onElementSec, onSec, kapat }: { onElementSec?: (ad: string) => void; onSec: (url: string) => void; kapat: () => void }) {
+  const elementler = useElements((s) => s.elementler);
+  const [ara, setAra] = useState("");
+  const [yeni, setYeni] = useState(false);
+  const q = ara.trim().toLocaleLowerCase("tr");
+  const liste = sirala(elementler.filter((e) => !q || `${e.ad} ${e.aciklama}`.toLocaleLowerCase("tr").includes(q)), "kullanim");
+  const sec = (e: VElement) => {
+    if (onElementSec) { onElementSec(e.ad); kapat(); return; }
+    const g = e.gorseller.find(Boolean);
+    if (!g) return void toast.error(`@${e.ad} için görsel yok`, { description: "Elemente bir görsel ekle ya da istemde @ yazarak kullan." });
+    onSec(g); kapat();
+  };
+  return (
+    <>
+      <div className="mb-3 flex items-center gap-2">
+        <p className="flex-1 text-[14px] text-metin-3">{onElementSec ? "Bir element seç" : "Elementin ana görseli kare olarak kullanılır"}</p>
+        <label className="hf-cip flex h-9 items-center gap-2 rounded-xl px-3 text-[14px] text-metin-3"><Search className="h-4 w-4" />
+          <input value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Ara" aria-label="Element ara" className="w-32 bg-transparent text-metin outline-none placeholder:text-metin-3" />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-5">
+        <button onClick={() => setYeni(true)} className="group text-left">
+          <span className="flex aspect-[4/5] w-full items-center justify-center rounded-xl bg-white/[0.05] ring-1 ring-white/10 group-hover:bg-white/[0.09]"><Plus className="h-6 w-6 text-metin-2" /></span>
+          <span className="mt-2 block text-center text-[14px] font-medium text-metin">Yeni element</span>
+        </button>
+        {liste.map((el) => (
+          <button key={el.id} onClick={() => sec(el)} className="group text-left">
+            <span className="relative block overflow-hidden rounded-xl ring-1 ring-white/10 transition-all group-hover:ring-white/40">
+              <ElementKapak e={el} className="aspect-[4/5] w-full" />
+              <span className="absolute left-2 top-2"><TurRozeti tur={el.tur} kucuk /></span>
+            </span>
+            <span className="mt-2 block truncate text-[14px] font-medium text-metin">@{el.ad}</span>
+            <span className="block truncate text-[12px] text-metin-3">{el.gorseller.length ? `${el.gorseller.length} görsel` : "Görsel yok"}</span>
+          </button>
+        ))}
+      </div>
+      <AnimatePresence>
+        {yeni && <ElementDuzenleModal key="varlik-yeni" element={null} onKapat={() => setYeni(false)} />}
+      </AnimatePresence>
+    </>
   );
 }

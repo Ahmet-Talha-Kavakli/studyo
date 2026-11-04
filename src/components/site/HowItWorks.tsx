@@ -32,7 +32,7 @@ export function HowItWorks() {
             <div className="relative text-center">
               <motion.div
                 whileHover={{ scale: 1.06, rotate: 3 }}
-                className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-ink-850 shadow-xl"
+                className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/15 bg-ink-850"
               >
                 <a.ikon className="h-7 w-7 text-vayra-300" />
               </motion.div>

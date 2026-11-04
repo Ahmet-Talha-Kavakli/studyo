@@ -1,10 +1,8 @@
 "use client";
 
-/* Route sarmalayıcısı — gerçek bileşen `@/components/studyo/UzunVideoStudyo`.
-   Next route dosyasından fazladan export edilemediği için bileşen ayrı
-   dosyada durur; "Tüm varlıklar" sekmesi onu `gomulu` ile mount eder. */
-import { UzunVideoStudyo } from "@/components/studyo/UzunVideoStudyo";
+/* Route sarmalayıcısı — gerçek bileşen `@/components/film/FilmSayfa`. */
+import { FilmSayfa } from "@/components/film/FilmSayfa";
 
-export default function UzunVideoStudyoSayfa() {
-  return <UzunVideoStudyo />;
+export default function UzunVideoSayfa() {
+  return <FilmSayfa />;
 }

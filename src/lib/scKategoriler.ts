@@ -1,5 +1,5 @@
 /**
- * Supercomputer ana sayfa kategori galerileri — Higgsfield "WHAT SUPERCOMPUTER CAN DO"
+ * Usta ana sayfa kategori galerileri — Higgsfield "WHAT SUPERCOMPUTER CAN DO"
  * altındaki kategori→kart yapısının birebir Türkçe karşılığı.
  *
  * Her kartın `istem`'i composer'a yazılır ve GERÇEK üretime (siteUretici / /api/uretim) gider.

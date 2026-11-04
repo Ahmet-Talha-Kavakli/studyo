@@ -31,7 +31,7 @@ export function UrunIcerik({ urun }: { urun: UrunSayfa }) {
         </motion.h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-white/60">{urun.aciklama}</p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Link href="/kayit" className={`inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r ${urun.renk} px-7 font-semibold text-ink-950 shadow-lg transition-all hover:-translate-y-0.5`}>
+          <Link href="/kayit" className={`inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r ${urun.renk} px-7 font-semibold text-ink-950 transition-all hover:-translate-y-0.5`}>
             {urun.cta} <ArrowRight className="h-4 w-4" />
           </Link>
           <Link href="/kesfet" className="inline-flex h-12 items-center gap-2 rounded-xl border border-white/15 px-7 font-medium transition-colors hover:bg-white/8">
@@ -41,7 +41,7 @@ export function UrunIcerik({ urun }: { urun: UrunSayfa }) {
 
         {/* Görsel placeholder */}
         <Reveal>
-          <div className={`mx-auto mt-14 aspect-video w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br ${urun.renk} opacity-90 shadow-2xl`}>
+          <div className={`mx-auto mt-14 aspect-video w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br ${urun.renk} opacity-90`}>
             <div className="flex h-full items-center justify-center">
               <DinamikIkon ad={urun.ozellikler[0].ikon} className="h-24 w-24 text-white/40" />
             </div>
@@ -55,7 +55,7 @@ export function UrunIcerik({ urun }: { urun: UrunSayfa }) {
           {urun.ozellikler.map((o, i) => (
             <Reveal key={o.baslik} i={i}>
               <div className="flex gap-4 rounded-2xl border border-white/10 bg-yuzey p-6">
-                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${urun.renk} shadow-lg`}>
+                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${urun.renk}`}>
                   <DinamikIkon ad={o.ikon} className="h-6 w-6 text-white" />
                 </span>
                 <div>
@@ -96,7 +96,7 @@ export function UrunIcerik({ urun }: { urun: UrunSayfa }) {
             <div className={`pointer-events-none absolute left-1/2 top-0 h-40 w-80 -translate-x-1/2 rounded-full bg-gradient-to-r ${urun.renk} opacity-20 blur-3xl`} />
             <h2 className="relative text-3xl font-bold">Hazır mısın?</h2>
             <p className="relative mx-auto mt-3 max-w-lg text-white/60">Ücretsiz kredilerle hemen dene, farkı kendin gör.</p>
-            <Link href="/kayit" className={`relative mt-7 inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r ${urun.renk} px-7 font-semibold text-ink-950 shadow-lg transition-all hover:-translate-y-0.5`}>
+            <Link href="/kayit" className={`relative mt-7 inline-flex h-12 items-center gap-2 rounded-xl bg-gradient-to-r ${urun.renk} px-7 font-semibold text-ink-950 transition-all hover:-translate-y-0.5`}>
               {urun.cta} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>

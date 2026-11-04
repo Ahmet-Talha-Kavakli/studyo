@@ -74,13 +74,13 @@ function ModalIcerik({ kapat, baslangicSekme }: { kapat: () => void; baslangicSe
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={kapat}
-      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-md sm:p-6"
+      className="perde fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-md sm:p-6"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 16 }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative my-auto w-full max-w-5xl rounded-3xl border border-white/10 bg-ink-900 shadow-2xl"
+        className="relative my-auto w-full max-w-5xl rounded-3xl border border-white/10 bg-ink-900"
       >
         {/* Sekme pill toggle (ortalı) + kapat */}
         <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-3xl border-b border-white/8 bg-ink-900/90 px-5 py-4 backdrop-blur">
@@ -135,11 +135,11 @@ function PlanSekmesi({ kapat }: { kapat: () => void }) {
   const planYukselt = (p: (typeof PLANLAR)[number]) => {
     const id = PLAN_ID[p.ad];
     if (id === "kurumsal") {
-      toast("Ekipler için görüşelim 📞", { description: "Satış ekibimiz seninle iletişime geçecek." });
+      toast("Kurumsal plan için bize yaz", { description: "Ekip planları satış ekibiyle ayarlanır. İletişim sayfasından ulaşabilirsin.", action: { label: "İletişim", onClick: () => window.location.assign("/iletisim") } });
       return;
     }
     profilGuncelle({ plan: id });
-    toast.success(`${p.ad} planına geçtin 🎉`, { description: "Yeni plan avantajların hesabına tanımlandı." });
+    toast.success(`${p.ad} planına geçtin`, { description: "Ödeme alınmadı, plan yalnızca bu hesapta güncellendi." });
     kapat();
   };
 
@@ -292,7 +292,7 @@ function PlanSekmesi({ kapat }: { kapat: () => void }) {
         })}
       </div>
       <p className="mt-6 text-center text-[11px] text-white/35">
-        Not: Sınırsız modeller ve ücretsiz üretimler yalnızca Vayra üzerinden erişilebilir; MCP/CLI, Canvas veya Supercomputer üzerinden erişilemez.
+        Not: Sınırsız modeller ve ücretsiz üretimler yalnızca Vayra üzerinden erişilebilir; MCP/CLI, Canvas veya Usta üzerinden erişilemez.
       </p>
     </motion.div>
   );
@@ -307,7 +307,7 @@ function KrediSekmesi({ gecUnlimited }: { gecUnlimited: () => void }) {
 
   const satinAl = (kredi: number, fiyat: number) => {
     krediEkle(kredi);
-    toast.success(`${formatKredi(kredi)} kredi eklendi 🎉`, { description: `${$(fiyat)} · tek seferlik satın alma` });
+    toast.success(`${formatKredi(kredi)} kredi eklendi`, { description: `${$(fiyat)} tutarında tek seferlik satın alma, ödeme alınmadı.` });
   };
 
   return (
@@ -366,7 +366,7 @@ function KrediSekmesi({ gecUnlimited }: { gecUnlimited: () => void }) {
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-base text-white/30 line-through">{$(eski)}</span>
                 <span className="text-2xl font-extrabold">{$(fiyat)}</span>
-                <span className="rounded-full bg-[#ff2d6f]/20 px-1.5 py-0.5 text-xs font-bold text-[#ff6b98]">−%{p.indirim}</span>
+                <span className="rounded-full bg-[#ff2d6f]/20 px-1.5 py-0.5 text-xs font-bold text-[#ff6b98]">%{p.indirim} indirim</span>
               </div>
 
               {/* En büyük pakette kaydırıcı */}
@@ -483,7 +483,7 @@ function UnlimitedAltModal({ model, kapat }: { model: UnlimitedModel | "hepsi"; 
   const seciliFiyat = fiyatlar[sureIdx];
 
   const satinAl = () => {
-    toast.success(`${ad} · Sınırsız erişim açıldı ⚡`, { description: `${UNLIMITED_SURELER[sureIdx].ad} · ${$(seciliFiyat)} tek seferlik` });
+    toast.success(`${ad} sınırsız erişimi açıldı`, { description: `${UNLIMITED_SURELER[sureIdx].ad}, ${$(seciliFiyat)} tek seferlik. Ödeme alınmadı.` });
     kapat();
   };
 
@@ -491,13 +491,13 @@ function UnlimitedAltModal({ model, kapat }: { model: UnlimitedModel | "hepsi"; 
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       onClick={kapat}
-      className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md"
+      className="perde fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/80 p-4 backdrop-blur-md"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 16 }}
         transition={{ type: "spring", stiffness: 340, damping: 30 }}
         onClick={(e) => e.stopPropagation()}
-        className="my-auto w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-ink-900 shadow-2xl"
+        className="my-auto w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-ink-900"
       >
         {/* Kapak */}
         <div className="relative aspect-video w-full overflow-hidden">
@@ -509,7 +509,7 @@ function UnlimitedAltModal({ model, kapat }: { model: UnlimitedModel | "hepsi"; 
           </button>
           <div className="absolute bottom-3 left-4 right-4">
             <div className="text-[11px] font-medium uppercase italic tracking-widest text-white/70">Sınırsız</div>
-            <div className="text-2xl font-extrabold uppercase leading-none text-cyan-glow drop-shadow">{ad}</div>
+            <div className="text-2xl font-extrabold uppercase leading-none text-cyan-glow">{ad}</div>
           </div>
         </div>
 
@@ -520,7 +520,7 @@ function UnlimitedAltModal({ model, kapat }: { model: UnlimitedModel | "hepsi"; 
               {cozunurlukler.map((c) => (
                 <button key={c} onClick={() => setCoz(c)}
                   className={cn("flex-1 rounded-lg py-2 text-center transition-colors",
-                    coz === c ? "bg-white text-ink-950 shadow" : "text-white/60 hover:text-white")}>
+                    coz === c ? "bg-white text-ink-950" : "text-white/60 hover:text-white")}>
                   <span className="block text-[10px] text-white/45">Şuna kadar</span>
                   <span className={cn("block text-sm font-bold", coz === c ? "text-ink-950" : c === "4K" ? "text-cyan-glow" : "text-white")}>{c}</span>
                 </button>
@@ -606,8 +606,8 @@ function AutoRefillSerit() {
       <button
         onClick={() => {
           const yeni = toggle();
-          if (yeni) toast.success("Otomatik yenileme açıldı ⚡", { description: "Bakiyen bitince paketin otomatik yenilenecek." });
-          else toast.success("Otomatik yenileme kapatıldı", { description: "Kredi yüklemesi artık elle yapılacak." });
+          if (yeni) toast.success("Otomatik yenileme açıldı", { description: "Bakiyen bitince paketin otomatik yenilenir." });
+          else toast.success("Otomatik yenileme kapatıldı", { description: "Krediyi artık elle yüklemen gerekir." });
         }}
         className="rounded-lg bg-white px-4 py-1.5 text-xs font-bold text-ink-950 transition hover:brightness-95">
         {acik ? "Kapat" : "Kur"}

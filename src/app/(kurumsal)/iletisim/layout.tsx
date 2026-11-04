@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "İletişim — Vayra",
-  description: "Vayra ekibiyle iletişime geç. Satış, destek ve iş birliği talepleriniz için bize ulaşın; sinematik AI üretim yolculuğunuzda yanınızdayız.",
+  title: "İletişim",
+  description: "Vayra ile iletişime geç: satış ve kurumsal, destek, basın, iş ortaklığı, güvenlik ve KVKK talepleri için doğru ekibe ulaş.",
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

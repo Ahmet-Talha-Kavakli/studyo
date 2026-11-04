@@ -23,7 +23,7 @@ const studyolar = [
   { ad: "Ses Stüdyosu", href: "/panel/ses", ikon: AudioLines },
   { ad: "Shorts Stüdyo", href: "/panel/shorts", ikon: Scissors },
   { ad: "Explainer Stüdyo", href: "/panel/explainer", ikon: GraduationCap },
-  { ad: "Supercomputer", href: "/panel/supercomputer", ikon: Cpu },
+  { ad: "Usta", href: "/panel/supercomputer", ikon: Cpu },
   { ad: "API Konsolu", href: "/panel/api", ikon: Terminal },
 ];
 

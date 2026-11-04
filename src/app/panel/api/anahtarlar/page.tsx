@@ -1,158 +1,141 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  KeyRound, Plus, Trash2, X, Check, ShieldAlert, Eye, EyeOff, Calendar, Hash,
-} from "lucide-react";
+import { Yuzen } from "@/components/ui/Yuzen";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { AlertTriangle, Ban, Check, Clock, Copy, Eye, FlaskConical, KeyRound, MoreHorizontal, Pencil, Plus, RefreshCw, Rocket, ShieldCheck, Sparkles, Terminal, Trash2 } from "lucide-react";
+import { useApiAnahtar, anahtarMaske, istekSirri, KAPSAMLAR, type ApiAnahtar, type AnahtarOrtam, type Kapsam } from "@/store/useApiAnahtar";
+import { senkronize } from "@/lib/api/istemci";
 import { toast } from "@/lib/toast";
-import { useApiAnahtar, anahtarMaske, type AnahtarOrtam } from "@/store/useApiAnahtar";
-import { BosDurum, KopyalaDugme, SayfaBaslik } from "@/components/api/parcalar";
-import { useEscKapat, useScrollKilit } from "@/hooks/useScrollKilit";
+import {
+  BosDurum, KodEditor, kalanSure, KopyalaDugme, Modal, Onay, OrtamRozet, SayfaBaslik, SecimSerit, Secenek, birincil, etiket, girdi, goreli, ikincil, panoyaKopyala,
+} from "@/components/api/ui";
+import { useHazir } from "@/components/api/veri";
 import { cn } from "@/lib/utils";
 
-/* ============================================================
-   API ANAHTARLARI — Higgsfield Cloud "API Keys" birebir.
-   Oluştur modalı (ad + güvenlik uyarısı) · tablo (ID/Ad/Oluşturma/İşlem) ·
-   gizle-göster · GERÇEK kopyala · sil.
-   Ekstra: canlı/test ortamı seçimi.
-   ============================================================ */
+const BITISLER: [string, number | null][] = [["Süresiz", null], ["30 gün", 30], ["90 gün", 90], ["1 yıl", 365]];
+const KAPSAM_IKON: Record<string, React.ElementType> = { full: ShieldCheck, generate: Sparkles, read: Eye };
 
-export default function ApiAnahtarlar() {
-  const { anahtarlar, olustur, sil } = useApiAnahtar();
-  const [modal, setModal] = useState(false);
-  const [ad, setAd] = useState("");
-  const [ortam, setOrtam] = useState<AnahtarOrtam>("canli");
-  const [yeniAnahtar, setYeniAnahtar] = useState<string | null>(null);
-  const [gorunur, setGorunur] = useState<Record<string, boolean>>({});
-  const [silOnay, setSilOnay] = useState<string | null>(null);
+type Form = { ad: string; ortam: AnahtarOrtam; kapsam: Kapsam; hizLimiti: number; aylikSinir: string; bitisGun: number | null };
+const BOS: Form = { ad: "", ortam: "canli", kapsam: "full", hizLimiti: 60, aylikSinir: "", bitisGun: null };
 
-  useScrollKilit(modal || yeniAnahtar !== null);
-  useEscKapat(modal || yeniAnahtar !== null, () => {
-    if (yeniAnahtar) setYeniAnahtar(null);
-    else setModal(false);
-  });
+export default function AnahtarlarSayfasi() {
+  const hazir = useHazir();
+  const anahtarlar = useApiAnahtar((s) => s.anahtarlar);
+  const iptaller = useApiAnahtar((s) => s.iptaller);
+  const uretimler = useApiAnahtar((s) => s.uretimler);
+  const { anahtarOlustur, anahtarGuncelle, anahtarIptal, anahtarDondur } = useApiAnahtar.getState();
 
-  const [olusturuluyor, setOlusturuluyor] = useState(false);
-  const anahtarOlustur = async () => {
-    if (olusturuluyor) return;
-    setOlusturuluyor(true);
-    const k = await olustur(ad, ortam);
-    setOlusturuluyor(false);
-    setModal(false);
-    setAd("");
-    setYeniAnahtar(k.tam);
-    toast.success("API anahtarı oluşturuldu", { description: k.ad });
+  const [form, setForm] = useState<Form | null>(null);
+  const [duzenlenen, setDuzenlenen] = useState<ApiAnahtar | null>(null);
+  const [yeni, setYeni] = useState<ApiAnahtar | null>(null);
+  const [silinecek, setSilinecek] = useState<ApiAnahtar | null>(null);
+  const [dondurulen, setDondurulen] = useState<ApiAnahtar | null>(null);
+  const [ayrinti, setAyrinti] = useState<ApiAnahtar | null>(null);
+  const [menu, setMenu] = useState<string | null>(null);
+  // ?yeni=1 (genel bakış ve denetim kaydından): oluşturma penceresini aç
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("yeni") === "1") { setForm(BOS); window.history.replaceState(null, "", window.location.pathname); } }, []);
+
+  if (!hazir) return <div className="h-[60vh]" />;
+
+  const kaydet = async () => {
+    if (!form) return;
+    const aylik = form.aylikSinir.trim() ? Math.max(0, Number(form.aylikSinir)) : null;
+    if (duzenlenen) {
+      anahtarGuncelle(duzenlenen.id, { ad: form.ad.trim() || duzenlenen.ad, kapsam: form.kapsam, hizLimiti: form.hizLimiti, aylikSinir: aylik, bitis: form.bitisGun === null ? null : duzenlenen.bitis ?? Date.now() + form.bitisGun * 86400_000 });
+      toast.success("Anahtar güncellendi", { description: "Yeni ayarlar sunucuda hemen geçerli." });
+    } else {
+      const a = await anahtarOlustur({ ad: form.ad, ortam: form.ortam, kapsam: form.kapsam, hizLimiti: form.hizLimiti, aylikSinir: aylik, bitis: form.bitisGun ? Date.now() + form.bitisGun * 86400_000 : null });
+      setYeni(a);
+    }
+    setForm(null); setDuzenlenen(null);
+    void senkronize();
+  };
+
+  const aylikHarcanan = (id: string) => {
+    const ay = new Date(); ay.setUTCDate(1); ay.setUTCHours(0, 0, 0, 0);
+    return uretimler.filter((u) => u.anahtarId === id && u.environment === "live" && u.status === "succeeded" && Date.parse(u.created_at) >= ay.getTime()).reduce((t, u) => t + u.credits, 0);
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">
-      <SayfaBaslik baslik="API Anahtarları" ozet="Anahtarlarını ve erişim tokenlarını yönet" />
+    <>
+      <SayfaBaslik baslik="API anahtarları" aciklama="Her anahtarın kapsamını, hız limitini, aylık harcama sınırını ve geçerlilik süresini ayrı ayarla. Değişiklikler sunucuda anında uygulanır."
+        sag={<button onClick={() => { setDuzenlenen(null); setForm(BOS); }} className={birincil}><Plus className="h-4 w-4" />Anahtar oluştur</button>} />
 
-      <div className="rounded-2xl border border-white/[0.06] bg-yuzey">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.06] px-5 py-4">
-          <h2 className="text-lg font-bold text-metin">API Anahtarları</h2>
-          <button
-            data-yeni-anahtar
-            onClick={() => setModal(true)}
-            className="hf-btn flex items-center gap-1.5 rounded-xl bg-aksan px-3.5 py-2 text-sm font-bold text-[#12140c]"
-          >
-            <Plus className="h-4 w-4" /> API Anahtarı Oluştur
-          </button>
-        </div>
-
+      <section className="mb-6 overflow-hidden rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012))] ring-1 ring-white/[0.08]">
         {anahtarlar.length === 0 ? (
-          <div className="p-5">
-            <BosDurum
-              ikon={<KeyRound className="h-9 w-9" />}
-              baslik="Henüz API anahtarın yok"
-              ozet="Vayra API'sini kullanmak için bir anahtar oluştur."
-            />
-          </div>
+          <BosDurum ikon={KeyRound} baslik="Henüz anahtarın yok" aciklama="Test anahtarıyla kredi harcamadan entegrasyonunu kur; hazır olunca canlı anahtara geç."
+            eylem={<>
+              <button onClick={() => setForm({ ...BOS, ortam: "test", ad: "Test anahtarı", hizLimiti: 20 })} className={ikincil}><FlaskConical className="h-4 w-4" />Test anahtarı</button>
+              <button onClick={() => setForm(BOS)} className={birincil}><Rocket className="h-4 w-4" />Canlı anahtar</button>
+            </>} />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-left text-[13.5px]">
               <thead>
-                <tr className="border-b border-white/[0.06] text-left text-[11px] uppercase tracking-[0.14em] text-metin-3">
-                  <th className="px-5 py-3 font-semibold">Anahtar</th>
-                  <th className="px-5 py-3 font-semibold">Ad</th>
-                  <th className="px-5 py-3 font-semibold">Çağrı</th>
-                  <th className="px-5 py-3 font-semibold">Oluşturma</th>
-                  <th className="px-5 py-3 text-right font-semibold">İşlemler</th>
+                <tr className="border-b border-white/[0.06] text-[12.5px] text-white/50">
+                  <th className="px-5 py-3 font-medium">Ad</th>
+                  <th className="px-3 py-3 font-medium">Anahtar</th>
+                  <th className="px-3 py-3 font-medium">Kapsam</th>
+                  <th className="px-3 py-3 font-medium">Limit</th>
+                  <th className="px-3 py-3 font-medium">Bu ay</th>
+                  <th className="px-3 py-3 font-medium">Son kullanım</th>
+                  <th className="px-3 py-3 font-medium">Oluşturma</th>
+                  <th className="w-12 px-3 py-3" />
                 </tr>
               </thead>
-              <tbody data-anahtar-tablo>
-                {anahtarlar.map((k) => {
-                  const acik = gorunur[k.id];
+              <tbody className="divide-y divide-white/[0.05]">
+                {anahtarlar.map((a) => {
+                  const harcanan = aylikHarcanan(a.id);
+                  const bitti = a.bitis !== null && a.bitis < Date.now();
                   return (
-                    <tr key={k.id} data-anahtar-satir className="border-b border-white/[0.04] last:border-0">
+                    <tr key={a.id} className={cn("group transition-colors hover:bg-white/[0.02]", bitti && "opacity-55")}>
                       <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <Hash className="h-3.5 w-3.5 shrink-0 text-metin-3" />
-                          <code className="font-mono text-xs text-metin-2">
-                            {acik ? k.tam : anahtarMaske(k.tam)}
-                          </code>
-                          <button
-                            onClick={() => setGorunur((g) => ({ ...g, [k.id]: !g[k.id] }))}
-                            aria-label={acik ? "Anahtarı gizle" : "Anahtarı göster"}
-                            className="text-metin-3 transition-colors hover:text-metin"
-                          >
-                            {acik ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                          </button>
-                          <KopyalaDugme metin={k.tam} etiket="Anahtar" kucuk />
+                        <div className="flex items-center gap-3">
+                        <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]", a.ortam === "test" ? "bg-amber-300/12 text-amber-200" : "bg-[#55d6fd]/12 text-[#55d6fd]")}><KeyRound className="h-4 w-4" /></span>
+                        <div className="min-w-0">
+                        <button onClick={() => setAyrinti(a)} className="flex items-center gap-2 text-left font-medium text-white hover:underline">{a.ad}</button>
+                        <div className="mt-1 flex items-center gap-1.5">
+                          <OrtamRozet ortam={a.ortam} />
+                          {a.bitis && <span className={cn("inline-flex items-center gap-1 text-[11.5px]", bitti ? "text-rose-300" : "text-amber-200")}><Clock className="h-3 w-3" />{bitti ? "Süresi doldu" : `${kalanSure(a.bitis)} sonra kapanıyor`}</span>}
+                        </div>
+                        </div>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 items-center justify-center rounded-md glass-ikon glass-ikon-lime">
-                            <KeyRound className="h-3 w-3" />
-                          </span>
-                          <span className="text-metin">{k.ad}</span>
-                          <span
-                            className={cn(
-                              "rounded border px-1.5 py-0.5 text-[10px] font-semibold",
-                              k.ortam === "canli"
-                                ? "border-aksan/30 bg-aksan/12 text-aksan"
-                                : "border-amber-400/30 bg-amber-500/12 text-amber-300",
-                            )}
-                          >
-                            {k.ortam === "canli" ? "canlı" : "test"}
-                          </span>
+                      <td className="px-3 py-3.5">
+                        <div className="flex items-center gap-1">
+                          <code className="rounded-[8px] bg-white/[0.05] px-2 py-1 font-mono text-[12.5px] text-white/80">{anahtarMaske(a.tam)}</code>
+                          <KopyalaDugme metin={a.tam} etiket={undefined} />
                         </div>
                       </td>
-                      <td className="px-5 py-3.5 text-metin-2">{k.cagri.toLocaleString("tr")}</td>
-                      <td className="px-5 py-3.5">
-                        <span className="flex items-center gap-1.5 text-metin-2">
-                          <Calendar className="h-3.5 w-3.5 text-metin-3" />
-                          {new Date(k.olusturma).toLocaleDateString("tr", {
-                            day: "2-digit", month: "long", year: "numeric",
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        {silOnay === k.id ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <button
-                              onClick={() => { sil(k.id); setSilOnay(null); toast.success("Anahtar silindi"); }}
-                              className="rounded-lg bg-rose-500/20 px-2 py-1 text-xs font-semibold text-rose-300 hover:bg-rose-500/30"
-                            >
-                              Onayla
-                            </button>
-                            <button
-                              onClick={() => setSilOnay(null)}
-                              className="rounded-lg px-2 py-1 text-xs text-metin-3 hover:text-metin"
-                            >
-                              Vazgeç
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            onClick={() => setSilOnay(k.id)}
-                            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-rose-400 transition-colors hover:bg-rose-500/12"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" /> Sil
-                          </button>
+                      <td className="px-3 py-3.5 text-white/75">{KAPSAMLAR.find((k) => k.id === a.kapsam)?.ad}</td>
+                      <td className="px-3 py-3.5 tabular-nums text-metin-2">{a.hizLimiti}/dk</td>
+                      <td className="px-3 py-3.5 tabular-nums">
+                        {a.ortam === "test" ? <span className="text-metin-2">Ücretsiz</span> : (
+                          <div className="w-28">
+                            <span className="text-white">{harcanan.toLocaleString("tr-TR")}</span><span className="text-metin-2">{a.aylikSinir !== null ? ` / ${a.aylikSinir.toLocaleString("tr-TR")}` : " kredi"}</span>
+                            {a.aylikSinir !== null && <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/[0.08]"><div className={cn("h-full rounded-full", harcanan / Math.max(1, a.aylikSinir) > 0.85 ? "bg-rose-400" : "bg-vurgu")} style={{ width: `${Math.min(100, (harcanan / Math.max(1, a.aylikSinir)) * 100)}%` }} /></div>}
+                          </div>
                         )}
+                      </td>
+                      <td className="px-3 py-3.5 text-metin-2">{a.sonKullanim ? goreli(a.sonKullanim) : <span className="text-metin-2">Hiç</span>}</td>
+                      <td className="px-3 py-3.5 text-metin-2">{new Date(a.olusturma).toLocaleDateString("tr-TR", { day: "numeric", month: "short", year: "numeric" })}</td>
+                      <td className="relative px-3 py-3.5">
+                        <button onClick={() => setMenu(menu === a.id ? null : a.id)} aria-label={`${a.ad} işlemleri`} className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.07] hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
+                        <Yuzen acik={!!(menu === a.id)} onKapat={() => setMenu(null)} sag={12} ust={48} bosluk={0} className="w-52 rounded-[14px] ring-1 ring-white/[0.08] bg-[#17171a] p-1.5">
+                              {[
+                                { ad: "Düzenle", ikon: Pencil, f: () => { setDuzenlenen(a); setForm({ ad: a.ad, ortam: a.ortam, kapsam: a.kapsam, hizLimiti: a.hizLimiti, aylikSinir: a.aylikSinir === null ? "" : String(a.aylikSinir), bitisGun: a.bitis ? 30 : null }); } },
+                                { ad: "Ayrıntılar", ikon: ShieldCheck, f: () => setAyrinti(a) },
+                                { ad: "Konsolda kullan", ikon: Terminal, href: `/panel/api/konsol?anahtar=${a.id}` },
+                                { ad: "Döndür", ikon: RefreshCw, f: () => setDondurulen(a) },
+                              ].map((x) => x.href ? (
+                                <Link key={x.ad} href={x.href} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-white hover:bg-white/[0.06]"><x.ikon className="h-3.5 w-3.5 text-metin-2" />{x.ad}</Link>
+                              ) : (
+                                <button key={x.ad} onClick={() => { x.f!(); setMenu(null); }} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-white hover:bg-white/[0.06]"><x.ikon className="h-3.5 w-3.5 text-metin-2" />{x.ad}</button>
+                              ))}
+                              <button onClick={() => { setSilinecek(a); setMenu(null); }} className="mt-1 flex w-full items-center gap-2.5 rounded-lg border-t border-white/[0.06] px-2.5 py-2 text-[13px] text-rose-300 hover:bg-rose-500/10"><Trash2 className="h-3.5 w-3.5" />İptal et</button>
+                            </Yuzen>
                       </td>
                     </tr>
                   );
@@ -161,145 +144,147 @@ export default function ApiAnahtarlar() {
             </table>
           </div>
         )}
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {[
+          { ikon: ShieldCheck, b: "Sunucuda tut", a: "Anahtarı tarayıcıya ya da mobil uygulamaya gömme. Ortam değişkeninde sakla, istekleri kendi sunucundan yap." },
+          { ikon: RefreshCw, b: "Düzenli döndür", a: "Döndürürken eski anahtara 24 saate kadar süre verebilirsin; dağıtımın yeni anahtara geçtikten sonra kendiliğinden kapanır." },
+          { ikon: AlertTriangle, b: "Sızdıysa hemen iptal et", a: "İptal sunucuda anında geçerli olur. Kodundan da kapatabilirsin: DELETE /v1/keys/self." },
+        ].map((x) => (
+          <motion.div key={x.b} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012))] ring-1 ring-white/[0.08] p-5">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#55d6fd]/12 text-[#55d6fd]"><x.ikon className="h-[18px] w-[18px]" /></span>
+            <p className="mt-4 text-[15px] font-semibold text-white">{x.b}</p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-white/65">{x.a}</p>
+          </motion.div>
+        ))}
       </div>
 
-      <p className="mt-4 text-xs text-metin-3">
-        Anahtarlarını istemci tarafı koduna gömme. Sunucundan çağır ve ortam değişkeninde sakla.
-      </p>
+      {iptaller.length > 0 && (
+        <details className="group mt-6 overflow-hidden rounded-[26px] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012))] ring-1 ring-white/[0.08]">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-3.5 text-[13.5px] text-metin-2 hover:text-white">
+            <span className="flex items-center gap-2"><Ban className="h-4 w-4" />İptal edilen anahtarlar ({iptaller.length})</span>
+            <span className="text-[12px] text-metin-2 group-open:hidden">Göster</span>
+          </summary>
+          <ul className="divide-y divide-white/[0.05] border-t border-white/[0.06]">
+            {iptaller.map((i) => (
+              <li key={i.id + i.iptal} className="flex flex-wrap items-center gap-3 px-5 py-3 text-[13px]">
+                <span className="text-metin-2 line-through decoration-white/25">{i.ad}</span>
+                <OrtamRozet ortam={i.ortam} />
+                <code className="font-mono text-[12px] text-metin-2">{anahtarMaske(i.tam)}</code>
+                <span className="ml-auto text-metin-2">{goreli(i.iptal)} iptal edildi</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
 
-      {/* Oluşturma modalı */}
-      <AnimatePresence>
-        {modal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setModal(false)}
-              className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              role="dialog"
-              aria-modal="true"
-              className="menu-surface fixed left-1/2 top-1/2 z-[81] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6"
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl glass-ikon glass-ikon-lime">
-                    <KeyRound className="h-4 w-4" />
-                  </span>
-                  <h3 className="text-lg font-bold text-metin">API Anahtarı Oluştur</h3>
-                </div>
-                <button onClick={() => setModal(false)} aria-label="Kapat" className="text-metin-3 hover:text-metin">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <label className="mb-1.5 block text-xs font-semibold text-metin-2">API Anahtar Adı</label>
-              <input
-                data-anahtar-ad
-                value={ad}
-                onChange={(e) => setAd(e.target.value)}
-                autoFocus
-                onKeyDown={(e) => e.key === "Enter" && anahtarOlustur()}
-                placeholder="örn. Üretim API, Geliştirme testi"
-                className="mb-1.5 h-11 w-full rounded-xl border border-white/[0.1] bg-yuzey-2 px-3.5 text-sm text-metin outline-none placeholder:text-metin-3 focus:border-aksan/50"
-              />
-              <p className="mb-4 text-[11px] text-metin-3">Bu anahtarı tanımak için açıklayıcı bir ad seç.</p>
-
-              <label className="mb-1.5 block text-xs font-semibold text-metin-2">Ortam</label>
-              <div className="mb-4 flex gap-2">
-                {(["canli", "test"] as AnahtarOrtam[]).map((o) => (
-                  <button
-                    key={o}
-                    onClick={() => setOrtam(o)}
-                    className={cn(
-                      "flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                      ortam === o ? "glass-cip glass-cip-aktif text-metin" : "glass-cip text-metin-2",
-                    )}
-                  >
-                    {o === "canli" ? "Canlı (vy_live_)" : "Test (vy_test_)"}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-amber-400/25 bg-amber-500/[0.08] p-3">
-                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-                <div>
-                  <p className="text-xs font-semibold text-amber-200">Güvenlik Uyarısı</p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-amber-200/70">
-                    Anahtarın oluşturulup yalnızca BİR KEZ tam olarak gösterilir. Kopyalayıp güvenli
-                    bir yerde sakladığından emin ol.
-                  </p>
+      {/* Oluştur / düzenle */}
+      <Modal acik={!!form} onKapat={() => { setForm(null); setDuzenlenen(null); }} genislik={600}
+        baslik={duzenlenen ? "Anahtarı düzenle" : "Yeni API anahtarı"}
+        aciklama={duzenlenen ? "Ortam sonradan değiştirilemez; ayarlar sunucuda anında geçerli olur." : "Anahtar oluşturulduktan sonra bir kez tam haliyle gösterilir."}
+        alt={<><button onClick={() => { setForm(null); setDuzenlenen(null); }} className={ikincil}>Vazgeç</button><button onClick={kaydet} className={birincil}>{duzenlenen ? "Kaydet" : "Oluştur"}</button></>}>
+        {form && (
+          <div className="space-y-5">
+            <div>
+              <label className={etiket} htmlFor="anahtar-ad">Ad</label>
+              <input id="anahtar-ad" autoFocus value={form.ad} onChange={(e) => setForm({ ...form, ad: e.target.value.slice(0, 60) })} placeholder="ör. Üretim sunucusu" className={girdi} />
+            </div>
+            {!duzenlenen && (
+              <div>
+                <span className={etiket}>Ortam</span>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Secenek ikon={Rocket} secili={form.ortam === "canli"} onClick={() => setForm({ ...form, ortam: "canli", hizLimiti: form.hizLimiti === 20 ? 60 : form.hizLimiti })} baslik="Canlı" aciklama="Gerçek üretim; kredi harcar." />
+                  <Secenek ikon={FlaskConical} secili={form.ortam === "test"} onClick={() => setForm({ ...form, ortam: "test", hizLimiti: form.hizLimiti === 60 ? 20 : form.hizLimiti })} baslik="Test" aciklama="Örnek çıktı döner; kredi harcamaz." />
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setModal(false)}
-                  className="hf-btn flex-1 rounded-xl border border-white/[0.12] py-2.5 text-sm font-medium text-metin-2 hover:bg-white/[0.05]"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  data-anahtar-olustur
-                  onClick={anahtarOlustur}
-                  className="hf-btn flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-aksan py-2.5 text-sm font-bold text-[#12140c]"
-                >
-                  <Check className="h-4 w-4" /> Oluştur
-                </button>
+            )}
+            <div>
+              <span className={etiket}>Kapsam</span>
+              <div className="space-y-2">{KAPSAMLAR.map((k) => <Secenek key={k.id} ikon={KAPSAM_IKON[k.id]} secili={form.kapsam === k.id} onClick={() => setForm({ ...form, kapsam: k.id })} baslik={k.ad} aciklama={k.ozet} />)}</div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className={etiket} htmlFor="anahtar-hiz">Hız limiti (istek/dk)</label>
+                <input id="anahtar-hiz" type="number" min={1} max={600} value={form.hizLimiti} onChange={(e) => setForm({ ...form, hizLimiti: Math.max(1, Math.min(600, Number(e.target.value) || 1)) })} className={girdi} />
               </div>
-            </motion.div>
-          </>
+              <div>
+                <label className={etiket} htmlFor="anahtar-sinir">Aylık harcama sınırı (kredi)</label>
+                <input id="anahtar-sinir" type="number" min={0} value={form.aylikSinir} onChange={(e) => setForm({ ...form, aylikSinir: e.target.value })} placeholder="Sınırsız" disabled={form.ortam === "test"} className={cn(girdi, "disabled:opacity-40")} />
+              </div>
+            </div>
+            <div>
+              <span className={etiket}>Geçerlilik</span>
+              <SecimSerit id="anahtar-bitis" secenek={BITISLER.map(([ad, gun]) => ({ id: gun === null ? "yok" : String(gun), ad }))} deger={form.bitisGun === null ? "yok" : String(form.bitisGun)}
+                onDegis={(v) => setForm({ ...form, bitisGun: v === "yok" ? null : Number(v) })} />
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </Modal>
 
-      {/* "Bir kez gösterilir" ekranı */}
-      <AnimatePresence>
-        {yeniAnahtar && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setYeniAnahtar(null)}
-              className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              role="dialog"
-              aria-modal="true"
-              className="menu-surface fixed left-1/2 top-1/2 z-[81] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6"
-            >
-              <div className="mb-4 flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl glass-ikon glass-ikon-lime">
-                  <Check className="h-4 w-4" />
-                </span>
-                <h3 className="text-lg font-bold text-metin">Anahtarın hazır</h3>
-              </div>
-              <p className="mb-3 text-sm text-metin-2">
-                Bu anahtar bir daha gösterilmeyecek. Şimdi kopyala ve güvenli bir yerde sakla.
-              </p>
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-aksan/25 bg-aksan/[0.06] p-3">
-                <code
-                  data-yeni-anahtar-degeri
-                  className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-sm text-metin [scrollbar-width:thin]"
-                >
-                  {yeniAnahtar}
-                </code>
-                <KopyalaDugme metin={yeniAnahtar} etiket="Anahtar" />
-              </div>
-              <button
-                onClick={() => setYeniAnahtar(null)}
-                className="hf-btn w-full rounded-xl bg-aksan py-2.5 text-sm font-bold text-[#12140c]"
-              >
-                Kopyaladım, kapat
-              </button>
-            </motion.div>
-          </>
+      {/* Bir kez gösterim */}
+      <Modal acik={!!yeni} onKapat={() => setYeni(null)} genislik={600} baslik="Anahtarın hazır"
+        aciklama="Şimdi kopyala ve ortam değişkenine kaydet. Bu tarayıcıda maskeli saklanır; sızdırmamak için ekran paylaşırken dikkat et."
+        alt={<button onClick={() => setYeni(null)} className={birincil}>Kaydettim</button>}>
+        {yeni && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-[18px] bg-[#55d6fd]/[0.07] p-3 pl-4 ring-1 ring-[#55d6fd]/35"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#55d6fd] text-[#06222b]"><Check className="h-4 w-4" strokeWidth={3} /></span>
+              <code className="min-w-0 flex-1 break-all font-mono text-[13px] text-white">{yeni.tam}</code>
+              <button onClick={async () => { if (await panoyaKopyala(yeni.tam)) toast.success("Anahtar kopyalandı"); }} className={birincil}><Copy className="h-4 w-4" />Kopyala</button>
+            </div>
+            <KodEditor dosyaAdi=".env" dil="bash" satirNo={false} kod={`VAYRA_API_KEY=${yeni.tam}`} gizle={yeni.tam} />
+          </div>
         )}
-      </AnimatePresence>
-    </div>
+      </Modal>
+
+      <Onay acik={!!silinecek} onKapat={() => setSilinecek(null)} baslik="Anahtarı iptal et" eylem="İptal et"
+        aciklama={<>Bu anahtarla yapılan istekler hemen <code className="font-mono text-rose-300">401 api_key_revoked</code> almaya başlar. Geri alınamaz. <strong className="text-white">{silinecek?.ad}</strong></>}
+        onOnay={() => { if (!silinecek) return; anahtarIptal(silinecek.id); void senkronize(); toast.success("Anahtar iptal edildi"); }} />
+
+      <Modal acik={!!dondurulen} onKapat={() => setDondurulen(null)} genislik={500} baslik="Anahtarı döndür"
+        aciklama="Aynı ayarlarla yeni bir anahtar oluşturulur. Eskisinin ne zaman kapanacağını seç.">
+        <div className="space-y-2">
+          {([["Hemen kapat", 0, "Sızıntı şüphesinde."], ["1 saat sonra", 1, "Hızlı dağıtım için."], ["24 saat sonra", 24, "Önerilen: dağıtımlar yeni anahtara geçsin."], ["7 gün sonra", 168, "Birden çok ortam güncellenecekse."]] as const).map(([ad, saat, ac]) => (
+            <Secenek key={ad} secili={false} baslik={ad} aciklama={ac} onClick={async () => {
+              if (!dondurulen) return;
+              const y = await anahtarDondur(dondurulen.id, saat);
+              setDondurulen(null);
+              if (y) { setYeni(y); void senkronize(); }
+            }} />
+          ))}
+        </div>
+      </Modal>
+
+      <AyrintiModal a={ayrinti} onKapat={() => setAyrinti(null)} />
+    </>
+  );
+}
+
+function AyrintiModal({ a, onKapat }: { a: ApiAnahtar | null; onKapat: () => void }) {
+  const [sir, setSir] = useState("");
+  useEffect(() => { if (a) void istekSirri(a.tam).then(setSir); }, [a]);
+  return (
+    <Modal acik={!!a} onKapat={onKapat} genislik={600} baslik={a?.ad ?? ""} aciklama="Anahtar kimliği ve istek bazlı webhook imza sırrı.">
+      {a && (
+        <dl className="divide-y divide-white/[0.06] overflow-hidden rounded-[18px] bg-white/[0.02] text-[13.5px] ring-1 ring-white/[0.08]">
+          {[
+            ["Kimlik", a.id],
+            ["Anahtar", anahtarMaske(a.tam)],
+            ["Ortam", a.ortam === "canli" ? "Canlı" : "Test"],
+            ["Kapsam", KAPSAMLAR.find((k) => k.id === a.kapsam)?.ad ?? a.kapsam],
+            ["Hız limiti", `${a.hizLimiti} istek / dakika`],
+            ["Aylık sınır", a.aylikSinir === null ? "Sınırsız" : `${a.aylikSinir.toLocaleString("tr-TR")} kredi`],
+            ["Geçerlilik", a.bitis ? new Date(a.bitis).toLocaleString("tr-TR") : "Süresiz"],
+          ].map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between gap-4 px-4 py-3"><dt className="text-white/60">{k}</dt><dd className={cn("truncate text-white", (k === "Kimlik" || k === "Anahtar") && "font-mono text-[12.5px]")}>{v}</dd></div>
+          ))}
+          <div className="px-4 py-3">
+            <dt className="text-metin-2">İstek bazlı webhook sırrı</dt>
+            <dd className="mt-1.5 flex items-center gap-2"><code className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-[#9ece6a]">{sir || "…"}</code><KopyalaDugme metin={sir} etiket="Sır" /></dd>
+            <p className="mt-1.5 text-[12px] leading-snug text-metin-2">İstekte <code className="font-mono">webhook_url</code> verdiğinde olaylar bu sırla imzalanır. Kayıtlı webhook uç noktalarının kendi sırları vardır.</p>
+          </div>
+        </dl>
+      )}
+    </Modal>
   );
 }

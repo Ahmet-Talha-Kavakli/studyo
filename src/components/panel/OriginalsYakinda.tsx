@@ -54,7 +54,7 @@ export function OriginalsYakinda() {
   const haberVer = () => {
     setHaberVerildi(true);
     if (typeof window !== "undefined") localStorage.setItem(ANAHTAR, "1");
-    toast.success("Kaydedildi", { description: "Originals yayına girince ilk sen haberdar olacaksın." });
+    toast.success("Haber listesine eklendin", { description: "Originals yayına girince ilk sen haberdar olacaksın." });
   };
 
   return (
@@ -143,9 +143,9 @@ export function OriginalsYakinda() {
                 {haberVerildi ? <Check className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
                 {haberVerildi ? "Haber verilecek" : "Haber ver"}
               </button>
-              <Link href="/panel/akis"
+              <Link href="/panel"
                 className="glass-kenar flex flex-1 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-[14.5px] font-semibold text-white transition-colors hover:bg-white/[0.08]">
-                Akış&apos;a göz at <ArrowUpRight className="h-4 w-4" />
+                Keşfet&apos;e göz at <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>
           </motion.div>

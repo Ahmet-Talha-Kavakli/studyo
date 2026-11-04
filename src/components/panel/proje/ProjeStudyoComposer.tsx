@@ -22,6 +22,8 @@
  * görsel sayfasındaki üretme panelini video sayfasına göre özelleştireceğiz").
  */
 
+import { Yuzen } from "@/components/ui/Yuzen";
+import { KrediYildiz } from "@/components/ui/KrediHap";
 import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -239,7 +241,7 @@ export function ProjeStudyoComposer({ projeId, projeAd, klasorAd, onUretildi }: 
 
   const uret = () => {
     if (!istem.trim() && !medya) {
-      toast.error("Önce ne üreteceğini yaz");
+      toast.error("İstem boş", { description: "Ne üretmek istediğini yaz ya da bir medya ekle." });
       return;
     }
     setUretiliyor(true);
@@ -270,7 +272,7 @@ export function ProjeStudyoComposer({ projeId, projeAd, klasorAd, onUretildi }: 
        çağırana bildiririz, o da projeKlasoreAt ile yazar. */
     if (s.id) onUretildi?.(s.id);
     toast.success(`${spec.ad} üretimi başladı`, {
-      description: klasorAd ? `${projeAd} · ${klasorAd} · ${modelAd}` : `${projeAd} · ${modelAd}`,
+      description: `${klasorAd ? `${projeAd} · ${klasorAd}` : projeAd} · ${modelAd}. Bitince bildirim gelir.`,
     });
     setIstem("");
     setMedya(null);
@@ -305,10 +307,7 @@ export function ProjeStudyoComposer({ projeId, projeAd, klasorAd, onUretildi }: 
               <Sparkles className="h-3.5 w-3.5 text-aksan" /> {modelAd}
               <ChevronDown className="h-3 w-3 text-metin-3" />
             </button>
-            {modelAcik && (
-              <>
-                <div className="fixed inset-0 z-20" onClick={() => setModelAcik(false)} />
-                <div className="menu-surface absolute bottom-full left-0 z-30 mb-1.5 max-h-64 w-56 overflow-y-auto rounded-xl p-1.5">
+            <Yuzen acik={!!(modelAcik)} onKapat={() => setModelAcik(false)} alt={"tam"} sol={0} bosluk={6} className="menu-surface max-h-64 w-56 overflow-y-auto rounded-xl p-1.5">
                   {modeller.map((m) => (
                     <button key={m.id} onClick={() => { setModelId(m.id); setModelAcik(false); }}
                       className={cn("flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-[13px] hover:bg-white/8",
@@ -317,9 +316,7 @@ export function ProjeStudyoComposer({ projeId, projeAd, klasorAd, onUretildi }: 
                       <span className="shrink-0 text-[11px] text-metin-3">✦{m.kredi}</span>
                     </button>
                   ))}
-                </div>
-              </>
-            )}
+                </Yuzen>
           </div>
         )}
 
@@ -374,7 +371,7 @@ export function ProjeStudyoComposer({ projeId, projeAd, klasorAd, onUretildi }: 
 
         <button onClick={uret} disabled={uretiliyor || (!istem.trim() && !medya)}
           className="hf-uret flex h-[62px] shrink-0 items-center gap-2 rounded-xl px-5 text-[14px] font-bold disabled:opacity-50">
-          <Sparkles className="h-4 w-4" /> Üret ✦{kredi}
+          <KrediYildiz className="h-4 w-4" /> Üret ✦{kredi}
         </button>
       </div>
     </div>

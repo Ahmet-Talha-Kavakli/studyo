@@ -81,7 +81,7 @@ export default function Moderasyon() {
       mod.kararVer({ icerikId: f.id, kullanici: f.kullanici, karar, yapan, ...ekstra });
       const kritik = karar === "kaldir" || karar === "ban";
       denetle(`${KARAR_ETIKET[karar]}: ${f.kullanici}`, kritik ? "kritik" : karar === "onay" ? "bilgi" : "uyari", f.kullanici);
-      toast.success(`${KARAR_ETIKET[karar]} — ${f.kullanici}`);
+      toast.success({ onay: "İçerik onaylandı", kaldir: "İçerik kaldırıldı", uyar: "Kullanıcı uyarıldı", ban: "Kullanıcı engellendi", escalate: "Üst incelemeye gönderildi" }[karar], { description: `Kullanıcı: ${f.kullanici}` });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [yapan],
@@ -153,7 +153,7 @@ export default function Moderasyon() {
     if (!ekKelime.trim()) return;
     mod.blocklistEkle({ kelime: ekKelime.trim(), kategori: ekKategori.trim() || "Genel", davranis: ekDavranis });
     denetle(`Blocklist kuralı eklendi: ${ekKelime.trim()}`, "uyari");
-    toast.success("Kural eklendi");
+    toast.success("Engel kuralı eklendi", { description: `"${ekKelime.trim()}" artık denetleniyor.` });
     setEkKelime("");
     setEkModal(false);
   };
@@ -241,7 +241,7 @@ export default function Moderasyon() {
                   ) : (
                     <div className="flex gap-1">
                       <Dugme boyut="sm" tur="tehlike" onClick={() => { mod.kararVer({ icerikId: h.id, kullanici: h.ihbarEden, karar: "kaldir", sebep: h.sebep, yapan }); denetle(`İhbar üzerine kaldırıldı: ${h.icerik}`, "kritik"); toast.success("İçerik kaldırıldı"); }}>Kaldır</Dugme>
-                      <Dugme boyut="sm" tur="glass" onClick={() => { mod.kararVer({ icerikId: h.id, kullanici: h.ihbarEden, karar: "onay", sebep: "İhbar reddedildi", yapan }); denetle(`İhbar reddedildi: ${h.icerik}`, "bilgi"); toast.success("İhbar reddedildi (içerik uygun)"); }}>Reddet</Dugme>
+                      <Dugme boyut="sm" tur="glass" onClick={() => { mod.kararVer({ icerikId: h.id, kullanici: h.ihbarEden, karar: "onay", sebep: "İhbar reddedildi", yapan }); denetle(`İhbar reddedildi: ${h.icerik}`, "bilgi"); toast.success("İhbar reddedildi", { description: "İçerik kurallara uygun bulundu." }); }}>Reddet</Dugme>
                     </div>
                   )}
                 </div>
@@ -278,7 +278,7 @@ export default function Moderasyon() {
                     <td className="px-4 py-3"><Rozet ton={b.davranis === "engelle" ? "tehlike" : b.davranis === "uyar" ? "uyari" : "notr"}>{b.davranis}</Rozet></td>
                     <td className="px-4 py-3 text-right tabular-nums text-[color:var(--ad-metin-2)]">0</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => { mod.blocklistSil(b.id); denetle(`Blocklist kuralı silindi: ${b.kelime}`, "uyari"); toast.success("Kural silindi"); }} title="Sil" className="text-[color:var(--ad-metin-3)] transition-colors hover:text-rose-400"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => { mod.blocklistSil(b.id); denetle(`Blocklist kuralı silindi: ${b.kelime}`, "uyari"); toast.success("Engel kuralı silindi", { description: `"${b.kelime}" artık denetlenmiyor.` }); }} title="Sil" className="text-[color:var(--ad-metin-3)] transition-colors hover:text-rose-400"><Trash2 className="h-4 w-4" /></button>
                     </td>
                   </tr>
                 ))}
@@ -413,7 +413,7 @@ export default function Moderasyon() {
                   ) : (
                     <div className="flex gap-1">
                       <Dugme boyut="sm" tur="tehlike" onClick={() => { mod.kararVer({ icerikId: d.id, kullanici: d.hakSahibi, karar: "kaldir", sebep: `DMCA: ${d.hakSahibi}`, yapan }); denetle(`DMCA içerik kaldırıldı: ${d.icerik}`, "kritik"); toast.success("İçerik kaldırıldı"); }}>Kaldır</Dugme>
-                      <Dugme boyut="sm" tur="glass" onClick={() => { mod.kararVer({ icerikId: d.id, kullanici: d.hakSahibi, karar: "onay", sebep: `DMCA reddedildi: ${d.hakSahibi}`, yapan }); denetle(`DMCA talebi reddedildi: ${d.icerik}`, "uyari"); toast.success("Talep reddedildi"); }}>Reddet</Dugme>
+                      <Dugme boyut="sm" tur="glass" onClick={() => { mod.kararVer({ icerikId: d.id, kullanici: d.hakSahibi, karar: "onay", sebep: `DMCA reddedildi: ${d.hakSahibi}`, yapan }); denetle(`DMCA talebi reddedildi: ${d.icerik}`, "uyari"); toast.success("DMCA talebi reddedildi", { description: "İçerik yayında kalıyor." }); }}>Reddet</Dugme>
                     </div>
                   ))}
                 </div>

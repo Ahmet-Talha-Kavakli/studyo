@@ -367,7 +367,7 @@ export function UcBoyutYakinda() {
   const haberVer = () => {
     setHaberVerildi(true);
     if (typeof window !== "undefined") localStorage.setItem(ANAHTAR, "1");
-    toast.success("Kaydedildi", { description: "3D Stüdyo yayına girince ilk sen haberdar olacaksın." });
+    toast.success("Haber listesine eklendin", { description: "3D Stüdyo yayına girince ilk sen haberdar olacaksın." });
   };
 
   return (

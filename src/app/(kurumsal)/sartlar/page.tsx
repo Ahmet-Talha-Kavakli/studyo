@@ -1,22 +1,24 @@
 import type { Metadata } from "next";
-import { HukukiSayfa } from "@/components/kurumsal/HukukiSayfa";
+import { YasalBelge } from "@/components/sirket/YasalBelge";
+import { SARTLAR, SARTLAR_GECMIS, SARTLAR_META } from "@/lib/kurumsal/yasal/sartlar";
+import { ILETISIM } from "@/lib/kurumsal/site";
 
-export const metadata: Metadata = { title: "Kullanım Şartları — Vayra" };
+export const metadata: Metadata = {
+  title: "Kullanım Şartları",
+  description: "Vayra kullanım şartları: hesap, krediler ve ödeme, içerik sahipliği, kabul edilebilir kullanım, fesih ve uyuşmazlıklar.",
+};
 
-export default function SartlarPage() {
+export default function Sayfa() {
   return (
-    <HukukiSayfa
+    <YasalBelge
       baslik="Kullanım Şartları"
-      guncelleme="1 Temmuz 2026"
-      ozet="Vayra'yı kullanırken geçerli olan koşullar ve karşılıklı sorumluluklar."
-      bolumler={[
-        { baslik: "Hizmetin kabulü", icerik: "Vayra'yı kullanarak bu şartları kabul etmiş olursun. Şartları kabul etmiyorsan hizmeti kullanma." },
-        { baslik: "Hesap sorumluluğu", icerik: "Hesabının güvenliğinden sen sorumlusun. Şüpheli bir durumda bizi bilgilendir." },
-        { baslik: "Kabul edilebilir kullanım", icerik: "Yasa dışı, zararlı, telif ihlali içeren veya başkalarının haklarını çiğneyen içerik üretemezsin." },
-        { baslik: "Krediler ve ödemeler", icerik: "Krediler seçtiğin plana göre tahsis edilir. Aboneliği istediğin an iptal edebilirsin." },
-        { baslik: "İçerik ve fikri mülkiyet", icerik: "Ürettiğin içerik sana aittir; platform altyapısı ve markası Vayra'ya aittir." },
-        { baslik: "Sorumluluk sınırı", icerik: "Hizmet 'olduğu gibi' sunulur. Kesintisiz veya hatasız olacağını garanti etmeyiz." },
-      ]}
+      aciklama="Vayra’yı kullanırken senin ve bizim haklarımızı, sorumluluklarımızı düzenleyen sözleşme. Her bölümün başında sade bir özet bulacaksın."
+      yururluk={SARTLAR_META.yururluk}
+      surum={SARTLAR_META.surum}
+      sorumlu="Vayra Technologies B.V. · Türkiye’de Vayra Teknoloji A.Ş."
+      bolumler={SARTLAR}
+      gecmis={SARTLAR_GECMIS}
+      iletisim={{ ad: "Hukuk", eposta: ILETISIM.hukuk }}
     />
   );
 }

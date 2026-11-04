@@ -1,27 +1,25 @@
-import type { Metadata, Viewport } from "next";
-import { KurumsalNav } from "@/components/kurumsal/KurumsalNav";
-import { KurumsalFooter } from "@/components/kurumsal/KurumsalFooter";
-
-/* (kurumsal) route-group kabuğu — AÇIK/BEYAZ kurumsal alan.
-   `.kurumsal-kapsam` token'ları beyaz temayı bu ağaca indirir (uygulamanın koyu
-   dilinden KASITLI ayrışma). URL'ler parantezle DEĞİŞMEZ: /gizlilik yine /gizlilik. */
+import type { Metadata } from "next";
+import { UstNav } from "@/components/kabuk/UstNav";
+import { MobilBaslik } from "@/components/kabuk/MobilBaslik";
+import { AltTabBar } from "@/components/kabuk/AltTabBar";
+import { AuthKapiModal } from "@/components/kabuk/AuthKapiModal";
+import { Altbilgi } from "@/components/kesfet/Kapanis";
+import { kesfetFont } from "@/components/kesfet/font";
 
 export const metadata: Metadata = {
-  description: "Vayra kurumsal — hakkımızda, kariyer, basın, güvenlik, iletişim ve yasal belgeler.",
+  description: "Vayra şirket sayfaları — hakkımızda, müşteriler, kurumsal, güvenlik, kariyer, basın, iş ortaklığı, iletişim ve yasal belgeler.",
 };
 
-/* Kurumsal alan açık temalı → tarayıcı çubuğu da beyaz. */
-export const viewport: Viewport = {
-  colorScheme: "light",
-  themeColor: "#ffffff",
-};
-
+/** Şirket ve yasal sayfalar ana siteyle aynı kabuğu kullanır: üst nav, alt bilgi, mobil çubuklar. */
 export default function KurumsalLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="kurumsal-kapsam min-h-screen bg-white text-[color:var(--color-metin)] antialiased">
-      <KurumsalNav />
-      <main className="pt-16">{children}</main>
-      <KurumsalFooter />
+    <div className={`kesfet-tema ${kesfetFont.variable} min-h-screen`}>
+      <UstNav />
+      <MobilBaslik />
+      <main className="pb-[calc(60px+env(safe-area-inset-bottom))] sm:pb-0">{children}</main>
+      <Altbilgi />
+      <AltTabBar />
+      <AuthKapiModal />
     </div>
   );
 }

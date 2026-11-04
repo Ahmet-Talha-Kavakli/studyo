@@ -16,8 +16,8 @@ const asamalar: { durum: SCDurum; etiket: string }[] = [
 const sira: SCDurum[] = ["kuyrukta", "planlaniyor", "kodlaniyor", "test", "tamam"];
 
 /**
- * Home canlı-ajan log kartı: Supercomputer'da aktif bir iş varsa onu adım-adım
- * checklist olarak gösterir; yoksa Supercomputer'a davet kartı. Gerçek veriye bağlı.
+ * Home canlı-ajan log kartı: Usta'da aktif bir iş varsa onu adım-adım
+ * checklist olarak gösterir; yoksa Usta'ya davet kartı. Gerçek veriye bağlı.
  */
 export function AjanLogKarti() {
   const isler = useSupercomputer((s) => s.isler);
@@ -31,7 +31,7 @@ export function AjanLogKarti() {
           <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md">
             <Cpu className="h-5 w-5 text-cyan-glow" />
           </span>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-glow/80">Supercomputer</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-glow/80">Usta</p>
           <h3 className="mt-1 text-lg font-bold">Bir fikir yaz, ajanlar inşa etsin</h3>
           <p className="mt-1 text-sm text-white/60">Uygulama, web sitesi veya oyunu prompt'tan uçtan uca üretir.</p>
         </div>
@@ -52,7 +52,7 @@ export function AjanLogKarti() {
           {aktif.durum === "tamam" ? <Check className="h-4 w-4" /> : <Loader2 className="h-4 w-4 animate-spin" />}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-glow/80">Supercomputer · Vayra 3D Sol</p>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-cyan-glow/80">Usta · Vayra 3D Sol</p>
           <p className="truncate text-sm font-semibold">{aktif.ad}</p>
         </div>
         <span className="shrink-0 text-xs text-white/45">%{Math.round(aktif.ilerleme)}</span>

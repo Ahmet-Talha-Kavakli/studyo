@@ -46,10 +46,10 @@ function yedekKopyala(metin: string): boolean {
  *
  * @returns kopyalandı mı
  */
-export async function kopyala(metin: string, basarıMesaj = "Kopyalandı", aciklama?: string): Promise<boolean> {
+export async function kopyala(metin: string, basarıMesaj = "Panoya kopyalandı", aciklama?: string): Promise<boolean> {
   const deger = String(metin ?? "");
   if (!deger.trim()) {
-    toast.error("Kopyalanacak içerik yok");
+    toast.error("Kopyalanacak içerik yok", { description: "Bu alan boş. Önce içerik oluştur ya da başka bir öğe seç." });
     return false;
   }
   try {
@@ -65,7 +65,7 @@ export async function kopyala(metin: string, basarıMesaj = "Kopyalandı", acikl
     toast.success(basarıMesaj, aciklama ? { description: aciklama } : undefined);
     return true;
   }
-  toast.error("Panoya kopyalanamadı", { description: deger.slice(0, 90) });
+  toast.error("Panoya kopyalanamadı", { description: `Tarayıcı panoya erişime izin vermedi. Metni seçip elle kopyala: ${deger.slice(0, 90)}` });
   return false;
 }
 
@@ -154,27 +154,27 @@ export interface IndirilebilirUretim {
  */
 export function uretimIndir(u: IndirilebilirUretim | null | undefined, ekMesaj?: string): boolean {
   if (!u) {
-    toast.error("İndirilecek üretim bulunamadı");
+    toast.error("İndirilecek üretim bulunamadı", { description: "Üretim silinmiş ya da henüz hazır değil. Listeyi yenileyip yeniden dene." });
     return false;
   }
   const ad = (u.baslik as string) || (u.prompt as string) || "vayra-uretim";
 
   if (u.videoUrl) {
     const ok = urlIndir(u.videoUrl, dosyaAdiTemiz(ad, "mp4"));
-    if (ok) { toast.success("Video indiriliyor 🎬", { description: ekMesaj ?? ad }); return true; }
+    if (ok) { toast.success("Video indiriliyor", { description: ekMesaj ?? ad }); return true; }
   }
   if (u.sesUrl) {
-    const ok = urlIndir(u.sesUrl, dosyaAdiTemiz(ad, "mp3"));
-    if (ok) { toast.success("Ses indiriliyor 🎧", { description: ekMesaj ?? ad }); return true; }
+    const ok = urlIndir(u.sesUrl, dosyaAdiTemiz(ad, String(u.sesUrl).match(/\.(mp3|wav|opus|ogg|m4a|webm)$/)?.[1] ?? "mp3"));
+    if (ok) { toast.success("Ses indiriliyor", { description: ekMesaj ?? ad }); return true; }
   }
   if (u.glbUrl) {
     const ok = urlIndir(u.glbUrl, dosyaAdiTemiz(ad, "glb"));
-    if (ok) { toast.success("3D model indiriliyor 🧊", { description: ekMesaj ?? ad }); return true; }
+    if (ok) { toast.success("3D model indiriliyor", { description: ekMesaj ?? ad }); return true; }
   }
   const gorsel = saltUrl(u.gorselUrl) ?? saltUrl(u.thumbnailUrl);
   if (gorsel && /^(data:|https?:|\/)/.test(gorsel)) {
     gorseliIndir(String(u.prompt ?? "") + String(u.model ?? ""), ad, gorsel);
-    toast.success("İndirildi ✓", { description: ekMesaj ?? ad });
+    toast.success("Görsel indiriliyor", { description: ekMesaj ?? ad });
     return true;
   }
   // Görsel çıktı yok → en azından üretimin künyesini gerçek bir dosya olarak indir.
@@ -194,10 +194,10 @@ export function uretimIndir(u: IndirilebilirUretim | null | undefined, ekMesaj?:
   );
   const ok = metinIndir(kunye, dosyaAdiTemiz(ad, "json"), "application/json");
   if (ok) {
-    toast.success("Üretim künyesi indirildi ✓", { description: "Medya dosyası yok — künye JSON olarak kaydedildi" });
+    toast.success("Üretim künyesi indirildi", { description: "Medya dosyası olmadığı için künye JSON olarak kaydedildi." });
     return true;
   }
-  toast.error("İndirilemedi", { description: "Tarayıcı indirmeyi engelledi." });
+  toast.error("İndirilemedi", { description: "Tarayıcı indirmeyi engelledi. Bu site için indirmelere izin verip yeniden dene." });
   return false;
 }
 
@@ -205,7 +205,7 @@ export function uretimIndir(u: IndirilebilirUretim | null | undefined, ekMesaj?:
 export function topluIndir(liste: IndirilebilirUretim[], etiket?: string) {
   const gecerli = liste.filter(Boolean);
   if (!gecerli.length) {
-    toast.error("İndirilecek seçim yok");
+    toast.error("İndirilecek seçim yok", { description: "Önce indirmek istediğin öğeleri seç." });
     return;
   }
   gecerli.forEach((u, i) => {
@@ -218,7 +218,7 @@ export function topluIndir(liste: IndirilebilirUretim[], etiket?: string) {
       gorseliIndir(String(u.prompt ?? "") + String(u.model ?? ""), ad, g && /^(data:|https?:|\/)/.test(g) ? g : undefined);
     }, i * 320);
   });
-  toast.success(`${gecerli.length} dosya indiriliyor ✓`, { description: etiket ?? "Tarayıcı indirmeleri sırayla başlatıldı" });
+  toast.success(`${gecerli.length} dosya indiriliyor`, { description: etiket ?? "Tarayıcı indirmeleri sırayla başlatır." });
 }
 
 export { dosyaAdiTemiz };

@@ -1,5 +1,8 @@
 "use client";
 
+import { upscaleAdresi } from "@/lib/upscaleVeri";
+import { KrediYildiz } from "@/components/ui/KrediHap";
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -11,6 +14,8 @@ import {
   Pencil, FileImage, FileType2, FileArchive, FileVideo, AudioLines,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
+import { uretimGeriAl } from "./uretimGeriAl";
 import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { useYorumlar, goreliZaman } from "@/store/useYorumlar";
 import { useReferansKopru } from "@/store/useReferansKopru";
@@ -157,7 +162,7 @@ function YayinModal({ u, onKapat, onYayinla }: {
   return createPortal(
     <div className="fixed inset-0 z-[130] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-ink-950/80 backdrop-blur-md" onClick={onKapat} />
+        className="perde absolute inset-0 bg-ink-950/80 backdrop-blur-md" onClick={onKapat} />
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
         transition={{ type: "spring", stiffness: 380, damping: 30 }}
@@ -219,8 +224,8 @@ function YayinModal({ u, onKapat, onYayinla }: {
               </div>
             </div>
             <button onClick={() => setIzin((v) => !v)}
-              className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", izin ? "bg-aksan" : "bg-white/15")}>
-              <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform", izin ? "translate-x-[22px]" : "translate-x-0.5")} />
+              className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", izin ? "bg-white" : "bg-white/15")}>
+              <span className={cn("absolute top-0.5 h-5 w-5 rounded-full transition-[transform,background-color]", izin ? "translate-x-[22px] bg-[#0a0a0b]" : "translate-x-0.5 bg-white")} />
             </button>
           </label>
         </div>
@@ -289,7 +294,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
     const el = medyaAlanRef.current;
     if (!el) return;
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else el.requestFullscreen?.().catch(() => toast.error("Tam ekran açılamadı."));
+    else el.requestFullscreen?.().catch(() => toast.error("Tam ekran açılamadı", { description: "Tarayıcın tam ekrana izin vermedi. Esc ile çıkıp yeniden dene." }));
   };
   const [promptAcik, setPromptAcik] = useState(false);
   const [detayAcik, setDetayAcik] = useState(true);
@@ -309,7 +314,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
     setAdDuzenleniyor(false);
     if (!yeni || yeni === u.baslik) return;
     guncelle(u.id, { baslik: yeni });
-    toast.success("Ad güncellendi", { description: `${yeni}.${u.tur === "video" ? "mp4" : u.tur === "ses" ? "mp3" : "png"} olarak inecek` });
+    toast.success("Ad güncellendi", { description: `Dosya ${yeni}.${u.tur === "video" ? "mp4" : u.tur === "ses" ? "mp3" : "png"} adıyla iner.` });
   };
   /** Dosya-sistemi güvenli indirme adı — kullanıcının verdiği başlıktan. */
   const dosyaAdi = () => (u.baslik.replace(/[^\wğüşiöçİĞÜŞÖÇ -]/gi, "").trim().slice(0, 60) || "vayra");
@@ -330,14 +335,14 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       a.href = dogrudan;
       a.download = `${dosyaAdi()}.${format}`;
       document.body.appendChild(a); a.click(); a.remove();
-      toast.success("İndiriliyor ✓", { description: `${dosyaAdi()}.${format}` });
+      toast.success(`${u.tur === "ses" ? "Ses" : "Video"} indiriliyor`, { description: `${dosyaAdi()}.${format}` });
       return;
     }
     const kaynak = u.gorselUrl && /^(data:|https?:|\/)/.test(u.gorselUrl) ? u.gorselUrl : saltUrl(u.gorselUrl);
-    if (!kaynak) { gorseliIndir(u.prompt + u.model, dosyaAdi()); return; }
+    if (!kaynak) { gorseliIndir(u.prompt + u.model, dosyaAdi()); toast.success("PNG indirildi", { description: `${dosyaAdi()}.png` }); return; }
     void gorseliFormatlaIndir(kaynak, dosyaAdi(), format).then(
-      () => toast.success(`${format.toUpperCase()} indirildi ✓`, { description: `${dosyaAdi()}.${format}` }),
-      () => toast.error("İndirilemedi"),
+      () => toast.success(`${format.toUpperCase()} indirildi`, { description: `${dosyaAdi()}.${format}` }),
+      () => mesaj.indirilemedi(`Görsel ${format.toUpperCase()} biçimine çevrilemedi.`),
     );
   };
   const [yorum, setYorum] = useState("");
@@ -403,8 +408,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       baslik: `${u.baslik} · ${h.ad}`.slice(0, 42), tur: "video", model: "Seedance 2.0",
       prompt: `${u.prompt} · canlandırma: ${h.prompt}`, kredi: 42, arac: "Videoya Çevir", meta: { oran: u.meta?.oran },
     });
-    if (!s.ok) return toast.error("Olmadı", { description: s.hata });
-    toast.success(`${h.ad} ile canlandırılıyor 🎬`, { description: "Recast Motion — statik görsel harekete geçiyor" });
+    if (!s.ok) return toast.error("Canlandırma başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success(`${h.ad} ile canlandırılıyor`, { description: `Seedance 2.0 · 42 kredi. Bitince bildirim gelir.` });
     onClose();
   };
   const { favoriToggle, guncelle, sil } = useProjeler();
@@ -422,8 +427,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       prompt: `${u.prompt} · ${a.ekPrompt} (${secimler})`, kredi: a.kredi, arac: a.arac,
       meta: u.meta,
     });
-    if (!s.ok) return toast.error("Uygulanamadı", { description: s.hata });
-    toast.success(`${a.ad} uygulanıyor ✨`, { description: `${secimler} · ${a.kredi} kredi` });
+    if (!s.ok) return toast.error(`${a.ad} başlatılamadı`, { description: s.hata ?? "Yeniden dene." });
+    toast.success(`${a.ad} uygulanıyor`, { description: `${secimler} · ${a.kredi} kredi. Bitince bildirim gelir.` });
     onClose();
   };
 
@@ -434,8 +439,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       prompt: `${u.prompt} · ${oran} orana genişletildi (outpaint/reframe), kenarlar doğal doldurma`,
       kredi: 4, arac: "Reframe", meta: { oran },
     });
-    if (!s.ok) return toast.error("Genişletilemedi", { description: s.hata });
-    toast.success(`${oran} orana genişletiliyor 🖼️`, { description: "Reframe · kenarlar dolduruluyor" });
+    if (!s.ok) return toast.error("Genişletme başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success(`${oran} oranına genişletiliyor`, { description: "Kenarlar dolduruluyor · 4 kredi. Bitince bildirim gelir." });
     onClose();
   };
 
@@ -483,8 +488,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       baslik: u.baslik,
     });
 
-    toast.success("Ayarlar composer'a yüklendi", {
-      description: [u.model, u.meta?.cozunurluk, u.meta?.oran].filter(Boolean).join(" · ") || undefined,
+    toast.success("Ayarlar oluşturucuya yüklendi", {
+      description: [u.model, u.meta?.cozunurluk, u.meta?.oran].filter(Boolean).join(" · ") + ".",
     });
     onClose();
   };
@@ -497,14 +502,14 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast.success("Ses indiriliyor 🎧");
+      toast.success("Ses indiriliyor", { description: a.download });
       return;
     }
     const gercekGorsel = u.gercek && u.gorselUrl && (u.gorselUrl.startsWith("data:") || u.gorselUrl.startsWith("http"))
       ? u.gorselUrl
       : undefined;
     gorseliIndir(u.prompt + u.model, u.baslik, gercekGorsel);
-    toast.success("İndirildi ✓", { description: u.baslik });
+    toast.success("İndirildi", { description: u.baslik });
   };
 
   const videoyaCevir = () => {
@@ -512,8 +517,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       baslik: u.baslik + " (video)", tur: "video", model: "Seedance 2.0",
       prompt: u.prompt, kredi: 42, arac: "Videoya Çevir",
     });
-    if (!s.ok) return toast.error("Olmadı", { description: s.hata });
-    toast.success("Videoya çevriliyor 🎬");
+    if (!s.ok) return toast.error("Video başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success("Videoya çevriliyor", { description: "Seedance 2.0 · 42 kredi. Bitince bildirim gelir." });
     onClose();
   };
 
@@ -540,7 +545,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
   const studyodaGelistir = (hedef: { ad: string; href: string }) => {
     // Prompt'u sonraki stüdyoya taşı (sessionStorage köprüsü).
     try { sessionStorage.setItem("vayra-gecis-prompt", u.prompt); } catch { /* yoksay */ }
-    toast.success(`${hedef.ad} — prompt taşındı`, { description: u.baslik });
+    toast.success("İstem taşındı", { description: `${hedef.ad} için açılıyor.` });
     router.push(hedef.href);
     onClose();
   };
@@ -558,9 +563,9 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
   const kokRef = useRef<HTMLSpanElement>(null);
   const [kapsam, setKapsam] = useState("");
   useEffect(() => {
-    const yakin = kokRef.current?.closest(".sinema-kapsam, .kitaplik-kapsam, .sc-kapsam");
+    const yakin = kokRef.current?.closest(".sinema-kapsam, .sc-kapsam");
     if (yakin) {
-      const bulunan = ["sinema-kapsam", "kitaplik-kapsam", "sc-kapsam"].find((k) => yakin.classList.contains(k));
+      const bulunan = ["sinema-kapsam", "sc-kapsam"].find((k) => yakin.classList.contains(k));
       if (bulunan) setKapsam(bulunan);
     }
     /* MOBİL LİME: portal body'ye taşınınca panel gövdesindeki `.mobil-lime-sayfa`
@@ -629,13 +634,13 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
           )}
           {(u.tur === "gorsel" || (u.tur === "video" && false)) && (
             <img src={saltUrl(u.gorselUrl)} alt={u.baslik}
-              className="max-h-full max-w-full rounded-xl object-contain shadow-2xl shadow-black/60" />
+              className="max-h-full max-w-full rounded-xl object-contain" />
           )}
           {u.tur === "ses" ? (
             <div className="w-full max-w-xl">
               {/* Higgsfield ses lightbox: büyük kart — kapak parıltısı + waveform oynatıcı */}
               <div
-                className="relative overflow-hidden rounded-3xl border border-white/10 bg-ink-900/80 p-8 shadow-2xl shadow-black/60"
+                className="relative overflow-hidden rounded-3xl border border-white/10 bg-ink-900/80 p-8"
                 style={{
                   background:
                     "radial-gradient(70% 60% at 50% 0%, rgba(34,211,238,0.14), transparent 70%), linear-gradient(160deg,#0f1113,#0f1113)",
@@ -653,14 +658,14 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                 <SesOynatici sesUrl={u.sesUrl} baslik={u.baslik} vurgu="cyan" />
               </div>
               <p className="mt-4 text-center text-xs text-white/40">
-                {u.sesUrl ? "Gerçek ses çıktısı" : "Demo ses — anahtar eklenince canlı çalar"}
+                {u.sesUrl ? "Gerçek ses çıktısı" : "Örnek ses — anahtar eklenince canlı çalar"}
               </p>
             </div>
           ) : u.tur === "3d" ? (
             <div className="w-full max-w-lg">
               <ModelGoruntuleyici glbUrl={u.glbUrl} thumbnail={u.thumbnailUrl} baslik={u.baslik} gercek={u.gercek} />
               <p className="mt-3 text-center text-xs text-white/40">
-                {u.glbUrl ? "Gerçek 3D model — sürükleyerek döndür" : "Demo model — anahtar eklenince canlı GLB"}
+                {u.glbUrl ? "Gerçek 3D model — sürükleyerek döndür" : "Örnek model — anahtar eklenince canlı GLB"}
               </p>
             </div>
           ) : u.tur === "video" ? (
@@ -671,7 +676,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
             <div className="flex w-full max-w-[min(100%,calc((100vh-11rem)*16/9))] flex-col">
               <VideoOynatici videoUrl={u.videoUrl} poster={saltUrl(u.gorselUrl)} baslik={u.baslik} />
               <p className="mt-3 text-center text-xs text-white/40">
-                {u.videoUrl ? "Gerçek video çıktısı" : "Demo video — anahtar eklenince canlı oynar"}
+                {u.videoUrl && u.gercek !== false && !u.meta?.demoKlip ? "Gerçek video çıktısı" : "Örnek klip: sağlayıcı bağlanınca gerçek çıktı oynar"}
               </p>
             </div>
           ) : null}
@@ -737,9 +742,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                 </button>
               </Tooltip>
               <AnimatePresence>
-                {indirAcik && (
-                  <motion.div initial={{ opacity: 0, scale: 0.97, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
-                    className="menu-surface absolute right-0 top-full z-[60] mt-1 w-56 rounded-2xl p-1.5">
+                <Yuzen acik={!!(indirAcik)} onKapat={() => setIndirAcik(false)} sag={0} ust={"tam"} bosluk={4}><motion.div initial={{ opacity: 0, scale: 0.97, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
+                    className="menu-surface w-56 rounded-2xl p-1.5">
                     {formatListesi.map((f, i) => (
                       <button key={f.ad} onClick={() => { formatIndir(f.ad); setIndirAcik(false); }}
                         className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left transition-colors hover:bg-white/8">
@@ -751,8 +755,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                         {i === 0 && <Check className="h-3.5 w-3.5 shrink-0 text-aksan" />}
                       </button>
                     ))}
-                  </motion.div>
-                )}
+                  </motion.div></Yuzen>
               </AnimatePresence>
             </div>
             <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/8 hover:text-white md:flex" aria-label="Kapat"><X className="h-5 w-5" /></button>
@@ -870,7 +873,15 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                       return (
                         <div key={a.ad}>
                           {/* Higgsfield birebir: ">" GERÇEK parametre panelini açar (eskiden yalan söylüyordu) */}
-                          <button onClick={() => setAcikArac(acikMi ? null : a.ad)}
+                          <button onClick={() => {
+                            if (a.arac === "Yükselt") {
+                              const url = u.tur === "video" ? u.videoUrl : u.gorselUrl;
+                              if (url && /^(\/|https:\/\/|data:image\/)/.test(url)) { onClose(); router.push(upscaleAdresi(url, u.id)); }
+                              else toast.error("Yükseltilecek dosya yok", { description: "Bu üretimin indirilebilir bir dosyası bulunmuyor. Yeniden üretip dene." });
+                              return;
+                            }
+                            setAcikArac(acikMi ? null : a.ad);
+                          }}
                             className={cn("flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-white/[0.06]",
                               acikMi && "bg-white/[0.06]")}>
                             <a.ikon className={cn("h-4.5 w-4.5 shrink-0", acikMi ? "text-aksan" : "text-white/70")} />
@@ -906,7 +917,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-aksan py-2.5 text-sm font-bold text-ink-950 transition-all hover:brightness-110 active:scale-[0.98]">
                                     {a.ad} uygula
                                     <span className="flex items-center gap-0.5 text-xs font-semibold">
-                                      <Sparkles className="h-3.5 w-3.5" /> {a.kredi}
+                                      <KrediYildiz className="h-3.5 w-3.5" /> {a.kredi}
                                     </span>
                                   </button>
                                 </div>
@@ -1041,7 +1052,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                                 Yanıtla
                               </button>
                               {y.yazar === "Sen" && (
-                                <button onClick={() => yorumSil(y.id)}
+                                <button onClick={() => { const silinen = useYorumlar.getState().yorumlar.filter((x) => x.id === y.id || x.yanitId === y.id); yorumSil(y.id); mesaj.silindi("Yorum", () => useYorumlar.getState().geriYukle(silinen)); }}
                                   className="text-[11.5px] text-white/40 opacity-0 transition-all hover:text-rose-400 group-hover/yorum:opacity-100">
                                   Sil
                                 </button>
@@ -1121,7 +1132,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
 
             {/* Yeniden Oluştur (Higgsfield "Recreate" — lime birincil) + Referans */}
             <div className="flex gap-2">
-              <button onClick={() => { const s = uretimBaslat({ baslik: u.baslik, tur: u.tur, model: u.model, prompt: u.prompt, kredi: u.kredi, arac: u.arac }); if (s.ok) { toast.success("Yeniden üretiliyor"); onClose(); } else toast.error(s.hata ?? ""); }}
+              <button onClick={() => { const s = uretimBaslat({ baslik: u.baslik, tur: u.tur, model: u.model, prompt: u.prompt, kredi: u.kredi, arac: u.arac }); if (s.ok) { toast.success("Yeniden üretiliyor", { description: `${u.model} · ${u.kredi} kredi. Bitince bildirim gelir.` }); onClose(); } else toast.error("Yeniden üretim başlatılamadı", { description: s.hata ?? "Yeniden dene." }); }}
                 className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-all active:scale-[0.98]",
                   u.tur === "video" ? "bg-aksan text-ink-950 hover:brightness-110" : "border border-white/15 bg-white/[0.03] hover:bg-white/8")}>
                 <RotateCw className="h-4 w-4" /> Yeniden oluştur
@@ -1156,7 +1167,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
               {/* m11/m17: tooltip'ler artık native title yerine Tooltip (side="top" =
                   ikonun üstünde AYRI balon, portal ile — ikonu örtmez, okunur). */}
               <div className="flex items-center gap-2 [&>span]:flex-1">
-                <Tooltip label={u.favori ? "Favoriden çıkar" : "Favori"} side="top"><button onClick={() => favoriToggle(u.id)}
+                <Tooltip label={u.favori ? "Favoriden çıkar" : "Favori"} side="top"><button onClick={() => { favoriToggle(u.id); toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi", { description: u.baslik }); }}
                   className={cn("flex h-10 w-full items-center justify-center rounded-xl border border-white/15 transition-colors hover:bg-white/8", u.favori && "border-rose-400/40 text-rose-400")}
                   aria-label="Favori">
                   <Heart className={cn("h-4 w-4", u.favori && "fill-current")} />
@@ -1168,7 +1179,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                 <Tooltip label={u.yayinda ? "Yayından kaldır" : "Keşfet'te yayınla"} side="top"><button
                   onClick={() => {
                     // m8: yayında değilse GERÇEK yayın akışı (modal); yayındaysa tek tıkla kaldır.
-                    if (u.yayinda) { guncelle(u.id, { yayinda: false }); toast.success("Yayından kaldırıldı"); return; }
+                    if (u.yayinda) { guncelle(u.id, { yayinda: false }); toast.success("Yayından kaldırıldı", { description: "Artık Keşfet akışında görünmüyor." }); return; }
                     if (onToplulukYayinla) { onToplulukYayinla(u); return; }
                     setYayinModal(true);
                   }}
@@ -1178,7 +1189,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                   <Globe className={cn("h-4 w-4", u.yayinda && "text-aksan")} />
                 </button></Tooltip>
                 <Tooltip label="Sil" side="top"><button
-                  onClick={() => { sil(u.id); toast.success("Üretim silindi"); onClose(); }}
+                  onClick={() => { const geriAl = uretimGeriAl([u.id]); sil(u.id); mesaj.silindi("Üretim", geriAl); onClose(); }}
                   className="flex h-10 w-full items-center justify-center rounded-xl border border-white/15 text-white/70 transition-colors hover:border-rose-400/40 hover:bg-rose-500/15 hover:text-rose-400"
                   aria-label="Sil"
                 >
@@ -1199,7 +1210,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
             onYayinla={(veri) => {
               guncelle(u.id, { yayinda: true, baslik: veri.baslik, etiketler: veri.etiketler });
               setYayinModal(false);
-              toast.success("Keşfet'te yayınlandı 🌍", { description: `"${veri.baslik}" artık toplulukta` });
+              toast.success("Keşfet'te yayınlandı", { description: `"${veri.baslik}" artık toplulukta görünüyor.` });
             }}
           />
         )}

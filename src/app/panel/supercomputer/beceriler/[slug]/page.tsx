@@ -25,7 +25,7 @@ import { kopyala } from "@/lib/gercekEylem";
                SAĞ: macOS pencereli büyük önizleme
      2. "{Ad} ile neler yapabilirsin" — örnek galeri
      3. "{AD}'İ SUPERCOMPUTER'DA DENE" — ortada composer, üstünde /slash çipi
-     4. "Supercomputer'da diğer becerileri dene" + "Tümünü gör ›"
+     4. "Usta'da diğer becerileri dene" + "Tümünü gör ›"
 
    NOT: Referansta detay sayfasında SEKME/SKILL.md görüntüleyici YOK —
    tek kolonlu bir vitrin sayfası.
@@ -171,7 +171,7 @@ export default function BeceriDetay() {
         {/* ═══════ 3. SUPERCOMPUTER'DA DENE ═══════ */}
         <section className="mt-20">
           <h2 className="sc-baslik mx-auto max-w-[760px] text-center text-[26px] leading-tight sm:text-[34px]">
-            {b.ad}&apos;ı Supercomputer&apos;da dene
+            {b.ad}&apos;ı Usta&apos;da dene
           </h2>
           <div className="mx-auto mt-7 max-w-[910px]">
             <SCComposer
@@ -199,7 +199,7 @@ export default function BeceriDetay() {
         <section className="mt-20">
           <div className="flex items-center">
             <h2 className="text-[20px] font-semibold text-[var(--sc-metin)]">
-              Supercomputer&apos;da diğer becerileri dene
+              Usta&apos;da diğer becerileri dene
             </h2>
             <Link href="/panel/supercomputer/ayarlar/beceriler"
               className="ml-auto flex min-h-[24px] items-center gap-1 py-0.5 text-[14px] text-[var(--sc-metin-3)] transition-colors hover:text-[var(--sc-metin)]">
@@ -230,7 +230,7 @@ function MiniKart({ b }: { b: Beceri }) {
       className="group/mk relative block aspect-[31/20] overflow-hidden rounded-2xl">
       <span className="absolute inset-0" style={{ background: beceriGradyan(b.tohum) }} />
       <span className="absolute inset-0 flex items-center justify-center px-8 pb-10 text-center">
-        <span className="text-[21px] font-semibold leading-tight text-[var(--sc-metin)] drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">
+        <span className="text-[21px] font-semibold leading-tight text-[var(--sc-metin)]">
           {b.ad}
         </span>
       </span>

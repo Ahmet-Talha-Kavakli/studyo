@@ -5,7 +5,7 @@
    gösteriyor, kategori sayfası tam listeyi.
 
    İSKELET VARYANTLARI (referans analizinden):
-     "ikili"    → sol: yükleme+Üret · sağ: örnek çıktı        (baskın, ~70)
+     "ikili"    → sol: yükleme+Üret · sağ: örnek çıktı        (baskın, yaklaşık 70)
      "adim"     → 1 Yükle → 2 Izgara → 3 Büyüt sihirbazı      (shots, whats-next, zooms)
      "panel"    → tuval + sağ ayar paneli                     (relight)
      "tekKart"  → ortalanmış tek yükleme kartı                (skin-enhancer)

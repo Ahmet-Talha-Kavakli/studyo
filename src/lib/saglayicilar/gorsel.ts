@@ -1,60 +1,6 @@
 import type { SaglayiciAdapter, SaglayiciIstek, SaglayiciSonuc, UretimTuru } from "./tipler";
 
 /**
- * OpenAI görsel adaptörü — gerçek gpt-image-1 API.
- * OPENAI_API_KEY tanımlıysa gerçek görsel üretir (base64 döner, doğrudan gömülür).
- */
-function oranToBoyut(oran?: string): string {
-  switch (oran) {
-    case "9:16":
-      return "1024x1536";
-    case "16:9":
-      return "1536x1024";
-    default:
-      return "1024x1024";
-  }
-}
-
-export const openaiGorselAdapter: SaglayiciAdapter = {
-  ad: "openai",
-
-  hazir() {
-    return Boolean(process.env.OPENAI_API_KEY);
-  },
-
-  destekler(tur: UretimTuru) {
-    return tur === "gorsel";
-  },
-
-  async uret(istek: SaglayiciIstek): Promise<SaglayiciSonuc> {
-    const anahtar = process.env.OPENAI_API_KEY!;
-    const yanit = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${anahtar}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-image-1",
-        prompt: istek.prompt.slice(0, 4000),
-        size: oranToBoyut(istek.meta?.oran),
-        n: 1,
-      }),
-    });
-    if (!yanit.ok) {
-      const t = await yanit.text().catch(() => "");
-      throw new Error(`OpenAI görsel ${yanit.status}: ${t.slice(0, 200)}`);
-    }
-    const d = (await yanit.json()) as { data: { b64_json?: string; url?: string }[] };
-    const ilk = d.data?.[0];
-    return {
-      dataUri: ilk?.b64_json ? `data:image/png;base64,${ilk.b64_json}` : undefined,
-      ciktiUrl: ilk?.url,
-      saglayici: "openai",
-      gercek: true,
-      detay: { model: "gpt-image-1" },
-    };
-  },
-};
-
-/**
  * Replicate video adaptörü — gerçek text-to-video (ör. bytedance/seedance, kling).
  * REPLICATE_API_TOKEN + REPLICATE_VIDEO_MODEL tanımlıysa gerçek çağrı yapar ve poll eder.
  */

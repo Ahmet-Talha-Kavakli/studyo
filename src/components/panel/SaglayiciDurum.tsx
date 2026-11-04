@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, FlaskConical, ChevronDown, Cpu } from "lucide-react";
@@ -18,7 +19,7 @@ const SAGLAYICI_ETIKET: Record<string, string> = {
   meshy: "Meshy AI",
   openai: "OpenAI",
   replicate: "Replicate",
-  simulasyon: "Demo motoru",
+  simulasyon: "Önizleme motoru",
 };
 
 /**
@@ -56,21 +57,18 @@ export function SaglayiciDurum() {
       >
         <Cpu className={`h-3.5 w-3.5 ${hepsiCanli ? "text-emerald-400" : canliSayi > 0 ? "text-cyan-glow" : "text-white/40"}`} />
         <span className="text-white/70">
-          {canliSayi > 0 ? `${canliSayi}/${turler.length} canlı` : "Demo"}
+          {canliSayi > 0 ? `${canliSayi}/${turler.length} canlı` : "Bağlı değil"}
         </span>
         <ChevronDown className={`h-3 w-3 text-white/40 transition-transform ${acik ? "rotate-180" : ""}`} />
       </button>
 
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setAcik(false)} />
-            <motion.div
+        <Yuzen acik={!!(acik)} onKapat={() => setAcik(false)} sag={0} ust={"tam"} bosluk={8}><motion.div
               initial={{ opacity: 0, y: 6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 6, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="menu-surface absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl p-3 shadow-2xl shadow-black/50"
+              className="menu-surface w-64 rounded-2xl p-3"
             >
               <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-wider text-white/35">
                 AI Sağlayıcı Durumu
@@ -104,9 +102,7 @@ export function SaglayiciDurum() {
                 <code className="rounded bg-white/8 px-1 text-white/60">.env.local</code>'e
                 girilince otomatik canlıya geçer.
               </p>
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );

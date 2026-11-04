@@ -1,396 +1,182 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import {
-  CreditCard, Plus, Trash2, X, Check, Wallet, Receipt, ShieldCheck, Zap,
-} from "lucide-react";
-import { toast } from "@/lib/toast";
-import { useAuth } from "@/store/useAuth";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowRight, BellRing, Coins, Download, FileText, KeyRound, Receipt } from "lucide-react";
 import { useApiAnahtar } from "@/store/useApiAnahtar";
-import { BosDurum, MetrikKart, SayfaBaslik } from "@/components/api/parcalar";
-import { useEscKapat, useScrollKilit } from "@/hooks/useScrollKilit";
+import { useAuth, PLAN_ADI } from "@/store/useAuth";
+import { useKrediModal } from "@/store/useKrediModal";
+import { KREDI_PAKETLERI } from "@/lib/fiyat";
+import { MODELLER } from "@/lib/catalog";
+import { senkronize } from "@/lib/api/istemci";
+import { TUR_ADI } from "@/lib/api/sema";
+import { toast } from "@/lib/toast";
+import { Anahtar, Kart, SayfaBaslik, SecimSerit, birincil, girdi, ikincil } from "@/components/api/ui";
+import { KrediJeton } from "@/components/ui/KrediHap";
+import { ModelLogo } from "@/components/kitaplik/Simgeler";
+import { csvIndir, useHazir } from "@/components/api/veri";
 import { cn } from "@/lib/utils";
 
-/* ============================================================
-   FATURALAMA — Higgsfield Cloud "Billing" birebir.
-   Bakiye · Hızlı işlem (Kredi Yükle modalı: 4 paket + özel tutar) ·
-   Ödeme yöntemleri · Otomatik yükleme · Satın alma geçmişi.
-   GERÇEK: krediSatinAl + auth.ekKrediEkle bakiyeyi gerçekten artırır.
-   ============================================================ */
-
-const PAKETLER = [
-  { kredi: 500, tutar: 449 },
-  { kredi: 800, tutar: 699, pop: true },
-  { kredi: 1600, tutar: 1299 },
-  { kredi: 4000, tutar: 2999 },
-];
-
-/** 1 ₺ ≈ kaç kredi (özel tutar hesabı için) */
-const KREDI_BASINA_TL = 0.85;
+const tl = (n: number) => n.toLocaleString("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 2 });
+const REFERANS = KREDI_PAKETLERI.find((p) => p.populer) ?? KREDI_PAKETLERI[0];
+const KREDI_TL = REFERANS.fiyat / REFERANS.kredi;
 
 export default function Faturalama() {
-  const { kullanici, ekKrediEkle } = useAuth();
-  const {
-    odemeYontemleri, satinAlmalar, otomatikYukle, cagrilar,
-    odemeEkle, odemeSil, otomatikYukleAyarla, krediSatinAl,
-  } = useApiAnahtar();
+  const hazir = useHazir();
+  const kullanici = useAuth((s) => s.kullanici);
+  const uretimler = useApiAnahtar((s) => s.uretimler);
+  const anahtarlar = useApiAnahtar((s) => s.anahtarlar);
+  const esik = useApiAnahtar((s) => s.dusukBakiyeEsigi);
+  const setEsik = useApiAnahtar((s) => s.setDusukBakiyeEsigi);
+  const krediAc = useKrediModal((s) => s.ac);
+  const [esikTaslak, setEsikTaslak] = useState<string>("");
+  const [fiyatTur, setFiyatTur] = useState<string>("gorsel");
 
-  const [yukleModal, setYukleModal] = useState(false);
-  const [kartModal, setKartModal] = useState(false);
-  const [secilenPaket, setSecilenPaket] = useState<number | null>(1);
-  const [ozelKredi, setOzelKredi] = useState("");
-  const [kartNo, setKartNo] = useState("");
-  const [kartSon, setKartSon] = useState("");
-
-  useScrollKilit(yukleModal || kartModal);
-  useEscKapat(yukleModal || kartModal, () => {
-    if (kartModal) setKartModal(false);
-    else setYukleModal(false);
-  });
-
-  const buAyHarcanan = useMemo(() => {
-    const ayBas = new Date();
-    ayBas.setDate(1); ayBas.setHours(0, 0, 0, 0);
-    return cagrilar.filter((c) => c.zaman >= ayBas.getTime()).reduce((a, c) => a + c.kredi, 0);
-  }, [cagrilar]);
-
-  const kartEkle = () => {
-    const rakam = kartNo.replace(/\s/g, "");
-    if (rakam.length < 15 || !/^\d+$/.test(rakam)) return toast.error("Geçerli bir kart numarası gir.");
-    const m = kartSon.match(/^(\d{1,2})\s*\/\s*(\d{2})$/);
-    if (!m) return toast.error("Son kullanım AA/YY biçiminde olmalı.");
-    const marka = rakam.startsWith("4") ? "visa" : rakam.startsWith("3") ? "amex" : "mastercard";
-    odemeEkle({ marka, son4: rakam.slice(-4), ay: Number(m[1]), yil: Number(m[2]) });
-    setKartNo(""); setKartSon(""); setKartModal(false);
-    toast.success("Ödeme yöntemi eklendi", { description: `${marka.toUpperCase()} ···· ${rakam.slice(-4)}` });
-  };
-
-  const odemeyeGec = () => {
-    const ozel = Number(ozelKredi);
-    const kredi = ozelKredi.trim() ? ozel : (secilenPaket !== null ? PAKETLER[secilenPaket].kredi : 0);
-    if (!kredi || kredi < 50) return toast.error("En az 50 kredi seçmelisin.");
-    const tutar = ozelKredi.trim()
-      ? Math.round(kredi * KREDI_BASINA_TL)
-      : PAKETLER[secilenPaket!].tutar;
-
-    if (odemeYontemleri.length === 0) {
-      setYukleModal(false);
-      setKartModal(true);
-      return toast.error("Önce bir ödeme yöntemi ekle.");
+  const faturalanan = useMemo(() => uretimler.filter((u) => u.environment === "live" && u.status === "succeeded" && u.credits > 0), [uretimler]);
+  const aylar = useMemo(() => {
+    const m = new Map<string, { anahtar: string; ad: string; kredi: number; istek: number; kalemler: typeof faturalanan }>();
+    for (const u of faturalanan) {
+      const d = new Date(u.created_at);
+      const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const x = m.get(k) ?? { anahtar: k, ad: d.toLocaleDateString("tr-TR", { month: "long", year: "numeric" }), kredi: 0, istek: 0, kalemler: [] };
+      x.kredi += u.credits; x.istek++; x.kalemler.push(u);
+      m.set(k, x);
     }
+    return Array.from(m.values()).sort((a, b) => b.anahtar.localeCompare(a.anahtar));
+  }, [faturalanan]);
 
-    krediSatinAl(kredi, tutar);
-    ekKrediEkle(kredi); // GERÇEK bakiye artışı
-    setYukleModal(false);
-    setOzelKredi("");
-    toast.success(`${kredi.toLocaleString("tr")} kredi yüklendi`, {
-      description: `₺${tutar} · ${odemeYontemleri[0].marka.toUpperCase()} ···· ${odemeYontemleri[0].son4}`,
-    });
-  };
+  if (!hazir) return <div className="h-[60vh]" />;
+  if (!kullanici) return <><SayfaBaslik baslik="Faturalama" /><Kart><p className="py-10 text-center text-[14px] text-white/60">Bakiyeni ve harcamanı görmek için giriş yap.</p></Kart></>;
+
+  const simdi = new Date();
+  const buAyAnahtar = `${simdi.getFullYear()}-${String(simdi.getMonth() + 1).padStart(2, "0")}`;
+  const buAy = aylar.find((a) => a.anahtar === buAyAnahtar);
+  const gecenGun = simdi.getDate();
+  const ayGun = new Date(simdi.getFullYear(), simdi.getMonth() + 1, 0).getDate();
+  const tahmin = buAy ? Math.round((buAy.kredi / gecenGun) * ayGun) : 0;
+  const kalanGun = buAy && buAy.kredi > 0 ? Math.floor(kullanici.krediler / (buAy.kredi / gecenGun)) : null;
+
+  const disaAktar = (a: (typeof aylar)[number]) => csvIndir(`vayra-api-ekstre-${a.anahtar}.csv`, [
+    ["tarih", "uretim_id", "model", "anahtar", "kredi", "tahmini_tl"],
+    ...a.kalemler.map((u) => [u.created_at, u.id, u.model, anahtarlar.find((k) => k.id === u.anahtarId)?.ad ?? u.anahtarId, u.credits, (u.credits * KREDI_TL).toFixed(2)]),
+    ["", "", "", "Toplam", a.kredi, (a.kredi * KREDI_TL).toFixed(2)],
+  ]);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">
-      <SayfaBaslik baslik="Faturalama" ozet="Faturalama, kredi ve ödeme bilgilerini yönet" />
+    <>
+      <SayfaBaslik baslik="Faturalama" aciklama="API, uygulamayla aynı kredi bakiyesini kullanır. Canlı üretimin kredisi tamamlandığında düşülür; başarısız ve iptal edilen üretimler ücretsizdir."
+        sag={<><Link href="/panel/kredi?sekme=plan" className={ikincil}>Planı yönet</Link><button onClick={() => krediAc("kredi")} className={birincil}><Coins className="h-4 w-4" />Kredi yükle</button></>} />
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <MetrikKart
-          deger={(kullanici?.krediler ?? 0).toLocaleString("tr")}
-          etiket="Bakiye"
-          alt="kullanılabilir kredi"
-          ikon={<Wallet className="h-4 w-4 text-aksan" />}
-          vurgulu
-        />
-        <MetrikKart
-          deger={buAyHarcanan.toLocaleString("tr")}
-          etiket="Bu Ay Kullanılan"
-          alt="API üzerinden harcanan kredi"
-          ikon={<Zap className="h-4 w-4 text-violet-300" />}
-        />
-        <div className="flex flex-col justify-center rounded-2xl border border-white/[0.06] bg-yuzey p-4">
-          <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-metin-3">Hızlı İşlem</div>
-          <button
-            data-kredi-yukle
-            onClick={() => setYukleModal(true)}
-            className="hf-btn flex items-center justify-center gap-1.5 rounded-xl bg-aksan py-2.5 text-sm font-bold text-[#12140c]"
-          >
-            <Plus className="h-4 w-4" /> Kredi Yükle
-          </button>
-        </div>
-      </div>
-
-      {/* Ödeme yöntemleri + otomatik yükleme */}
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-semibold text-metin">Ödeme Yöntemleri</h3>
-              <p className="text-xs text-metin-2">Kayıtlı kartlarını yönet</p>
-            </div>
-            <button
-              onClick={() => setKartModal(true)}
-              className="hf-btn glass-cip flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm text-metin"
-            >
-              <Plus className="h-4 w-4" /> Kart Ekle
-            </button>
+      <section className="relative mb-6 overflow-hidden rounded-[28px] bg-[#0a1013] ring-1 ring-white/[0.09]">
+        <span className="pointer-events-none absolute -left-24 -top-32 h-80 w-[420px] rounded-full bg-[#55d6fd]/20 opacity-60 blur-[90px] [animation:gp-leke-1_14s_ease-in-out_infinite]" aria-hidden />
+        <span className="pointer-events-none absolute -bottom-40 right-10 h-72 w-[360px] rounded-full bg-violet-400/15 opacity-50 blur-[100px] [animation:gp-leke-2_17s_ease-in-out_infinite]" aria-hidden />
+        <div className="relative grid gap-px lg:grid-cols-[minmax(0,1.3fr)_repeat(3,minmax(0,1fr))]">
+          <div className="p-5 sm:p-6">
+            <p className="flex items-center gap-2 text-[13px] text-white/65"><KrediJeton boyut={15} />Bakiye</p>
+            <p className="mt-2 flex items-baseline gap-2"><span className="text-[44px] font-semibold leading-none tabular-nums tracking-[-0.04em] text-white">{kullanici.krediler.toLocaleString("tr-TR")}</span><span className="text-[14px] text-white/55">kredi</span></p>
+            <p className="mt-2.5 text-[13px] text-white/65">{PLAN_ADI[kullanici.plan] ?? kullanici.plan} plan · yaklaşık <span className="text-white">{tl(kullanici.krediler * KREDI_TL)}</span></p>
           </div>
-          {odemeYontemleri.length === 0 ? (
-            <BosDurum
-              ikon={<CreditCard className="h-7 w-7" />}
-              baslik="Kayıtlı ödeme yöntemi yok"
-              ozet="Hızlı ödeme ve otomatik yükleme için kart ekle."
-            />
+          {[
+            { e: "Bu ay API", d: (buAy?.kredi ?? 0).toLocaleString("tr-TR"), a: `${buAy?.istek ?? 0} faturalı üretim`, r: "text-white" },
+            { e: "Ay sonu tahmini", d: tahmin.toLocaleString("tr-TR"), a: "Bugüne kadarki günlük ortalamayla", r: "text-white" },
+            { e: "Bakiye yeter", d: kalanGun === null ? "Harcama yok" : `${kalanGun} gün`, a: "Bu ayın harcama hızıyla", r: kalanGun !== null && kalanGun < 7 ? "text-rose-300" : kalanGun === null ? "text-white/45" : "text-emerald-300" },
+          ].map((h, i) => (
+            <motion.div key={h.e} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 + i * 0.05 }} className="border-t border-white/[0.07] p-5 sm:p-6 lg:border-l lg:border-t-0">
+              <p className="text-[13px] text-white/65">{h.e}</p>
+              <p className={cn("mt-2 text-[26px] font-semibold leading-none tabular-nums tracking-[-0.03em]", h.r)}>{h.d}</p>
+              <p className="mt-2 text-[12.5px] text-white/50">{h.a}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      <div className="mb-6 grid gap-5 lg:grid-cols-2">
+        <Kart baslik="Düşük bakiye uyarısı" aciklama="Eşiğin altına inince bildirim ve credits.low webhook olayı" sag={<Anahtar acik={esik !== null} onDegis={(v) => { setEsik(v ? Number(esikTaslak) || 200 : null); void senkronize(); toast.success(v ? "Düşük bakiye uyarısı açıldı" : "Düşük bakiye uyarısı kapatıldı"); }} etiket="Düşük bakiye uyarısı" />}>
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-amber-300/12 text-amber-200"><BellRing className="h-[18px] w-[18px]" /></span>
+            <p className="flex-1 text-[13.5px] leading-relaxed text-white/70">{esik ? <>Bakiye <span className="font-semibold text-white">{esik}</span> kredinin altına indiğinde haber verilir.</> : "Bir eşik yaz; bakiye altına inince bildirim ve credits.low olayı gelir."}</p>
+          </div>
+          <form onSubmit={(e) => { e.preventDefault(); const n = Math.max(1, Number(esikTaslak)); if (!n) return; setEsik(n); setEsikTaslak(""); void senkronize(); toast.success("Uyarı eşiği güncellendi", { description: `Bakiye ${n} kredinin altına inince haber vereceğiz.` }); }} className="mt-4 flex gap-2">
+            <div className="relative w-40">
+              <input type="number" min={1} value={esikTaslak} onChange={(e) => setEsikTaslak(e.target.value)} placeholder={String(esik ?? 200)} aria-label="Eşik (kredi)" className={cn(girdi, "pr-14 tabular-nums")} />
+              <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[12.5px] text-white/45">kredi</span>
+            </div>
+            <button disabled={!esikTaslak} className={cn(birincil, "h-11 px-5")}>Kaydet</button>
+          </form>
+        </Kart>
+        <Kart baslik="Anahtar harcama sınırları" aciklama="Bir anahtar sınırını aşarsa 402 spend_limit_reached döner" sag={<Link href="/panel/api/anahtarlar" className={cn(ikincil, "h-8 px-3 text-[12.5px]")}>Düzenle</Link>}>
+          {anahtarlar.filter((a) => a.ortam === "canli").length === 0 ? (
+            <div className="flex items-center gap-3 rounded-[16px] bg-white/[0.03] px-3.5 py-3 ring-1 ring-white/[0.06]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#55d6fd]/12 text-[#55d6fd]"><KeyRound className="h-[18px] w-[18px]" /></span>
+              <p className="min-w-0 flex-1 text-[13px] leading-snug text-white/70">Canlı anahtar yok. Sınırlar canlı anahtar oluşturunca burada görünür.</p>
+              <Link href="/panel/api/anahtarlar?yeni=1" className={cn(ikincil, "h-8 shrink-0 px-3 text-[12.5px]")}>Oluştur</Link>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {odemeYontemleri.map((y) => (
-                <div
-                  key={y.id}
-                  className="group flex items-center gap-3 rounded-xl border border-white/[0.06] bg-yuzey-2 px-3.5 py-3"
-                >
-                  <span className="flex h-8 w-11 items-center justify-center rounded-md glass-ikon text-[10px] font-bold uppercase text-metin-2">
-                    {y.marka}
-                  </span>
-                  <span className="flex-1 font-mono text-sm text-metin">···· ···· ···· {y.son4}</span>
-                  <span className="text-xs text-metin-3">
-                    {String(y.ay).padStart(2, "0")}/{y.yil}
-                  </span>
-                  <button
-                    onClick={() => { odemeSil(y.id); toast.success("Kart kaldırıldı"); }}
-                    aria-label="Kartı kaldır"
-                    className="text-metin-3 opacity-0 transition-opacity hover:text-rose-400 group-hover:opacity-100"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+            <ul className="space-y-3.5">
+              {anahtarlar.filter((a) => a.ortam === "canli").map((a) => {
+                const h = faturalanan.filter((u) => u.anahtarId === a.id && u.created_at.startsWith(buAyAnahtar)).reduce((t, u) => t + u.credits, 0);
+                const oran = a.aylikSinir ? Math.min(1, h / a.aylikSinir) : 0;
+                return (
+                  <li key={a.id} className="text-[13px]">
+                    <div className="flex items-center gap-3">
+                      <KeyRound className="h-3.5 w-3.5 shrink-0 text-[#55d6fd]" />
+                      <span className="min-w-0 flex-1 truncate font-medium text-white">{a.ad}</span>
+                      <span className="tabular-nums text-white/65">{h.toLocaleString("tr-TR")} / {a.aylikSinir === null ? "sınırsız" : a.aylikSinir.toLocaleString("tr-TR")}</span>
+                    </div>
+                    {a.aylikSinir !== null && <div className="ml-[26px] mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.07]"><motion.div initial={{ width: 0 }} animate={{ width: `${oran * 100}%` }} transition={{ duration: 0.6 }} className={cn("h-full rounded-full", oran > 0.9 ? "bg-rose-400" : oran > 0.7 ? "bg-amber-300" : "bg-[#55d6fd]")} /></div>}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Kart>
+      </div>
+
+      <Kart className="mb-6" baslik="Aylık ekstreler" aciklama={`Tahmini TL, ${REFERANS.kredi.toLocaleString("tr-TR")} kredilik paket fiyatıyla (${tl(KREDI_TL)} / kredi)`} govdeSinif="p-0">
+        {aylar.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-4 px-5 py-5">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] bg-white/[0.06] text-white/80"><Receipt className="h-5 w-5" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-medium text-white">Henüz faturalı API kullanımı yok</p>
+              <p className="mt-0.5 text-[13px] text-white/60">Test anahtarı kullanımı ücretsizdir ve burada görünmez. İlk canlı üretimden sonra aylık ekstren oluşur.</p>
             </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-          <h3 className="text-base font-semibold text-metin">Otomatik Yükleme</h3>
-          <p className="mb-4 text-xs text-metin-2">Bakiyen düştüğünde krediler otomatik eklenir</p>
-          <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-yuzey-2 px-4 py-3">
-            <span className={cn("text-sm font-medium", otomatikYukle ? "text-aksan" : "text-metin-2")}>
-              {otomatikYukle ? "Etkin" : "Devre dışı"}
-            </span>
-            <button
-              role="switch"
-              aria-checked={otomatikYukle}
-              aria-label="Otomatik yükleme"
-              onClick={() => {
-                if (!otomatikYukle && odemeYontemleri.length === 0) {
-                  setKartModal(true);
-                  return toast.error("Önce bir ödeme yöntemi ekle.");
-                }
-                otomatikYukleAyarla(!otomatikYukle);
-                toast.success(otomatikYukle ? "Otomatik yükleme kapatıldı" : "Otomatik yükleme açıldı");
-              }}
-              className={cn("relative h-6 w-11 rounded-full transition-colors", otomatikYukle ? "bg-aksan" : "bg-white/15")}
-            >
-              <span
-                className={cn(
-                  "absolute top-1 h-4 w-4 rounded-full transition-all",
-                  otomatikYukle ? "left-6 bg-[#12140c]" : "left-1 bg-white",
-                )}
-              />
-            </button>
+            <Link href="/panel/api/anahtarlar?yeni=1" className={cn(ikincil, "shrink-0")}>Canlı anahtar oluştur<ArrowRight className="h-3.5 w-3.5" /></Link>
           </div>
-          {otomatikYukle && (
-            <p className="mt-3 text-xs text-metin-3">
-              Bakiye 500 kredinin altına düştüğünde 1.600 kredi otomatik yüklenir.
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Satın alma geçmişi */}
-      <div className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h3 className="text-base font-semibold text-metin">Satın Alma Geçmişi</h3>
-        <p className="mb-4 text-xs text-metin-2">Kredi satın alma işlemlerin</p>
-        {satinAlmalar.length === 0 ? (
-          <BosDurum ikon={<Receipt className="h-7 w-7" />} baslik="Henüz satın alma yok" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
-              <thead>
-                <tr className="border-b border-white/[0.06] text-left text-[11px] uppercase tracking-[0.14em] text-metin-3">
-                  <th className="py-2.5 font-semibold">İşlem Kimliği</th>
-                  <th className="py-2.5 font-semibold">Tarih</th>
-                  <th className="py-2.5 font-semibold">Kredi</th>
-                  <th className="py-2.5 font-semibold">Tutar</th>
-                  <th className="py-2.5 font-semibold">Durum</th>
+          <table className="w-full text-left text-[13.5px]">
+            <thead><tr className="border-b border-white/[0.06] text-[12.5px] text-white/55"><th className="px-5 py-3 font-medium">Dönem</th><th className="px-3 py-3 text-right font-medium">Üretim</th><th className="px-3 py-3 text-right font-medium">Kredi</th><th className="px-3 py-3 text-right font-medium">TL karşılığı</th><th className="w-36 px-5 py-3" /></tr></thead>
+            <tbody className="divide-y divide-white/[0.05]">
+              {aylar.map((a) => (
+                <tr key={a.anahtar} className="transition-colors hover:bg-white/[0.02]">
+                  <td className="px-5 py-3"><span className="flex items-center gap-2.5 text-white"><span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-white/[0.06]"><FileText className="h-4 w-4 text-white/70" /></span>{a.ad}{a.anahtar === buAyAnahtar && <span className="rounded-full bg-amber-300/12 px-2 py-0.5 text-[11.5px] font-medium text-amber-200">Açık dönem</span>}</span></td>
+                  <td className="px-3 py-3 text-right tabular-nums text-white/60">{a.istek}</td>
+                  <td className="px-3 py-3 text-right font-semibold tabular-nums text-white">{a.kredi.toLocaleString("tr-TR")}</td>
+                  <td className="px-3 py-3 text-right tabular-nums text-white/60">{tl(a.kredi * KREDI_TL)}</td>
+                  <td className="px-5 py-3 text-right"><button onClick={() => disaAktar(a)} className={cn(ikincil, "h-8 px-3 text-[12.5px]")}><Download className="h-3.5 w-3.5" />CSV ekstre</button></td>
                 </tr>
-              </thead>
-              <tbody>
-                {satinAlmalar.map((t) => (
-                  <tr key={t.id} className="border-b border-white/[0.04] last:border-0">
-                    <td className="py-3 font-mono text-xs text-metin-2">{t.id}</td>
-                    <td className="py-3 text-metin-2">{new Date(t.tarih).toLocaleDateString("tr")}</td>
-                    <td className="py-3 text-metin">{t.kredi.toLocaleString("tr")}</td>
-                    <td className="py-3 text-metin">₺{t.tutar.toLocaleString("tr")}</td>
-                    <td className="py-3">
-                      <span className="inline-flex items-center gap-1 rounded-full border border-aksan/30 bg-aksan/12 px-2 py-0.5 text-[11px] font-medium text-aksan">
-                        <Check className="h-3 w-3" /> Tamamlandı
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )}
-      </div>
+      </Kart>
 
-      {/* Kredi yükleme modalı */}
-      <AnimatePresence>
-        {yukleModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setYukleModal(false)}
-              className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              role="dialog"
-              aria-modal="true"
-              className="menu-surface fixed left-1/2 top-1/2 z-[81] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6"
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <h3 className="text-lg font-bold text-metin">Kredi Yükle</h3>
-                <button onClick={() => setYukleModal(false)} aria-label="Kapat" className="text-metin-3 hover:text-metin">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <p className="mb-3 text-sm font-medium text-metin-2">Hızlı Yükleme Seçenekleri</p>
-              <div className="mb-5 grid grid-cols-2 gap-3">
-                {PAKETLER.map((p, i) => (
-                  <button
-                    key={p.kredi}
-                    onClick={() => { setSecilenPaket(i); setOzelKredi(""); }}
-                    className={cn(
-                      "relative rounded-2xl border py-4 text-center transition-colors",
-                      secilenPaket === i && !ozelKredi.trim()
-                        ? "border-aksan/50 bg-aksan/[0.08]"
-                        : "border-white/[0.08] bg-yuzey-2 hover:border-white/20",
-                    )}
-                  >
-                    {p.pop && (
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-aksan px-2 py-0.5 text-[10px] font-bold text-[#12140c]">
-                        Popüler
-                      </span>
-                    )}
-                    <div className="text-2xl font-bold text-metin">{p.kredi.toLocaleString("tr")}</div>
-                    <div className="text-xs text-metin-3">kredi</div>
-                    <div className="mt-1.5 text-sm font-semibold text-aksan">₺{p.tutar.toLocaleString("tr")}</div>
-                  </button>
-                ))}
-              </div>
-
-              <p className="mb-2 text-sm font-medium text-metin-2">Veya Özel Tutar Gir</p>
-              <div className="mb-5 flex items-center gap-3">
-                <input
-                  value={ozelKredi}
-                  onChange={(e) => setOzelKredi(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="Kredi adedi gir"
-                  inputMode="numeric"
-                  className="h-11 flex-1 rounded-xl border border-white/[0.1] bg-yuzey-2 px-3.5 text-sm text-metin outline-none placeholder:text-metin-3 focus:border-aksan/50"
-                />
-                <span className="whitespace-nowrap text-xs text-metin-3">
-                  {ozelKredi.trim() ? `≈ ₺${Math.round(Number(ozelKredi) * KREDI_BASINA_TL)}` : "1 kredi ≈ ₺0,85"}
-                </span>
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setYukleModal(false)}
-                  className="hf-btn flex-1 rounded-xl border border-white/[0.12] py-2.5 text-sm font-medium text-metin-2 hover:bg-white/[0.05]"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  data-odeme
-                  onClick={odemeyeGec}
-                  className="hf-btn flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-aksan py-2.5 text-sm font-bold text-[#12140c]"
-                >
-                  <CreditCard className="h-4 w-4" /> Ödemeye Geç
-                </button>
-              </div>
-              <p className="mt-3 flex items-center justify-center gap-1.5 text-[11px] text-metin-3">
-                <ShieldCheck className="h-3.5 w-3.5" /> Demo · gerçek ödeme alınmaz, kart bilgisi saklanmaz.
-              </p>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Kart ekleme modalı */}
-      <AnimatePresence>
-        {kartModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setKartModal(false)}
-              className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 10 }}
-              role="dialog"
-              aria-modal="true"
-              className="menu-surface fixed left-1/2 top-1/2 z-[81] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl p-6"
-            >
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-xl glass-ikon glass-ikon-lime">
-                    <CreditCard className="h-4 w-4" />
-                  </span>
-                  <h3 className="text-lg font-bold text-metin">Kart Ekle</h3>
-                </div>
-                <button onClick={() => setKartModal(false)} aria-label="Kapat" className="text-metin-3 hover:text-metin">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <label className="mb-1.5 block text-xs font-medium text-metin-2">Kart numarası</label>
-              <input
-                value={kartNo}
-                onChange={(e) => setKartNo(e.target.value.replace(/[^\d ]/g, "").slice(0, 19))}
-                placeholder="4242 4242 4242 4242"
-                inputMode="numeric"
-                className="mb-4 h-11 w-full rounded-xl border border-white/[0.1] bg-yuzey-2 px-3.5 font-mono text-sm text-metin outline-none placeholder:text-metin-3 focus:border-aksan/50"
-              />
-              <label className="mb-1.5 block text-xs font-medium text-metin-2">Son kullanım (AA/YY)</label>
-              <input
-                value={kartSon}
-                onChange={(e) => setKartSon(e.target.value.replace(/[^\d/]/g, "").slice(0, 5))}
-                onKeyDown={(e) => e.key === "Enter" && kartEkle()}
-                placeholder="12/28"
-                inputMode="numeric"
-                className="mb-5 h-11 w-full rounded-xl border border-white/[0.1] bg-yuzey-2 px-3.5 font-mono text-sm text-metin outline-none placeholder:text-metin-3 focus:border-aksan/50"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setKartModal(false)}
-                  className="hf-btn flex-1 rounded-xl border border-white/[0.12] py-2.5 text-sm font-medium text-metin-2 hover:bg-white/[0.05]"
-                >
-                  Vazgeç
-                </button>
-                <button
-                  onClick={kartEkle}
-                  className="hf-btn flex-1 rounded-xl bg-aksan py-2.5 text-sm font-bold text-[#12140c]"
-                >
-                  Ekle
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+      <Kart baslik="Model fiyatları" aciklama="Kredi cinsinden; görsel modellerde adet, saniye başı fiyatlı videolarda süre çarpılır"
+        sag={<SecimSerit id="fiyat-tur" kucuk secenek={(["gorsel", "video", "ses", "muzik", "3d"] as const).map((t) => ({ id: t as string, ad: TUR_ADI[t] }))} deger={fiyatTur} onDegis={setFiyatTur} />} govdeSinif="p-0">
+        <table className="w-full text-left text-[13.5px]">
+          <tbody className="divide-y divide-white/[0.05]">
+            {MODELLER.filter((m) => m.tur === fiyatTur).map((m) => (
+              <motion.tr key={m.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="group transition-colors hover:bg-white/[0.025]">
+                <td className="px-5 py-3"><Link href={`/panel/api/modeller/${m.id}`} className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/[0.08] transition group-hover:scale-105"><ModelLogo ad={`${m.ad} ${m.saglayici} ${m.id}`} boyut={18} /></span><span><span className="block font-medium text-white group-hover:underline">{m.ad}</span><span className="block text-[12px] text-white/50">{m.saglayici}</span></span></Link></td>
+                <td className="hidden px-3 py-3 font-mono text-[12px] text-white/50 sm:table-cell">{m.id}</td>
+                <td className="px-3 py-3 text-right"><span className="text-[15px] font-semibold tabular-nums text-white">{m.kisit?.krediSn ?? m.kredi}</span> <span className="text-white/55">kredi {m.tur === "gorsel" ? "/ görsel" : m.kisit?.krediSn ? "/ sn" : "/ istek"}</span></td>
+                <td className="hidden px-5 py-3 text-right tabular-nums text-white/65 sm:table-cell">{tl((m.kisit?.krediSn ?? m.kredi) * KREDI_TL)}</td>
+              </motion.tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="border-t border-white/[0.06] px-5 py-3 text-[12.5px] text-white/55">Test anahtarıyla yapılan istekler ücretsizdir; örnek çıktı döner.</p>
+      </Kart>
+    </>
   );
 }

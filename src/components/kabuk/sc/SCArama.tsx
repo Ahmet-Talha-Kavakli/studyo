@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 /* ============================================================
    SC ARAMA KUTUSU — tek kaynak.
    Referans: /panel/supercomputer/uygulamalar sağ üstteki arama.
-   Tüm Supercomputer sayfaları BUNU kullanır; böylece hepsi birebir aynı.
+   Tüm Usta sayfaları BUNU kullanır; böylece hepsi birebir aynı.
 
    Anatomi: yuvarlak hap · 240px · sol büyüteç (16px, %40 beyaz) · 14px metin
    ============================================================ */

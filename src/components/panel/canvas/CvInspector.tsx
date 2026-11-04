@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { KrediYildiz } from "@/components/ui/KrediHap";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Search, Check, ChevronRight, Sparkles, Gem, Clock, Volume2, VolumeX,
@@ -54,7 +55,7 @@ export function CvInspector({
         top: 120, right: 55, width: 280,
         background: CV.panelSag, borderRadius: 12,
         border: `1px solid ${CV.barKenar}`,
-        boxShadow: "0 20px 60px rgba(0,0,0,0.55)",
+        boxShadow: "none",
       }}>
 
       {/* başlık */}
@@ -224,7 +225,7 @@ export function CvInspector({
           {uretiliyor ? "Üretiliyor…" : "ÜRET"}
           {!uretiliyor && meta.kredi != null && (
             <span className="flex items-center gap-1 text-[13px]">
-              <Sparkles className="h-3.5 w-3.5" /> {meta.kredi}
+              <KrediYildiz className="h-3.5 w-3.5" /> {meta.kredi}
             </span>
           )}
         </button>
@@ -398,7 +399,7 @@ function Kabuk({ children, genislik, onKapat }: {
           style={{
             width: genislik, background: CV.panelAlt,
             border: `1px solid ${CV.barKenar}`,
-            boxShadow: "0 16px 44px rgba(0,0,0,0.6)",
+            boxShadow: "none",
           }}>
           {children}
         </motion.div>

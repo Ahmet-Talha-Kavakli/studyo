@@ -12,7 +12,6 @@ const kolonlar = [
       ["3D Stüdyo", "/urunler/3d"],
       ["Ses Stüdyosu", "/urunler/ses"],
       ["Modeller", "/modeller"],
-      ["Uygulamalar", "/uygulamalar"],
     ],
   },
   {
@@ -23,6 +22,7 @@ const kolonlar = [
       ["Fiyatlandırma", "/fiyatlandirma"],
       ["API & MCP", "/gelistirici"],
       ["SSS", "/sss"],
+      ["Sistem durumu", "/durum"],
     ],
   },
   {
@@ -72,7 +72,7 @@ export function SiteFooter() {
               ].map(({ I, ad, url }) => (
                 <a key={ad} href={url} target="_blank" rel="noopener noreferrer" aria-label={ad} title={ad} className="group relative flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-white/60 transition-colors hover:border-white/25 hover:text-white">
                   <I className="h-4 w-4" />
-                  <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink-800 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">{ad}</span>
+                  <span className="pointer-events-none absolute -top-9 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-ink-800 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">{ad}</span>
                 </a>
               ))}
             </div>

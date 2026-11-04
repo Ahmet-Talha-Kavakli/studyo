@@ -1,307 +1,283 @@
 "use client";
 
 import { create } from "zustand";
-import { alanlariKoru } from "./gocHelper";
 import { persist } from "zustand/middleware";
+import { KURALLAR, kampanyaBul, seviyeBul, type Kampanya, type Platform } from "@/lib/earn/kampanyalar";
+import { kodUret } from "@/lib/earn/dogrulama";
 
 /* ============================================================
-   useEarn — EARN.VAYRA kazanç platformunun BEYNİ.
+   useEarn — Vayra Earn verisi (v3).
 
-   7 kazanç yolu (flow performans, sosyal paylaşım, referans, affiliate,
-   bounty görev, marketplace, yarışma), tier/XP sistemi, bağlı hesaplar,
-   başvuru/gönderim durum makineleri, cüzdan (kredi + ₺), çekim, destek.
+   Hesaba bağlıdır: `sahip` (e-posta) değişirse veri sıfırlanır; her kullanıcı
+   boş başlar. Örnek/sahte kayıt yoktur.
 
-   Ödül birimi: KREDI. Eşik üstü NAKİT çekim (₺). Her şey persist + gerçek.
-   Admin (/admin/earn) moderasyon kuyruğunu bu store'dan okur/onaylar.
+   Gönderi yaşam döngüsü ZAMANDAN hesaplanır:
+     inceleme (72 sa) → kazanıyor (7 gün) → bekleme (3 gün) → çekilebilir
+   Görev: inceleme → bekleme → çekilebilir (sabit ödül).
+   Yarışma: kampanya bitene kadar "jüride"; derece açıklanınca ödül, yoksa "sonuçlandı".
+
+   Görüntülenme: platform API'si bağlıysa (bkz. lib/earn/entegrasyon) gerçek değer
+   `istatistik` alanına yazılır ve o kullanılır; değilse takipçiye bağlı
+   deterministik tahmin eğrisi çalışır.
    ============================================================ */
 
-// ── zaman/sabitler ──
-export const KREDI_TL = 0.01;                 // 1 kredi = 0,01 ₺ (100 kredi = 1 ₺)
-export const MIN_CEKIM = 50000;               // min çekim: 50.000 kredi = 500 ₺
-export const now = () => Date.now();
+const SA = 3_600_000, GUN = 86_400_000;
 
-// ── Tier sistemi ──
-export type TierId = "tohum" | "yukselen" | "uretici" | "elit" | "efsane";
-export interface Tier { id: TierId; ad: string; minXp: number; carpan: number; cekimLimiti: number; renk: string; rozet: string; }
-export const TIERLER: Tier[] = [
-  { id: "tohum",    ad: "Tohum",    minXp: 0,      carpan: 1.0,  cekimLimiti: 100000,  renk: "#86efac", rozet: "🌱" },
-  { id: "yukselen", ad: "Yükselen", minXp: 25000,  carpan: 1.15, cekimLimiti: 250000,  renk: "#4ade80", rozet: "🌿" },
-  { id: "uretici",  ad: "Üretici",  minXp: 100000, carpan: 1.35, cekimLimiti: 500000,  renk: "#22c55e", rozet: "🍀" },
-  { id: "elit",     ad: "Elit",     minXp: 300000, carpan: 1.6,  cekimLimiti: 1000000, renk: "#16a34a", rozet: "🌳" },
-  { id: "efsane",   ad: "Efsane",   minXp: 800000, carpan: 2.0,  cekimLimiti: 5000000, renk: "#15803d", rozet: "👑" },
-];
-export function tierBul(xp: number): Tier {
-  let t = TIERLER[0];
-  for (const x of TIERLER) if (xp >= x.minXp) t = x;
-  return t;
-}
-export function sonrakiTier(xp: number): Tier | null {
-  const i = TIERLER.findIndex((t) => xp < t.minXp);
-  return i === -1 ? null : TIERLER[i];
+export type GonderiDurum = "inceleme" | "kazaniyor" | "bekleme" | "cekilebilir" | "reddedildi" | "degerlendirme" | "sonuclandi";
+export type GonderiKontrol = { gercek: boolean; sahibiMi: boolean | null; baslik?: string; kucukResim?: string };
+export type Gonderi = {
+  id: string; kampanyaId: string; platform: Platform; link: string; tarih: number;
+  /** Simülasyon için hedef görüntülenme (takipçi + bağlantıdan türetilir). */
+  hedef: number;
+  /** Gönderide kullanılan Vayra üretimi (kitaplık). */
+  uretimId?: string;
+  uretimGorsel?: string;
+  kontrol?: GonderiKontrol;
+  /** Platform API'sinden okunan son görüntülenme. */
+  istatistik?: { goruntulenme: number; zaman: number };
+  red?: string; itiraz?: "inceleniyor" | "reddedildi";
+  derece?: number;
+};
+export type HesapDurum = "bekliyor" | "dogrulaniyor" | "dogrulandi";
+export type BagliHesap = { platform: Platform; kadi: string; kod: string; durum: HesapDurum; takipci: number; tarih: number; ad?: string; gercek?: boolean; hata?: string };
+export type Kimlik = { ad: string; soyad: string; tckn: string; dogumYili: number; gercek: boolean; tarih: number };
+export type OdemeYontemi = { id: string; tur: "iban" | "papara"; ad: string; deger: string };
+export type CekimDurum = "isleniyor" | "odendi" | "basarisiz";
+export type Cekim = {
+  id: string; tutar: number; ucret: number; yontemId: string; yontemAd: string; tarih: number;
+  referans: string; gercek: boolean; durum?: CekimDurum; hata?: string;
+};
+export type GelirKaynak = "davet" | "ortaklik" | "marketplace";
+export type Gelir = { id: string; kaynak: GelirKaynak; baslik: string; tutar: number; tarih: number };
+export type Davetli = { id: string; kadi: string; durum: "kayit" | "uretti" | "abone"; plan?: string; komisyon: number; tarih: number };
+export type DestekTalep = { id: string; konu: string; mesaj: string; durum: "gonderiliyor" | "iletildi" | "hata"; tarih: number };
+
+/* ── Deterministik yardımcılar ── */
+export function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+
+/** Gönderinin anlık durumu, görüntülenmesi ve kazancı. */
+export function gonderiHesap(g: Gonderi, simdi = Date.now(), seviyeBonus = 0) {
+  const k = kampanyaBul(g.kampanyaId); // bitiş tarihleri bugüne sabitlidir; geçmiş "simdi" ile kaymaz
+  const gecen = simdi - g.tarih;
+  const inceleme = KURALLAR.incelemeSaat * SA, kazanma = KURALLAR.kazanmaGun * GUN, bekleme = KURALLAR.beklemeGun * GUN;
+  const sonuc = { durum: "inceleme" as GonderiDurum, goruntulenme: 0, kazanc: 0, sabit: 0, bonus24: 0, bonus7: 0, ilerleme: 0, sonrakiAsama: 0, minAltinda: false, gercekVeri: false, kampanya: k };
+  if (!k) return sonuc;
+  if (g.red && g.itiraz !== "inceleniyor") return { ...sonuc, durum: "reddedildi" as GonderiDurum };
+
+  if (k.tur === "yarisma") {
+    if (k.bitis > simdi) return { ...sonuc, durum: "degerlendirme" as GonderiDurum, sonrakiAsama: k.bitis };
+    if (!g.derece) return { ...sonuc, durum: "sonuclandi" as GonderiDurum };
+    const odul = k.dereceler?.[g.derece - 1] ?? 0;
+    const tamam = k.bitis + bekleme;
+    return { ...sonuc, durum: (simdi >= tamam ? "cekilebilir" : "bekleme") as GonderiDurum, kazanc: odul, sonrakiAsama: tamam };
+  }
+  if (gecen < inceleme) return { ...sonuc, ilerleme: gecen / inceleme, sonrakiAsama: g.tarih + inceleme };
+
+  if (k.tur === "gorev") {
+    const odul = Math.round((k.odul ?? 0) * (1 + seviyeBonus));
+    const tamam = g.tarih + inceleme + bekleme;
+    return { ...sonuc, durum: (simdi >= tamam ? "cekilebilir" : "bekleme") as GonderiDurum, kazanc: odul, sabit: odul, ilerleme: Math.min(1, (gecen - inceleme) / bekleme), sonrakiAsama: tamam };
+  }
+
+  // Görüntülenme kampanyası
+  const t = Math.min(gecen - inceleme, kazanma);
+  const tau = (1.2 + (g.hedef % 7) / 5) * GUN;
+  const egri = (x: number) => 1 - Math.exp(-x / tau);
+  const tahmin = Math.round(g.hedef * egri(t) / egri(kazanma));
+  const gercekVeri = !!g.istatistik;
+  const goruntulenme = gercekVeri ? g.istatistik!.goruntulenme : tahmin;
+  // 24. saat bonusu: ilk 24 saatin payı eğriyle oranlanır (gerçek veride de).
+  const pay24 = egri(Math.min(t, GUN)) / Math.max(1e-9, egri(t));
+  const g24 = Math.round(goruntulenme * Math.min(1, pay24));
+  const oran = k.oran ?? 0, sabit = k.sabitOdeme ?? 0;
+  const ham = (goruntulenme / 1000) * oran;
+  const bonus24 = t >= GUN ? (g24 / 1000) * oran * KURALLAR.bonus24 : 0;
+  const bonus7 = t >= kazanma ? ham * KURALLAR.bonus7 : 0;
+  let kazanc = (sabit + ham + bonus24 + bonus7) * (1 + seviyeBonus);
+  kazanc = Math.min(kazanc, k.maxOdeme ?? Infinity);
+  const bitti = gecen >= inceleme + kazanma;
+  const minAltinda = bitti && kazanc < (k.minOdeme ?? 0);
+  if (minAltinda) kazanc = 0;
+  kazanc = Math.round(kazanc * 100) / 100;
+  if (!bitti) return { ...sonuc, durum: "kazaniyor" as GonderiDurum, goruntulenme, kazanc, sabit, bonus24, bonus7, gercekVeri, ilerleme: t / kazanma, sonrakiAsama: g.tarih + inceleme + kazanma };
+  const tamam = g.tarih + inceleme + kazanma + bekleme;
+  return { ...sonuc, durum: (simdi >= tamam ? "cekilebilir" : "bekleme") as GonderiDurum, goruntulenme, kazanc, sabit, bonus24, bonus7, gercekVeri, minAltinda, ilerleme: Math.min(1, (gecen - inceleme - kazanma) / bekleme), sonrakiAsama: tamam };
 }
 
-// ── Ortak durum ──
-export type Durum = "taslak" | "inceleniyor" | "onaylandi" | "reddedildi" | "odendi";
-export type Platform = "instagram" | "tiktok" | "youtube" | "facebook";
-export const PLATFORMLAR: { id: Platform; ad: string; renk: string }[] = [
-  { id: "instagram", ad: "Instagram", renk: "#E1306C" },
-  { id: "tiktok", ad: "TikTok", renk: "#00f2ea" },
-  { id: "youtube", ad: "YouTube", renk: "#FF0000" },
-  { id: "facebook", ad: "Facebook", renk: "#1877F2" },
-];
-
-// ── Görüntülenme paketleri (sosyal paylaşım tier'ları) ──
-export interface GoruntulenmePaket { esik: number; ad: string; kredi: number; }
-export const GORUNTULENME_PAKETLERI: GoruntulenmePaket[] = [
-  { esik: 1000, ad: "1K", kredi: 500 },
-  { esik: 10000, ad: "10K", kredi: 3000 },
-  { esik: 100000, ad: "100K", kredi: 20000 },
-  { esik: 1000000, ad: "1M", kredi: 150000 },
-];
-export function paketBul(goruntulenme: number): GoruntulenmePaket | null {
-  let p: GoruntulenmePaket | null = null;
-  for (const x of GORUNTULENME_PAKETLERI) if (goruntulenme >= x.esik) p = x;
-  return p;
+/** Çekimin durumu. Papara (gerçek) anında sonuçlanır; banka havalesi 1 iş günü içinde. */
+export function cekimDurum(c: Cekim, simdi = Date.now()): CekimDurum {
+  if (c.durum) return c.durum;
+  return simdi - c.tarih >= 24 * SA ? "odendi" : "isleniyor";
 }
 
-// ── Kayıt tipleri ──
-export interface EarnHareket { id: string; tur: string; baslik: string; kredi: number; durum: Durum; tarih: number; not?: string; }
-export interface BagliHesap { platform: Platform; kullaniciAdi: string; dogrulandi: boolean; takipci: number; tarih: number; }
-export interface Paylasim { id: string; platform: Platform; link: string; kanitUrl: string | null; goruntulenme: number; kredi: number; durum: Durum; tarih: number; redNedeni?: string; }
-export interface Referans { id: string; kod: string; davetEdilen: string; durum: "beklemede" | "katildi" | "uretti"; kredi: number; seviye: 1 | 2; tarih: number; }
-export interface AffiliateSatis { id: string; musteri: string; plan: string; tutar: number; komisyon: number; durum: Durum; tarih: number; }
-export interface Gorev { id: string; baslik: string; aciklama: string; odul: number; xp: number; sonTarih: number; kategori: string; kotaKalan: number; }
-export interface GorevBasvuru { id: string; gorevId: string; baslik: string; teslimLink: string | null; durum: Durum; odul: number; tarih: number; redNedeni?: string; }
-/** Marketplace preset — kullanım-başı gelir modeli.
- *  Biri preseti kullandığında: satisFiyati öder → Vayra %50 komisyon + model maliyeti düşülür → kalan üreticiye.
- *  ureticiPay = satisFiyati − (satisFiyati × KOMISYON) − modelMaliyet. */
-export interface Preset {
-  id: string; ad: string; aciklama: string; modelId: string; modelAd: string; modelMaliyet: number;
-  satisFiyati: number; kullanim: number; kazanc: number; durum: "aktif" | "beklemede" | "pasif"; tarih: number; kategori: string;
+/** Cüzdan özeti. */
+export function cuzdan(s: Pick<EarnState, "gonderiler" | "gelirler" | "cekimler">, simdi = Date.now()) {
+  const digerToplam = s.gelirler.reduce((a, g) => a + g.tutar, 0);
+  // Seviye, bonussuz toplam kazançla belirlenir (bonus seviyeye, seviye bonusa bağlı olmasın).
+  const bonussuz = s.gonderiler.reduce((a, g) => { const h = gonderiHesap(g, simdi, 0); return h.durum === "reddedildi" ? a : a + h.kazanc; }, 0);
+  const sv = seviyeBul(bonussuz + digerToplam);
+  let bekleyen = 0, gonderiCekilebilir = 0, gonderiToplam = 0;
+  for (const g of s.gonderiler) {
+    const h = gonderiHesap(g, simdi, sv.seviye.bonus);
+    if (h.durum === "kazaniyor" || h.durum === "bekleme") bekleyen += h.kazanc;
+    if (h.durum === "cekilebilir") gonderiCekilebilir += h.kazanc;
+    if (h.durum !== "reddedildi") gonderiToplam += h.kazanc;
+  }
+  const gecerli = s.cekimler.filter((c) => cekimDurum(c, simdi) !== "basarisiz");
+  const cekilen = gecerli.reduce((a, c) => a + c.tutar + c.ucret, 0);
+  const odenen = gecerli.filter((c) => cekimDurum(c, simdi) === "odendi").reduce((a, c) => a + c.tutar, 0);
+  const isleniyor = gecerli.filter((c) => cekimDurum(c, simdi) === "isleniyor").reduce((a, c) => a + c.tutar, 0);
+  const yuvarla = (n: number) => Math.round(n * 100) / 100;
+  return {
+    bekleyen: yuvarla(bekleyen),
+    cekilebilir: Math.max(0, yuvarla(gonderiCekilebilir + digerToplam - cekilen)),
+    odenen, isleniyor,
+    toplam: yuvarla(gonderiToplam + digerToplam),
+    /** Seviyeyi belirleyen bonussuz toplam (ilerleme çubukları bununla hesaplanır). */
+    seviyeKazanc: yuvarla(bonussuz + digerToplam),
+    ...sv,
+  };
 }
-export const MARKETPLACE_KOMISYON = 0.5; // Vayra %50
-/** Bir kullanımda üreticiye kalan (negatifse fiyat yetersiz). */
-export function ureticiPay(satisFiyati: number, modelMaliyet: number): number {
-  return Math.round(satisFiyati - satisFiyati * MARKETPLACE_KOMISYON - modelMaliyet);
-}
-export interface Yarisma { id: string; ad: string; tema: string; odulHavuzu: number; bitis: number; katilimci: number; durum: "aktif" | "bitti"; }
-export interface YarismaKatilim { id: string; yarismaId: string; ad: string; icerikLink: string; oy: number; siralama: number | null; durum: Durum; tarih: number; }
-export interface Cekim { id: string; kredi: number; tl: number; yontem: "IBAN" | "PayPal" | "Papara"; hesap: string; durum: "inceleniyor" | "onaylandi" | "odendi" | "reddedildi"; tarih: number; redNedeni?: string; }
-export interface DestekTalep { id: string; konu: string; kategori: string; mesaj: string; durum: "acik" | "yanitlandi" | "kapandi"; tarih: number; yanitlar: { kimden: "ben" | "ekip"; metin: string; tarih: number }[]; }
 
-interface EarnState {
-  xp: number;
-  bagliHesaplar: BagliHesap[];
-  paylasimlar: Paylasim[];
-  referanslar: Referans[];
-  affiliateSatislar: AffiliateSatis[];
-  gorevBasvurular: GorevBasvuru[];
-  presetler: Preset[];
-  yarismaKatilimlar: YarismaKatilim[];
+/** Kampanyanın bu kullanıcı için kalan kontenjanı ve katılım hakkı. */
+export function kampanyaHakki(k: Kampanya, gonderiler: Gonderi[]) {
+  const benim = gonderiler.filter((g) => g.kampanyaId === k.id && !(g.red && g.itiraz !== "inceleniyor"));
+  // Görev ve yarışmada kişi başı 1 gönderi; görüntülenme kampanyasında sınırsız.
+  const tekHak = k.tur !== "goruntulenme";
+  return {
+    gonderiSayisi: benim.length,
+    hakKaldi: !tekHak || benim.length === 0,
+    kotaKalan: k.tur === "gorev" ? Math.max(0, (k.kotaKalan ?? 0) - benim.length) : null,
+  };
+}
+
+/** Son `gun` günün günlük kazancı (gönderi artışları + diğer gelirler). Grafik için. */
+export function gunlukSeri(s: Pick<EarnState, "gonderiler" | "gelirler">, simdi = Date.now(), gun = 30) {
+  const bugun = new Date(simdi); bugun.setHours(23, 59, 59, 999);
+  const son = bugun.getTime();
+  const veri: number[] = [], etiketler: string[] = [];
+  const fmt = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "short" });
+  const kumulatif = (t: number) => s.gonderiler.reduce((a, g) => {
+    if (g.tarih > t) return a;
+    const h = gonderiHesap(g, Math.min(t, simdi), 0);
+    return h.durum === "reddedildi" ? a : a + h.kazanc;
+  }, 0);
+  let onceki = kumulatif(son - gun * GUN);
+  for (let i = gun - 1; i >= 0; i--) {
+    const bit = son - i * GUN;
+    const k = kumulatif(bit);
+    const diger = s.gelirler.filter((x) => x.tarih > bit - GUN && x.tarih <= bit).reduce((a, x) => a + x.tutar, 0);
+    veri.push(Math.max(0, Math.round((k - onceki + diger) * 100) / 100));
+    etiketler.push(fmt.format(new Date(bit)));
+    onceki = k;
+  }
+  return { veri, etiketler };
+}
+
+interface EarnVeri {
+  sahip: string | null;
+  katilimlar: string[];
+  gonderiler: Gonderi[];
+  hesaplar: BagliHesap[];
+  kimlik: Kimlik | null;
+  odemeYontemleri: OdemeYontemi[];
   cekimler: Cekim[];
-  hareketler: EarnHareket[];
-  destekTalepler: DestekTalep[];
-  referansKodu: string;
-  affiliateKodu: string;
-  onboardTamam: boolean;
-  flowAktarilan: number;   // Flow'dan hesaba aktarılan toplam kredi (tekrar aktarım engeli)
+  gelirler: Gelir[];
+  davetKodu: string;
+  kuponKodu: string;
+  davetliler: Davetli[];
+  destek: DestekTalep[];
+  karsilamaKapali: boolean;
+  /** Bildirimi gönderilmiş olay anahtarları (tekrar bildirilmesin). */
+  bildirilen: string[];
+}
 
-  // aksiyonlar
-  hesapBagla: (platform: Platform, kullaniciAdi: string) => void;
-  hesapDogrula: (platform: Platform) => void;
+interface EarnState extends EarnVeri {
+  sahipAyarla: (email: string, ad: string) => void;
+  katil: (kampanyaId: string) => void;
+  gonder: (g: { kampanyaId: string; platform: Platform; link: string; uretimId?: string; uretimGorsel?: string; kontrol?: GonderiKontrol }) => string;
+  istatistikYaz: (id: string, goruntulenme: number) => void;
+  itirazEt: (id: string) => void;
+  hesapEkle: (platform: Platform, kadi: string) => void;
+  hesapGuncelle: (platform: Platform, patch: Partial<BagliHesap>) => void;
   hesapKaldir: (platform: Platform) => void;
-  paylasimGonder: (p: { platform: Platform; link: string; kanitUrl: string | null; goruntulenme: number }) => string;
-  referansOlustur: (davetEdilen: string) => void;
-  gorevBasvur: (gorev: Gorev) => void;
-  gorevTeslim: (basvuruId: string, link: string) => void;
-  presetEkle: (p: { ad: string; aciklama: string; modelId: string; modelAd: string; modelMaliyet: number; satisFiyati: number; kategori: string }) => void;
-  presetKaldir: (id: string) => void;
-  presetDurumDegistir: (id: string) => void;
-  yarismaKatil: (yarisma: Yarisma, link: string) => void;
-  cekimTalep: (kredi: number, yontem: Cekim["yontem"], hesap: string) => boolean;
-  destekAc: (konu: string, kategori: string, mesaj: string) => void;
-  destekYanitla: (id: string, metin: string) => void;
-  onboardBitir: () => void;
-  kodGaranti: () => void;   // ilk mount'ta benzersiz referans/affiliate kodu üretir (SSR-güvenli)
-  flowKazancAktar: (kredi: number) => void;   // Flow performans kazancını hesaba onaylı olarak aktarır
-
-  // admin köprüsü (moderasyon)
-  moderasyonOnayla: (kayitTur: "paylasim" | "gorev" | "cekim" | "yarisma", id: string) => void;
-  moderasyonReddet: (kayitTur: "paylasim" | "gorev" | "cekim" | "yarisma", id: string, neden: string) => void;
+  kimlikKaydet: (k: Kimlik) => void;
+  yontemEkle: (y: Omit<OdemeYontemi, "id">) => void;
+  yontemSil: (id: string) => void;
+  cekimEkle: (c: Omit<Cekim, "id" | "tarih">) => string;
+  cekimGuncelle: (id: string, patch: Partial<Cekim>) => void;
+  kuponDegistir: (kod: string) => void;
+  destekEkle: (konu: string, mesaj: string) => string;
+  destekGuncelle: (id: string, durum: DestekTalep["durum"]) => void;
+  karsilamaKapat: () => void;
+  bildirildi: (anahtar: string) => void;
 }
 
-let sc = 0;
-const uid = (p: string) => { sc += 1; return `${p}_${sc}_${now().toString(36)}`; };
-// SSR-güvenli sabit başlangıç kodu (Math.random SSR/hydration uyumsuzluğu yapıyordu).
-// Gerçek benzersiz kod ilk mount'ta kodGaranti() ile üretilir.
-const VARSAYILAN_KOD = "VAYRA1";
-function rastKod() { return Array.from({ length: 6 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join(""); }
+let sayac = 0;
+const yeniId = (p: string) => `${p}_${Date.now().toString(36)}_${(sayac += 1)}`;
+function kod(on: string) { return `${on}-${Array.from({ length: 4 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("")}`; }
 
-// örnek presetler (kullanıcının satıştaki ürünleri) — platform dolu görünsün
-function seedPresetler(): Preset[] {
-  return [
-    { id: "pr_seed1", ad: "Altın Saat Portre", aciklama: "Sıcak ışıklı editorial portre presetim.", modelId: "ruh-2", modelAd: "Ruh 2", modelMaliyet: 4, satisFiyati: 40, kullanim: 128, kazanc: 128 * ureticiPay(40, 4), durum: "aktif", tarih: now() - 12 * 864e5, kategori: "Portre" },
-    { id: "pr_seed2", ad: "Neon Şehir Estetiği", aciklama: "Siberpunk neon şehir sahnesi.", modelId: "flux-2", modelAd: "Flux 2", modelMaliyet: 5, satisFiyati: 60, kullanim: 74, kazanc: 74 * ureticiPay(60, 5), durum: "aktif", tarih: now() - 6 * 864e5, kategori: "Sahne" },
-  ];
-}
+const bos = (): EarnVeri => ({
+  sahip: null, katilimlar: [], gonderiler: [], hesaplar: [], kimlik: null, odemeYontemleri: [], cekimler: [],
+  gelirler: [], davetKodu: "", kuponKodu: "", davetliler: [], destek: [], karsilamaKapali: false, bildirilen: [],
+});
 
 export const useEarn = create<EarnState>()(
   persist(
     (set, get) => ({
-      xp: 42000, // demo: Yükselen tier'da başla ki platform dolu görünsün
-      bagliHesaplar: [],
-      paylasimlar: [],
-      referanslar: [],
-      affiliateSatislar: [],
-      gorevBasvurular: [],
-      presetler: seedPresetler(),
-      yarismaKatilimlar: [],
-      cekimler: [],
-      hareketler: [
-        { id: uid("hr"), tur: "flow", baslik: "Flow içerik performansı — Temmuz", kredi: 8400, durum: "onaylandi", tarih: now() - 3 * 864e5 },
-        { id: uid("hr"), tur: "referans", baslik: "Referans bonusu · @mehmet3d", kredi: 2000, durum: "onaylandi", tarih: now() - 5 * 864e5 },
-      ],
-      destekTalepler: [],
-      referansKodu: VARSAYILAN_KOD,
-      affiliateKodu: VARSAYILAN_KOD,
-      onboardTamam: false,
-      flowAktarilan: 0,
+      ...bos(),
 
-      hesapBagla: (platform, kullaniciAdi) => set((s) => ({
-        bagliHesaplar: [...s.bagliHesaplar.filter((h) => h.platform !== platform),
-          { platform, kullaniciAdi: kullaniciAdi.replace("@", ""), dogrulandi: false, takipci: 1000 + Math.floor(Math.random() * 90000), tarih: now() }],
-      })),
-      hesapDogrula: (platform) => set((s) => ({
-        bagliHesaplar: s.bagliHesaplar.map((h) => h.platform === platform ? { ...h, dogrulandi: true } : h),
-      })),
-      hesapKaldir: (platform) => set((s) => ({ bagliHesaplar: s.bagliHesaplar.filter((h) => h.platform !== platform) })),
-
-      paylasimGonder: (p) => {
-        const paket = paketBul(p.goruntulenme);
-        const t = get();
-        const tier = tierBul(t.xp);
-        const kredi = paket ? Math.round(paket.kredi * tier.carpan) : 0;
-        const id = uid("py");
-        set((s) => ({
-          paylasimlar: [{ id, platform: p.platform, link: p.link, kanitUrl: p.kanitUrl, goruntulenme: p.goruntulenme, kredi, durum: "inceleniyor", tarih: now() }, ...s.paylasimlar],
-          hareketler: [{ id: uid("hr"), tur: "paylasim", baslik: `${p.platform} paylaşımı`, kredi, durum: "inceleniyor", tarih: now() }, ...s.hareketler],
-        }));
+      sahipAyarla: (email, ad) => {
+        if (get().sahip === email) return;
+        const k = kodUret(ad || email.split("@")[0]);
+        set({ ...bos(), sahip: email, davetKodu: k, kuponKodu: `${k.toUpperCase().slice(0, 8)}15` });
+      },
+      katil: (id) => set((s) => (s.katilimlar.includes(id) ? s : { katilimlar: [...s.katilimlar, id] })),
+      gonder: ({ kampanyaId, platform, link, uretimId, uretimGorsel, kontrol }) => {
+        const id = yeniId("go");
+        const takipci = get().hesaplar.find((h) => h.platform === platform)?.takipci ?? 1000;
+        // Tahmini hedef: takipçinin 0,4–2,4 katı (bağlantıdan türeyen sabit tohum).
+        const hedef = Math.max(500, Math.round(takipci * (0.4 + (hash(link) % 200) / 100)));
+        set((s) => ({ gonderiler: [{ id, kampanyaId, platform, link, tarih: Date.now(), hedef, uretimId, uretimGorsel, kontrol }, ...s.gonderiler] }));
         return id;
       },
+      istatistikYaz: (id, goruntulenme) => set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id === id ? { ...g, istatistik: { goruntulenme, zaman: Date.now() } } : g)) })),
+      itirazEt: (id) => set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id === id && !g.itiraz ? { ...g, itiraz: "inceleniyor" } : g)) })),
 
-      referansOlustur: (davetEdilen) => {
-        const rid = uid("rf");
-        set((s) => ({
-          referanslar: [{ id: rid, kod: s.referansKodu, davetEdilen, durum: "beklemede", kredi: 2500, seviye: 1, tarih: now() }, ...s.referanslar],
-        }));
-        // demo: davet edilen kısa süre sonra katılır, sonra üretim yapar → kazanç hesaba düşer
-        setTimeout(() => set((s) => ({ referanslar: s.referanslar.map((r) => r.id === rid ? { ...r, durum: "katildi" as const } : r) })), 4000);
-        setTimeout(() => set((s) => ({
-          referanslar: s.referanslar.map((r) => r.id === rid ? { ...r, durum: "uretti" as const } : r),
-          hareketler: [{ id: uid("hr"), tur: "referans", baslik: `Referans kazancı · ${davetEdilen}`, kredi: 2500, durum: "onaylandi" as Durum, tarih: now() }, ...s.hareketler],
-          xp: s.xp + 2500,
-        })), 8000);
+      hesapEkle: (platform, kadi) => set((s) => ({
+        hesaplar: [...s.hesaplar.filter((h) => h.platform !== platform),
+          { platform, kadi: kadi.replace(/^@/, "").trim().toLowerCase(), kod: kod("VYR"), durum: "bekliyor", takipci: 0, tarih: Date.now() }],
+      })),
+      hesapGuncelle: (platform, patch) => set((s) => ({ hesaplar: s.hesaplar.map((h) => (h.platform === platform ? { ...h, ...patch } : h)) })),
+      hesapKaldir: (platform) => set((s) => ({ hesaplar: s.hesaplar.filter((h) => h.platform !== platform) })),
+
+      kimlikKaydet: (k) => set({ kimlik: k }),
+      yontemEkle: (y) => set((s) => ({ odemeYontemleri: [...s.odemeYontemleri, { ...y, id: yeniId("oy") }] })),
+      yontemSil: (id) => set((s) => ({ odemeYontemleri: s.odemeYontemleri.filter((y) => y.id !== id) })),
+      cekimEkle: (c) => {
+        const id = yeniId("ck");
+        set((s) => ({ cekimler: [{ ...c, id, tarih: Date.now() }, ...s.cekimler] }));
+        return id;
       },
+      cekimGuncelle: (id, patch) => set((s) => ({ cekimler: s.cekimler.map((c) => (c.id === id ? { ...c, ...patch } : c)) })),
 
-      gorevBasvur: (gorev) => set((s) => ({
-        gorevBasvurular: [{ id: uid("gb"), gorevId: gorev.id, baslik: gorev.baslik, teslimLink: null, durum: "taslak", odul: gorev.odul, tarih: now() }, ...s.gorevBasvurular],
-      })),
-      gorevTeslim: (basvuruId, link) => set((s) => ({
-        gorevBasvurular: s.gorevBasvurular.map((b) => b.id === basvuruId ? { ...b, teslimLink: link, durum: "inceleniyor" } : b),
-        hareketler: [{ id: uid("hr"), tur: "gorev", baslik: "Görev teslimi", kredi: s.gorevBasvurular.find((b) => b.id === basvuruId)?.odul ?? 0, durum: "inceleniyor", tarih: now() }, ...s.hareketler],
-      })),
-
-      presetEkle: (p) => set((s) => ({
-        presetler: [{ id: uid("pr"), ad: p.ad, aciklama: p.aciklama, modelId: p.modelId, modelAd: p.modelAd, modelMaliyet: p.modelMaliyet, satisFiyati: p.satisFiyati, kullanim: 0, kazanc: 0, durum: "beklemede", tarih: now(), kategori: p.kategori }, ...s.presetler],
-      })),
-      presetKaldir: (id) => set((s) => ({ presetler: s.presetler.filter((p) => p.id !== id) })),
-      presetDurumDegistir: (id) => set((s) => ({ presetler: s.presetler.map((p) => p.id === id ? { ...p, durum: p.durum === "aktif" ? "pasif" : "aktif" } : p) })),
-
-      yarismaKatil: (yarisma, link) => set((s) => ({
-        yarismaKatilimlar: [{ id: uid("yk"), yarismaId: yarisma.id, ad: yarisma.ad, icerikLink: link, oy: 0, siralama: null, durum: "inceleniyor", tarih: now() }, ...s.yarismaKatilimlar],
-      })),
-
-      cekimTalep: (kredi, yontem, hesap) => {
-        const t = get();
-        const kazanc = t.hareketler.filter((h) => h.durum === "onaylandi" && h.kredi > 0).reduce((a, h) => a + h.kredi, 0);
-        const cekilen = t.cekimler.filter((c) => c.durum !== "reddedildi").reduce((a, c) => a + c.kredi, 0);
-        const mevcut = Math.max(0, kazanc - cekilen);
-        const tier = tierBul(t.xp);
-        if (kredi < MIN_CEKIM || kredi > mevcut || kredi > tier.cekimLimiti) return false;
-        const id = uid("ck");
-        set((s) => ({
-          cekimler: [{ id, kredi, tl: kredi * KREDI_TL, yontem, hesap, durum: "inceleniyor", tarih: now() }, ...s.cekimler],
-          hareketler: [{ id: uid("hr"), tur: "cekim", baslik: `Çekim · ${yontem}`, kredi: -kredi, durum: "inceleniyor", tarih: now() }, ...s.hareketler],
-        }));
-        return true;
+      kuponDegistir: (k) => set({ kuponKodu: k.toLocaleUpperCase("tr-TR").replace(/[^A-Z0-9]/g, "").slice(0, 12) }),
+      destekEkle: (konu, mesaj) => {
+        const id = yeniId("ds");
+        set((s) => ({ destek: [{ id, konu, mesaj, durum: "gonderiliyor", tarih: Date.now() }, ...s.destek] }));
+        return id;
       },
-
-      destekAc: (konu, kategori, mesaj) => {
-        const tid = uid("dt");
-        set((s) => ({
-          destekTalepler: [{ id: tid, konu, kategori, mesaj, durum: "acik", tarih: now(), yanitlar: [{ kimden: "ben", metin: mesaj, tarih: now() }] }, ...s.destekTalepler],
-        }));
-        // demo: ekip kısa süre sonra karşılama yanıtı verir → durum "yanitlandi"
-        setTimeout(() => set((s) => ({
-          destekTalepler: s.destekTalepler.map((t) => t.id === tid ? {
-            ...t, durum: "yanitlandi" as const,
-            yanitlar: [...t.yanitlar, { kimden: "ekip" as const, metin: "Merhaba! Talebini aldık, ekibimiz inceliyor. En kısa sürede detaylı dönüş yapacağız. 💚", tarih: now() }],
-          } : t),
-        })), 3000);
-      },
-      destekYanitla: (id, metin) => set((s) => ({
-        destekTalepler: s.destekTalepler.map((t) => t.id === id ? { ...t, durum: "acik", yanitlar: [...t.yanitlar, { kimden: "ben", metin, tarih: now() }] } : t),
-      })),
-
-      onboardBitir: () => set({ onboardTamam: true }),
-      flowKazancAktar: (kredi) => set((s) => ({
-        hareketler: [{ id: uid("hr"), tur: "flow", baslik: "Flow içerik kazancı hesaba aktarıldı", kredi, durum: "onaylandi" as Durum, tarih: now() }, ...s.hareketler],
-        xp: s.xp + kredi,
-        flowAktarilan: s.flowAktarilan + kredi,
-      })),
-      kodGaranti: () => set((s) => ({
-        referansKodu: s.referansKodu === VARSAYILAN_KOD ? rastKod() : s.referansKodu,
-        affiliateKodu: s.affiliateKodu === VARSAYILAN_KOD ? rastKod() : s.affiliateKodu,
-      })),
-
-      // ── admin moderasyonu (gerçek onay → kullanıcı tarafı güncellenir) ──
-      moderasyonOnayla: (kayitTur, id) => set((s) => {
-        if (kayitTur === "paylasim") return {
-          paylasimlar: s.paylasimlar.map((p) => p.id === id ? { ...p, durum: "onaylandi" as Durum } : p),
-          hareketler: s.hareketler.map((h) => h.tur === "paylasim" && h.durum === "inceleniyor" ? { ...h, durum: "onaylandi" as Durum } : h),
-          xp: s.xp + (s.paylasimlar.find((p) => p.id === id)?.kredi ?? 0),
-        };
-        if (kayitTur === "cekim") return { cekimler: s.cekimler.map((c) => c.id === id ? { ...c, durum: "odendi" as const } : c) };
-        if (kayitTur === "gorev") return { gorevBasvurular: s.gorevBasvurular.map((b) => b.id === id ? { ...b, durum: "onaylandi" as Durum } : b) };
-        return { yarismaKatilimlar: s.yarismaKatilimlar.map((y) => y.id === id ? { ...y, durum: "onaylandi" as Durum } : y) };
-      }),
-      moderasyonReddet: (kayitTur, id, neden) => set((s) => {
-        if (kayitTur === "paylasim") return { paylasimlar: s.paylasimlar.map((p) => p.id === id ? { ...p, durum: "reddedildi" as Durum, redNedeni: neden } : p) };
-        if (kayitTur === "cekim") return { cekimler: s.cekimler.map((c) => c.id === id ? { ...c, durum: "reddedildi" as const, redNedeni: neden } : c) };
-        if (kayitTur === "gorev") return { gorevBasvurular: s.gorevBasvurular.map((b) => b.id === id ? { ...b, durum: "reddedildi" as Durum, redNedeni: neden } : b) };
-        return { yarismaKatilimlar: s.yarismaKatilimlar.map((y) => y.id === id ? { ...y, durum: "reddedildi" as Durum } : y) };
-      }),
+      destekGuncelle: (id, durum) => set((s) => ({ destek: s.destek.map((d) => (d.id === id ? { ...d, durum } : d)) })),
+      karsilamaKapat: () => set({ karsilamaKapali: true }),
+      bildirildi: (a) => set((s) => (s.bildirilen.includes(a) ? s : { bildirilen: [...s.bildirilen.slice(-300), a] })),
     }),
-    { name: "vayra-earn", version: 1, migrate: alanlariKoru },
+    {
+      name: "vayra-earn",
+      version: 3,
+      // v2 → v3: örnek (demo) veriler kaldırıldı; hesap bazlı, boş başlangıç.
+      migrate: () => bos() as EarnState,
+    },
   ),
 );
 
-// ── türetilmiş hesaplar ──
-/** Çekilebilir bakiye = onaylı kazanç − (inceleniyor/odendi çekimler). */
-export function bakiye(hareketler: EarnHareket[], cekimler: Cekim[]): number {
-  const kazanc = hareketler.filter((h) => h.durum === "onaylandi" && h.kredi > 0).reduce((a, h) => a + h.kredi, 0);
-  const cekilen = cekimler.filter((c) => c.durum !== "reddedildi").reduce((a, c) => a + c.kredi, 0);
-  return Math.max(0, kazanc - cekilen);
-}
-export function bekleyen(hareketler: EarnHareket[]): number {
-  return hareketler.filter((h) => h.durum === "inceleniyor" && h.kredi > 0).reduce((a, h) => a + h.kredi, 0);
-}
-export function toplamKazanc(hareketler: EarnHareket[]): number {
-  return hareketler.filter((h) => h.durum === "onaylandi" && h.kredi > 0).reduce((a, h) => a + h.kredi, 0);
-}
-export function tl(kredi: number): string {
-  return (kredi * KREDI_TL).toLocaleString("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 });
-}
-export function krediBic(n: number): string {
-  return n.toLocaleString("tr-TR");
-}
+export type { Kampanya };

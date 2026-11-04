@@ -86,7 +86,7 @@ export default function Finans() {
       if (!ok) return;
       aboStore.indirimUygula(a.id, 20, admin);
       denetle("Abonelik indirimi (%20)", "bilgi", a.ad);
-      toast.success("İndirim uygulandı");
+      toast.success("İndirim uygulandı", { description: `${a.ad} aboneliğine %20 sadakat indirimi tanımlandı.` });
       return;
     }
     const risk = aksiyonRisk("abonelik_iptal");
@@ -99,7 +99,7 @@ export default function Finans() {
     if (!ok) return;
     aboStore.durumDegistir(a.id, yeniDurum, admin, `${tip} · ${a.ad}`);
     denetle(`Abonelik ${tip}`, "uyari", a.ad);
-    toast.success("İşlem uygulandı");
+    toast.success(tip === "iptal" ? "Abonelik iptal edildi" : tip === "duraklat" ? "Abonelik duraklatıldı" : "Abonelik yeniden başlatıldı", { description: tip === "iptal" ? `${a.ad} aboneliği dönem sonunda sona erecek.` : a.ad });
   };
 
   const iadeKarar = async (i: IadeKayit, onay: boolean) => {
@@ -107,17 +107,17 @@ export default function Finans() {
     const ok = await onayIste({ baslik: onay ? "İadeyi onayla" : "İadeyi reddet", aciklama: `${i.ad} · ${para(i.tutar)} · ${i.sebepKategori}`, risk: onay ? risk.risk : 0, eylemEtiket: onay ? "Onayla" : "Reddet" });
     if (!ok) return;
     denetle(`İade ${onay ? "onaylandı" : "reddedildi"}`, "kritik", i.ad);
-    toast.success(onay ? "İade onaylandı" : "İade reddedildi");
+    toast.success(onay ? "İade onaylandı" : "İade reddedildi", { description: `${i.ad} · ${para(i.tutar)}` });
   };
 
   const retryAksiyon = async (rt: RetryKayit, tip: string) => {
     const ok = await onayIste({ baslik: `Ödeme: ${tip}`, aciklama: `${rt.ad} · ${para(rt.tutar)} · ${rt.denemeSayisi}. deneme`, risk: 0, eylemEtiket: "Uygula" });
     if (!ok) return;
     denetle(`Retry ${tip}`, "bilgi", rt.ad);
-    toast.success("İşlem uygulandı");
+    toast.success(tip === "süre tanı" ? "Ödeme için süre tanındı" : "Ödeme yeniden denendi", { description: `${rt.ad} · ${para(rt.tutar)}` });
   };
 
-  const paketToggle = (id: string, gorunur: boolean) => { modStore.paketGuncelle(id, { gorunur }); toast.success("Paket güncellendi"); };
+  const paketToggle = (id: string, gorunur: boolean) => { modStore.paketGuncelle(id, { gorunur }); toast.success(gorunur ? "Paket görünür yapıldı" : "Paket gizlendi"); };
 
   const sekmeler = [
     { id: "ozet", ad: "Özet & P&L" },

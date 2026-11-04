@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ReactNode, useState, useMemo, useEffect, useRef } from "react";
@@ -166,7 +167,7 @@ export function StudyoSidebar({
                 dar ? "justify-center px-0" : "gap-2.5 px-2",
                 aktif ? "bg-[#1e1e1e] text-metin" : "text-metin-2 hover:bg-white/5 hover:text-metin")}>
               {/* 3D gradyan rozet ikon (Higgsfield birebir) */}
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_1px_2px_rgba(0,0,0,0.35)]" style={{ background: m.grad }}>
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]" style={{ background: m.grad }}>
                 <m.ikon className="h-[15px] w-[15px]" strokeWidth={2.2} style={{ color: m.ikonRenk }} />
               </span>
               {!dar && m.ad}
@@ -190,12 +191,9 @@ export function StudyoSidebar({
         </div>
         {/* Sıralama menüsü — "Sırala" başlığı + 5 seçenek, seçilide lime ✓ */}
         <AnimatePresence>
-          {siraAcik && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setSiraAcik(false)} />
-              <motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+          <Yuzen acik={!!(siraAcik)} onKapat={() => setSiraAcik(false)} sag={8} ust={32} bosluk={0}><motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.14 }}
-                className="menu-surface absolute right-2 top-8 z-50 w-[210px] rounded-2xl p-1.5">
+                className="menu-surface w-[210px] rounded-2xl p-1.5">
                 <p className="px-3 pb-1 pt-1.5 text-[12px] text-metin-3">Sırala</p>
                 {SIRALAMALAR.map((s) => (
                   <button key={s} onClick={() => { setSira(s); setSiraAcik(false); }}
@@ -204,9 +202,7 @@ export function StudyoSidebar({
                     {sira === s && <Check className="h-3.5 w-3.5 shrink-0 text-aksan" />}
                   </button>
                 ))}
-              </motion.div>
-            </>
-          )}
+              </motion.div></Yuzen>
         </AnimatePresence>
       </div>
       {/* Arama kutusu — "Ara" ikonuyla açılır */}

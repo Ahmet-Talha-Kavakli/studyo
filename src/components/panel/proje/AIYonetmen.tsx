@@ -139,7 +139,7 @@ export function AIYonetmen({ projeAd, onKapat }: { projeAd: string; onKapat: () 
     setAdim(0);
 
     /* Düşünme adımlarını sırayla göster — "thinking" hissi.
-       Toplam ~1.8sn: her adım 360ms. */
+       Toplam yaklaşık 1.8sn: her adım 360ms. */
     let i = 0;
     const sayac = setInterval(() => {
       i += 1;
@@ -189,7 +189,7 @@ export function AIYonetmen({ projeAd, onKapat }: { projeAd: string; onKapat: () 
               <YonetmenKarti tur={m.recete.tur} konu={m.recete.konu}
                 onIsteme={(istem, model, oran) => {
                   ayarGonder({ tur: "video", prompt: istem, model, oran });
-                  toast.success("İstem composer'a gönderildi", { description: model });
+                  toast.success("İstem oluşturucuya gönderildi", { description: `Model: ${model}.` });
                 }} />
             ) : (
               <span className="max-w-[85%] rounded-2xl rounded-bl-md bg-white/[0.06] px-3.5 py-2.5 text-[13.5px] leading-relaxed text-metin-2">

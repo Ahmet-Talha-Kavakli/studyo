@@ -165,7 +165,7 @@ export function SCArtifact({
               style={aktifCihaz.px ? { width: aktifCihaz.px, minWidth: aktifCihaz.px } : undefined}
               className={cn(
                 "border-0 bg-white",
-                aktifCihaz.px ? "h-full rounded-lg shadow-[0_8px_30px_-8px_rgba(0,0,0,0.6)]" : "h-full w-full",
+                aktifCihaz.px ? "h-full rounded-lg" : "h-full w-full",
               )}
             />
           </div>

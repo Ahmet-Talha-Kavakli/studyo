@@ -1,8 +1,8 @@
 "use client";
 
-import { PazUretimIzgara } from "@/components/panel/pazarlama/PazUretimIzgara";
+import { PazarlamaAna } from "@/components/studyo/PazarlamaAna";
 
-/** Tüm üretimler — referanslar/marketing/generations birebir. */
+/** Eski "Tüm üretimler" adresi — stüdyonun Reklamlarım görünümünü açar. */
 export default function PazUretimlerSayfasi() {
-  return <PazUretimIzgara baslik="Tüm üretimler" />;
+  return <PazarlamaAna baslangic="reklamlar" />;
 }

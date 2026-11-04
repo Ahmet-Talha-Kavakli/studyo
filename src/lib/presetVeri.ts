@@ -18,6 +18,7 @@ export interface Preset {
   kat: string;             // onizlemeArka kategorisi (video yoksa yedek gradyan)
   kategoriler: string[];   // filtre chip'leri
   video: string;           // preset-video/<slug>.mp4
+  kapak?: string;          // örnek video yoksa kapak görseli
   veoPrompt: string;       // Veo 3.1 image-to-video hareket tarifi (8sn)
 }
 

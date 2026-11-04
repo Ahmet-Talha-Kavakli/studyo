@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { SCAramaModal } from "@/components/kabuk/sc/SCAramaModal";
+import { GorevCalistirici } from "@/components/sc/GorevCalistirici";
 
 /* ============================================================
    SUPERCOMPUTER LAYOUT — tüm SC alt sayfalarını kapsar.
@@ -32,6 +33,7 @@ export default function SupercomputerLayout({ children }: { children: React.Reac
     <>
       {children}
       <SCAramaModal acik={aramaAcik} onKapat={() => setAramaAcik(false)} />
+      <GorevCalistirici />
     </>
   );
 }

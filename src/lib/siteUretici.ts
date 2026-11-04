@@ -9,7 +9,11 @@
  * SSR güvenli: Math.random / Date.now KULLANMAZ (deterministik hash tabanlı).
  */
 
-export type SiteTip = "landing" | "portfolyo" | "dashboard" | "oyun" | "blog" | "menu";
+import { butceHTML, hafizaHTML, kanatHTML, tuglaHTML, yapilacakHTML, zamanlayiciHTML } from "./siteUreticiEk";
+
+export type SiteTip = "landing" | "portfolyo" | "dashboard" | "oyun" | "blog" | "menu" | "uygulama";
+export type OyunTur = "yilan" | "tugla" | "kanat" | "hafiza";
+export type UygulamaTur = "yapilacak" | "butce" | "zamanlayici";
 
 export interface SitePlan {
   tip: SiteTip;
@@ -20,6 +24,14 @@ export interface SitePlan {
   zemin: string;      // koyu mu açık mı
   koyu: boolean;
   sektor: string;
+  /** Menü sitelerinde içerik türü (kahve dükkânı ya da restoran). */
+  mutfak?: "kahve" | "yemek";
+  /** Oyun şablonu (yılan, tuğla kırma, kanat, hafıza). */
+  oyun?: OyunTur;
+  /** Uygulama şablonu (yapılacaklar, bütçe, odak zamanlayıcı). */
+  uygulama?: UygulamaTur;
+  /** Çıktı adında tipin yerine geçen açıklama ("Tuğla Kır", "Bütçe"). */
+  alt?: string;
   bolumler: string[]; // üretilen bölüm başlıkları (düşünce izi için)
   dosyalar: string[]; // "üretilen dosyalar" listesi (düşünce izi için)
 }
@@ -47,7 +59,7 @@ const SEKTORLER: { anahtar: string[]; ad: string; ikon: string }[] = [
   { anahtar: ["spor", "fitness", "gym", "koş", "yoga"], ad: "Spor & Sağlık", ikon: "💪" },
   { anahtar: ["moda", "giyim", "ayakkabı", "butik", "mağaza", "e-ticaret", "shop", "store"], ad: "E-Ticaret", ikon: "🛍️" },
   { anahtar: ["oyun", "game", "arcade", "puan"], ad: "Oyun", ikon: "🎮" },
-  { anahtar: ["ajans", "tasarım", "studio", "stüdyo", "kreatif", "portfolyo", "portfolio"], ad: "Kreatif Ajans", ikon: "✦" },
+  { anahtar: ["ajans", "tasarım", "studio", "stüdyo", "kreatif", "portfolyo", "portfolio"], ad: "Kreatif Ajans", ikon: "◆" },
   { anahtar: ["yapay zeka", "ai", "saas", "yazılım", "uygulama", "platform", "startup", "teknoloji"], ad: "Teknoloji / SaaS", ikon: "⚡" },
   { anahtar: ["emlak", "gayrimenkul", "ev", "konut"], ad: "Emlak", ikon: "🏛️" },
   { anahtar: ["seyahat", "tur", "otel", "tatil"], ad: "Seyahat", ikon: "✈️" },
@@ -62,22 +74,43 @@ export function planla(istem: string): SitePlan {
 
   // Tip algıla
   let tip: SiteTip = "landing";
-  if (/(oyun|game|arcade|yılan|snake|tetris|puan tut)/.test(t)) tip = "oyun";
+  const oyun: OyunTur | undefined = /(tuğla|tugla|breakout|blok kır|raket)/.test(t) ? "tugla" : /(flappy|kanat|uçan kuş|zıplayan kuş)/.test(t) ? "kanat"
+    : /(hafıza|hafiza|memory|eşleştirme|kart eşle)/.test(t) ? "hafiza" : /(oyun|game|arcade|yılan|snake|tetris|puan tut)/.test(t) ? "yilan" : undefined;
+  const uygulama: UygulamaTur | undefined = oyun ? undefined : /(yapılacak|yapilacak|todo|to-do|görev listesi)/.test(t) ? "yapilacak"
+    : /(bütçe|butce|harcama|gider takip|masraf)/.test(t) ? "butce" : /(pomodoro|zamanlayıcı|zamanlayici|odak sayacı|geri sayım)/.test(t) ? "zamanlayici" : undefined;
+  if (oyun) tip = "oyun";
+  else if (uygulama) tip = "uygulama";
   else if (/(dashboard|panel|yönetim|admin|gösterge|analitik|istatistik)/.test(t)) tip = "dashboard";
   else if (/(portfolyo|portfolio|cv|özgeçmiş|kişisel site)/.test(t)) tip = "portfolyo";
   else if (/(blog|haber|dergi|yazı|makale)/.test(t)) tip = "blog";
   else if (/(menü|menu|restoran|kafe|kahve|cafe)/.test(t)) tip = "menu";
 
   // Sektör
-  const sektorObj = SEKTORLER.find((s) => s.anahtar.some((a) => t.includes(a))) ?? { ad: "Genel", ikon: "✦" };
+  const sektorObj = SEKTORLER.find((s) => s.anahtar.some((a) => t.includes(a))) ?? { ad: "Genel", ikon: "◆" };
 
   // Marka adı: tırnak içi ya da büyük harfli kelime ya da ilk anlamlı kelime
   let marka = "";
   const tirnak = istem.match(/["'"']([^"'"']{2,30})["'"']/);
   if (tirnak) marka = tirnak[1].trim();
   if (!marka) {
-    const adGecti = istem.match(/(?:adı|ismi|adında|isminde)\s+([A-Za-zçğıöşüÇĞİÖŞÜ0-9]{2,20})/i);
+    // Türkçede ad önce gelir: "Demlik adında", "Nova isimli"; "adı Nova" biçimi de desteklenir.
+    const once = istem.match(/([A-Za-zçğıöşüÇĞİÖŞÜ0-9]{2,20})\s+(?:adında|isminde|adlı|isimli)/i);
+    if (once) marka = once[1];
+  }
+  if (!marka) {
+    const adGecti = istem.match(/(?:adı|ismi)\s+([A-Za-zçğıöşüÇĞİÖŞÜ0-9]{2,20})/i);
     if (adGecti) marka = adGecti[1];
+  }
+  if (!marka) {
+    // "Demlik için bir site", "Nova markası için": büyük harfle yazılmış ad + için/markası/şirketi…
+    const icin = istem.match(/(?:^|\s)([A-ZÇĞİÖŞÜ][A-Za-zçğıöşüÇĞİÖŞÜ0-9]{1,20})(?:'(?:[a-zçğıöşü]+))?\s+(?:için|markası|firması|şirketi|kafesi|dükkanı|dükkânı|restoranı|ajansı|stüdyosu)/);
+    const yaygin = /^(Bir|Bu|Şu|Benim|Bana|Yeni|Basit|Modern|Kendi|Küçük|Büyük|Site|Web|Oyun|Panel)$/;
+    if (icin && !yaygin.test(icin[1])) marka = icin[1];
+  }
+  if (!marka) {
+    // Cümle ortasında büyük harfle başlayan özel ad ("… kahvecim Demlik için …").
+    const ozel = istem.split(/\s+/).slice(1).find((k) => /^[A-ZÇĞİÖŞÜ][a-zçğıöşü0-9]{2,19}$/.test(k.replace(/[.,!?'’].*$/, "")));
+    if (ozel) marka = ozel.replace(/[.,!?'’].*$/, "");
   }
   if (!marka) {
     // sektöre göre üretilmiş marka
@@ -86,7 +119,8 @@ export function planla(istem: string): SitePlan {
   }
   marka = marka.charAt(0).toLocaleUpperCase("tr") + marka.slice(1);
 
-  const palet = sec(PALETLER, tohum);
+  const palet = tip === "menu" ? { a: "#a4532a", b: "#d08a4e", zemin: "#f6efe4", koyu: false } : sec(PALETLER, tohum);
+  const mutfak = tip === "menu" ? (/(kahve|cafe|kafe|espresso|barista)/.test(t) ? "kahve" as const : "yemek" as const) : undefined;
 
   const SLOGANLAR = [
     "Fikirden yayına, dakikalar içinde.",
@@ -108,9 +142,16 @@ export function planla(istem: string): SitePlan {
     zemin: palet.zemin,
     koyu: palet.koyu,
     sektor: sektorObj.ad,
-    bolumler: tip === "oyun" ? ["Oyun tuvali", "Skor & kontroller", "Başlat/Duraklat", "Duyarlı yerleşim"] : BOLUM_HAVUZ,
+    mutfak,
+    oyun,
+    uygulama,
+    alt: oyun ? { yilan: "Yılan", tugla: "Tuğla Kır", kanat: "Kanat", hafiza: "Hafıza" }[oyun] : uygulama ? { yapilacak: "Yapılacaklar", butce: "Bütçe", zamanlayici: "Odak" }[uygulama] : undefined,
+    bolumler: tip === "oyun" ? (oyun === "hafiza" ? ["Kart ızgarası", "Hamle ve süre", "Eşleşme animasyonu", "En iyi skor"] : ["Oyun tuvali", "Skor & kontroller", "Başlat/Duraklat", "Duyarlı yerleşim"])
+      : tip === "uygulama" ? (uygulama === "butce" ? ["Gelir/gider özeti", "Hareket formu", "Kategori grafiği", "Kalıcı kayıt"] : uygulama === "zamanlayici" ? ["Mod seçici", "İlerleme halkası", "Bildirim sesi", "Günlük sayaç"] : ["Görev formu", "Filtre sekmeleri", "Tamamla/sil", "Kalıcı kayıt"])
+      : tip === "menu" ? ["Karşılama", "Menü sekmeleri", "Günün demlemesi", "Hikâyemiz", "Saatler ve konum", "Ayak (footer)"] : BOLUM_HAVUZ,
     dosyalar: tip === "oyun"
       ? ["index.html", "style.css", "game.js", "README.md"]
+      : tip === "uygulama" ? ["index.html", "style.css", "app.js", "README.md"]
       : ["index.html", "style.css", "main.js", "assets/logo.svg", "README.md"],
   };
 }
@@ -188,10 +229,10 @@ function landingHTML(p: SitePlan): string {
   <div class="hero-orb" style="width:380px;height:380px;background:var(--b);top:40px;right:-40px"></div>
   <div class="wrap" style="position:relative;z-index:1">
     <span class="chip reveal in">${p.sektor} · Yapay zeka ile üretildi</span>
-    <h1 class="reveal in" style="margin:22px auto;max-width:900px">Geleceğin <span class="grad">${p.sektor.toLowerCase()}</span> deneyimi <span class="grad">${p.marka}</span> ile.</h1>
-    <p class="lead reveal in" style="margin:0 auto 32px">${p.slogan} ${p.marka}, işini bir üst seviyeye taşımak için gereken her şeyi tek çatı altında sunar.</p>
+    <h1 class="reveal in" style="margin:22px auto;max-width:900px"><span class="grad">${p.marka}</span><br>${p.slogan}</h1>
+    <p class="lead reveal in" style="margin:0 auto 32px">${p.marka}, işini büyütmek için gereken araçları tek bir yerde toplar; kurulumu dakikalar sürer.</p>
     <div class="reveal in" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap"><a href="#iletisim" class="btn">Ücretsiz dene →</a><a href="#nasil" class="btn ghost">Nasıl çalışır</a></div>
-    <div class="reveal" style="margin-top:60px;height:320px;border-radius:20px;border:1px solid var(--kn);background:linear-gradient(135deg,var(--yz),transparent);display:grid;place-items:center;color:var(--tx2)">✦ Canlı ürün önizlemesi</div>
+    <div class="reveal grid g3" style="margin-top:60px;text-align:left">${[["Aktif kullanıcı", "12.480", "+18%"], ["Ortalama kurulum", "4 dk", "−35%"], ["Memnuniyet", "4,9/5", "2.100 yorum"]].map(([a, d, n]) => `<div class="card"><p style="color:var(--tx2);font-size:14px">${a}</p><p style="font-size:34px;font-weight:800;letter-spacing:-.02em;margin:6px 0 2px">${d}</p><p class="grad" style="font-size:14px;font-weight:700">${n}</p></div>`).join("")}</div>
   </div>
 </section>
 
@@ -216,7 +257,91 @@ function landingHTML(p: SitePlan): string {
   <a href="#" class="btn" style="background:#07070a;color:#fff" onclick="alert('🎉 ${p.marka} ailesine hoş geldin! (demo)');return false">Ücretsiz hesap aç →</a>
 </div></section>
 
-<footer><div class="wrap"><div class="logo" style="justify-content:center;margin-bottom:12px"><span class="mark">${p.marka.charAt(0)}</span>${p.marka}</div>© 2026 ${p.marka}. Vayra Supercomputer ile üretildi.</div></footer>
+<footer><div class="wrap"><div class="logo" style="justify-content:center;margin-bottom:12px"><span class="mark">${p.marka.charAt(0)}</span>${p.marka}</div>© 2026 ${p.marka}. Vayra Usta ile üretildi.</div></footer>
+${REVEAL_JS}</body></html>`;
+}
+
+/** Kafe / restoran: sıcak tonlu karşılama, sekmeli menü, günün önerisi, hikâye, saatler. */
+function menuHTML(p: SitePlan): string {
+  const kahve = p.mutfak !== "yemek";
+  const menu: [string, [string, string, string][]][] = kahve ? [
+    ["Espresso bar", [["Espresso", "Tek shot, kakao ve fındık notaları", "75"], ["Cortado", "Eşit ölçü espresso ve ılık süt", "95"], ["Flat white", "Çift ristretto, ipeksi süt", "110"], ["Latte", "Yumuşak ve kremamsı; yulaf sütüyle de olur", "115"]]],
+    ["Demleme", [["V60", "Günün tek kökenli çekirdeği, elde demlenir", "130"], ["Chemex", "İki kişilik, temiz ve berrak fincan", "220"], ["Soğuk demleme", "18 saat demlenmiş, buz üstünde", "125"], ["Türk kahvesi", "Bakır cezvede, közde pişer", "85"]]],
+    ["Fırından", [["Tereyağlı kruvasan", "Sabah 7'de fırından çıkar", "90"], ["Tarçınlı çörek", "Esmer şeker ve ceviz", "95"], ["Muzlu ekmek", "Bitter çikolata parçalı", "85"], ["Limonlu kek", "Yoğurtlu, nemli dokulu", "80"]]],
+  ] : [
+    ["Başlangıçlar", [["Közlenmiş patlıcan", "Yoğurt, sumak, nar ekşisi", "180"], ["Mevsim çorbası", "Ekşi maya ekmekle", "140"], ["Humus", "Kavrulmuş nohut, zeytinyağı", "160"]]],
+    ["Ana yemekler", [["Fırın tavuk", "Kekik, limon, közde sebze", "390"], ["Mantı", "Tereyağlı sos, nane", "320"], ["Izgara köfte", "Piyaz ve közlenmiş biber", "360"]]],
+    ["Tatlılar", [["Fırın sütlaç", "Tarçın ve fındık", "140"], ["Künefe", "Antep fıstığıyla", "190"], ["Mevsim meyveleri", "Bal ve ceviz", "130"]]],
+  ];
+  const saat = kahve ? [["Hafta içi", "07:30 – 20:00"], ["Cumartesi", "08:30 – 21:00"], ["Pazar", "09:00 – 19:00"]] : [["Hafta içi", "12:00 – 23:00"], ["Cumartesi", "12:00 – 00:00"], ["Pazar", "12:00 – 22:00"]];
+  const baslik = kahve ? "Her fincanda yavaş demlenmiş bir hikâye." : "Mevsimin ürünleri, odun ateşinde.";
+  const giris = kahve ? `${p.marka}, mahallenin köşesinde küçük partilerle kavrulan çekirdekleri özenle demleyen butik bir kahve dükkânı.` : `${p.marka}, yerel üreticilerden gelen mevsim ürünlerini sade tariflerle sofraya taşıyan bir mahalle restoranı.`;
+  const ozel = kahve ? ["Günün demlemesi", "Etiyopya · Yirgacheffe", "Yasemin, bergamot ve şeftali notaları. V60 ile, 1.900 metreden.", "130"] : ["Şefin önerisi", "Kuzu incik", "8 saat ağır ateşte, közlenmiş patlıcan beğendiyle.", "520"];
+  const sayilar = kahve ? [["4", "kökenden çekirdek"], ["48 saat", "kavurma tazeliği"], ["%100", "kompostlanabilir bardak"], ["7/7", "fırından taze"]] : [["12", "yerel üretici"], ["1", "odun fırını"], ["Her gün", "taze hamur"], ["0", "dondurulmuş ürün"]];
+  return `<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${p.marka} — ${kahve ? "Kahve dükkânı" : "Restoran"}</title><style>${ortakStil(p)}
+  .serif{font-family:Georgia,'Times New Roman',serif;letter-spacing:-.01em}
+  h1.serif{font-weight:700;font-size:clamp(40px,6.4vw,76px);line-height:1.04}
+  h2.serif{font-weight:700}
+  .btn{color:#fff;box-shadow:0 10px 30px -12px var(--a)}
+  .btn.ghost{color:var(--tx)}
+  .logo .mark{color:#fff}
+  .hero{padding:140px 0 80px}
+  .hero .wrap{display:grid;gap:48px;align-items:center}
+  @media(min-width:900px){.hero .wrap{grid-template-columns:1.15fr .85fr}}
+  .ozel{position:relative;border-radius:28px;padding:30px;background:linear-gradient(160deg,#3b2316,#24150d);color:#f6ebdc;box-shadow:0 40px 80px -40px rgba(60,30,10,.7);overflow:hidden}
+  .ozel:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-80px;top:-90px;background:radial-gradient(circle,var(--b),transparent 70%);opacity:.55}
+  .fincan{width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#5a3420 0 38%,#c9915c 39% 44%,#f6ebdc 45% 62%,transparent 63%);margin-bottom:22px;position:relative}
+  .sekmeler{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:34px}
+  .sekme{border:1px solid var(--kn);background:transparent;color:var(--tx2);padding:10px 20px;border-radius:100px;font-size:15px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+  .sekme.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+  .liste{max-width:760px;margin:0 auto;display:none}.liste.on{display:block;animation:gel .4s ease}
+  @keyframes gel{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .urun{display:flex;align-items:baseline;gap:12px;padding:18px 4px;border-bottom:1px solid var(--kn)}
+  .urun b{font-size:18px}.urun .nokta{flex:1;border-bottom:1px dotted var(--kn);transform:translateY(-4px)}
+  .urun .fiyat{font-weight:700;color:var(--a);font-size:18px}
+  .urun p{color:var(--tx2);font-size:14px;margin-top:2px}
+  .saat{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--kn);font-size:15px}
+  </style></head><body>
+<nav><div class="wrap"><div class="logo serif"><span class="mark">${p.marka.charAt(0)}</span>${p.marka}</div>
+<div class="nlinks"><a href="#menu">Menü</a><a href="#hikaye">Hikâyemiz</a><a href="#ziyaret">Ziyaret</a></div>
+<a href="#ziyaret" class="btn" style="padding:9px 18px">${kahve ? "Sipariş ver" : "Rezervasyon"}</a></div></nav>
+
+<section class="hero"><div class="wrap">
+  <div class="reveal in">
+    <span class="chip">${kahve ? "Nitelikli kahve · Ev yapımı tatlılar" : "Mevsim mutfağı · Odun fırını"}</span>
+    <h1 class="serif" style="margin:22px 0 20px">${baslik}</h1>
+    <p class="lead" style="margin-bottom:30px">${giris}</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap"><a href="#menu" class="btn">Menüye göz at</a><a href="#ziyaret" class="btn ghost">Yol tarifi</a></div>
+  </div>
+  <div class="ozel reveal in">
+    <div class="fincan"></div>
+    <p style="font-size:13px;opacity:.7;font-weight:600">${ozel[0]}</p>
+    <h3 class="serif" style="font-size:28px;margin:6px 0 10px">${ozel[1]}</h3>
+    <p style="opacity:.75;font-size:15px">${ozel[2]}</p>
+    <p style="margin-top:18px;font-size:22px;font-weight:700">₺${ozel[3]}</p>
+  </div>
+</div></section>
+
+<section id="menu" style="background:var(--yz)"><div class="wrap">
+  <div class="reveal" style="text-align:center;margin-bottom:34px"><h2 class="serif">Menü</h2><p class="lead" style="margin:0 auto">Fiyatlar Türk lirasıdır; menü mevsime göre değişir.</p></div>
+  <div class="sekmeler">${menu.map(([k], i) => `<button class="sekme${i ? "" : " on"}" data-i="${i}">${k}</button>`).join("")}</div>
+  ${menu.map(([, l], i) => `<div class="liste${i ? "" : " on"}" data-i="${i}">${l.map(([a, d, f]) => `<div class="urun"><div><b>${a}</b><p>${d}</p></div><span class="nokta"></span><span class="fiyat">₺${f}</span></div>`).join("")}</div>`).join("")}
+</div></section>
+
+<section id="hikaye"><div class="wrap grid g2" style="align-items:center;gap:48px">
+  <div class="reveal"><h2 class="serif">Hikâyemiz</h2><p class="lead">${kahve ? "Küçük bir kavurma makinesi ve iki barista ile başladık. Bugün hâlâ her çekirdeği haftada iki kez, küçük partilerle kavuruyoruz." : "Annemizin defterindeki tariflerle açıldık. Sebzeyi pazardan, eti yerel kasaptan alıyor, her şeyi her gün yeniden hazırlıyoruz."}</p></div>
+  <div class="grid g2 reveal">${sayilar.map(([a, b]) => `<div class="card"><p class="serif" style="font-size:32px;font-weight:700;color:var(--a)">${a}</p><p style="color:var(--tx2);font-size:14px">${b}</p></div>`).join("")}</div>
+</div></section>
+
+<section id="ziyaret" style="background:var(--yz)"><div class="wrap grid g2" style="gap:48px">
+  <div class="reveal"><h2 class="serif">Bizi ziyaret et</h2><p class="lead" style="margin-bottom:22px">Moda Caddesi No: 18, Kadıköy · İstanbul</p><a href="#" class="btn" onclick="return false">Haritada aç</a></div>
+  <div class="reveal">${saat.map(([g, s]) => `<div class="saat"><span>${g}</span><b>${s}</b></div>`).join("")}</div>
+</div></section>
+
+<footer><div class="wrap"><div class="logo serif" style="justify-content:center;margin-bottom:12px"><span class="mark">${p.marka.charAt(0)}</span>${p.marka}</div>© 2026 ${p.marka}</div></footer>
+<script>
+document.querySelectorAll('.sekme').forEach(b=>b.onclick=()=>{document.querySelectorAll('.sekme,.liste').forEach(x=>x.classList.toggle('on',x.dataset.i===b.dataset.i))});
+</script>
 ${REVEAL_JS}</body></html>`;
 }
 
@@ -233,15 +358,15 @@ function oyunHTML(p: SitePlan): string {
   <div id="skorbar"><span>Skor: <span class="grad" id="skor">0</span></span><span>Rekor: <span class="grad" id="rekor">0</span></span></div>
   <canvas id="c" width="420" height="420"></canvas>
   <div class="ctrl"><button class="btn" id="basla">Yeniden Başlat</button><button class="btn ghost" id="dur">Duraklat</button></div>
-  <p style="color:var(--tx2);font-size:13px">${p.marka} · Vayra Supercomputer ile üretildi</p>
+  <p style="color:var(--tx2);font-size:13px">${p.marka} · Vayra Usta ile üretildi</p>
 <script>
 const cv=document.getElementById('c'),cx=cv.getContext('2d'),N=21,S=cv.width/N;
-let yilan,yon,elma,skor,rekor=+localStorage.getItem('${p.marka}_rekor')||0,dongu,duraklat=false;
+let yilan,yon,elma,skor,rekor=(()=>{try{return +localStorage.getItem('${p.marka}_rekor')||0}catch(e){return 0}})(),dongu,duraklat=false;
 document.getElementById('rekor').textContent=rekor;
-function basla(){yilan=[{x:10,y:10}];yon={x:1,y:0};elma=yeniElma();skor=0;duraklat=false;guncelleSkor();clearInterval(dongu);dongu=setInterval(tik,95)}
+function basla(){yilan=[{x:10,y:10}];yon={x:1,y:0};skor=0;elma=yeniElma();duraklat=false;guncelleSkor();clearInterval(dongu);dongu=setInterval(tik,95)}
 function yeniElma(){let e;do{e={x:(Math.floor(Math.abs(Math.sin(skor*99.7+Date.now()*.001)*1e4))%N),y:(Math.floor(Math.abs(Math.cos(skor*57.3+Date.now()*.001)*1e4))%N)}}while(yilan&&yilan.some(s=>s.x===e.x&&s.y===e.y));return e}
 function guncelleSkor(){document.getElementById('skor').textContent=skor}
-function tik(){if(duraklat)return;const b={x:(yilan[0].x+yon.x+N)%N,y:(yilan[0].y+yon.y+N)%N};if(yilan.some(s=>s.x===b.x&&s.y===b.y)){if(skor>rekor){rekor=skor;localStorage.setItem('${p.marka}_rekor',rekor);document.getElementById('rekor').textContent=rekor}return basla()}yilan.unshift(b);if(b.x===elma.x&&b.y===elma.y){skor++;guncelleSkor();elma=yeniElma()}else yilan.pop();ciz()}
+function tik(){if(duraklat)return;const b={x:(yilan[0].x+yon.x+N)%N,y:(yilan[0].y+yon.y+N)%N};if(yilan.some(s=>s.x===b.x&&s.y===b.y)){if(skor>rekor){rekor=skor;try{localStorage.setItem('${p.marka}_rekor',rekor)}catch(e){}document.getElementById('rekor').textContent=rekor}return basla()}yilan.unshift(b);if(b.x===elma.x&&b.y===elma.y){skor++;guncelleSkor();elma=yeniElma()}else yilan.pop();ciz()}
 function ciz(){cx.clearRect(0,0,cv.width,cv.height);const g=cx.createLinearGradient(elma.x*S,elma.y*S,elma.x*S+S,elma.y*S+S);g.addColorStop(0,'${p.aksan}');g.addColorStop(1,'${p.aksan2}');cx.fillStyle=g;cx.beginPath();cx.arc(elma.x*S+S/2,elma.y*S+S/2,S/2-2,0,7);cx.fill();yilan.forEach((s,i)=>{cx.fillStyle=i===0?'${p.aksan}':'${p.aksan2}';cx.globalAlpha=i===0?1:Math.max(.35,1-i/28);const r=6;cx.beginPath();cx.roundRect(s.x*S+1,s.y*S+1,S-2,S-2,r);cx.fill()});cx.globalAlpha=1}
 addEventListener('keydown',e=>{const k=e.key.toLowerCase();if((k==='arrowup'||k==='w')&&yon.y===0)yon={x:0,y:-1};else if((k==='arrowdown'||k==='s')&&yon.y===0)yon={x:0,y:1};else if((k==='arrowleft'||k==='a')&&yon.x===0)yon={x:-1,y:0};else if((k==='arrowright'||k==='d')&&yon.x===0)yon={x:1,y:0}});
 let tx,ty;cv.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
@@ -287,9 +412,11 @@ function dashboardHTML(p: SitePlan): string {
 
 /** Plana göre gerçek çalışan tek-dosya HTML üretir. */
 export function siteUret(plan: SitePlan): string {
-  if (plan.tip === "oyun") return oyunHTML(plan);
+  if (plan.tip === "oyun") return plan.oyun === "tugla" ? tuglaHTML(plan) : plan.oyun === "kanat" ? kanatHTML(plan) : plan.oyun === "hafiza" ? hafizaHTML(plan) : oyunHTML(plan);
+  if (plan.tip === "uygulama") return plan.uygulama === "butce" ? butceHTML(plan) : plan.uygulama === "zamanlayici" ? zamanlayiciHTML(plan) : yapilacakHTML(plan);
   if (plan.tip === "dashboard") return dashboardHTML(plan);
-  return landingHTML(plan); // landing / portfolyo / blog / menu → zengin landing
+  if (plan.tip === "menu") return menuHTML(plan);
+  return landingHTML(plan); // landing / portfolyo / blog → zengin landing
 }
 
 /** Kısayol: istemden doğrudan {plan, html}. */
@@ -312,11 +439,26 @@ export function takipMi(istem: string): boolean {
 }
 
 /** Önceki planı bir takip mesajına göre revize eder (marka/tip korunur, stil değişir). */
+/** Menü siteleri için sıcak ve birbirinden belirgin biçimde ayrışan paletler. */
+const MENU_PALETLER = [
+  { a: "#a4532a", b: "#d08a4e", zemin: "#f6efe4", koyu: false },
+  { a: "#d9a066", b: "#f0c98f", zemin: "#17110d", koyu: true },
+  { a: "#4f6b4a", b: "#8fae7e", zemin: "#f3f1e7", koyu: false },
+  { a: "#b23a48", b: "#e07a5f", zemin: "#fbf3ee", koyu: false },
+  { a: "#2f5d8a", b: "#6fa3c9", zemin: "#f1f4f6", koyu: false },
+];
+
 export function planiRevizeEt(onceki: SitePlan, istem: string): SitePlan {
   const t = istem.toLowerCase();
   const yeni = { ...onceki };
+  if (onceki.tip === "menu" && /(renk|reng|paleti|canlı|parlak|koyu|açık|farklı|başka)/.test(t)) {
+    const i = MENU_PALETLER.findIndex((p) => p.a === onceki.aksan);
+    const aday = MENU_PALETLER.filter((p, k) => k !== i && (/koyu/.test(t) ? p.koyu : /açık/.test(t) ? !p.koyu : true));
+    const yp = aday[hash(istem) % aday.length] ?? MENU_PALETLER[(i + 1) % MENU_PALETLER.length];
+    return { ...yeni, aksan: yp.a, aksan2: yp.b, zemin: yp.zemin, koyu: yp.koyu };
+  }
   // Renk değişikliği istendiyse deterministik olarak farklı palete geç
-  if (/(renk|paleti|canlı|parlak|koyu|açık|farklı|başka)/.test(t)) {
+  if (/(renk|reng|paleti|canlı|parlak|koyu|açık|farklı|başka)/.test(t)) {
     const idx = PALETLER.findIndex((p) => p.a === onceki.aksan);
     const yp = PALETLER[(idx + 1 + hash(istem) % (PALETLER.length - 1)) % PALETLER.length];
     yeni.aksan = yp.a; yeni.aksan2 = yp.b; yeni.zemin = yp.zemin; yeni.koyu = yp.koyu;

@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -7,6 +8,7 @@ import {
   Gem, Clock, Sparkles, Check, Box, Ban, Monitor, Smartphone,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 import {
   PAZ_STILLER, ORNEK_URUNLER, KALITELER, SURELER, PAZ_KREDI,
@@ -63,7 +65,7 @@ export function PazUrunBaglantisi({
   const urun = urunler.find((u) => u.id === seciliUrun);
 
   const devam = () => {
-    if (!urun) { toast.error("Önce bir ürün seç"); return; }
+    if (!urun) { toast.error("Ürün seçilmedi", { description: "Devam etmek için listeden bir ürün seç ya da yeni ürün ekle." }); return; }
     setAdim(2);
   };
 
@@ -81,13 +83,13 @@ export function PazUrunBaglantisi({
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
             {/* Ekranın TAM ortası + blur'lu overlay (madde 52) */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={onKapat} className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+              onClick={onKapat} className="perde absolute inset-0 bg-black/70 backdrop-blur-md" />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 14 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative flex max-h-[90vh] w-full max-w-[1140px] flex-col overflow-hidden rounded-[18px] bg-[#1A1A1A] shadow-2xl">
+              className="relative flex max-h-[90vh] w-full max-w-[1140px] flex-col overflow-hidden rounded-[18px] bg-[#1A1A1A]">
 
               {/* başlık */}
               <div className="relative shrink-0 px-6 pt-5">
@@ -245,7 +247,7 @@ export function PazUrunBaglantisi({
         urunler={urunler} secili={seciliUrun} onSec={(id) => { setSeciliUrun(id); setEkleAcik(false); }}
         onUrunEkle={(u) => setUrunler((l) => [u, ...l])}
         onDuzenle={(u) => { setDuzenlenen(u); setEkleAcik(false); }}
-        onSil={(id) => { setUrunler((l) => l.filter((x) => x.id !== id)); toast.success("Ürün silindi"); }}
+        onSil={(id) => { const sira = urunler.findIndex((x) => x.id === id), u = urunler[sira]; setUrunler((l) => l.filter((x) => x.id !== id)); mesaj.silindi("Ürün", u ? () => setUrunler((l) => (l.some((x) => x.id === id) ? l : [...l.slice(0, sira), u, ...l.slice(sira)])) : undefined); }}
         baslangicUrl={url} />
 
       {/* ══ "Ürünün" düzenleme modalı ══ */}
@@ -253,12 +255,13 @@ export function PazUrunBaglantisi({
         onKaydet={(g) => {
           setUrunler((l) => l.map((x) => (x.id === g.id ? g : x)));
           setDuzenlenen(null);
-          toast.success("Ürün kaydedildi");
+          toast.success("Ürün kaydedildi", { description: `${g.ad} güncellendi.` });
         }}
         onSil={(id) => {
+          const sira = urunler.findIndex((x) => x.id === id), u = urunler[sira];
           setUrunler((l) => l.filter((x) => x.id !== id));
           setDuzenlenen(null);
-          toast.success("Ürün silindi");
+          mesaj.silindi("Ürün", u ? () => setUrunler((l) => (l.some((x) => x.id === id) ? l : [...l.slice(0, sira), u, ...l.slice(sira)])) : undefined);
         }} />
     </>
   );
@@ -279,13 +282,10 @@ function AltCubukCip({
         <Ikon className="h-[18px] w-[18px]" /> {deger}
       </button>
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={onTikla} />
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+        <Yuzen acik={!!(acik)} onKapat={onTikla} alt={"tam"} sol={0} bosluk={12}><motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.14 }}
-              className="absolute bottom-full left-0 z-50 mb-3 w-[212px] rounded-[14px] bg-[#1E1E1E] p-2"
-              style={{ boxShadow: "0 20px 50px rgba(0,0,0,.7)" }}>
+              className="w-[212px] rounded-[14px] bg-[#1E1E1E] p-2"
+              style={{ boxShadow: "none" }}>
               {secenekler.map((s) => (
                 <button key={s} onClick={() => onSec(s)}
                   className={cn(
@@ -296,9 +296,7 @@ function AltCubukCip({
                   {deger === s && <Check className="h-4 w-4" style={{ color: "var(--sn-lime,#c9f531)" }} />}
                 </button>
               ))}
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );
@@ -359,7 +357,7 @@ export function UrununuEkle({
                 url: t0, tohum: `urun-${t0}`, gorseller: [],
               });
             }
-            toast.success(kip === "app" ? "Uygulama oluşturuldu" : "Ürün oluşturuldu");
+            toast.success(kip === "app" ? "Uygulama oluşturuldu" : "Ürün oluşturuldu", { description: `${buyukAd} listene eklendi.` });
           } else {
             setHatalar((l) => [{ id: yeniId("hata"), url: t0, kip }, ...l]);
           }
@@ -376,7 +374,7 @@ export function UrununuEkle({
       {acik && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onKapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+            onClick={onKapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
           <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -545,12 +543,9 @@ export function UrununuEkle({
                       <MoreHorizontal className="h-4 w-4" />
                     </button>
                     <AnimatePresence>
-                      {menuId === u.id && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setMenuId(null)} />
-                          <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
-                            className="absolute right-2 top-11 z-50 w-[220px] rounded-[16px] bg-[#1A1A1A] p-2.5"
-                            style={{ boxShadow: "0 20px 50px rgba(0,0,0,.8)" }}>
+                      <Yuzen acik={!!(menuId === u.id)} onKapat={() => setMenuId(null)} sag={8} ust={44} bosluk={0}><motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+                            className="w-[220px] rounded-[16px] bg-[#1A1A1A] p-2.5"
+                            style={{ boxShadow: "none" }}>
                             <button onClick={() => { setMenuId(null); onDuzenle(u); }}
                               className="flex w-full items-center gap-3 rounded-[10px] px-3 py-3 text-left text-[17px] text-white transition-colors hover:bg-white/[0.07]">
                               <Pencil className="h-5 w-5 text-[#D8D8D8]" /> Düzenle
@@ -559,9 +554,7 @@ export function UrununuEkle({
                               className="flex w-full items-center gap-3 rounded-[10px] px-3 py-3 text-left text-[17px] text-[#E5484D] transition-colors hover:bg-[#E5484D]/10">
                               <Trash2 className="h-5 w-5" /> Sil
                             </button>
-                          </motion.div>
-                        </>
-                      )}
+                          </motion.div></Yuzen>
                     </AnimatePresence>
 
                     <p className="mt-2 truncate text-center text-[14px] font-semibold text-white">{u.ad}</p>
@@ -617,7 +610,7 @@ function UrunDuzenle({
       {urun && (
         <div className="fixed inset-0 z-[230] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onKapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+            onClick={onKapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
           <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}

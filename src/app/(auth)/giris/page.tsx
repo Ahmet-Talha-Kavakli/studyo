@@ -2,18 +2,14 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { AuthKart } from "@/components/auth/AuthKart";
+import { AuthEkran } from "@/components/auth/AuthEkran";
 
-function Giris() {
-  const params = useSearchParams();
-  const geri = params.get("geri") ?? "/panel";
-  return <AuthKart baslangic="giris" geri={geri} />;
+function Ekran() {
+  const geri = useSearchParams().get("geri");
+  // Yalnız site içi yollara dön (açık yönlendirmeye karşı)
+  return <AuthEkran niyet="giris" geri={geri && geri.startsWith("/") && !geri.startsWith("//") ? geri : "/panel"} />;
 }
 
-export default function GirisSayfa() {
-  return (
-    <Suspense fallback={<div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-cyan-glow" />}>
-      <Giris />
-    </Suspense>
-  );
+export default function Sayfa() {
+  return <Suspense fallback={<div className="min-h-[100dvh] bg-[#08080a]" />}><Ekran /></Suspense>;
 }

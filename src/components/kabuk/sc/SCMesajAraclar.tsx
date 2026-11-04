@@ -63,7 +63,7 @@ export function SCMesajAraclar({
   const [bekleyen, setBekleyen] = useState<GeriBildirimTur | null>(null);
 
   const kopyalaTikla = async () => {
-    const ok = await kopyala(metin, "Kopyalandı");
+    const ok = await kopyala(metin, "Yanıt kopyalandı");
     if (!ok) return;
     // Geçici ✓ göstergesi — Claude'da ikon kısa süre tik olur.
     setKopyalandi(true);
@@ -73,7 +73,7 @@ export function SCMesajAraclar({
   /** Sesli oku — tarayıcının konuşma sentezi. Desteklenmiyorsa bilgilendirir. */
   const sesliOku = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      toast.error("Tarayıcın sesli okumayı desteklemiyor");
+      toast.error("Sesli okuma desteklenmiyor", { description: "Bu tarayıcı konuşma sentezini desteklemiyor. Güncel bir tarayıcıyla dene." });
       return;
     }
     const s = window.speechSynthesis;
@@ -96,7 +96,7 @@ export function SCMesajAraclar({
     setOy(bekleyen);
     setBekleyen(null);
     // detay isteğe bağlı; boş geçilebilir (Claude'da da öyle).
-    toast.success(detay ? "Geri bildirimin gönderildi" : "Geri bildirimin alındı");
+    toast.success("Geri bildirimin alındı", { description: "Teşekkürler, yanıtları iyileştirmek için kullanacağız." });
   };
 
   return (

@@ -17,6 +17,7 @@ import {
   Sparkles, BarChart3, Gift as GiftIcon, Coins,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { useAkis, birlesikFeed } from "@/store/useAkis";
 import { useAuth } from "@/store/useAuth";
 import { kisaSayi } from "@/lib/akisVeri";
@@ -52,32 +53,32 @@ export default function UreticiMerkezi() {
   const krediHarca = (miktar: number): boolean => {
     const k = useAuth.getState().kullanici;
     if (!k) return false;
-    if (k.krediler < miktar) { toast.error("Yetersiz kredi", { description: `Bu işlem için ${miktar} kredi gerekli.` }); return false; }
+    if (k.krediler < miktar) { mesaj.yetersizKredi(miktar, k.krediler); return false; }
     profilGuncelle({ krediler: k.krediler - miktar });
     return true;
   };
 
   const ureticiOl = () => {
     useAkis.getState().icerikUreticiOl();
-    toast.success("İçerik üretici oldun 🎉", { description: "Artık analizler, boost ve mavi tik erişimin var." });
+    toast.success("İçerik üretici oldun", { description: "Analizler, öne çıkarma ve mavi tik artık açık." });
   };
   const maviTikAl = () => {
     if (maviTik) return;
     if (!krediHarca(MAVI_TIK_FIYAT)) return;
     useAkis.getState().maviTikAl();
-    toast.success("Mavi tik alındı ✔️", { description: `Profilin artık doğrulanmış · -${MAVI_TIK_FIYAT} kredi` });
+    toast.success("Mavi tik alındı", { description: `Profilin artık doğrulanmış görünüyor. ${MAVI_TIK_FIYAT} kredi düşüldü.` });
   };
   const oneCikar = (id: string) => {
     if (oneCikarilan.includes(id)) return;
     if (!krediHarca(ONE_CIKAR_FIYAT)) return;
     setOneCikarilan((v) => [...v, id]);
-    toast.success("Gönderi öne çıkarıldı 🚀", { description: `24 saat boyunca daha fazla kişiye ulaşacak · -${ONE_CIKAR_FIYAT} kredi` });
+    toast.success("Gönderi öne çıkarıldı", { description: `24 saat boyunca daha fazla kişiye ulaşacak. ${ONE_CIKAR_FIYAT} kredi düşüldü.` });
   };
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 sm:py-10">
-      <Link href="/panel/akis" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-metin-3 transition-colors hover:text-metin">
-        <ChevronLeft className="h-4 w-4" /> Akış'a dön
+      <Link href="/panel" className="mb-5 inline-flex items-center gap-1.5 text-[13px] text-metin-3 transition-colors hover:text-metin">
+        <ChevronLeft className="h-4 w-4" /> Keşfet'e dön
       </Link>
 
       {/* hero */}
@@ -202,7 +203,7 @@ export default function UreticiMerkezi() {
           <section>
             <div className="flex items-center gap-3 rounded-2xl border border-emerald-400/25 bg-emerald-400/[0.06] p-4">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300"><GiftIcon className="h-5 w-5" /></span>
-              <p className="text-[13px] leading-snug text-metin-2">Takipçilerin sana <span className="font-semibold text-emerald-300">hediye</span> gönderdikçe kredi kazanırsın. Preset ve uygulama paylaşımların da kullanım başına kazandırır — <Link href="/panel/kazan" className="text-emerald-300 underline">Para Kazan</Link>.</p>
+              <p className="text-[13px] leading-snug text-metin-2">Takipçilerin sana <span className="font-semibold text-emerald-300">hediye</span> gönderdikçe kredi kazanırsın. Preset ve uygulama paylaşımların da kullanım başına kazandırır — <Link href="/earn" className="text-emerald-300 underline">Vayra Earn</Link>.</p>
             </div>
           </section>
         </div>

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, Brain, Zap, Plug, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { BarChart3, Bot, Brain, Zap, Plug, ShieldCheck, SlidersHorizontal, type LucideIcon } from "lucide-react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /* ============================================================
@@ -18,11 +19,13 @@ import { cn } from "@/lib/utils";
    ============================================================ */
 
 const SEKMELER: { ad: string; href: string; ikon: LucideIcon; ozet: string }[] = [
-  { ad: "Genel", href: "/panel/supercomputer/ayarlar", ikon: SlidersHorizontal, ozet: "Model ve davranış" },
-  { ad: "AI Çalışanlar", href: "/panel/supercomputer/ayarlar/calisanlar", ikon: Bot, ozet: "Özel görev ajanları" },
-  { ad: "Hafıza", href: "/panel/supercomputer/ayarlar/hafiza", ikon: Brain, ozet: "Kalıcı bağlam" },
+  { ad: "Genel", href: "/panel/supercomputer/ayarlar", ikon: SlidersHorizontal, ozet: "Talimatlar, görünüm, yetenekler" },
+  { ad: "Bellek", href: "/panel/supercomputer/ayarlar/hafiza", ikon: Brain, ozet: "Kalıcı bağlam" },
+  { ad: "Çalışanlar", href: "/panel/supercomputer/ayarlar/calisanlar", ikon: Bot, ozet: "Özel asistanlar" },
   { ad: "Beceriler", href: "/panel/supercomputer/ayarlar/beceriler", ikon: Zap, ozet: "Yetenek paketleri" },
   { ad: "Bağlayıcılar", href: "/panel/supercomputer/ayarlar/baglayicilar", ikon: Plug, ozet: "Dış uygulamalar" },
+  { ad: "Veri ve gizlilik", href: "/panel/supercomputer/ayarlar/veri", ikon: ShieldCheck, ozet: "Paylaşım, arşiv, dışa aktarma" },
+  { ad: "Kullanım", href: "/panel/supercomputer/ayarlar/kullanim", ikon: BarChart3, ozet: "Kredi ve etkinlik" },
 ];
 
 export default function AyarlarLayout({ children }: { children: React.ReactNode }) {
@@ -31,38 +34,32 @@ export default function AyarlarLayout({ children }: { children: React.ReactNode 
   const aktif = (h: string) =>
     h === "/panel/supercomputer/ayarlar" ? path === h : path === h || path.startsWith(h + "/");
 
+  const secili = SEKMELER.find((x) => aktif(x.href)) ?? SEKMELER[0];
   return (
     <div className="sc-kapsam min-h-full bg-[var(--sc-zemin)] text-[var(--sc-metin)]">
-      <div className="mx-auto max-w-[1080px] px-6 py-10">
-        <header className="mb-8">
-          <h1 className="text-[26px] font-normal tracking-[-0.02em]">Ayarlar</h1>
-          <p className="mt-1 text-[14px] text-[var(--sc-metin-3)]">
-            Supercomputer&apos;ın nasıl çalıştığını, neyi hatırladığını ve neye erişebileceğini yönet.
-          </p>
-        </header>
-
-        {/* items-start ŞART: flex varsayılanı `stretch` olduğu için nav tüm
-            sütun yüksekliğine uzuyor ve sticky etkisiz kalıyordu. */}
-        <div className="flex flex-col gap-8 md:flex-row md:items-start">
-          {/* Sekme listesi — Claude'un ayar gezinmesi (dikey, sade).
-              md+ ekranlarda YAPIŞKAN: uzun listelerde aşağı inince sekmeler
-              görünmez oluyordu, artık üstte sabit kalır. */}
-          <nav className="shrink-0 md:sticky md:top-6 md:h-fit md:w-[236px]">
-            <ul className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+      <div className="mx-auto max-w-[1240px] px-6 py-8 max-md:pt-16 max-sm:px-4 md:pl-10 xl:pl-14">
+        {/* items-start ŞART: yoksa yapışkan menü sütun boyunca uzar ve yapışmaz. */}
+        <div className="flex flex-col gap-5 md:flex-row md:items-start">
+          {/* Ayarlar menüsü: başlık şeridi + simgeli satırlar, tek kartta (havada yazı yok). */}
+          <nav aria-label="Ayarlar" className="shrink-0 overflow-hidden rounded-[22px] bg-[var(--sc-kart)] ring-1 ring-inset ring-white/[0.07] md:sticky md:top-6 md:w-[272px]">
+            <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3.5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-[var(--sc-metin)]"><SlidersHorizontal className="h-[18px] w-[18px]" /></span>
+              <span className="min-w-0"><span className="block text-[16px] font-semibold tracking-[-0.01em]">Ayarlar</span><span className="block truncate text-[12.5px] text-[var(--sc-metin-3)]">Usta nasıl çalışsın</span></span>
+            </div>
+            <ul className="gizli-scroll flex gap-1 overflow-x-auto p-2 md:flex-col md:overflow-visible">
               {SEKMELER.map((s) => {
                 const bu = aktif(s.href);
                 return (
                   <li key={s.href} className="shrink-0 md:shrink">
-                    <Link href={s.href}
-                      className={cn(
-                        "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[14px] transition-colors",
-                        bu
-                          ? "bg-[var(--sc-yukselti)] font-medium text-[var(--sc-metin)]"
-                          : "text-[var(--sc-metin-2)] hover:bg-[var(--sc-cip)] hover:text-[var(--sc-metin)]",
-                      )}>
-                      <s.ikon className={cn("h-[17px] w-[17px] shrink-0", bu ? "text-[var(--sc-aksan)]" : "text-[var(--sc-metin-3)]")}
-                        strokeWidth={1.8} />
-                      <span className="whitespace-nowrap md:whitespace-normal">{s.ad}</span>
+                    <Link href={s.href} aria-current={bu ? "page" : undefined}
+                      className={cn("relative flex items-center gap-3 rounded-[14px] px-2.5 py-2 transition-colors active:scale-[0.99]",
+                        bu ? "text-[var(--sc-metin)]" : "text-[var(--sc-metin-2)] hover:bg-white/[0.055] hover:text-[var(--sc-metin)]")}>
+                      {bu && <motion.span layoutId="sc-ayar-zemin" transition={{ type: "spring", stiffness: 480, damping: 38 }} className="absolute inset-0 rounded-[14px] bg-white/[0.085] ring-1 ring-inset ring-white/[0.08]" />}
+                      <span className={cn("relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full", bu ? "bg-white text-[#0b0b0c]" : "bg-white/[0.065] text-[var(--sc-metin-2)]")}><s.ikon className="h-4 w-4" strokeWidth={1.9} /></span>
+                      <span className="relative min-w-0">
+                        <span className={cn("block whitespace-nowrap text-[13.5px]", bu && "font-semibold")}>{s.ad}</span>
+                        <span className="hidden truncate text-[11.5px] text-[var(--sc-metin-3)] md:block">{s.ozet}</span>
+                      </span>
                     </Link>
                   </li>
                 );
@@ -70,7 +67,13 @@ export default function AyarlarLayout({ children }: { children: React.ReactNode 
             </ul>
           </nav>
 
-          <div className="min-w-0 flex-1">{children}</div>
+          <div className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center gap-3 rounded-[22px] bg-[var(--sc-kart)] px-4 py-3.5 ring-1 ring-inset ring-white/[0.07] sm:px-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.085]"><secili.ikon className="h-[18px] w-[18px]" /></span>
+              <span className="min-w-0"><span className="block text-[18px] font-semibold tracking-[-0.02em]">{secili.ad}</span><span className="block truncate text-[12.5px] text-[var(--sc-metin-3)]">{secili.ozet}</span></span>
+            </div>
+            {children}
+          </div>
         </div>
       </div>
     </div>

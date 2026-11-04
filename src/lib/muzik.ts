@@ -58,9 +58,9 @@ export const VOKAL_ETIKETLERI = ["[Male]", "[Female]", "[Duet]", "[Choir]", "[Wh
 
 /** Şarkı süreleri. */
 export const SURELER = [
-  { id: "kisa", ad: "Kısa", saniye: 30, ipucu: "~30 sn snippet" },
-  { id: "orta", ad: "Standart", saniye: 120, ipucu: "~2 dk tam şarkı" },
-  { id: "uzun", ad: "Uzun", saniye: 200, ipucu: "~3.5 dk uzatılmış" },
+  { id: "kisa", ad: "Kısa", saniye: 30, ipucu: "yaklaşık 30 sn snippet" },
+  { id: "orta", ad: "Standart", saniye: 120, ipucu: "yaklaşık 2 dk tam şarkı" },
+  { id: "uzun", ad: "Uzun", saniye: 200, ipucu: "yaklaşık 3.5 dk uzatılmış" },
 ];
 
 /** AI müzik modelleri (kendi markamız). */

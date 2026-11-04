@@ -9,7 +9,7 @@
      bir tabandan deterministik olarak türetilir.
    - id'ler sabit string'lerdir ("seed_1".."seed_24"),
      performance.now() KULLANILMAZ.
-   - gorselUrl, onizlemeArka(...) çıktısıdır (CSS background string),
+   - gorselUrl, public/gercek altındaki, istemle eşleşen gerçek bir karedir.
      ham path değildir — UretimKarti style={{ background }} ile kullanır.
 
    Bu deterministiklik sayesinde initial state olarak güvenle
@@ -18,8 +18,6 @@
 
 import type { Uretim } from "@/store/useProjeler";
 import type { ModelTur } from "@/lib/catalog";
-import { onizlemeArka } from "@/lib/utils";
-import { origArka } from "./gercekVeri";
 
 /**
  * Sabit zaman tabanı — 12 Tem 2026 civarı bir an (UTC).
@@ -36,8 +34,11 @@ interface SeedSatir {
   prompt: string;
   kredi: number;
   arac: string;
-  /** onizlemeArka için kullanılacak stok kategorisi. */
-  kategori: string;
+  kategori?: string;
+  /** Örneğin gerçek görseli (public/gercek) — istemle birebir eşleşir. */
+  gorsel: string;
+  oran: string;
+  sure?: string;
   favori?: boolean;
   yayinda?: boolean;
 }
@@ -47,272 +48,30 @@ interface SeedSatir {
  * ~10 görsel, ~8 video, ~3 ses, ~3 3D karışımı.
  */
 const SATIRLAR: SeedSatir[] = [
-  // ---- VİDEO (8) ----
-  {
-    baslik: "Neon Tokyo Sokakları — Gece Sürüşü",
-    tur: "video",
-    model: "Sora 2",
-    prompt:
-      "Yağmurdan ıslak Tokyo arka sokaklarında gece boyu ilerleyen kamera, neon tabelaların yansımaları, sinematik anamorfik lens, fizik tutarlı su birikintileri.",
-    kredi: 60,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-    yayinda: true,
-    favori: true,
-  },
-  {
-    baslik: "Kapadokya Şafağında Balonlar",
-    tur: "video",
-    model: "Veo 3.1",
-    prompt:
-      "Kapadokya vadisinde şafak vakti yükselen onlarca sıcak hava balonu, altın saat aydınlatması, atmosferik sis, yavaş yukarı doğru kamera hareketi, 1080p.",
-    kredi: 55,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-    yayinda: true,
-  },
-  {
-    baslik: "Siberpunk Kahraman — Storyboard",
-    tur: "video",
-    model: "Kling 3.0",
-    prompt:
-      "Karakter odaklı 6 kesimlik siberpunk hikâye: yağmurlu çatı kovalamacası, holografik reklamlar, 4K, tutarlı karakter yüzü.",
-    kredi: 48,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-  },
-  {
-    baslik: "Ürün Lansmanı — Parfüm Reklamı",
-    tur: "video",
-    model: "Seedance 2.0",
-    prompt:
-      "Lüks parfüm şişesinin etrafında dönen ışık, senkron müzik ve seslendirme, çok çekimli montaj, cam üzerinde damlacıklar, mermer zemin.",
-    kredi: 42,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-    yayinda: true,
-  },
-  {
-    baslik: "Anime Stil — Kiraz Çiçekleri",
-    tur: "video",
-    model: "WAN 2.7",
-    prompt:
-      "Video referanslı stil transferi ile canlı çekimi anime estetiğine çevir, kiraz çiçekleri savrulan bir tapınak avlusu, pastel tonlar.",
-    kredi: 38,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-  },
-  {
-    baslik: "Hızlı Reels — Kahve Dükkânı",
-    tur: "video",
-    model: "MiniMax Hailuo 2.3",
-    prompt:
-      "Butik kahve dükkânında latte sanatı çeken barista, sıcak ışık, kısa-form dikey reels, hızlı kesimler, stilize renk gradasyonu.",
-    kredi: 20,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-    yayinda: true,
-  },
-  {
-    baslik: "Uzay İstasyonu — Yörünge Manzarası",
-    tur: "video",
-    model: "Sora 2",
-    prompt:
-      "Alçak yörüngedeki bir uzay istasyonundan Dünya manzarası, dönen güneş panelleri, gerçekçi ışık, uzun süreli yavaş kamera kaydırma.",
-    kredi: 60,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-    favori: true,
-  },
-  {
-    baslik: "Dağ Bisikleti — Orman Patikası",
-    tur: "video",
-    model: "Veo 3.1",
-    prompt:
-      "Sisli çam ormanında hızla inen dağ bisikletçisi, ilk şahıs takip kamerası, ıslak toprak, güneş ışınları ağaç aralarından, dış mekan.",
-    kredi: 55,
-    arac: "Video Stüdyo",
-    kategori: "sinematik",
-    yayinda: true,
-  },
-
-  // ---- GÖRSEL (10) — portre / manzara / urun dağılımlı ----
-  {
-    baslik: "Editorial Moda — Kırmızı Palto",
-    tur: "gorsel",
-    model: "Ruh 2.0",
-    prompt:
-      "Yüksek moda editorial portre, kırmızı yün palto giyen model, minimal stüdyo, keskin gölge, dergi kapağı estetiği, kültür-yerli kimlik.",
-    kredi: 4,
-    arac: "Görsel Stüdyo",
-    kategori: "portre",
-    favori: true,
-    yayinda: true,
-  },
-  {
-    baslik: "Sinematik Portre — Altın Işık",
-    tur: "gorsel",
-    model: "Ruh Sinema",
-    prompt:
-      "Altın saat pencere ışığında oturan kadın portresi, zengin doku, sığ alan derinliği, sıcak sinematik mood, film grain.",
-    kredi: 6,
-    arac: "Görsel Stüdyo",
-    kategori: "portre",
-    yayinda: true,
-  },
-  {
-    baslik: "İzlanda Şelalesi — Geniş Manzara",
-    tur: "gorsel",
-    model: "Seedream 5.0 Pro",
-    prompt:
-      "İzlanda'da devasa bir şelale, bazalt kayalar, dramatik bulutlar, uzun pozlama ipeksi su, geniş açı manzara, yüksek dinamik aralık.",
-    kredi: 7,
-    arac: "Görsel Stüdyo",
-    kategori: "manzara",
-    yayinda: true,
-  },
-  {
-    baslik: "Ürün Çekimi — Deri Cüzdan",
-    tur: "gorsel",
-    model: "Nano Banana Pro",
-    prompt:
-      "El yapımı kahverengi deri cüzdanın stüdyo ürün çekimi, yumuşak gölge, mermer yüzey, marka adı okunaklı yazı ile, e-ticaret kalitesi.",
-    kredi: 5,
-    arac: "Görsel Stüdyo",
-    kategori: "urun",
-  },
-  {
-    baslik: "Fütüristik Spor Ayakkabı",
-    tur: "gorsel",
-    model: "Flux 2",
-    prompt:
-      "Havada süzülen fütüristik spor ayakkabı, neon aksanlar, temiz stüdyo arka planı, keskin detay ve tutarlı geometri, reklam görseli.",
-    kredi: 5,
-    arac: "Görsel Stüdyo",
-    kategori: "urun",
-    favori: true,
-  },
-  {
-    baslik: "Vesikalık — Kurumsal Portre",
-    tur: "gorsel",
-    model: "GPT Image 2",
-    prompt:
-      "Takım elbiseli profesyonelin stüdyo kalitesinde vesikalık portresi, nötr gri arka plan, yumuşak anahtar ışık, LinkedIn için uygun.",
-    kredi: 6,
-    arac: "Görsel Stüdyo",
-    kategori: "portre",
-  },
-  {
-    baslik: "Toskana Bağları — Gün Batımı",
-    tur: "gorsel",
-    model: "Ruh Sinema",
-    prompt:
-      "Toskana kırsalında gün batımında uzanan üzüm bağları, servi ağaçları, sıcak turuncu gökyüzü, huzurlu manzara, film estetiği.",
-    kredi: 6,
-    arac: "Görsel Stüdyo",
-    kategori: "manzara",
-    yayinda: true,
-  },
-  {
-    baslik: "Kozmetik Serumu — Cam Şişe",
-    tur: "gorsel",
-    model: "Seedream 5.0 Pro",
-    prompt:
-      "Şeffaf cam cilt bakım serumu şişesi, su damlacıkları, yaprak yansımaları, açık pastel arka plan, premium kozmetik ürün çekimi.",
-    kredi: 7,
-    arac: "Görsel Stüdyo",
-    kategori: "urun",
-  },
-  {
-    baslik: "Sokak Portresi — Yağmur Sonrası",
-    tur: "gorsel",
-    model: "Ruh 2.0",
-    prompt:
-      "Yağmur sonrası şehir sokağında genç adam portresi, bokeh ışıklar, ıslak yansımalar, doğal cilt dokusu, editorial sokak modası.",
-    kredi: 4,
-    arac: "Görsel Stüdyo",
-    kategori: "portre",
-    favori: true,
-  },
-  {
-    baslik: "Alp Dağları — Sisli Zirve",
-    tur: "gorsel",
-    model: "Flux 2",
-    prompt:
-      "Karlı Alp zirveleri arasında yükselen sabah sisi, keskin kaya detayı, soğuk mavi tonlar, geniş panoramik dağ manzarası.",
-    kredi: 5,
-    arac: "Görsel Stüdyo",
-    kategori: "manzara",
-  },
-
-  // ---- SES (3) — soyut kategorisi ----
-  {
-    baslik: "Belgesel Anlatımı — Türkçe Seslendirme",
-    tur: "ses",
-    model: "ElevenLabs TTS",
-    prompt:
-      "Doğa belgeseli için sıcak, güven veren erkek anlatıcı sesi, net diksiyon, duygu tonlaması, Türkçe.",
-    kredi: 3,
-    arac: "Ses Stüdyosu",
-    kategori: "soyut",
-    yayinda: true,
-  },
-  {
-    baslik: "Lo-fi Chill — Çalışma Müziği",
-    tur: "ses",
-    model: "Vali Müzik",
-    prompt:
-      "Rahatlatıcı lo-fi hip-hop enstrümantal, yumuşak piyano, vinil çıtırtısı, 90 BPM, telifsiz çalışma müziği loop.",
-    kredi: 8,
-    arac: "Ses Stüdyosu",
-    kategori: "soyut",
-    favori: true,
-  },
-  {
-    baslik: "SFX — Kapı Gıcırtısı & Adımlar",
-    tur: "ses",
-    model: "Vali SFX",
-    prompt:
-      "Ahşap kapı gıcırtısı ve tahta zeminde yaklaşan ayak sesleri, gerilim sahnesi için foley ses efekti paketi.",
-    kredi: 2,
-    arac: "Ses Stüdyosu",
-    kategori: "soyut",
-  },
-
-  // ---- 3D (3) — 3d kategorisi ----
-  {
-    baslik: "Sci-fi Kask — Üretime Hazır Model",
-    tur: "3d",
-    model: "Meshy Metin→3D",
-    prompt:
-      "Fütüristik astronot kaskı, PBR dokulu, temiz quad topoloji, GLB çıktı, oyun/AR için üretime hazır 3D varlık.",
-    kredi: 25,
-    arac: "3D Stüdyo",
-    kategori: "3d",
-    favori: true,
-    yayinda: true,
-  },
-  {
-    baslik: "Antika Vazo — Görselden 3D",
-    tur: "3d",
-    model: "Meshy Görsel→3D",
-    prompt:
-      "Tek referans fotoğraftan çıkarılan seramik antika vazo mesh'i, otomatik topoloji, gerçekçi doku haritası.",
-    kredi: 30,
-    arac: "3D Stüdyo",
-    kategori: "3d",
-    yayinda: true,
-  },
-  {
-    baslik: "Robot Karakter — Rig & Yürüyüş",
-    tur: "3d",
-    model: "Meshy Rig & Animasyon",
-    prompt:
-      "Sevimli robot karakterin otomatik rig'lenmesi ve yürüme animasyonu, hazır iskelet, gerçek zamanlı önizleme için optimize.",
-    kredi: 20,
-    arac: "3D Stüdyo",
-    kategori: "3d",
-  },
+  { baslik: "Yağmurlu Tokyo Sokakları", tur: "video", model: "Sora 2", prompt: "Yağmurdan ıslak Tokyo sokağında şemsiyeli kalabalık, neon tabelaların yansımaları, sinematik anamorfik lens, yavaş takip kamerası.", kredi: 60, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/yagmurlu-tokyo-sokagikling-3-0-turbo.webp", oran: "9:16", sure: "0:08", favori: true, yayinda: true },
+  { baslik: "Sisli Vadi — Şafak", tur: "video", model: "Veo 3.1", prompt: "Şafakta sisle dolan dağ vadisi, katman katman sırtlar, yavaş yukarı kamera hareketi, atmosferik ışık, 1080p.", kredi: 55, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/sisli-vadi-safagiseedance-2-0.webp", oran: "9:16", sure: "0:08", yayinda: true },
+  { baslik: "Neon Ninja — Kovalamaca", tur: "video", model: "Kling 3.0", prompt: "Yağmurlu neon sokakta ışın kılıçlı ninja, holografik tabelalar, ağır çekim, siberpunk atmosfer, tutarlı karakter.", kredi: 48, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/neon-ninjaatlas-creative.webp", oran: "1:1", sure: "0:05" },
+  { baslik: "Saat Reklamı — Ürün Lansmanı", tur: "video", model: "Seedance 2.0", prompt: "Lüks kol saatinin etrafında dönen ışık, koyu zemin, makro kadran detayı, çok çekimli reklam montajı.", kredi: 42, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/urun-reklami-saatadcraft.webp", oran: "16:9", sure: "0:10", yayinda: true },
+  { baslik: "Samuray Düellosu", tur: "video", model: "WAN 2.7", prompt: "Kiraz çiçekleri savrulan avluda iki samurayın düellosu, gün batımı ışığı, toz ve yapraklar, sinematik ağır çekim.", kredi: 38, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/samuray-duellosukling-3-0.webp", oran: "9:16", sure: "0:05" },
+  { baslik: "Kahve Dükkânı — Reels", tur: "video", model: "MiniMax Hailuo 2.3", prompt: "Ahşap masada latte, pencereden sıcak ışık, yavaş dolly hareketi, kısa dikey reels için stilize renk.", kredi: 20, arac: "Video Stüdyo", gorsel: "/gercek/galeri/urun5.webp", oran: "1:1", sure: "0:06", yayinda: true },
+  { baslik: "Uzay İstasyonu — Yörünge", tur: "video", model: "Sora 2", prompt: "Alçak yörüngedeki uzay istasyonu, arkada Dünya, dönen güneş panelleri, gerçekçi ışık, uzun yavaş kamera kaydırma.", kredi: 60, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/uzay-istasyonu-yorungesiveo-3-1.webp", oran: "9:16", sure: "0:10", favori: true },
+  { baslik: "Orman Şelalesi — FPV", tur: "video", model: "Veo 3.1", prompt: "Yosunlu orman içinde şelaleye doğru alçak FPV drone uçuşu, su sisi, sabah ışığı, akıcı hareket.", kredi: 55, arac: "Video Stüdyo", gorsel: "/gercek/kesfet/fpv-drone.webp", oran: "3:4", sure: "0:08", yayinda: true },
+  { baslik: "Editorial Moda — Siyah Couture", tur: "gorsel", model: "Ruh 2.0", prompt: "Yüksek moda editorial: siyah tüylü couture elbise, koyu stüdyo, keskin kenar ışığı, dergi kapağı estetiği.", kredi: 4, arac: "Görsel Stüdyo", gorsel: "/gercek/kesfet/editorial-moda1.webp", oran: "16:9", favori: true, yayinda: true },
+  { baslik: "Altın Saat Portresi", tur: "gorsel", model: "Ruh Sinema", prompt: "Altın saatte çayırda kızıl saçlı kadın portresi, sığ alan derinliği, sıcak sinematik ton, film grain.", kredi: 6, arac: "Görsel Stüdyo", gorsel: "/gercek/kesfet/altin-saat-portresinano-banana-pro.webp", oran: "9:16", yayinda: true },
+  { baslik: "Tropik Şelale", tur: "gorsel", model: "Seedream 5.0 Pro", prompt: "Yağmur ormanında turkuaz gölete dökülen şelale, uzun pozlama ipeksi su, yemyeşil bitki örtüsü, geniş açı.", kredi: 7, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/manzara9.webp", oran: "1:1", yayinda: true },
+  { baslik: "Ürün Çekimi — Kol Saati", tur: "gorsel", model: "Nano Banana Pro", prompt: "Deri kayışlı lacivert kadranlı kol saati, ahşap yüzey, yumuşak gölge, e-ticaret kalitesinde ürün çekimi.", kredi: 5, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/urun11.webp", oran: "1:1" },
+  { baslik: "Fütüristik Spor Ayakkabı", tur: "gorsel", model: "Flux 2", prompt: "Renkli fütüristik spor ayakkabı çifti, pastel stüdyo zemini, keskin detay ve tutarlı geometri, reklam görseli.", kredi: 5, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/urun4.webp", oran: "1:1", favori: true },
+  { baslik: "Karakter Portresi — Yakın Plan", tur: "gorsel", model: "GPT Image 2", prompt: "Sakallı adamın sinematik yakın plan portresi, koyu zemin, yumuşak anahtar ışık, keskin göz detayı.", kredi: 5, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/portre10.webp", oran: "1:1" },
+  { baslik: "Yeşil Tepeler — Kırsal Manzara", tur: "gorsel", model: "Seedream 5.0 Pro", prompt: "Yeşil tepeler arasında kıvrılan yol ve tek bir çiftlik evi, sabah ışığı, geniş açı, yumuşak gölgeler.", kredi: 7, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/manzara3.webp", oran: "1:1" },
+  { baslik: "Kozmetik Serum — Cam Şişe", tur: "gorsel", model: "Nano Banana Pro", prompt: "Beyaz zeminde damlalıklı cam serum şişesi, minimal kompozisyon, yumuşak ışık, temiz ürün görseli.", kredi: 5, arac: "Görsel Stüdyo", gorsel: "/gercek/kesfet/urun-reklami4.webp", oran: "16:9" },
+  { baslik: "Neon Sokak Portresi", tur: "gorsel", model: "Ruh 2.0", prompt: "Neon ışıklı sokakta yüzüne renkli çizgiler yansıyan genç adam, gece, sinematik yakın plan.", kredi: 4, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/portre3.webp", oran: "1:1" },
+  { baslik: "Dağ Gölü — Şafak", tur: "gorsel", model: "Seedream 5.0 Pro", prompt: "Karlı dağların aynalandığı sakin göl, şafak sisi, simetrik kompozisyon, serin tonlar.", kredi: 7, arac: "Görsel Stüdyo", gorsel: "/gercek/galeri/manzara1.webp", oran: "1:1" },
+  { baslik: "Belgesel Anlatımı — Türkçe", tur: "ses", model: "ElevenLabs v3", prompt: "Sakin ve güven veren erkek sesiyle belgesel anlatımı: \"Bu topraklarda her taşın bir hikâyesi var.\"", kredi: 8, arac: "Ses Stüdyo", gorsel: "/gercek/kesfet/sinematik-anlatinarration.webp", oran: "1:1", sure: "0:42" },
+  { baslik: "Lo-fi Chill — Çalışma Müziği", tur: "muzik", model: "Vayra Muse", prompt: "Yumuşak piyano ve vinil cızırtısıyla lo-fi hip hop, 78 BPM, odaklanmak için sakin ritim.", kredi: 10, arac: "Müzik Stüdyo", gorsel: "/gercek/kesfet/vayra-muse-litevayra.webp", oran: "1:1", sure: "2:14", favori: true },
+  { baslik: "SFX — Kapı Gıcırtısı ve Adımlar", tur: "ses", model: "Vali SFX", prompt: "Eski ahşap kapının gıcırdayarak açılması ve ardından taş zeminde yaklaşan adımlar.", kredi: 3, arac: "Ses Stüdyo", gorsel: "/gercek/kesfet/vali-sfxvali.webp", oran: "1:1", sure: "0:06" },
+  { baslik: "Sci-fi Robot — Üretime Hazır Model", tur: "3d", model: "Meshy 6", prompt: "Mavi ışıklı zırhlı sci-fi robot, PBR dokular, oyun motoruna hazır düşük poligon topoloji.", kredi: 30, arac: "3D Stüdyo", gorsel: "/gercek/kesfet/sci-fi-robot-karakter3dworks.webp", oran: "1:1" },
+  { baslik: "Robot Bahçıvan — Stilize Karakter", tur: "3d", model: "Meshy 6", prompt: "Çiçek bahçesinde sulama yapan sevimli robot, stilize oranlar, sıcak renkler, görselden 3D.", kredi: 25, arac: "3D Stüdyo", gorsel: "/gercek/kesfet/robot-bahcivankling-3-0.webp", oran: "9:16" },
+  { baslik: "Zırhlı Robot — Rig ve Yürüyüş", tur: "3d", model: "Meshy 6", prompt: "Gümüş zırhlı insansı robot, iskelet rig ve döngüsel yürüyüş animasyonu, 4K dokular.", kredi: 35, arac: "3D Stüdyo", gorsel: "/gercek/kesfet/3d-robot2.webp", oran: "16:9" },
 ];
 
 /**
@@ -320,22 +79,8 @@ const SATIRLAR: SeedSatir[] = [
  * - id: "seed_{n}" (sabit, performance.now yok)
  * - olusturma: TABAN - index*SAAT → en yeni (index 0) en büyük timestamp,
  *   böylece [en yeni ... en eski] sıralaması korunur.
- * - gorselUrl: onizlemeArka(baslik+model, kategori) → CSS background string.
+ * - gorselUrl: satırın kendi görseli; oran görselin gerçek boyutundan.
  */
-/**
- * Higgsfield birebir: galeri satır-hizalı (justified) dizilir ve kartlar KARIŞIK
- * en-boy oranlarında olur. Oran meta'dan okunur (UretimKarti.oranSayi), o yüzden
- * seed'lere de deterministik çeşitli oranlar veriyoruz — hepsi aynı olursa galeri
- * ölü bir ızgaraya döner.
- */
-const GORSEL_ORANLAR = ["3:4", "1:1", "4:3", "16:9", "2:3", "4:5", "3:2", "9:16"];
-const VIDEO_ORANLAR = ["16:9", "16:9", "9:16", "4:3", "21:9"];
-function seedOran(tur: ModelTur, i: number): string {
-  if (tur === "video") return VIDEO_ORANLAR[i % VIDEO_ORANLAR.length];
-  if (tur === "3d") return "1:1";
-  if (tur === "ses") return "4:3";
-  return GORSEL_ORANLAR[i % GORSEL_ORANLAR.length];
-}
 
 export const SEED_URETIMLER: Uretim[] = SATIRLAR.map((s, i) => ({
   id: `seed_${i + 1}`,
@@ -345,13 +90,13 @@ export const SEED_URETIMLER: Uretim[] = SATIRLAR.map((s, i) => ({
   prompt: s.prompt,
   durum: "tamam",
   ilerleme: 100,
-  gorselUrl: onizlemeArka(`${s.baslik}${s.model}`, s.kategori),
+  gorselUrl: s.gorsel,
   olusturma: TABAN - i * SAAT,
   kredi: s.kredi,
   favori: s.favori,
   yayinda: s.yayinda,
   arac: s.arac,
-  meta: { oran: seedOran(s.tur, i), cozunurluk: s.tur === "gorsel" ? "2K" : "1080p" },
+  meta: { oran: s.oran, cozunurluk: s.tur === "gorsel" ? "2K" : "1080p", ...(s.sure ? { sure: s.sure } : {}) },
   saglayici: "simulasyon",
   gercek: false,
 }));

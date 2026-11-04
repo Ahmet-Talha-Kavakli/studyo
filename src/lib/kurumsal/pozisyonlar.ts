@@ -10,11 +10,17 @@ export interface Pozisyon {
   gorevler: string[];
   nitelikler: string[];
   arti: string[]; // tercih sebebi
+  /** Brüt yıllık maaş aralığı (AB Ücret Şeffaflığı Direktifi). */
+  maas: string;
+  /** İlan tarihi (ISO). */
+  tarih: string;
 }
 
 export const POZISYONLAR: Pozisyon[] = [
   {
     slug: "kidemli-frontend-muhendisi",
+    maas: "€78.000 – €98.000",
+    tarih: "2026-09-28",
     ad: "Kıdemli Frontend Mühendisi",
     ekip: "Mühendislik",
     yer: "Uzaktan · Avrupa",
@@ -36,6 +42,8 @@ export const POZISYONLAR: Pozisyon[] = [
   },
   {
     slug: "yapay-zeka-arastirmacisi",
+    maas: "€105.000 – €140.000",
+    tarih: "2026-09-15",
     ad: "Yapay Zekâ Araştırmacısı (Üretken Modeller)",
     ekip: "Yapay Zekâ",
     yer: "Uzaktan · Global",
@@ -57,6 +65,8 @@ export const POZISYONLAR: Pozisyon[] = [
   },
   {
     slug: "urun-tasarimcisi",
+    maas: "€68.000 – €88.000",
+    tarih: "2026-10-02",
     ad: "Ürün Tasarımcısı",
     ekip: "Tasarım",
     yer: "Uzaktan · Avrupa/Amerika",
@@ -78,6 +88,8 @@ export const POZISYONLAR: Pozisyon[] = [
   },
   {
     slug: "buyume-pazarlama-uzmani",
+    maas: "$95.000 – $120.000",
+    tarih: "2026-09-20",
     ad: "Büyüme & Pazarlama Uzmanı",
     ekip: "Büyüme",
     yer: "Uzaktan · Amerika",
@@ -99,6 +111,8 @@ export const POZISYONLAR: Pozisyon[] = [
   },
   {
     slug: "musteri-basari-uzmani",
+    maas: "€52.000 – €64.000",
+    tarih: "2026-10-06",
     ad: "Müşteri Başarı Uzmanı",
     ekip: "Operasyon",
     yer: "Amsterdam · Hibrit",
@@ -117,6 +131,84 @@ export const POZISYONLAR: Pozisyon[] = [
       "Çözüm odaklı, empatik yaklaşım",
     ],
     arti: ["Yaratıcı araç deneyimi", "Teknik altyapı bilgisi"],
+  },
+  {
+    slug: "kurumsal-satis-yoneticisi-istanbul",
+    maas: "₺2.400.000 – ₺3.100.000 + prim",
+    tarih: "2026-10-09",
+    ad: "Kurumsal Satış Yöneticisi",
+    ekip: "Satış",
+    yer: "İstanbul · Hibrit",
+    tur: "Tam zamanlı",
+    ozet: "Türkiye'deki ajans, e-ticaret ve medya şirketlerine Vayra Kurumsal'ı anlatacak, satış sürecini baştan sona yürütecek ilk kurumsal satış rolü.",
+    gorevler: ["Ajans ve markalarla keşif görüşmeleri yapmak, demo sunmak", "Teklif, sözleşme ve satın alma süreçlerini yönetmek", "Ürün ekibine sahadan geri bildirim taşımak", "Türkiye satış oyun kitabını kurmak"],
+    nitelikler: ["B2B SaaS'ta 4+ yıl kurumsal satış deneyimi", "Ajans ya da yaratıcı sektörde ağ", "Akıcı Türkçe ve iyi derecede İngilizce"],
+    arti: ["Yapay zekâ ürünleri satmış olmak", "Kamu ve büyük holding satın alma süreçlerini bilmek"],
+  },
+  {
+    slug: "kreator-topluluk-yoneticisi",
+    maas: "₺1.500.000 – ₺1.950.000",
+    tarih: "2026-10-04",
+    ad: "Kreatör Topluluk Yöneticisi",
+    ekip: "Topluluk",
+    yer: "İstanbul · Hibrit",
+    tur: "Tam zamanlı",
+    ozet: "Vayra Earn kreatörlerini büyütecek, kampanyaları markalarla birlikte tasarlayacak ve Türkiye'deki yaratıcı topluluğun sesi olacaksın.",
+    gorevler: ["Kreatör kampanyalarını kurgulamak ve yönetmek", "Topluluk etkinlikleri ve atölyeler düzenlemek", "Kreatör başarı hikâyelerini içeriğe dönüştürmek"],
+    nitelikler: ["Sosyal medya ve kreatör ekonomisini yakından tanımak", "Proje yönetimi becerisi", "Güçlü Türkçe yazım"],
+    arti: ["Kendi içerik kanalını yönetmiş olmak", "Video kurgu deneyimi"],
+  },
+  {
+    slug: "backend-muhendisi-uretim-altyapisi",
+    maas: "€82.000 – €104.000",
+    tarih: "2026-09-24",
+    ad: "Backend Mühendisi · Üretim Altyapısı",
+    ekip: "Mühendislik",
+    yer: "Uzaktan · Avrupa/Türkiye",
+    tur: "Tam zamanlı",
+    ozet: "Günde milyonlarca üretim isteğini model sağlayıcılarına yönlendiren kuyruk, faturalama ve gözlemlenebilirlik altyapısını büyüteceksin.",
+    gorevler: ["Çok sağlayıcılı yönlendirme ve yeniden deneme mantığını geliştirmek", "Kredi ve faturalama sisteminin doğruluğunu korumak", "Gecikme ve maliyet metriklerini izlemek, iyileştirmek"],
+    nitelikler: ["Dağıtık sistemlerde 4+ yıl deneyim", "TypeScript ya da Go", "Postgres ve kuyruk sistemleri"],
+    arti: ["GPU iş yükleri", "Ödeme sistemleri deneyimi"],
+  },
+  {
+    slug: "guven-guvenlik-uzmani",
+    maas: "€62.000 – €78.000",
+    tarih: "2026-09-30",
+    ad: "Güven ve Güvenlik Uzmanı",
+    ekip: "Güven & Güvenlik",
+    yer: "Uzaktan · Avrupa",
+    tur: "Tam zamanlı",
+    ozet: "İçerik politikalarımızı uygulayacak, kötüye kullanım örüntülerini tespit edecek ve moderasyon sistemlerimizi geliştireceksin.",
+    gorevler: ["Politika ihlali bildirimlerini incelemek ve itirazları değerlendirmek", "Otomatik denetim kurallarını iyileştirmek", "Kolluk ve çocuk koruma kuruluşlarıyla süreçleri yürütmek"],
+    nitelikler: ["Güven ve güvenlik ya da moderasyon alanında 3+ yıl", "Sentetik medya risklerine hâkimiyet", "Hassas içerikle çalışabilme dayanıklılığı"],
+    arti: ["Türkçe ve başka bir Avrupa dili", "Veri analizi (SQL)"],
+  },
+  {
+    slug: "destek-uzmani-turkce",
+    maas: "₺1.100.000 – ₺1.400.000",
+    tarih: "2026-10-08",
+    ad: "Destek Uzmanı (Türkçe)",
+    ekip: "Operasyon",
+    yer: "İstanbul · Uzaktan",
+    tur: "Tam zamanlı",
+    ozet: "Türkiye'deki kullanıcılarımızın ilk temas noktası olacak; faturalama, üretim ve hesap sorularını hızla ve sıcak bir dille çözeceksin.",
+    gorevler: ["E-posta ve iletişim formu taleplerini yanıtlamak", "Sık sorunları belgelemek, yardım içeriği yazmak", "Hataları mühendislik ekibine tekrar üretilebilir şekilde iletmek"],
+    nitelikler: ["Müşteri desteğinde 2+ yıl", "Mükemmel Türkçe yazım, iyi İngilizce", "Teknik ürünleri öğrenme isteği"],
+    arti: ["Yaratıcı yazılımları kullanmış olmak"],
+  },
+  {
+    slug: "hukuk-musaviri-veri-koruma",
+    maas: "₺2.200.000 – ₺2.800.000",
+    tarih: "2026-09-18",
+    ad: "Hukuk Müşaviri · Veri Koruma",
+    ekip: "Hukuk",
+    yer: "İstanbul · Hibrit",
+    tur: "Tam zamanlı",
+    ozet: "KVKK ve GDPR uyumumuzu, kurumsal sözleşmelerimizi ve kreatör programımızın hukuki altyapısını yöneteceksin.",
+    gorevler: ["Veri işleme sözleşmelerini ve yurt dışı aktarım süreçlerini yürütmek", "Kurumsal müşteri sözleşmelerini müzakere etmek", "Tüketici ve e-ticaret mevzuatı uyumunu sağlamak"],
+    nitelikler: ["Avukatlık ruhsatı ve 5+ yıl deneyim", "KVKK ve tüketici mevzuatında uzmanlık", "İyi derecede İngilizce"],
+    arti: ["Teknoloji şirketinde şirket içi deneyim", "GDPR / IAPP sertifikası"],
   },
 ];
 

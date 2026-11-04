@@ -76,27 +76,27 @@ export default function Destek() {
   };
 
   const makroUygula = async (makroAd: string, aksiyon: string) => {
-    if (!acikTicket) { toast.error("Önce bir ticket açın"); return; }
+    if (!acikTicket) { toast.error("Ticket seçilmedi", { description: "Makro uygulamak için soldan bir ticket aç." }); return; }
     const ok = await onayIste({ baslik: makroAd, aciklama: aksiyon, risk: 0, eylemEtiket: "Uygula" });
     if (!ok) return;
     const sistemMetni = MAKRO_YANIT[makroAd] ?? aksiyon;
     st.makroUygula(acikTicket.id, makroAd, sistemMetni, admin);
     denetle(`Makro uygulandı: ${makroAd}`, "bilgi", acikTicket.id);
-    toast.success("Makro uygulandı — yanıt thread'e eklendi");
+    toast.success("Makro uygulandı", { description: `${makroAd} yanıtı ticket geçmişine eklendi.` });
   };
 
   const durumDegistir = (d: Ticket["durum"]) => {
     if (!acikTicket) return;
     st.durumDegistir(acikTicket.id, d);
     denetle(`Ticket durumu: ${d}`, "bilgi", acikTicket.id);
-    toast.success("Durum güncellendi");
+    toast.success("Ticket durumu güncellendi");
   };
 
   const ata = (kime: string) => {
     if (!acikTicket) return;
     st.ata(acikTicket.id, kime);
     denetle(`Ticket atandı: ${kime}`, "bilgi", acikTicket.id);
-    toast.success(`Atandı: ${kime}`);
+    toast.success("Ticket atandı", { description: `Sorumlu: ${kime}.` });
   };
 
   const kul = acikTicket ? kullaniciBul(acikTicket.kullaniciId) : null;
@@ -168,7 +168,7 @@ export default function Destek() {
       {/* SSS */}
       {sekme === "sss" && (
         <div className="space-y-2">
-          <div className="mb-1 flex justify-end"><Dugme boyut="sm" onClick={() => toast.success("Yeni SSS eklendi")}>SSS ekle</Dugme></div>
+          <div className="mb-1 flex justify-end"><Dugme boyut="sm" onClick={() => toast.info("SSS düzenleyici hazır değil", { description: "SSS ekleme henüz kaydedilmiyor." })}>SSS ekle</Dugme></div>
           {SSS_YONETIM.map((s) => (
             <Kart key={s.id} className="!p-3">
               <div className="flex items-center gap-3">

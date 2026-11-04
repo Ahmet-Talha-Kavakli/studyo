@@ -104,7 +104,7 @@ export function Model3DKarti({
               <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
                 style={{ left: menuKonum.x, top: menuKonum.y }}
-                className="menu-surface fixed z-[91] max-h-[70vh] w-52 overflow-y-auto rounded-xl p-1.5 text-sm shadow-2xl [scrollbar-width:thin]">
+                className="menu-surface fixed z-[91] max-h-[70vh] w-52 overflow-y-auto rounded-xl p-1.5 text-sm [scrollbar-width:thin]">
                 <MenuOge ikon={PersonStanding} ad="Animasyon ekle" onClick={() => { onAnimasyon(); setMenu(false); }} />
                 <AltMenu ad="Düzenle" ikon={Pencil} acik={altMenu === "duzenle"} onToggle={() => setAltMenu(altMenu === "duzenle" ? null : "duzenle")}
                   ogeler={["Doku düzenle", "Yeniden dokuma", "Remesh", "Rig & Vinç"]}
@@ -139,7 +139,7 @@ const RayBtn = forwardRef<HTMLButtonElement, { ikon: typeof RotateCw; etiket: st
     return (
       <Tooltip label={etiket} side="left">
         <button ref={ref} onClick={onClick} aria-label={etiket}
-          className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full glass-ikon text-white/90  transition-colors">
+          className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded-full glass-ikon text-white/90 transition-colors">
           <Ikon className="h-3.5 w-3.5" />
         </button>
       </Tooltip>
@@ -196,20 +196,20 @@ export function IndirmeModal({ acik, onKapat, baslik, glbUrl }: { acik: boolean;
     if (glbUrl) {
       // Gerçek Meshy GLB varsa doğrudan onu indir.
       dosyaIndir(glbUrl, format.toLowerCase());
-      toast.success(`Model ${format} olarak indiriliyor 🧊`);
+      toast.success(`Model ${format} olarak indiriliyor`, { description: baslik });
     } else {
       // Demo modelde: seçilen formatta GERÇEK, geçerli bir dosya üret ve indir.
       const icerik = format === "OBJ"
         ? `# Vayra 3D — ${baslik}\n# Format: OBJ · ${anim === "tum" ? "tüm animasyonlar" : "mevcut animasyon"}\no ${baslik.replace(/\s/g, "_")}\nv -1 -1 -1\nv 1 -1 -1\nv 1 1 -1\nv -1 1 -1\nv -1 -1 1\nv 1 -1 1\nv 1 1 1\nv -1 1 1\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 3 4 8 7\nf 1 4 8 5\nf 2 3 7 6\n`
         : format === "STL"
         ? `solid ${baslik.replace(/\s/g, "_")}\n  facet normal 0 0 -1\n    outer loop\n      vertex -1 -1 -1\n      vertex 1 -1 -1\n      vertex 1 1 -1\n    endloop\n  endfacet\nendsolid ${baslik.replace(/\s/g, "_")}\n`
-        : JSON.stringify({ vayra3d: true, ad: baslik, bicim: format, duzenlenmisKarakter: duzenlenmis, animasyon: anim, tekDosya, uretici: "Vayra 3D Studio", not: "Demo çıktı — gerçek GLB için üretim motorunu bir 3D sağlayıcıya bağla." }, null, 2);
+        : JSON.stringify({ vayra3d: true, ad: baslik, bicim: format, duzenlenmisKarakter: duzenlenmis, animasyon: anim, tekDosya, uretici: "Vayra 3D Studio", not: "Örnek çıktı — gerçek GLB için üretim motorunu bir 3D sağlayıcıya bağla." }, null, 2);
       const uzanti = format === "OBJ" ? "obj" : format === "STL" ? "stl" : format === "GLB" ? "gltf" : format.toLowerCase();
       const blob = new Blob([icerik], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       dosyaIndir(url, uzanti);
       setTimeout(() => URL.revokeObjectURL(url), 4000);
-      toast.success(`${baslik.slice(0, 24)} · ${format} indirildi 🧊`);
+      toast.success(`Model ${format} olarak indirildi`, { description: `Örnek dosya: ${baslik.slice(0, 40)}. Gerçek model için 3D sağlayıcısı gerekli.` });
     }
     onKapat();
   };
@@ -219,9 +219,9 @@ export function IndirmeModal({ acik, onKapat, baslik, glbUrl }: { acik: boolean;
       {acik && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onKapat} />
+            className="perde fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onKapat} />
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-            className="menu-surface fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl p-5 shadow-2xl">
+            className="menu-surface fixed left-1/2 top-1/2 z-50 w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl p-5">
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-semibold">İndirme Ayarları</h3>
               <button onClick={onKapat} className="text-metin-3 hover:text-white"><Download className="hidden" /><span className="text-lg leading-none">×</span></button>
@@ -263,9 +263,8 @@ function ModalToggle({ ad, acik, onToggle }: { ad: string; acik: boolean; onTogg
   return (
     <button onClick={onToggle} className="flex w-full items-center justify-between py-2 text-sm">
       <span className="text-metin">{ad}</span>
-      <span className={cn("relative h-5 w-9 rounded-full transition-colors", acik ? "bg-aksan" : "bg-white/15")}>
-        <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", acik ? "left-[18px]" : "left-0.5")} />
-        {acik && <Check className="absolute left-1 top-1 h-3 w-3 text-zemin" />}
+      <span className={cn("relative h-5 w-9 rounded-full transition-colors", acik ? "bg-white" : "bg-white/15")}>
+        <span className={cn("absolute left-0 top-0.5 h-4 w-4 rounded-full transition-all", acik ? "left-[18px] bg-[#0a0a0b]" : "left-0.5 bg-white")} />
       </span>
     </button>
   );

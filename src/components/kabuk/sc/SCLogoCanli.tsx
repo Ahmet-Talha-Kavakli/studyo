@@ -14,7 +14,7 @@ import { useEffect, useRef } from "react";
    `boyut` px cinsindendir. Kullanım (kullanıcı kararı):
      · boş sohbet ekranında büyük
      · üretim sırasında çalışma bandında küçük
-   Mesaj satırlarında kullanılmaz.
+   · sohbette son yanıtın altında (yazarken canlı, bitince durgun) — 2026-10-26 kullanıcı kararı
    ============================================================ */
 export function SCLogoCanli({
   boyut = 28, calisiyor = false, className,

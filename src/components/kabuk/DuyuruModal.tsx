@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { kopyala } from "@/lib/gercekEylem";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "@/lib/toast";
@@ -63,11 +64,11 @@ function DuyuruIcerik({ duyuru, onKapat }: { duyuru: Duyuru; onKapat: () => void
     <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={duyuru.onayGerekli ? undefined : onKapat}
-        className="absolute inset-0 bg-black/55 backdrop-blur-md" />
+        className="perde absolute inset-0 bg-black/55 backdrop-blur-md" />
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 bg-[#141416] p-7 text-center shadow-2xl">
+        className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 bg-[#141416] p-7 text-center">
         {/* politika gibi zorunlu duyurularda X yok */}
         {!duyuru.onayGerekli && (
           <button onClick={onKapat} className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/8 text-metin-2 hover:bg-white/12 hover:text-white"><X className="h-4 w-4" /></button>
@@ -81,7 +82,7 @@ function DuyuruIcerik({ duyuru, onKapat }: { duyuru: Duyuru; onKapat: () => void
 
         {/* PROMO KOD */}
         {duyuru.promoKod && (
-          <button onClick={() => { navigator.clipboard?.writeText(duyuru.promoKod!).catch(() => {}); toast.success("Promo kod kopyalandı"); }}
+          <button onClick={() => { void kopyala(duyuru.promoKod!, "Promo kod kopyalandı"); }}
             className="mb-5 flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-aksan/40 bg-aksan/[0.07] px-4 py-3">
             <span className="font-mono text-[16px] font-bold tracking-wider text-aksan">{duyuru.promoKod}</span>
             <Copy className="h-4 w-4 text-aksan" />

@@ -21,10 +21,9 @@ const SUTUNLAR: { baslik: string; linkler: { ad: string; href: string; vurgu?: b
     baslik: "Navigasyon",
     linkler: [
       { ad: "Keşfet", href: "/panel" },
-      { ad: "Akış", href: "/panel/akis" },
       { ad: "Stüdyolar", href: "/panel/gorsel" },
       { ad: "Viral Presetler", href: "/panel/presetler" },
-      { ad: "Supercomputer", href: "/panel/supercomputer" },
+      { ad: "Usta", href: "/panel/supercomputer" },
       { ad: "Kitaplığım", href: "/panel/kitaplik" },
     ],
   },
@@ -68,7 +67,7 @@ export function PanelFooter() {
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.1fr_repeat(3,1fr)]">
           {/* Marka — referansta yok ama bizde nav'da logo var, kimlik burada da dursun */}
           <div className="max-w-xs">
-            <Link href="/panel/akis" className="flex items-center gap-2.5">
+            <Link href="/panel" className="flex items-center gap-2.5">
               <VayraIsaret size={28} />
               <span className="text-[18px] font-bold text-white">Vayra</span>
             </Link>

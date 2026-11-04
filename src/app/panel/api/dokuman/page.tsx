@@ -1,267 +1,205 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { BookOpen, Terminal, ShieldCheck, ArrowRight, Boxes, Webhook as WebhookIkon } from "lucide-react";
-import { MODELLER } from "@/lib/catalog";
-import {
-  API_SUNUCU, DIL_ADLARI, DURUM_ENUM, kodUret, durumKodu, modelUcNoktasi, turEtiket,
-  type Dil,
-} from "@/lib/apiPlatform";
-import { useApiAnahtar } from "@/store/useApiAnahtar";
-import { KodBlok, KopyalaDugme, SayfaBaslik } from "@/components/api/parcalar";
+import { ArrowRight, Info, Search, Terminal } from "lucide-react";
+import { UC_GRUPLARI, UC_NOKTALAR, type UcNokta } from "@/lib/api/ucnoktalar";
+import { DILLER, kodUret, tamAkis, type Dil } from "@/lib/api/kod";
+import { HATALAR } from "@/lib/api/hatalar";
+import { apiTaban } from "@/lib/api/istemci";
+import { ParametreListesi } from "@/components/api/Parametreler";
+import { KodEditor, YontemRozet, useSeciliAnahtar } from "@/components/api/ui";
+import { useHazir } from "@/components/api/veri";
 import { cn } from "@/lib/utils";
 
-/* ============================================================
-   DOKÜMANTASYON — Higgsfield "Documentation" karşılığı, Vayra sürümü.
-   Kimlik doğrulama · 3 dilde SDK kurulumu ve ilk istek · durum akışı ·
-   tüm modellerin uç nokta tablosu · hata kodları.
-   ============================================================ */
-
-const KURULUM: Record<Dil, string> = {
-  curl: `# Kurulum gerekmez — curl her yerde var.
-export VAYRA_API_KEY="vy_live_…"`,
-  python: `pip install vayra
-
-# veya doğrudan HTTP:
-pip install requests`,
-  node: `npm install @vayra/sdk
-
-# veya doğrudan fetch (Node 18+) kullan — bağımlılık yok.`,
-};
-
-const SDK_ORNEK: Record<Dil, string> = {
-  curl: `curl -X POST '${API_SUNUCU}/v1/text2image/ruh-2' \\
-  -H "Authorization: Bearer $VAYRA_API_KEY" \\
-  -H 'Content-Type: application/json' \\
-  -d '{"prompt":"altın saatte editorial portre","width_and_height":"1536x1536"}'`,
-  python: `from vayra import Vayra
-
-vayra = Vayra(api_key=os.environ["VAYRA_API_KEY"])
-
-istek = vayra.gorsel.uret(
-    model="ruh-2",
-    prompt="altın saatte editorial portre",
-    width_and_height="1536x1536",
-)
-
-sonuc = istek.bekle()   # tamamlanana kadar bloklar
-print(sonuc.output.url)`,
-  node: `import { Vayra } from "@vayra/sdk";
-
-const vayra = new Vayra({ apiKey: process.env.VAYRA_API_KEY });
-
-const istek = await vayra.gorsel.uret({
-  model: "ruh-2",
-  prompt: "altın saatte editorial portre",
-  width_and_height: "1536x1536",
-});
-
-const sonuc = await istek.bekle();
-console.log(sonuc.output.url);`,
-};
-
-const HATALAR = [
-  { kod: 400, ad: "invalid_request", aciklama: "Eksik veya geçersiz parametre." },
-  { kod: 401, ad: "unauthorized", aciklama: "API anahtarı yok, hatalı veya silinmiş." },
-  { kod: 402, ad: "insufficient_credits", aciklama: "Bakiye bu üretim için yetersiz." },
-  { kod: 422, ad: "content_policy", aciklama: "İçerik politikası reddetti — kredi iade edilir." },
-  { kod: 429, ad: "rate_limited", aciklama: "Dakikalık istek sınırı aşıldı. Retry-After'a uy." },
-  { kod: 500, ad: "internal_error", aciklama: "Sunucu hatası — kredi otomatik iade edilir." },
+const KILAVUZ = [
+  { id: "baslangic", ad: "Hızlı başlangıç" },
+  { id: "kimlik", ad: "Kimlik doğrulama" },
+  { id: "ortamlar", ad: "Test ve canlı" },
+  { id: "yasam", ad: "Üretim yaşam döngüsü" },
+  { id: "sonuc", ad: "Sonucu almak" },
+  { id: "idempotency", ad: "Idempotency" },
+  { id: "sayfalama", ad: "Sayfalama" },
+  { id: "hatalar", ad: "Hatalar" },
+  { id: "surum", ad: "Sürümleme" },
 ];
 
 export default function Dokuman() {
-  const anahtarlar = useApiAnahtar((s) => s.anahtarlar);
-  const anahtar = anahtarlar[0]?.tam ?? "vy_live_ANAHTARINI_BURAYA_KOY";
-  const [dil, setDil] = useState<Dil>("curl");
+  const hazir = useHazir();
+  const [anahtar] = useSeciliAnahtar();
+  const [dil, setDil] = useState<Dil>("python");
+  const [aktif, setAktif] = useState("baslangic");
+  const [q, setQ] = useState("");
 
-  const ilkModel = MODELLER[0];
-  const akisKodu = useMemo(
-    () => `${kodUret(dil, { model: ilkModel, prompt: "sisli sokakta neon tabela", anahtar })}\n\n${durumKodu(dil, anahtar)}`,
-    [dil, ilkModel, anahtar],
-  );
+  useEffect(() => {
+    if (!hazir) return;
+    const go = new IntersectionObserver((e) => { const g = e.filter((x) => x.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]; if (g) setAktif(g.target.id); }, { rootMargin: "-80px 0px -70% 0px" });
+    document.querySelectorAll("[data-bolum]").forEach((el) => go.observe(el));
+    return () => go.disconnect();
+  }, [hazir]);
+
+  const ucler = useMemo(() => UC_NOKTALAR.filter((u) => !q || `${u.ad} ${u.yol} ${u.grup}`.toLocaleLowerCase("tr").includes(q.toLocaleLowerCase("tr"))), [q]);
+  if (!hazir) return <div className="h-[60vh]" />;
+  const taban = apiTaban();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">
-      <SayfaBaslik
-        baslik="Dokümantasyon"
-        ozet="Vayra API'sine 5 dakikada bağlan"
-        sag={
-          <Link
-            href="/panel/api/anahtarlar"
-            className="hf-btn flex items-center gap-1.5 rounded-xl bg-aksan px-3.5 py-2 text-sm font-bold text-[#12140c]"
-          >
-            Anahtar al <ArrowRight className="h-4 w-4" />
-          </Link>
-        }
-      />
+    <div className="grid gap-10 xl:grid-cols-[210px_minmax(0,1fr)]">
+      <aside className="hidden xl:block">
+        <nav className="sticky top-20 max-h-[calc(100vh-100px)] overflow-y-auto pb-8 text-[13px] [scrollbar-width:thin]" aria-label="İçindekiler">
+          <label className="mb-5 flex h-10 items-center gap-2 rounded-full bg-white/[0.045] px-3.5 text-white/65 ring-1 ring-white/[0.09] transition focus-within:ring-[#55d6fd]/60">
+            <Search className="h-3.5 w-3.5" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Uç nokta ara" aria-label="Uç nokta ara" className="min-w-0 flex-1 bg-transparent text-[12.5px] text-white outline-none placeholder:text-white/65" />
+          </label>
+          {!q && <>
+            <p className="mb-1.5 text-[12.5px] text-white/65">Kılavuz</p>
+            {KILAVUZ.map((k) => <a key={k.id} href={`#${k.id}`} className={cn("relative block rounded-[10px] py-1.5 pl-3 transition-colors", aktif === k.id ? "bg-white/[0.06] font-medium text-white" : "text-white/65 hover:text-white")}>{aktif === k.id && <span className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-[#55d6fd]" />}{k.ad}</a>)}
+          </>}
+          {UC_GRUPLARI.map((g) => {
+            const l = ucler.filter((u) => u.grup === g);
+            if (!l.length) return null;
+            return (
+              <div key={g}>
+                <p className="mb-1.5 mt-5 text-[12.5px] text-white/65">{g}</p>
+                {l.map((u) => (
+                  <a key={u.id} href={`#${u.id}`} className={cn("relative flex items-center gap-2 rounded-[10px] py-1.5 pl-3 transition-colors", aktif === u.id ? "bg-white/[0.06] text-white" : "text-white/65 hover:text-white")}>{aktif === u.id && <span className="absolute inset-y-1.5 left-0 w-[2px] rounded-full bg-[#55d6fd]" />}
+                    <span className={cn("w-9 shrink-0 font-mono text-[10px] font-semibold", { GET: "text-emerald-300", POST: "text-sky-300", PUT: "text-amber-300", DELETE: "text-rose-300" }[u.yontem])}>{u.yontem === "DELETE" ? "DEL" : u.yontem}</span>
+                    <span className="truncate">{u.ad}</span>
+                  </a>
+                ))}
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
 
-      {/* Canlı deneme şeridi — endpoint GERÇEK çalışır */}
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-aksan/25 bg-aksan/[0.06] px-4 py-3.5">
-        <div>
-          <p className="text-sm font-semibold text-metin">Uç noktalar canlı çalışıyor ✅</p>
-          <p className="mt-0.5 text-xs text-metin-2">
-            Bu ortamda gerçek istek atmak için taban URL <code className="rounded bg-white/[0.06] px-1 font-mono text-[11px]">{typeof window !== "undefined" ? window.location.origin : ""}/api/v1</code> — anahtarını üret, konsoldan dene.
-          </p>
-        </div>
-        <Link href="/panel/api/konsol" className="hf-btn flex items-center gap-1.5 rounded-xl bg-aksan px-3.5 py-2 text-sm font-bold text-[#12140c]">
-          API Konsolu <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
+      <article className="min-w-0">
+        <header className="relative mb-12 overflow-hidden rounded-[28px] bg-[#0a1013] p-6 ring-1 ring-white/[0.09] sm:p-8">
+          <span className="pointer-events-none absolute -right-20 -top-28 h-72 w-96 rounded-full bg-[#55d6fd]/20 blur-[90px] [animation:gp-leke-1_14s_ease-in-out_infinite]" aria-hidden />
+          <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.05)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:linear-gradient(90deg,transparent,black_60%)]" aria-hidden />
+          <p className="relative inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3 py-1 text-[12.5px] font-medium text-white/85 ring-1 ring-white/[0.1]"><span className="h-1.5 w-1.5 rounded-full bg-[#55d6fd]" />Vayra API · v1</p>
+          <h1 className="relative mt-3 text-[34px] font-semibold tracking-[-0.035em] text-white sm:text-[40px]">Dokümantasyon</h1>
+          <p className="relative mt-3 max-w-[680px] text-[15px] leading-relaxed text-white/70">Görsel, video, ses, müzik ve 3D üretimini tek bir REST API ile ürününe ekle. JSON gönderirsin, JSON alırsın; tüm modeller aynı uç noktayı ve aynı kredi bakiyesini kullanır.</p>
+          <div className="relative mt-6 inline-flex max-w-full items-center gap-3 rounded-full bg-black/40 py-2 pl-4 pr-4 ring-1 ring-white/[0.1] backdrop-blur"><span className="shrink-0 text-[12.5px] text-white/55">Taban adres</span><code className="truncate font-mono text-[13px] text-[#9ece6a]">{taban}</code></div>
+        </header>
 
-      {/* Kimlik doğrulama */}
-      <section className="rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-metin">
-          <ShieldCheck className="h-4.5 w-4.5 text-aksan" /> Kimlik Doğrulama
-        </h2>
-        <p className="mb-4 text-sm text-metin-2">
-          Her istek <code className="font-mono text-metin">Authorization: Bearer &lt;anahtar&gt;</code> başlığı
-          taşımalı. Anahtarını yalnızca sunucu tarafında kullan.
-        </p>
-        <div className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-yuzey-2 px-3.5 py-2.5">
-          <code className="min-w-0 flex-1 truncate font-mono text-sm text-metin-2">
-            Authorization: Bearer {anahtarlar[0] ? `${anahtarlar[0].onEk}…` : "vy_live_…"}
-          </code>
-          <KopyalaDugme metin={`Authorization: Bearer ${anahtar}`} etiket="Başlık" kucuk />
-        </div>
-      </section>
-
-      {/* Dil seçici + SDK */}
-      <section className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-metin">
-            <Terminal className="h-4.5 w-4.5 text-aksan" /> SDK Örnekleri
-          </h2>
-          <div className="flex gap-1 rounded-xl bg-white/[0.05] p-0.5">
-            {(Object.keys(DIL_ADLARI) as Dil[]).map((d) => (
-              <button
-                key={d}
-                data-dil={d}
-                onClick={() => setDil(d)}
-                className={cn(
-                  "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                  dil === d ? "bg-aksan text-[#12140c]" : "text-metin-2 hover:text-metin",
-                )}
-              >
-                {DIL_ADLARI[d]}
-              </button>
+        <Bolum id="baslangic" baslik="Hızlı başlangıç" sag={<KodEditor sekmeler={DILLER.map((d) => ({ id: d.id, ad: d.ad, kod: tamAkis(d.id, taban, "nano-banana-pro", { prompt: "Kapadokya üzerinde gün doğumunda sıcak hava balonları", aspect_ratio: "16:9" }) }))} aktif={dil} onSekme={(d) => setDil(d as Dil)} maxH={460} />}>
+          <ol className="space-y-5">
+            {[
+              ["Anahtar oluştur", <>Panelde <Link href="/panel/api/anahtarlar" className="text-vurgu-acik hover:underline">API anahtarları</Link> sayfasından bir test anahtarı oluştur. Test anahtarı kredi harcamaz.</>],
+              ["Ortam değişkenine koy", <>Anahtarı koduna gömme: <code className="font-mono text-[#e0af68]">export VAYRA_API_KEY=vy_test_…</code></>],
+              ["Üretimi başlat ve sonucu al", <>Yandaki kod bir görsel üretir, bitene kadar bekler ve çıktı adresini yazdırır. Önce <Link href="/panel/api/modeller/nano-banana-pro/oyun-alani" className="text-vurgu-acik hover:underline">oyun alanında</Link> da deneyebilirsin.</>],
+            ].map(([b, a], i) => (
+              <li key={i} className="flex gap-4">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[13px] font-semibold text-black">{i + 1}</span>
+                <div><p className="text-[15px] font-semibold text-white">{b}</p><p className="mt-1 text-[14px] leading-relaxed text-white/65">{a}</p></div>
+              </li>
             ))}
-          </div>
-        </div>
+          </ol>
+        </Bolum>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-metin-2">1 · Kurulum</h3>
-            <KodBlok kod={KURULUM[dil]} baslik={DIL_ADLARI[dil]} satirNo={false} />
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-metin-2">2 · İlk üretim</h3>
-            <KodBlok kod={SDK_ORNEK[dil]} baslik={DIL_ADLARI[dil]} />
-          </div>
-        </div>
+        <Bolum id="kimlik" baslik="Kimlik doğrulama" sag={<KodEditor dosyaAdi="Başlık" dil="http" kod={`GET /api/v1/account\nAuthorization: Bearer ${anahtar ? anahtar.tam : "vy_live_…"}`} gizle={anahtar?.tam} satirNo={false} />}>
+          <P>Her isteğe <code className="font-mono text-[#7dcfff]">Authorization: Bearer</code> başlığıyla anahtarını ekle. Anahtarlar <code className="font-mono text-white">vy_live_</code> ya da <code className="font-mono text-white">vy_test_</code> ile başlar ve bir sağlama toplamı taşır; yanlış kopyalanmış anahtar 401 <code className="font-mono text-rose-200">invalid_api_key</code> döner.</P>
+          <P>Her anahtarın bir kapsamı vardır: <strong className="text-white">Tam erişim</strong>, <strong className="text-white">Yalnız üretim</strong> ya da <strong className="text-white">Salt okunur</strong>. Yetkisiz işlem 403 <code className="font-mono text-rose-200">insufficient_scope</code> döner.</P>
+          <Not>Anahtarı tarayıcıda ya da mobil uygulamada kullanma. İsteği kendi sunucundan yap.</Not>
+        </Bolum>
 
-        <div className="mt-4">
-          <h3 className="mb-2 text-sm font-semibold text-metin-2">3 · Ham HTTP ile üret ve durumu sorgula</h3>
-          <KodBlok kod={akisKodu} baslik={`${DIL_ADLARI[dil]} · uçtan uca`} />
-        </div>
-      </section>
+        <Bolum id="ortamlar" baslik="Test ve canlı ortam" sag={<Tablo satirlar={[["", "Test (vy_test_)", "Canlı (vy_live_)"], ["Kredi", "Harcamaz", "Tamamlanınca düşer"], ["Çıktı", "Örnek dosya", "Model çıktısı"], ["Süre", "< 1 sn", "Modele göre"], ["Varsayılan limit", "20 / dk", "60 / dk"]]} />}>
+          <P>Test anahtarıyla bütün akışı — doğrulama, hata kodları, durum sorgusu, webhook ve imza — gerçek model çalıştırmadan, ücretsiz kur. Yanıtta <code className="font-mono text-white">environment: &quot;test&quot;</code> ve <code className="font-mono text-white">simulated: true</code> görürsün.</P>
+          <P>Canlı anahtarda çıktı gerçek modelden gelir. Sunucuda bir modelin sağlayıcı anahtarı tanımlı değilse yanıt yine başarılı olur ama <code className="font-mono text-white">simulated: true</code> işaretlidir; bu durumda kredi yine düşer, çünkü istek canlıdır.</P>
+        </Bolum>
 
-      {/* Durum akışı */}
-      <section className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h2 className="mb-1 text-lg font-bold text-metin">Üretim Durumları</h2>
-        <p className="mb-4 text-sm text-metin-2">Bir istek şu durumlardan geçer:</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {DURUM_ENUM.map((d, i) => (
-            <span key={d} className="flex items-center gap-2">
-              <code
-                className={cn(
-                  "rounded-lg border px-2.5 py-1 font-mono text-xs",
-                  d === "completed"
-                    ? "border-aksan/30 bg-aksan/12 text-aksan"
-                    : d === "failed" || d === "nsfw"
-                      ? "border-rose-400/30 bg-rose-500/12 text-rose-300"
-                      : "border-white/[0.1] bg-white/[0.05] text-metin-2",
-                )}
-              >
-                {d}
-              </code>
-              {i < DURUM_ENUM.length - 1 && <ArrowRight className="h-3 w-3 text-metin-3" />}
-            </span>
-          ))}
-        </div>
-        <div className="mt-4 flex items-start gap-2.5 rounded-xl border border-white/[0.06] bg-yuzey-2 p-3.5">
-          <WebhookIkon className="mt-0.5 h-4 w-4 shrink-0 text-metin-2" />
-          <p className="text-xs text-metin-2">
-            Sürekli sorgulamak yerine{" "}
-            <Link href="/panel/api/webhooklar" className="text-aksan underline decoration-dotted">
-              webhook
-            </Link>{" "}
-            tanımla — üretim bittiğinde sunucuna POST atılır.
-          </p>
-        </div>
-      </section>
+        <Bolum id="yasam" baslik="Üretim yaşam döngüsü" sag={<KodEditor dosyaAdi="Durumlar" dil="duz" satirNo={false} kod={"queued ──► processing ──► succeeded\n   │            │\n   │            └──► failed     (kredi iade)\n   └──► canceled               (kredi düşmez)"} />}>
+          <P>POST /v1/generations hemen <code className="font-mono text-white">201</code> döner ve üretim <code className="font-mono text-[#7dcfff]">queued</code> durumundadır. Model çalışmaya başlayınca <code className="font-mono text-[#7dcfff]">processing</code>, bitince <code className="font-mono text-[#7dcfff]">succeeded</code> ya da <code className="font-mono text-[#7dcfff]">failed</code> olur.</P>
+          <P><code className="font-mono text-white">metrics.queue_ms</code> kuyrukta, <code className="font-mono text-white">metrics.run_ms</code> modelde geçen süredir. Çıktı adresleri 24 saat erişilebilir; kalıcı saklama için kendi depolamana kopyala.</P>
+        </Bolum>
 
-      {/* Model uç noktaları */}
-      <section className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h2 className="mb-1 flex items-center gap-2 text-lg font-bold text-metin">
-          <Boxes className="h-4.5 w-4.5 text-aksan" /> Model Uç Noktaları
-        </h2>
-        <p className="mb-4 text-sm text-metin-2">{MODELLER.length} model API&apos;ye açık</p>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-sm">
-            <thead>
-              <tr className="border-b border-white/[0.06] text-left text-[11px] uppercase tracking-[0.14em] text-metin-3">
-                <th className="py-2.5 font-semibold">Model</th>
-                <th className="py-2.5 font-semibold">Tür</th>
-                <th className="py-2.5 font-semibold">Uç Nokta</th>
-                <th className="py-2.5 font-semibold">Kredi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MODELLER.map((m) => (
-                <tr key={m.id} className="border-b border-white/[0.04] last:border-0">
-                  <td className="py-2.5">
-                    <Link
-                      href={`/panel/api/modeller/${m.id}/api-referans`}
-                      className="font-medium text-metin transition-colors hover:text-aksan"
-                    >
-                      {m.ad}
-                    </Link>
-                  </td>
-                  <td className="py-2.5 text-metin-3">{turEtiket(m.tur)}</td>
-                  <td className="py-2.5">
-                    <code className="font-mono text-xs text-metin-2">{modelUcNoktasi(m)}</code>
-                  </td>
-                  <td className="py-2.5 text-metin-2">{m.kredi}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <Bolum id="sonuc" baslik="Sonucu almak" sag={<KodEditor dosyaAdi="İstek bazlı webhook" dil="json" kod={JSON.stringify({ model: "veo-31", input: { prompt: "Yağmurlu İstanbul sokağı, neon tabelalar" }, webhook_url: "https://ornek.com/vayra/webhook", metadata: { siparis: "A-1042" } }, null, 2)} />}>
+          <ul className="space-y-3 text-[14px] leading-relaxed text-white/65">
+            <li><strong className="text-white">Webhook (önerilen):</strong> hesap düzeyinde <Link href="/panel/api/webhooklar" className="text-vurgu-acik hover:underline">uç nokta</Link> ekle ya da isteğe <code className="font-mono text-white">webhook_url</code> koy. Olaylar <code className="font-mono text-[#7dcfff]">Vayra-Signature</code> ile imzalanır.</li>
+            <li><strong className="text-white">Durum sorgusu:</strong> yanıttaki <code className="font-mono text-white">urls.get</code> adresini 1–2 saniye aralıkla sorgula.</li>
+            <li><strong className="text-white">Senkron:</strong> <code className="font-mono text-white">sync: true</code> ile yanıt en çok 55 sn bekletilir. Görsel ve ses gibi kısa işler için uygun.</li>
+          </ul>
+        </Bolum>
 
-      {/* Hata kodları */}
-      <section className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h2 className="mb-4 flex items-center gap-2 text-lg font-bold text-metin">
-          <BookOpen className="h-4.5 w-4.5 text-aksan" /> Hata Kodları
-        </h2>
-        <div className="divide-y divide-white/[0.05] rounded-xl border border-white/[0.06]">
-          {HATALAR.map((h) => (
-            <div key={h.kod} className="flex flex-wrap items-center gap-3 px-3.5 py-3">
-              <span
-                className={cn(
-                  "rounded-md px-2 py-0.5 font-mono text-xs font-bold",
-                  h.kod >= 500 ? "bg-rose-500/18 text-rose-300" : "bg-amber-500/18 text-amber-300",
-                )}
-              >
-                {h.kod}
-              </span>
-              <code className="font-mono text-sm text-metin">{h.ad}</code>
-              <span className="text-xs text-metin-3">{h.aciklama}</span>
-            </div>
-          ))}
+        <Bolum id="idempotency" baslik="Idempotency" sag={<KodEditor dosyaAdi="Başlık" dil="http" satirNo={false} kod={"POST /api/v1/generations\nIdempotency-Key: 0f8c2d7e-5b1a-4c2e-9d3f-7a6b5c4d3e2f"} />}>
+          <P>Ağ hatasında aynı isteği güvenle yeniden göndermek için <code className="font-mono text-[#7dcfff]">Idempotency-Key</code> başlığı ekle. Aynı anahtar ve aynı gövde 24 saat içinde tekrar gelirse yeni üretim açılmaz, ilk yanıt <code className="font-mono text-white">idempotent-replayed: true</code> başlığıyla döner. Aynı anahtar farklı gövdeyle gelirse 409 <code className="font-mono text-rose-200">idempotency_conflict</code>.</P>
+        </Bolum>
+
+        <Bolum id="sayfalama" baslik="Sayfalama" sag={<KodEditor dosyaAdi="Yanıt" dil="json" kod={JSON.stringify({ object: "list", data: ["…"], has_more: true, next_cursor: "gen_8f2c1a9b3d4e5f6a7b8c9d0e" }, null, 2)} />}>
+          <P>Liste uç noktaları imleç tabanlıdır. <code className="font-mono text-white">has_more</code> true ise sonraki sayfa için <code className="font-mono text-white">starting_after=&lt;next_cursor&gt;</code> gönder. <code className="font-mono text-white">limit</code> 1–100.</P>
+        </Bolum>
+
+        <Bolum id="hatalar" baslik="Hatalar" sag={<KodEditor dosyaAdi="400 Bad Request" dil="json" kod={JSON.stringify({ error: { type: "invalid_request_error", code: "parameter_invalid", message: "input.aspect_ratio: Şunlardan biri olmalı: 1:1, 16:9, 9:16.", param: "input.aspect_ratio", request_id: "req_2b9e4f1a7c3d5e8f", doc_url: "/panel/api/hatalar#parameter_invalid" } }, null, 2)} />}>
+          <P>Hatalar her zaman aynı biçimde döner: <code className="font-mono text-white">type</code> hatanın sınıfı, <code className="font-mono text-white">code</code> makinece okunur nedeni, <code className="font-mono text-white">param</code> sorunlu alandır. Her yanıtta <code className="font-mono text-white">x-request-id</code> başlığı vardır; destekle yazışırken bunu paylaş.</P>
+          <div className="mt-4 flex flex-wrap gap-1.5">{HATALAR.map((h) => <Link key={h.kod} href={`/panel/api/hatalar#${h.kod}`} className="rounded-full bg-white/[0.05] px-2.5 py-1 font-mono text-[11.5px] text-white/65 ring-1 ring-white/[0.06] transition hover:bg-white/[0.1] hover:text-white"><span className={h.http >= 500 ? "text-rose-300" : "text-amber-200"}>{h.http}</span> {h.kod}</Link>)}</div>
+        </Bolum>
+
+        <Bolum id="surum" baslik="Sürümleme" sag={<div />}>
+          <P>Sürüm adreste taşınır (<code className="font-mono text-white">/v1</code>). v1 içinde yalnız geriye uyumlu değişiklik yapılır: yeni uç nokta, yeni isteğe bağlı alan, yeni olay türü, yeni hata kodu. Bilinmeyen alanları yok sayacak şekilde ayrıştır. Değişiklikler <Link href="/panel/api/degisiklikler" className="text-vurgu-acik hover:underline">Değişiklikler</Link> sayfasında.</P>
+        </Bolum>
+
+        <div className="mb-10 mt-20 border-t border-white/[0.07] pt-10">
+          <h2 className="text-[26px] font-semibold tracking-[-0.025em] text-white">API referansı</h2>
+          <p className="mt-2 text-[14.5px] text-white/65">Her uç nokta, parametreleri, örnek isteği ve yanıtıyla. Model girdileri için <Link href="/panel/api/modeller" className="text-vurgu-acik hover:underline">model sayfalarına</Link> bak.</p>
         </div>
-      </section>
+        {ucler.map((u) => <UcBolum key={u.id} u={u} taban={taban} anahtar={anahtar?.tam} />)}
+      </article>
+    </div>
+  );
+}
+
+function Bolum({ id, baslik, children, sag }: { id: string; baslik: string; children: React.ReactNode; sag: React.ReactNode }) {
+  return (
+    <section id={id} data-bolum className="mb-16 grid scroll-mt-20 items-start gap-8 2xl:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+      <div className="min-w-0">
+        <h2 className="mb-4 text-[22px] font-semibold tracking-[-0.02em] text-white"><a href={`#${id}`} className="hover:underline">{baslik}</a></h2>
+        {children}
+      </div>
+      <div className="min-w-0 2xl:sticky 2xl:top-20">{sag}</div>
+    </section>
+  );
+}
+
+function UcBolum({ u, taban, anahtar }: { u: UcNokta; taban: string; anahtar?: string }) {
+  const [dil, setDil] = useState<Dil>("curl");
+  const yol = u.yol.replace("{id}", u.grup === "Modeller" ? "nano-banana-pro" : "gen_8f2c1a9b3d4e5f6a7b8c9d0e");
+  return (
+    <section id={u.id} data-bolum className="mb-20 grid scroll-mt-20 items-start gap-8 border-t border-white/[0.05] pt-12 2xl:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)]">
+      <div className="min-w-0">
+        <p className="text-[12.5px] text-white/65">{u.grup}</p>
+        <h3 className="mt-1.5 text-[22px] font-semibold tracking-[-0.02em] text-white">{u.ad}</h3>
+        <div className="mt-3 flex flex-wrap items-center gap-2"><YontemRozet yontem={u.yontem} /><code className="font-mono text-[13.5px] text-white">/v1{u.yol}</code>
+          <span className="rounded-full bg-white/[0.05] px-2.5 py-0.5 text-[12px] text-white/65 ring-1 ring-white/[0.06]">{u.kapsam === "yok" ? "Kimlik gerekmez" : `Kapsam: ${u.kapsam}`}</span>
+        </div>
+        <p className="mt-4 text-[14px] leading-relaxed text-white/65">{u.ozet}</p>
+        {u.yolParam && <><h4 className="mb-1 mt-7 text-[14px] font-semibold text-white">Yol parametreleri</h4><ParametreListesi alanlar={u.yolParam} /></>}
+        {u.sorgu && <><h4 className="mb-1 mt-7 text-[14px] font-semibold text-white">Sorgu parametreleri</h4><ParametreListesi alanlar={u.sorgu} /></>}
+        {u.govde && <><h4 className="mb-1 mt-7 text-[14px] font-semibold text-white">Gövde</h4><ParametreListesi alanlar={u.govde} /></>}
+        {u.notlar && <ul className="mt-6 space-y-2">{u.notlar.map((n) => <li key={n}><Not>{n}</Not></li>)}</ul>}
+        {u.hatalar.length > 0 && <div className="mt-6 flex flex-wrap items-center gap-1.5 text-[12.5px] text-white/65">Olası hatalar: {u.hatalar.map((h) => <Link key={h} href={`/panel/api/hatalar#${h}`} className="rounded-full bg-rose-400/10 px-2 py-0.5 font-mono text-[11.5px] text-rose-200 transition hover:bg-rose-400/20">{h}</Link>)}</div>}
+      </div>
+      <div className="min-w-0 space-y-4 2xl:sticky 2xl:top-20">
+        <KodEditor sekmeler={DILLER.map((d) => ({ id: d.id, ad: d.ad, kod: kodUret(d.id, { taban, yontem: u.yontem, yol, anahtar: u.kapsam === "yok" ? undefined : anahtar, govde: u.ornekGovde }) }))} aktif={dil} onSekme={(d) => setDil(d as Dil)} gizle={anahtar} maxH={320}
+          alt={<div className="flex justify-end border-t border-white/[0.06] bg-[#16161e] px-4 py-2"><Link href={`/panel/api/konsol?uc=${u.id}`} className="inline-flex items-center gap-1 text-[12px] font-medium text-[#7aa2f7] hover:underline"><Terminal className="h-3.5 w-3.5" />Konsolda dene<ArrowRight className="h-3 w-3" /></Link></div>} />
+        <KodEditor dosyaAdi={`${u.yanitKodu} · yanıt`} dil="json" kod={JSON.stringify(u.ornekYanit, null, 2)} maxH={360} />
+      </div>
+    </section>
+  );
+}
+
+function P({ children }: { children: React.ReactNode }) {
+  return <p className="mb-3 text-[14px] leading-relaxed text-white/65">{children}</p>;
+}
+function Not({ children }: { children: React.ReactNode }) {
+  return <p className="flex gap-3 rounded-[16px] bg-[#55d6fd]/[0.06] px-4 py-3 text-[13.5px] leading-relaxed text-white/75 ring-1 ring-inset ring-[#55d6fd]/20"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#55d6fd]/15"><Info className="h-3.5 w-3.5 text-[#55d6fd]" /></span><span>{children}</span></p>;
+}
+function Tablo({ satirlar }: { satirlar: string[][] }) {
+  return (
+    <div className="overflow-hidden rounded-[22px] bg-[linear-gradient(180deg,rgba(255,255,255,0.035),rgba(255,255,255,0.012))] ring-1 ring-white/[0.08]">
+      <table className="w-full text-left text-[13px]">
+        <tbody className="divide-y divide-white/[0.05]">
+          {satirlar.map((s, i) => <tr key={i} className={i === 0 ? "bg-white/[0.03] text-[12.5px]" : "transition-colors hover:bg-white/[0.02]"}>{s.map((h, j) => <td key={j} className={cn("px-4 py-3", j === 0 ? "text-white/55" : i === 0 ? "font-semibold text-white" : "text-white/85")}>{h}</td>)}</tr>)}
+        </tbody>
+      </table>
     </div>
   );
 }

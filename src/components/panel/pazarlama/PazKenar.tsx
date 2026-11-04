@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -10,6 +11,7 @@ import {
   MoreVertical, Pencil, ArrowRightLeft, Pin, Trash2, Folder, ChevronRight,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { VayraIsaret } from "@/components/kabuk/VayraIsaret";
 import { useProje, type Proje } from "@/store/useSinema";
 import { cn, onizlemeArka, saltUrl } from "@/lib/utils";
@@ -23,7 +25,7 @@ import { cn, onizlemeArka, saltUrl } from "@/lib/utils";
      ── Araçlar ──   Ürün Bağlantısı · Reklam Referansı
      ── Projeler ⌃── Yeni proje(soluk) · Yeni proje · <proje> · Yeni klasör
 
-   Supercomputer sidebar'ındaki DARALT + MANUEL GENİŞLİK davranışı
+   Usta sidebar'ındaki DARALT + MANUEL GENİŞLİK davranışı
    birebir taşındı: sağ kenardan sürükle (MIN..MAKS), yeterince sola
    çekince DAR moda düşer, çift tık varsayılana döner.
    İçerik payı `--paz-kenar` değişkeniyle sayfalara iner.
@@ -163,14 +165,11 @@ export function PazKenar() {
 
           {/* Çalışma alanı değiştirici — diğer stüdyolara geçiş */}
           <AnimatePresence>
-            {alanAcik && !dar && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setAlanAcik(false)} />
-                <motion.div
+            <Yuzen acik={!!(alanAcik && !dar)} onKapat={() => setAlanAcik(false)} sol={16} sag={16} ust={"tam"} bosluk={0}><motion.div
                   initial={{ opacity: 0, y: -6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -6, scale: 0.98 }} transition={{ duration: 0.14 }}
-                  className="absolute left-4 right-4 top-full z-50 max-h-[60vh] overflow-y-auto rounded-[14px] bg-[#1E1F22] p-1.5 ring-1 ring-white/10"
-                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,.7)" }}>
+                  className="max-h-[60vh] overflow-y-auto rounded-[14px] bg-[#1E1F22] p-1.5 ring-1 ring-white/10"
+                  style={{ boxShadow: "none" }}>
                   {/* m38: TAM stüdyo listesi — yeni stüdyolar dahil (eskiden 4 taneydi) */}
                   {[
                     { ad: "Pazarlama Stüdyosu", href: "/panel/pazarlama", aktif: true },
@@ -179,7 +178,7 @@ export function PazKenar() {
                     { ad: "Explainer", href: "/panel/explainer" },
                     { ad: "Uzun Video Stüdyosu", href: "/panel/uzun-video" },
                     { ad: "Montaj Stüdyosu", href: "/panel/montaj" },
-                    { ad: "Supercomputer", href: "/panel/supercomputer" },
+                    { ad: "Usta", href: "/panel/supercomputer" },
                     { ad: "Canvas", href: "/panel/canvas" },
                     { ad: "AI Influencer", href: "/panel/influencer" },
                     
@@ -191,9 +190,7 @@ export function PazKenar() {
                       {a.aktif && <Check className="h-4 w-4" style={{ color: "var(--sn-lime,#55d6fd)" }} />}
                     </Link>
                   ))}
-                </motion.div>
-              </>
-            )}
+                </motion.div></Yuzen>
           </AnimatePresence>
           {!dar && (
             <button onClick={() => setDar(true)} aria-label="Paneli daralt"
@@ -332,7 +329,7 @@ function ProjeSatir({ proje, aktif, onSec }: { proje: Proje; aktif: boolean; onS
 
   const adKaydet = () => {
     const t = taslakAd.trim();
-    if (t && t !== proje.ad) { projeGuncelle(proje.id, { ad: t }); toast.success("Yeniden adlandırıldı"); }
+    if (t && t !== proje.ad) { projeGuncelle(proje.id, { ad: t }); toast.success("Proje adı güncellendi", { description: `Yeni ad: ${t}.` }); }
     setYenidenAdli(false);
   };
 
@@ -383,7 +380,7 @@ function ProjeSatir({ proje, aktif, onSec }: { proje: Proje; aktif: boolean; onS
         <>
           <div className="fixed inset-0 z-[60]" onClick={menuKapat} />
           <div style={{ position: "fixed", left: menu.x, top: menu.y }}
-            className="z-[61] w-44 rounded-xl bg-[#1E1F22] p-1.5 ring-1 ring-white/10 shadow-2xl">
+            className="z-[61] w-44 rounded-xl bg-[#1E1F22] p-1.5 ring-1 ring-white/10">
             <button onClick={() => { setYenidenAdli(true); setTaslakAd(proje.ad); menuKapat(); }}
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-white transition-colors hover:bg-white/[0.07]">
               <Pencil className="h-4 w-4 text-metin-2" /> Yeniden adlandır
@@ -395,9 +392,9 @@ function ProjeSatir({ proje, aktif, onSec }: { proje: Proje; aktif: boolean; onS
                 <ChevronRight className="ml-auto h-3.5 w-3.5 text-metin-3" />
               </button>
               {tasiAlt && (
-                <div className="absolute left-full top-0 ml-1 w-52 rounded-xl bg-[#1E1F22] p-1.5 ring-1 ring-white/10 shadow-2xl">
+                <div className="absolute left-full top-0 ml-1 w-52 rounded-xl bg-[#1E1F22] p-1.5 ring-1 ring-white/10">
                   {proje.klasorId && (
-                    <button onClick={() => { projeTasi(proje.id, undefined); toast.success("Köke taşındı"); menuKapat(); }}
+                    <button onClick={() => { projeTasi(proje.id, undefined); toast.success("Proje kök dizine taşındı"); menuKapat(); }}
                       className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-white transition-colors hover:bg-white/[0.07]">
                       <ArrowRightLeft className="h-4 w-4 text-metin-2" /> Kök dizine al
                     </button>
@@ -408,7 +405,7 @@ function ProjeSatir({ proje, aktif, onSec }: { proje: Proje; aktif: boolean; onS
                       <span className="text-[13px] text-metin-3">Klasör bulunamadı</span>
                     </div>
                   ) : klasorler.map((k) => (
-                    <button key={k.id} onClick={() => { projeTasi(proje.id, k.id); toast.success(`"${k.ad}" klasörüne taşındı`); menuKapat(); }}
+                    <button key={k.id} onClick={() => { projeTasi(proje.id, k.id); toast.success(`Proje "${k.ad}" klasörüne taşındı`); menuKapat(); }}
                       className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-white transition-colors hover:bg-white/[0.07]">
                       <Folder className="h-4 w-4 text-[#5fa8f5]" /> <span className="min-w-0 flex-1 truncate">{k.ad}</span>
                     </button>
@@ -416,12 +413,17 @@ function ProjeSatir({ proje, aktif, onSec }: { proje: Proje; aktif: boolean; onS
                 </div>
               )}
             </div>
-            <button onClick={() => { projeSabitle(proje.id); toast.success(proje.sabit ? "Sabitleme kaldırıldı" : "Sabitlendi"); menuKapat(); }}
+            <button onClick={() => { projeSabitle(proje.id); toast.success(proje.sabit ? "Proje sabitlemeden çıkarıldı" : "Proje sabitlendi"); menuKapat(); }}
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-white transition-colors hover:bg-white/[0.07]">
               <Pin className="h-4 w-4 text-metin-2" /> {proje.sabit ? "Sabitlemeyi kaldır" : "Sabitle"}
             </button>
             <div className="my-1 h-px bg-white/[0.07]" />
-            <button onClick={() => { projeSil(proje.id); toast.success("Silindi"); menuKapat(); }}
+            <button onClick={() => {
+              const p = proje, sira = useProje.getState().projeler.findIndex((x) => x.id === p.id);
+              projeSil(p.id);
+              mesaj.silindi(`"${p.ad}" projesi`, () => useProje.setState((s) => { const l = [...s.projeler]; l.splice(Math.max(0, sira), 0, p); return { projeler: l }; }));
+              menuKapat();
+            }}
               className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-rose-400 transition-colors hover:bg-rose-500/10">
               <Trash2 className="h-4 w-4" /> Sil
             </button>

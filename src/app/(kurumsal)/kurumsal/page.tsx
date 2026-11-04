@@ -1,130 +1,89 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Info, Briefcase, Newspaper, ShieldCheck, Handshake, Scale, ArrowRight, Mail, FileText, Star, Building2 } from "lucide-react";
-import { Hero, IstatistikBandi, Kart, CTASerit, BolumBaslik, DegerKart } from "@/components/kurumsal/UI";
-import { ISTATISTIKLER, HIZLI_GERCEKLER, DEGERLER } from "@/lib/kurumsal/icerik";
-import { OFISLER } from "@/lib/kurumsal/site";
+import { ArrowUpRight } from "lucide-react";
+import { Kap } from "@/components/sirket/ortak";
+import { SatisFormu } from "@/components/sirket/SatisFormu";
+import { HatBaslik, Karsilastirma, KurumsalSss, SatinAlmaListesi, UretimHatti, YoneticiKartlari } from "@/components/sirket/kurumsal/KurumsalParcalari";
+import { ILETISIM } from "@/lib/kurumsal/site";
 
 export const metadata: Metadata = {
-  title: "Kurumsal — Vayra",
-  description: "Vayra kurumsal genel bakış: hakkımızda, kariyer, basın, güvenlik, iş ortaklığı ve yasal merkez. Şirketle ilgili her şey tek çatı altında.",
+  title: "Kurumsal",
+  description: "Ekipler ve kurumlar için Vayra: ortak kredi havuzu, SSO, denetim kayıtları, veri ikamet bölgesi, marka modeli, onay akışı, SLA ve atanmış başarı yöneticisi.",
 };
 
-const bolumler = [
-  { ikon: Info, ad: "Hakkımızda", ozet: "Hikayemiz, misyonumuz, değerlerimiz ve ekibimiz.", href: "/hakkinda" },
-  { ikon: Briefcase, ad: "Kariyer", ozet: "Açık pozisyonlar ve Vayra'da çalışma kültürü.", href: "/kariyer" },
-  { ikon: FileText, ad: "Blog", ozet: "Ürün duyuruları, yaratıcılık ve mühendislik yazıları.", href: "/blog" },
-  { ikon: Star, ad: "Referanslar", ozet: "Bize güvenen markalar ve yaratıcıların deneyimleri.", href: "/referanslar" },
-  { ikon: Newspaper, ad: "Basın", ozet: "Medya kiti, marka varlıkları ve basın bültenleri.", href: "/basin" },
-  { ikon: ShieldCheck, ad: "Güvenlik", ozet: "Veri koruma, altyapı güvenliği ve uyumluluk.", href: "/guvenlik" },
-  { ikon: Handshake, ad: "İş Ortaklığı", ozet: "Partner programı, entegrasyon ve iş birliği fırsatları.", href: "/partner" },
-  { ikon: Scale, ad: "Yasal Merkez", ozet: "Gizlilik, şartlar, veri koruma, çerezler ve iade politikası.", href: "/yasal" },
+const SSS = [
+  { s: "Kurumsal plan ne kadar?", c: "Fiyat; kredi hacmine, üye sayısına, veri bölgesi ve özel model ihtiyacına göre yıllık sözleşmeyle belirlenir. Ekip planı fiyatlandırma sayfasında açıkça listelenir; daha büyük ihtiyaçlar için satış ekibimiz teklif hazırlar." },
+  { s: "Verilerimiz model eğitiminde kullanılır mı?", c: "Hayır. İstemleriniz, yüklediğiniz dosyalar ve çıktılarınız ne bizim ne de model sağlayıcılarımızın modellerini eğitmek için kullanılmaz. Bu taahhüt sözleşmeye de yazılır." },
+  { s: "Hangi kimlik sağlayıcılarla SSO çalışıyor?", c: "SAML 2.0 destekleyen tüm kimlik sağlayıcılarla: Okta, Microsoft Entra ID, Google Workspace, OneLogin ve JumpCloud. Kullanıcı yaşam döngüsü SCIM ile otomatik yönetilebilir." },
+  { s: "Veri işleme sözleşmesi (DPA) imzalıyor musunuz?", c: "Evet. GDPR md. 28 ve KVKK uyumlu standart DPA'mızı sunar, gerekirse kurumunuzun sözleşmesini inceleriz. Alt işleyici listesi Güvenlik sayfasında yayınlanır." },
+  { s: "Ürettiğimiz içeriklerin hakları kimde?", c: "Ürettiğiniz tüm içerikler size aittir ve ticari olarak kullanılabilir. Kurumsal sözleşmelerde fikrî mülkiyet tazminat güvencesi de sunuyoruz." },
+  { s: "Kurulum ne kadar sürer?", c: "SSO ve çalışma alanı kurulumu genellikle bir gün sürer. İlk hafta içinde ekibinize canlı eğitim veririz; özel marka modeli eğitimi 1–2 hafta sürer." },
 ];
 
-export default function KurumsalHub() {
+const baslik = "text-[30px] font-semibold leading-[1.1] tracking-[-0.03em] text-white sm:text-[38px]";
+
+/** Kurumsal — "B · Üretim hattı" (2026-10-29). */
+export default function Kurumsal() {
   return (
-    <>
-      <Hero
-        ustBaslik="Kurumsal"
-        baslik="Vayra hakkında her şey"
-        aciklama="Şirketimiz, ekibimiz ve çalışma prensiplerimizle ilgili aradığın her şey tek çatı altında."
-      />
+    <Kap className="pb-24 pt-6 sm:pt-10">
+      <HatBaslik />
 
-      <section className="mx-auto max-w-5xl px-4 py-6">
-        <IstatistikBandi ogeler={ISTATISTIKLER} />
-      </section>
-
-      {/* Şirket özeti */}
-      <section className="mx-auto max-w-4xl px-4 py-10">
-        <div className="kr-kart p-8 text-center md:p-10">
-          <p className="text-lg leading-relaxed text-[color:var(--color-metin-2)]">
-            <span className="font-semibold text-[color:var(--color-metin)]">Vayra</span>, 2024'te Amsterdam'da kuruldu.
-            Video, görsel, 3D ve sesi tek panelde birleştiren yeni nesil bir yaratıcı AI platformu.
-            Bugün 120+ ülkede 10.000'den fazla yaratıcı, ajans ve marka Vayra ile üretiyor.
-          </p>
+      <section id="hat" className="mt-20 scroll-mt-24 sm:mt-28">
+        <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <h2 className={`${baslik} max-w-[620px]`}>Brif'ten yayına, <span className="bg-gradient-to-r from-[#55d6fd] to-[#a8ecff] bg-clip-text text-transparent">her adımda kontrol</span></h2>
+          <p className="max-w-sm text-[14.5px] text-white/65">Ekibin hızlı üretir; kurallar her adımda kendiliğinden işler.</p>
         </div>
+        <UretimHatti />
       </section>
 
-      {/* Ofisler — global varlık */}
-      <section className="mx-auto max-w-5xl px-4 pb-4">
-        <BolumBaslik baslik="Nerede çalışıyoruz?" ozet="Üç kıtada dört ofis, 18 ülkeye yayılmış uzaktan bir ekip." />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {OFISLER.map((o) => (
-            <Kart key={o.sehir}>
-              <div className="flex items-center gap-2.5">
-                <span className="kr-ikon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Building2 className="h-4 w-4" /></span>
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-[color:var(--color-metin)]">{o.sehir}</div>
-                  <div className="truncate text-xs text-[color:var(--color-metin-3)]">{o.ulke}</div>
-                </div>
-              </div>
-              <div className="mt-3 border-t border-[color:var(--color-kenar)] pt-3">
-                <div className="text-[13px] font-medium text-[color:var(--color-metin-2)]">{o.rol}</div>
-                <div className="mt-0.5 text-xs text-[color:var(--color-metin-3)]">{o.saat}</div>
-              </div>
-            </Kart>
-          ))}
+      <section className="mt-24 sm:mt-28">
+        <h2 className={`${baslik} mb-2`}>Yönetici için tek ekran</h2>
+        <p className="mb-8 max-w-xl text-[14.5px] text-white/65">Finans ve BT'nin sorduğu her şey: bütçe, model erişimi, kimlik ve kayıt.</p>
+        <YoneticiKartlari />
+      </section>
+
+      <section className="mt-24">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <h2 className={baslik}>Satın alma sürecine hazır</h2>
+          <Link href="/guvenlik" className="group flex items-center gap-1 text-[14px] text-white/65 transition hover:text-white">Güvenlik merkezi<ArrowUpRight className="h-4 w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></Link>
         </div>
+        <SatinAlmaListesi />
       </section>
 
-      {/* Hızlı gerçekler */}
-      <section className="mx-auto max-w-5xl px-4 pb-6">
-        <div className="kr-kart grid grid-cols-2 gap-px overflow-hidden bg-[color:var(--color-kenar)] !p-0 sm:grid-cols-3 lg:grid-cols-6">
-          {HIZLI_GERCEKLER.map((h) => (
-            <div key={h.etiket} className="bg-white px-4 py-5 text-center">
-              <div className="text-xs uppercase tracking-wider text-[color:var(--color-metin-3)]">{h.etiket}</div>
-              <div className="mt-1.5 font-semibold text-[color:var(--color-metin)]">{h.deger}</div>
-            </div>
-          ))}
+      <section className="mt-24">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className={baslik}>Ekip mi, Kurumsal mı?</h2>
+            <p className="mt-2 max-w-xl text-[14.5px] text-white/65">10 kişiye kadar ekipler kartla hemen başlayabilir. Kimlik yönetimi, veri ikameti ve sözleşme ihtiyacı olan kurumlar için Kurumsal.</p>
+          </div>
+          <Link href="/fiyatlandirma?kitle=ekip" className="flex items-center gap-1 text-[14px] text-white/65 transition hover:text-white">Ekip fiyatları<ArrowUpRight className="h-4 w-4" /></Link>
         </div>
+        <div className="mt-6"><Karsilastirma /></div>
       </section>
 
-      {/* Bölüm kartları */}
-      <section className="mx-auto max-w-5xl px-4 py-12">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {bolumler.map((b) => (
-            <Link key={b.href} href={b.href as never} className="group">
-              <Kart hover className="flex h-full flex-col">
-                <div className="flex items-start justify-between">
-                  <span className="kr-ikon flex h-11 w-11 items-center justify-center rounded-xl"><b.ikon className="h-5 w-5" /></span>
-                  <ArrowRight className="h-5 w-5 text-[color:var(--color-metin-3)] transition-all group-hover:translate-x-1 group-hover:text-[color:var(--kr-lime-metin)]" />
-                </div>
-                <h3 className="mt-4 font-semibold text-[color:var(--color-metin)]">{b.ad}</h3>
-                <p className="mt-1.5 flex-1 text-sm leading-relaxed text-[color:var(--color-metin-2)]">{b.ozet}</p>
-              </Kart>
-            </Link>
-          ))}
+      <section id="gorusme" className="mt-24 grid scroll-mt-24 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <div>
+          <h2 className={baslik}>Ekibine özel bir demo planlayalım</h2>
+          <p className="mt-3 text-[15px] leading-relaxed text-white/65">Formu doldur; 1 iş günü içinde dönüş yapalım. İstersen doğrudan <a href={`mailto:${ILETISIM.satis}`} className="text-white underline-offset-4 hover:underline">{ILETISIM.satis}</a> adresine yaz.</p>
+          <ol className="mt-8 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+            {[["Kişiye özel demo", "Kendi kullanım senaryolarınla, kendi markanla 30 dakikalık canlı gösterim."], ["İki haftalık deneme alanı", "Ekibin gerçek projelerle denesin; SSO ilk gün bağlanır."], ["Esnek sözleşme", "Kredi hacmine göre fiyat, fatura ile ödeme, e-fatura."]].map(([a, b], i) => (
+              <li key={a} className="flex gap-4 py-4">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#55d6fd] text-[12px] font-semibold text-[#04212b]">{i + 1}</span>
+                <span><span className="block text-[15px] font-medium text-white">{a}</span><span className="mt-0.5 block text-[14px] leading-relaxed text-white/65">{b}</span></span>
+              </li>
+            ))}
+          </ol>
         </div>
-
-        {/* İletişim şeridi */}
-        <Link href={"/iletisim" as never} className="group mt-4 block">
-          <Kart hover className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <span className="kr-ikon flex h-11 w-11 items-center justify-center rounded-xl"><Mail className="h-5 w-5" /></span>
-              <div>
-                <h3 className="font-semibold text-[color:var(--color-metin)]">Bize ulaş</h3>
-                <p className="text-sm text-[color:var(--color-metin-2)]">Soru, iş birliği veya kurumsal ihtiyaçların için buradayız.</p>
-              </div>
-            </div>
-            <ArrowRight className="h-5 w-5 shrink-0 text-[color:var(--color-metin-3)] transition-all group-hover:translate-x-1 group-hover:text-[color:var(--kr-lime-metin)]" />
-          </Kart>
-        </Link>
+        <SatisFormu />
       </section>
 
-      {/* Değerler özeti */}
-      <section className="mx-auto max-w-6xl px-4 py-12">
-        <BolumBaslik baslik="Neye inanıyoruz?" ozet="Şirket olarak bizi yönlendiren ilkeler." />
-        <div className="grid gap-5 sm:grid-cols-2">
-          {DEGERLER.map((d) => <DegerKart key={d.ad} {...d} />)}
+      <section className="mt-24 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
+        <div>
+          <h2 className="text-[22px] font-semibold tracking-[-0.02em] text-white">Sık sorulanlar</h2>
+          <p className="mt-2 text-[14.5px] leading-relaxed text-white/65">Güvenlik değerlendirme paketi ve DPA için <Link href="/guvenlik" className="text-white underline-offset-4 hover:underline">Güvenlik merkezi</Link>.</p>
         </div>
+        <KurumsalSss sorular={SSS} />
       </section>
-
-      <CTASerit
-        baslik="Yaratıcılığın altyapısına katıl"
-        ozet="Dünyanın dört bir yanından 10.000+ yaratıcı Vayra ile üretiyor."
-        birincil={{ ad: "Ücretsiz başla", href: "/kayit" }}
-        ikincil={{ ad: "Hakkımızda", href: "/hakkinda" }}
-      />
-    </>
+    </Kap>
   );
 }

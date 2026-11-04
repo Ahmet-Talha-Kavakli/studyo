@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AuthDugmeleri } from "@/components/auth/AuthDugmeleri";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, ChevronDown } from "lucide-react";
@@ -40,7 +41,7 @@ export function SiteNav() {
         <nav
           className={cn(
             "flex items-center justify-between rounded-2xl px-4 transition-all duration-300",
-            scrolled ? "glass-strong h-14 shadow-lg shadow-black/30" : "h-16",
+            scrolled ? "glass-strong h-14" : "h-16",
           )}
         >
           {/* Logo */}
@@ -67,7 +68,7 @@ export function SiteNav() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 8, scale: 0.98 }}
                     transition={{ duration: 0.18 }}
-                    className="menu-surface absolute left-1/2 top-full w-80 -translate-x-1/2 rounded-2xl p-2 shadow-2xl shadow-black/50"
+                    className="menu-surface absolute left-1/2 top-full w-80 -translate-x-1/2 rounded-2xl p-2"
                   >
                     {urunler.map((u) => (
                       <Link
@@ -95,7 +96,6 @@ export function SiteNav() {
 
             {[
               { ad: "Modeller", href: "/modeller" },
-              { ad: "Uygulamalar", href: "/uygulamalar" },
               { ad: "Entegrasyonlar", href: "/entegrasyonlar" },
               { ad: "Keşfet", href: "/kesfet" },
               { ad: "Fiyatlandırma", href: "/fiyatlandirma" },
@@ -111,14 +111,7 @@ export function SiteNav() {
           </div>
 
           {/* Sağ aksiyonlar */}
-          <div className="hidden items-center gap-2 md:flex">
-            <Link href="/giris">
-              <Button variant="ghost" size="sm">Giriş yap</Button>
-            </Link>
-            <Link href="/kayit">
-              <Button variant="primary" size="sm">Ücretsiz başla</Button>
-            </Link>
-          </div>
+          <AuthDugmeleri className="hidden md:flex" />
 
           {/* Mobil */}
           <button
@@ -145,17 +138,14 @@ export function SiteNav() {
                     className="rounded-lg px-3 py-2.5 text-sm hover:bg-white/8">{u.ad}</Link>
                 ))}
                 <div className="my-1 h-px bg-white/10" />
-                {["Modeller|/modeller", "Uygulamalar|/uygulamalar", "Keşfet|/kesfet", "Fiyatlandırma|/fiyatlandirma"].map((x) => {
+                {["Modeller|/modeller", "Keşfet|/kesfet", "Fiyatlandırma|/fiyatlandirma"].map((x) => {
                   const [ad, href] = x.split("|");
                   return (
                     <Link key={href} href={href} onClick={() => setMobil(false)}
                       className="rounded-lg px-3 py-2.5 text-sm hover:bg-white/8">{ad}</Link>
                   );
                 })}
-                <div className="mt-2 flex gap-2">
-                  <Link href="/giris" className="flex-1"><Button variant="glass" size="sm" className="w-full">Giriş</Button></Link>
-                  <Link href="/kayit" className="flex-1"><Button variant="primary" size="sm" className="w-full">Başla</Button></Link>
-                </div>
+                <AuthDugmeleri blok className="mt-2" onTik={() => setMobil(false)} />
               </div>
             </motion.div>
           )}

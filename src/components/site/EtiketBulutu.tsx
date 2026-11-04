@@ -47,8 +47,7 @@ const etiketler: { ad: string; href: string }[] = [
   { ad: "Relight", href: "/panel/gorsel" },
   { ad: "Görsel Genişlet", href: "/panel/gorsel" },
   { ad: "MCP & CLI", href: "/gelistirici" },
-  { ad: "AI Çalışanlar", href: "/panel/calisanlar" },
-  { ad: "Supercomputer", href: "/panel/supercomputer" },
+  { ad: "Usta", href: "/panel/supercomputer" },
   { ad: "Explainer Video", href: "/panel/explainer" },
   { ad: "Shorts Stüdyo", href: "/panel/shorts" },
 ];

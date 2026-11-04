@@ -35,7 +35,7 @@ export function PazUstKume({ className }: { className?: string }) {
         <span className="hidden sm:inline">Varlıklar</span>
       </Link>
 
-      <Link href="/panel/profil"
+      <Link href="/panel/ayarlar/hesap"
         className="flex h-11 w-11 items-center justify-center rounded-full text-[13px] font-bold text-[#101207] ring-2 ring-white/20"
         style={{ background: "radial-gradient(circle at 30% 30%, #fff, var(--sn-lime,#55d6fd))" }}>
         {(kullanici?.ad ?? "V").charAt(0).toUpperCase()}

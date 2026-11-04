@@ -71,6 +71,30 @@ export interface Parca {
   yayinda?: boolean;
   klasorId?: string;
   dinlenme: number;
+  /* — gerçek üretim (sağlayıcı) — */
+  /** Sağlayıcının ürettiği dosya. Yoksa parça demo sentezidir (istem/söz sese yansımaz). */
+  sesUrl?: string;
+  gercek?: boolean;
+  saglayici?: "eleven" | "lyria" | "demo";
+  stiller?: string[];
+  haric?: string[];
+  /** Bölüm planı (ElevenLabs döndürür ya da kullanıcı düzenler). */
+  plan?: import("@/lib/muzikVeri").MuzikPlan;
+  sarkiId?: string;
+  aciklama?: string;
+  turler?: string[];
+  kapak?: string;
+  bicim?: string;
+  kredi?: number;
+  hata?: string;
+  /** Ayrılmış stemler (ses ayırma sonucu). */
+  stemler?: { ad: string; url: string }[];
+  /** Herkese açık paylaşım kimliği (/p/<id>). */
+  paylasimId?: string;
+  /** Kitaplıktaki (useProjeler) karşılığı. */
+  uretimId?: string;
+  /** Aynı anda üretilen varyantların etiketi (A, B). */
+  varyantEtiketi?: string;
 }
 
 export interface Klasor { id: string; ad: string; olusturma: number }

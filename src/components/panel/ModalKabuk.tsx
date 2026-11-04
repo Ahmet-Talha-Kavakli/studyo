@@ -22,7 +22,7 @@ export function ModalKabuk({ baslik, onKapat, children, genis }: {
 }) {
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-      <button className="absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Kapat" onClick={onKapat} />
+      <button className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" aria-label="Kapat" onClick={onKapat} />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
         className={cn("relative w-full rounded-2xl bg-yuzey p-5 ring-1 ring-inset ring-white/[0.08]", genis ? "max-w-3xl" : "max-w-md")}

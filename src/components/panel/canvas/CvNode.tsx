@@ -392,7 +392,7 @@ function Sticky({ node, secili, duzenleniyor, onBasla, onSecim, onIstemDegis, on
                 transform: "translate(-50%, -50%)",
                 background: acik ? "#FFFFFF" : "#FFFFFF",
                 border: acik ? `2px solid ${CV.tutamacMavi}` : "none",
-                boxShadow: acik ? undefined : "0 1px 4px rgba(0,0,0,0.4)",
+                boxShadow: undefined,
               }}>
               {acik && <Plus className="h-3.5 w-3.5" style={{ color: CV.tutamacMavi }} strokeWidth={3} />}
             </button>
@@ -406,7 +406,7 @@ function Sticky({ node, secili, duzenleniyor, onBasla, onSecim, onIstemDegis, on
           background: node.renk ?? "#FAE196",
           borderRadius: 4,
           outline: secili ? `2px solid ${CV.secim}` : undefined,
-          boxShadow: "0 6px 18px rgba(0,0,0,0.35)",
+          boxShadow: "none",
         }}>
         {duzenleniyor ? (
           <textarea

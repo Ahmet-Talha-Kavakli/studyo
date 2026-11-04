@@ -31,7 +31,7 @@ export function AiDock() {
       </AnimatePresence>
 
       <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setAcik((v) => !v)}
-        className="fixed bottom-5 right-5 z-[70] flex h-13 w-13 items-center justify-center rounded-2xl shadow-lg"
+        className="fixed bottom-5 right-5 z-[70] flex h-13 w-13 items-center justify-center rounded-2xl"
         style={{ width: 52, height: 52, background: "linear-gradient(135deg, #7de0ff, #1ea8d6)", boxShadow: "0 8px 24px -6px rgba(85,214,253,0.5)" }}>
         {acik ? <X className="h-5 w-5 text-[#04222c]" /> : <Sparkles className="h-5 w-5 text-[#04222c]" />}
       </motion.button>

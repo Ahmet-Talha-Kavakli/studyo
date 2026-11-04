@@ -25,7 +25,7 @@ export function MegaMenu({ menu, onGit }: { menu: MegaMenuTip; onGit: () => void
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.98 }}
       transition={{ duration: 0.16 }}
-      className="menu-surface absolute left-0 top-full z-50 mt-1 w-[620px] rounded-2xl p-3 shadow-2xl shadow-black/50"
+      className="menu-surface absolute left-0 top-full z-50 mt-1 w-[620px] rounded-2xl p-3"
     >
       <div className="grid grid-cols-2 gap-2">
         {/* Özellikler */}

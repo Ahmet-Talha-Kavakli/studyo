@@ -1,0 +1,6 @@
+Contact: mailto:security@vayra.ai
+Expires: 2027-10-01T00:00:00.000Z
+Preferred-Languages: tr, en
+Canonical: https://vayra.ai/.well-known/security.txt
+Policy: https://vayra.ai/guvenlik#bildirim
+Acknowledgments: https://vayra.ai/guvenlik#guncellemeler

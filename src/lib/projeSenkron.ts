@@ -32,6 +32,9 @@ export function projeSenkron() {
       // Proje silinmişse yetim gibi davran (aşağıdaki blok yakalar).
       if (p) continue;
     }
+    // Hiç düğümü olmayan tuval (ilk açılıştaki boş örnek tuvaller) proje açmaz;
+    // yoksa yeni kullanıcı Projeler'de üç boş "az önce" projesiyle karşılaşıyordu.
+    if (!canvas.icerikler[board.id]?.nodelar?.length) continue;
     // Yetim board (projeId yok ya da bağlı proje silinmiş) → yeni proje oluştur + bağla.
     const yeniProjeId = proje.projeOlustur(board.ad || "Tuval projesi", "Genel", { kaynakStudyo: "Canvas" });
     proje.boardBagla(yeniProjeId, board.id);

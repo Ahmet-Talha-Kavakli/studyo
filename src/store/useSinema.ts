@@ -22,6 +22,15 @@ export interface Cekim {
   durum: CekimDurum;
   gorselUrl?: string;
   videoUrl?: string;
+  /** Sahnede kullanılan @elementler (ad). */
+  elementler?: string[];
+  isik?: string;
+  palet?: string;
+  model?: string;
+  /** Çekim listesi alanları (yönetmen ve storyboard): plan ölçeği, açı, lens, diyalog, ses notu, geçiş. */
+  plan?: string; aci?: string; lens?: string; diyalog?: string; ses?: string; gecis?: string;
+  /** Sahnenin önceki üretimleri; en yenisi başta. */
+  surumler?: { id: string; gorselUrl?: string; videoUrl?: string; uretimId?: string; zaman: number }[];
 }
 
 // Proje-içi element (karakter/mekan/prop) — Elements sekmesi
@@ -32,6 +41,52 @@ export interface ProjeElement {
   tohum: string;
   aciklama?: string;
 }
+/** Brif blok editörü (Notion dili). metin: güvenli küçük HTML (b, i, s, code, a, @işaret span). */
+export type BrifBlokTur = "p" | "h1" | "h2" | "h3" | "icindekiler" | "sutun" | "madde" | "numara" | "yap" | "kutu" | "alinti" | "ayrac" | "gorsel" | "element" | "acilir" | "kod" | "tablo" | "baglanti";
+export type BrifRenk = "gri" | "mavi" | "yesil" | "sari" | "turuncu" | "kirmizi" | "mor" | "pembe";
+export interface BrifYorum { id: string; kim: string; metin: string; zaman: number; cozuldu?: boolean }
+export interface BrifBlok {
+  id: string; tur: BrifBlokTur; metin: string; ok?: boolean; ic?: string; acik?: boolean; src?: string[]; elementler?: string[]; ipucu?: string;
+  /** Liste girintisi (0-3), Tab ile artar. */
+  girinti?: number;
+  /** Sütunlar bloğunda her sütunun güvenli HTML içeriği (2-3 sütun). */
+  sutunlar?: string[];
+  /** Yazı ya da zemin rengi (Notion'daki gibi blok başına). */
+  renk?: BrifRenk; zemin?: boolean;
+  /** Tablo hücreleri (ilk satır başlık). */
+  tablo?: string[][];
+  /** Kod bloğunun dili; bağlantı bloğunun adresi. */
+  dil?: string; url?: string;
+  yorumlar?: BrifYorum[];
+}
+/** Brif sayfasının görünümü: kapak, simge, başlık ve okuma seçenekleri. */
+export interface BrifSayfa { baslik?: string; kapak?: string; kapakY?: number; simge?: string; simgeRenk?: string; genis?: boolean; kucuk?: boolean; yazi?: "sans" | "serif" | "mono"; kilit?: boolean }
+/** Brifin düzenlenebilir özellikleri (Notion veritabanı satırı gibi). */
+export interface BrifOzellik { durum?: "taslak" | "inceleme" | "onay" | "arsiv"; teslim?: string; sorumlu?: string; etiketler?: string[] }
+export interface BrifSurum { id: string; zaman: number; kim: string; bloklar: BrifBlok[]; baslik?: string }
+/** AI Yönetmen: sahne önerisi ve oturum. */
+export interface SahneOnerisi {
+  id: string; baslik: string; istem: string; kamera: string; isik: string; sure: number; model: string; tur: "video" | "gorsel"; elementler?: string[];
+  plan?: string; aci?: string; lens?: string; diyalog?: string; ses?: string; gecis?: string;
+  durum: "oneri" | "eklendi" | "reddedildi"; cekimId?: string;
+  /** Var olan bir sahnenin güncellemesiyse: hedef sahne ve önerinin geldiği andaki hâli (önce ve sonra kartı için). */
+  hedefCekimId?: string; onceki?: { baslik: string; istem: string; kamera: string; isik: string; sure: number; plan?: string; aci?: string; lens?: string };
+}
+/** Yönetmen yanıtının bir sürümü (Yeniden oluştur ile birikir; mesajda biri gösterilir). */
+export interface YonetmenSurum { metin: string; oneriler?: SahneOnerisi[]; dusunce?: string; dusunmeSn?: number; takip?: string[]; demo?: boolean; hata?: boolean; durduruldu?: boolean; zaman: number }
+export interface YonetmenMesaj {
+  id: string; rol: "ben" | "yonetmen"; metin: string; zaman: number; oneriler?: SahneOnerisi[]; demo?: boolean; hata?: boolean;
+  /** Özetlenmiş düşünce ve süresi (saniye). */
+  dusunce?: string; dusunmeSn?: number;
+  /** Kullanıcının eklediği görseller (küçültülmüş veri adresi ya da proje karesi). */
+  gorseller?: string[];
+  /** Yanıttan sonra önerilen devam istemleri. */
+  takip?: string[];
+  durduruldu?: boolean; begeni?: 1 | -1;
+  /** Yeniden oluşturulan sürümler; aktif olan mesajın kendi alanlarında durur. */
+  surumler?: YonetmenSurum[]; surumNo?: number;
+}
+export interface YonetmenOturum { id: string; ad: string; zaman: number; mesajlar: YonetmenMesaj[]; sabit?: boolean }
 // Canvas düğümü (sonsuz tuval) — Canvas sekmesi
 export interface CanvasDugum {
   id: string;
@@ -93,6 +148,12 @@ export interface ProjeYayin {
   yayinTarihi: number;
 }
 
+/** Proje üyesi — Higgsfield rolleri: Sahip / Yönetici / Katılımcı / İzleyici. */
+export type ProjeRol = "sahip" | "yonetici" | "katilimci" | "izleyici";
+export interface ProjeUye { email: string; ad: string; rol: ProjeRol; renk: string; davet: number; bekliyor?: boolean }
+/** Proje etkinlik kaydı — yalnız gerçekten yapılan eylemler yazılır. */
+export interface ProjeEtkinlik { id: string; kim: string; metin: string; tur: "proje" | "sahne" | "element" | "uretim" | "uye" | "klasor" | "yayin"; zaman: number }
+
 export interface SinemaProje {
   id: string;
   ad: string;
@@ -125,6 +186,17 @@ export interface SinemaProje {
   klasorler?: ProjeKlasor[];      // proje-İÇİ klasörler (detay sidebar "Klasörler")
   yayin?: ProjeYayin;             // yayınlandıysa yayın bilgisi
   yayinda?: boolean;              // yayın bayrağı (hızlı kontrol)
+  // ── Proje çalışma alanı (2026-10-29) ──
+  ustProjeId?: string;            // alt proje ise üst projenin id'si (ağaç)
+  uyeler?: ProjeUye[];            // sahip dışındaki üyeler + davetler
+  butce?: number;                 // kredi bütçesi (0/boş = sınırsız)
+  etkinlik?: ProjeEtkinlik[];     // en yeni başta, en fazla 80
+  brifBloklar?: BrifBlok[];       // Notion dili brif; brief alanı bunun düz metin karşılığıdır
+  brifDuzenleme?: { kim: string; zaman: number };
+  brifSayfa?: BrifSayfa;
+  brifOzellik?: BrifOzellik;
+  brifSurumleri?: BrifSurum[];    // en yeni başta, en fazla 30
+  yonetmenOturumlari?: YonetmenOturum[]; // AI Yönetmen oturumları, en yeni başta
 }
 
 // Ortak proje = SinemaProje (stüdyo-nötr). Diğer stüdyolar `Proje` adıyla import eder.
@@ -132,7 +204,11 @@ export type Proje = SinemaProje;
 
 interface SinemaState {
   projeler: SinemaProje[];
-  projeOlustur: (ad?: string, tur?: string, opts?: { kaynakStudyo?: string; renk?: string }) => string;
+  projeOlustur: (ad?: string, tur?: string, opts?: { kaynakStudyo?: string; renk?: string; ustProjeId?: string; aciklama?: string }) => string;
+  uyeEkle: (projeId: string, uye: Omit<ProjeUye, "davet">) => void;
+  uyeGuncelle: (projeId: string, email: string, patch: Partial<ProjeUye>) => void;
+  uyeSil: (projeId: string, email: string) => void;
+  etkinlikEkle: (projeId: string, metin: string, tur?: ProjeEtkinlik["tur"]) => void;
   projeSil: (id: string) => void;
   projeGuncelle: (id: string, patch: Partial<Omit<SinemaProje, "cekimler">>) => void;
   projeGetir: (id: string) => SinemaProje | undefined;
@@ -225,13 +301,17 @@ const SEED: SinemaProje[] = [
   },
 ];
 
+const kaydet = (p: SinemaProje, metin: string, tur: ProjeEtkinlik["tur"]): SinemaProje => ({
+  ...p, etkinlik: [{ id: yeniId("ev"), kim: "Sen", metin, tur, zaman: Date.now() }, ...(p.etkinlik ?? [])].slice(0, 80),
+});
+
 export const useSinema = create<SinemaState>()(
   persist(
     (set, get) => ({
       projeler: SEED,
       projeOlustur: (ad = "Adsız proje", tur = "Genel", opts) => {
         const id = yeniId("p");
-        const t = Math.max(1, ...get().projeler.map((_, i) => i + 1));
+        const t = Date.now();
         const proje: SinemaProje = {
           id,
           ad,
@@ -243,26 +323,35 @@ export const useSinema = create<SinemaState>()(
           kapakTohum: `proj-${id}`,
           ayar: { palet: "Oto", isik: "Oto", hareket: "Oto", kamera: "Oto", lens: "Oto", oran: "16:9" },
           cekimler: [
-            { id: yeniId("c"), baslik: "Çekim 1", istem: "", sure: 4, hareket: "Statik", tohum: `sh-${id}-1`, durum: "taslak" },
+            { id: yeniId("c"), baslik: "Sahne 1", istem: "", sure: 4, hareket: "Statik", tohum: `sh-${id}-1`, durum: "taslak" },
           ],
           boardIdler: [],
           uretimIdler: [],
           shortsKlipleri: [],
           kaynakStudyo: opts?.kaynakStudyo,
+          ustProjeId: opts?.ustProjeId,
+          aciklama: opts?.aciklama,
+          etkinlik: [{ id: yeniId("ev"), kim: "Sen", metin: opts?.ustProjeId ? "Alt projeyi oluşturdu" : "Projeyi oluşturdu", tur: "proje", zaman: t }],
         };
-        set((s) => ({ projeler: [proje, ...s.projeler] }));
+        set((s) => ({
+          projeler: [proje, ...s.projeler.map((p) => (p.id === opts?.ustProjeId ? kaydet({ ...p, guncelleme: t }, `"${ad}" alt projesini ekledi`, "proje") : p))],
+        }));
         return id;
       },
       projeSil: (id) =>
         set((s) => ({
           // Klasör silinince içindeki projeler köke düşer (klasorId temizlenir).
-          projeler: s.projeler
-            .filter((p) => p.id !== id)
-            .map((p) => (p.klasorId === id ? { ...p, klasorId: undefined } : p)),
+          projeler: (() => {
+            const silinen = s.projeler.find((p) => p.id === id);
+            return s.projeler
+              .filter((p) => p.id !== id)
+              .map((p) => (p.klasorId === id ? { ...p, klasorId: undefined } : p))
+              .map((p) => (p.ustProjeId === id ? { ...p, ustProjeId: silinen?.ustProjeId } : p));
+          })(),
         })),
       projeGuncelle: (id, patch) =>
         set((s) => ({
-          projeler: s.projeler.map((p) => (p.id === id ? { ...p, ...patch, guncelleme: (p.guncelleme ?? 0) + 1 } : p)),
+          projeler: s.projeler.map((p) => (p.id === id ? { ...p, ...patch, guncelleme: Date.now() } : p)),
         })),
       projeSabitle: (id) =>
         set((s) => ({ projeler: s.projeler.map((p) => (p.id === id ? { ...p, sabit: !p.sabit } : p)) })),
@@ -270,7 +359,7 @@ export const useSinema = create<SinemaState>()(
         set((s) => ({ projeler: s.projeler.map((p) => (p.id === id ? { ...p, klasorId } : p)) })),
       klasorOlustur: (ad = "Yeni klasör") => {
         const id = yeniId("k");
-        const t = Math.max(1, ...get().projeler.map((_, i) => i + 1));
+        const t = Date.now();
         const klasor: SinemaProje = {
           id, ad, tur: "Klasör", gizlilik: "ozel", olusturma: t, guncelleme: t,
           kapakTohum: `kls-${id}`,
@@ -281,6 +370,19 @@ export const useSinema = create<SinemaState>()(
         return id;
       },
       projeGetir: (id) => get().projeler.find((p) => p.id === id),
+      uyeEkle: (projeId, uye) =>
+        set((s) => ({
+          projeler: s.projeler.map((p) => {
+            if (p.id !== projeId || (p.uyeler ?? []).some((u) => u.email.toLowerCase() === uye.email.toLowerCase())) return p;
+            return kaydet({ ...p, uyeler: [...(p.uyeler ?? []), { ...uye, davet: Date.now() }], gizlilik: "acik", guncelleme: Date.now() }, `${uye.email} adresini davet etti`, "uye");
+          }),
+        })),
+      uyeGuncelle: (projeId, email, patch) =>
+        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, uyeler: (p.uyeler ?? []).map((u) => (u.email === email ? { ...u, ...patch } : u)) } : p)) })),
+      uyeSil: (projeId, email) =>
+        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? kaydet({ ...p, uyeler: (p.uyeler ?? []).filter((u) => u.email !== email) }, `${email} adresini projeden çıkardı`, "uye") : p)) })),
+      etkinlikEkle: (projeId, metin, tur = "proje") =>
+        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? kaydet(p, metin, tur) : p)) })),
       cekimEkle: (projeId, kismi) => {
         const id = yeniId("c");
         set((s) => ({
@@ -288,15 +390,16 @@ export const useSinema = create<SinemaState>()(
             if (p.id !== projeId) return p;
             const n = p.cekimler.length + 1;
             const cekim: Cekim = {
+              ...kismi,
               id,
-              baslik: kismi?.baslik ?? `Çekim ${n}`,
+              baslik: kismi?.baslik ?? `Sahne ${n}`,
               istem: kismi?.istem ?? "",
               sure: kismi?.sure ?? 4,
               hareket: kismi?.hareket ?? HAREKETLER[n % HAREKETLER.length],
               tohum: `sh-${projeId}-${n}`,
               durum: "taslak",
             };
-            return { ...p, cekimler: [...p.cekimler, cekim], guncelleme: (p.guncelleme ?? 0) + 1 };
+            return kaydet({ ...p, cekimler: [...p.cekimler, cekim], guncelleme: Date.now() }, `"${cekim.baslik}" sahnesini ekledi`, "sahne");
           }),
         }));
         return id;
@@ -305,7 +408,7 @@ export const useSinema = create<SinemaState>()(
         set((s) => ({
           projeler: s.projeler.map((p) =>
             p.id === projeId
-              ? { ...p, cekimler: p.cekimler.map((c) => (c.id === cekimId ? { ...c, ...patch } : c)), guncelleme: (p.guncelleme ?? 0) + 1 }
+              ? { ...p, cekimler: p.cekimler.map((c) => (c.id === cekimId ? { ...c, ...patch } : c)), guncelleme: Date.now() }
               : p,
           ),
         })),
@@ -326,9 +429,9 @@ export const useSinema = create<SinemaState>()(
 
       // ── Editör sekme action'ları (proje-içi kalıcı içerik) ──
       briefGuncelle: (projeId, brief) =>
-        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, brief, guncelleme: (p.guncelleme ?? 0) + 1 } : p)) })),
+        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, brief, guncelleme: Date.now() } : p)) })),
       elementEkle: (projeId, el) =>
-        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, elementler: [...(p.elementler ?? []), { ...el, id: yeniId("el") }] } : p)) })),
+        set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? kaydet({ ...p, elementler: [...(p.elementler ?? []), { ...el, id: yeniId("el") }], guncelleme: Date.now() }, `@${el.ad} elementini ekledi`, "element") : p)) })),
       elementSil: (projeId, elId) =>
         set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, elementler: (p.elementler ?? []).filter((e) => e.id !== elId) } : p)) })),
       canvasDugumEkle: (projeId, dugum) =>
@@ -347,7 +450,7 @@ export const useSinema = create<SinemaState>()(
         set((s) => ({
           projeler: s.projeler.map((p) =>
             p.id === projeId && !(p.boardIdler ?? []).includes(boardId)
-              ? { ...p, boardIdler: [...(p.boardIdler ?? []), boardId], guncelleme: (p.guncelleme ?? 0) + 1 }
+              ? { ...p, boardIdler: [...(p.boardIdler ?? []), boardId], guncelleme: Date.now() }
               : p,
           ),
         })),
@@ -365,7 +468,7 @@ export const useSinema = create<SinemaState>()(
             const alan = kanal === "shorts" ? "shortsKlipleri" : "uretimIdler";
             const mevcut = (p[alan] ?? []) as string[];
             if (mevcut.includes(uretimId)) return p;
-            return { ...p, [alan]: [uretimId, ...mevcut], guncelleme: (p.guncelleme ?? 0) + 1 };
+            return { ...p, [alan]: [uretimId, ...mevcut], guncelleme: Date.now() };
           }),
         })),
       uretimCoz: (projeId, uretimId) =>
@@ -399,7 +502,8 @@ export const useSinema = create<SinemaState>()(
               ? {
                   ...p,
                   klasorler: [...(p.klasorler ?? []), { id, ad, renk, aciklama, ustId, olusturma: Date.now(), uretimIdler: [] }],
-                  guncelleme: (p.guncelleme ?? 0) + 1,
+                  guncelleme: Date.now(),
+                  etkinlik: [{ id: yeniId("ev"), kim: "Sen", metin: `"${ad}" klasörünü açtı`, tur: "klasor" as const, zaman: Date.now() }, ...(p.etkinlik ?? [])].slice(0, 80),
                 }
               : p,
           ),
@@ -460,7 +564,8 @@ export const useSinema = create<SinemaState>()(
                   yayinda: true,
                   gizlilik: "acik",
                   yayin: { ...yayin, yayinTarihi: Date.now() },
-                  guncelleme: (p.guncelleme ?? 0) + 1,
+                  guncelleme: Date.now(),
+                  etkinlik: [{ id: yeniId("ev"), kim: "Sen", metin: "Projeyi yayınladı", tur: "yayin" as const, zaman: Date.now() }, ...(p.etkinlik ?? [])].slice(0, 80),
                 }
               : p,
           ),
@@ -468,7 +573,7 @@ export const useSinema = create<SinemaState>()(
       projeYayinKaldir: (projeId) =>
         set((s) => ({
           projeler: s.projeler.map((p) =>
-            p.id === projeId ? { ...p, yayinda: false, gizlilik: "ozel", guncelleme: (p.guncelleme ?? 0) + 1 } : p,
+            p.id === projeId ? { ...p, yayinda: false, gizlilik: "ozel", guncelleme: Date.now() } : p,
           ),
         })),
     }),

@@ -72,7 +72,7 @@ export default function Analitik() {
   };
   const calistir = () => {
     setSonuc(aktifSorgu.calistir());
-    toast.success(`${aktifSorgu.ad} · ${aktifSorgu.calistir().length} satır döndü`);
+    toast.success("Sorgu çalıştırıldı", { description: `${aktifSorgu.ad}: ${aktifSorgu.calistir().length} satır döndü.` });
   };
   const bicimle = (v: string | number, bicim?: string) =>
     bicim === "para" ? para(Number(v)) : bicim === "sayi" ? sayi(Number(v)) : String(v);
@@ -83,7 +83,7 @@ export default function Analitik() {
       aktifSorgu.kolonlar.map((k) => k.ad),
       sonuc.map((row) => aktifSorgu.kolonlar.map((k) => row[k.anahtar] ?? "")),
     );
-    toast.success("CSV indirildi");
+    toast.success("Sorgu sonucu indirildi", { description: `${aktifSorgu.id}.csv · ${sonuc.length} satır.` });
   };
 
   // Proaktif kampanya (risk listesi) — audit + toast
@@ -95,7 +95,7 @@ export default function Analitik() {
       detay: ad ? "Tekil abone win-back teklifi" : "Risk listesindeki tüm abonelere kampanya",
       onem: "uyari", arac: "manuel",
     });
-    toast.success(ad ? `${ad} için kampanya kuyruğa alındı` : `${riskListe.length} aboneye kampanya başlatıldı`);
+    toast.success(ad ? "Kampanya kuyruğa alındı" : "Toplu kampanya başlatıldı", { description: ad ? `${ad} için geri kazanım teklifi gönderilecek.` : `Risk listesindeki ${riskListe.length} aboneye teklif gönderilecek.` });
   };
 
   const genelCsv = () => {
@@ -104,7 +104,7 @@ export default function Analitik() {
       ["Cohort", "Boyut", "D1", "D7", "D30", "D90", "Gelir"],
       cohort.map((c) => [c.cohort, c.boyut, c.d1, c.d7, c.d30, c.d90, c.gelir]),
     );
-    toast.success("Cohort raporu CSV indirildi");
+    toast.success("Cohort raporu indirildi", { description: "cohort-retention.csv" });
   };
 
   const sekmeler = [

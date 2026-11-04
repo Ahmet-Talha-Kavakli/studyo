@@ -36,6 +36,10 @@ export interface Paylasim {
   minFiyat?: number;     // modele + komisyona göre hesaplanan taban fiyat (kredi)
   ekstraFiyat?: number;  // yayıncının taban üstüne eklediği fiyat (kredi)
   kazanc?: number;       // yayıncıya biriken bakiye (ekstranın yarısı × kullanım)
+  /** Gerçek kapak: yayıncının kitaplığındaki üretim çıktısı. */
+  gorsel?: string;
+  /** Kaynak üretim kimliği (kitaplık). */
+  uretimId?: string;
 }
 
 /** m26: Bir preset modeline göre minimum fiyat (taban maliyet + %30 platform komisyonu). */
@@ -89,7 +93,7 @@ export const usePaylasim = create<PaylasimState>()(
       begeniToggle: (id) =>
         set((s) => ({ begenilenler: s.begenilenler.includes(id) ? s.begenilenler.filter((x) => x !== id) : [...s.begenilenler, id] })),
       kullanildi: (id) =>
-        set((s) => ({ benimPaylasimlar: s.benimPaylasimlar.map((x) => (x.id === id ? { ...x, kullanim: x.kullanim + 1 } : x)) })),
+        set((s) => ({ benimPaylasimlar: s.benimPaylasimlar.map((x) => (x.id === id ? { ...x, kullanim: x.kullanim + 1, kazanc: (x.kazanc ?? 0) + Math.floor((x.ekstraFiyat ?? 0) / 2) } : x)) })),
     }),
     { name: "vayra-paylasim", version: 1, migrate: alanlariKoru },
   ),

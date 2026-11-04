@@ -9,8 +9,8 @@ import { X, Sparkles, AlertTriangle } from "lucide-react";
  * Sayfaya ilk girişte bir kez çıkar (localStorage bayrağı), "Anladım" denince
  * bir daha gösterilmez. Sayfa içi küçük rozet için `BetaRozet`.
  *
- * Supercomputer'ın SCBetaUyari deseninin genelleştirilmiş hali; her beta
- * stüdyo kendi `anahtar`ını verir (Montaj, Supercomputer, …).
+ * Usta'nın SCBetaUyari deseninin genelleştirilmiş hali; her beta
+ * stüdyo kendi `anahtar`ını verir (Montaj, Usta, …).
  */
 export function BetaUyari({
   anahtar, baslik, ikon: Ikon, aciklama, notMetni,
@@ -41,11 +41,11 @@ export function BetaUyari({
       {acik && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={kapat} className="absolute inset-0 bg-black/55 backdrop-blur-md" />
+            onClick={kapat} className="perde absolute inset-0 bg-black/55 backdrop-blur-md" />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 320, damping: 30 }}
-            className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 bg-[#141416] p-7 text-center shadow-2xl">
+            className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/10 bg-[#141416] p-7 text-center">
             <button onClick={kapat} aria-label="Kapat"
               className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-white/8 text-metin-2 hover:bg-white/12 hover:text-white"><X className="h-4 w-4" /></button>
 

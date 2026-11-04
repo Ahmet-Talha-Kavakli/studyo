@@ -66,10 +66,10 @@ export default function Kvkk() {
     const ok = await onayIste({ baslik: "Kullanıcı verisini dışa aktar", aciklama: `${t.ad} tüm verisi (profil, ledger, üretim, oturum, gezinme) JSON olarak indirilir (KVKK md.11 erişim talebi).`, risk: 0, eylemEtiket: "İndir" });
     if (!ok) return;
     const basarili = kullaniciVeriExport(t.kullaniciId, t.ad);
-    if (!basarili) { toast.error("Kullanıcı bulunamadı."); return; }
+    if (!basarili) { toast.error("Kullanıcı bulunamadı", { description: `${t.ad} kaydı silinmiş olabilir. Talebi kontrol et.` }); return; }
     kvkkStore.durumDegistir(t.id, "tamamlandi", "Veri erişim paketi indirildi", admin);
     denetle("KVKK veri erişimi karşılandı (dosya indirildi)", "uyari", t.ad);
-    toast.success("Veri paketi indirildi");
+    toast.success("Veri paketi indirildi", { description: `${t.ad} için erişim talebi tamamlandı.` });
   };
 
   const anonimlestir = async (t: Talep) => {
@@ -79,13 +79,13 @@ export default function Kvkk() {
     aks.durumDegistir(t.kullaniciId, "silinme_talebi"); // kullanıcı gerçekten anonimleşir
     kvkkStore.durumDegistir(t.id, "tamamlandi", "Hesap anonimleştirildi (PII silindi)", admin);
     denetle("KVKK silme talebi karşılandı (anonimleştirildi)", "kritik", t.ad);
-    toast.success("Hesap anonimleştirildi");
+    toast.success("Hesap anonimleştirildi", { description: `${t.ad} kişisel verileri silindi; finansal kayıtlar saklanıyor.` });
   };
 
   const talepIsle = (t: Talep) => {
     kvkkStore.durumDegistir(t.id, "tamamlandi", `${TUR_AD[t.tur]} karşılandı`, admin);
     denetle(`KVKK ${TUR_AD[t.tur]} karşılandı`, "uyari", t.ad);
-    toast.success("Talep işlendi");
+    toast.success("Talep tamamlandı", { description: `${TUR_AD[t.tur]} · ${t.ad}` });
   };
 
   const bekleyen = tumTalep.filter((t) => t.durum === "beklemede" || t.durum === "isleniyor").length;

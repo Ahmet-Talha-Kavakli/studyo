@@ -57,7 +57,7 @@ export default function Modeller() {
     if (!ok) return;
     mod.modelGuncelle(id, { acik });
     denetle(`Model ${acik ? "açıldı" : "kapatıldı"}`, "uyari", ad);
-    toast.success(acik ? "Model açıldı" : "Model kapatıldı");
+    toast.success(acik ? "Model açıldı" : "Model kapatıldı", { description: ad });
   };
 
   const fiyatKaydet = async (id: string, ad: string) => {
@@ -66,11 +66,11 @@ export default function Modeller() {
     if (!ok) return;
     mod.modelGuncelle(id, { kredi: dKredi, maliyetUsd: dMaliyet });
     denetle(`Model fiyatı değiştirildi: ${dKredi} kredi / ${dolar(dMaliyet)}`, "kritik", ad);
-    toast.success("Fiyat güncellendi (anlık)");
+    toast.success("Model fiyatı güncellendi", { description: `${ad}: ${dKredi} kredi. Hemen geçerli.` });
     setDuzenle(null);
   };
 
-  const iadeKuralToggle = (id: string, ad: string) => { mod.iadeKuralToggle(id); denetle(`İade kuralı değişti: ${ad}`, "uyari"); toast.success("İade kuralı güncellendi"); };
+  const iadeKuralToggle = (id: string, ad: string) => { mod.iadeKuralToggle(id); denetle(`İade kuralı değişti: ${ad}`, "uyari"); toast.success("İade kuralı güncellendi", { description: ad }); };
 
   const sekmeler = [
     { id: "katalog", ad: "Model Kataloğu", sayi: statlar.length },

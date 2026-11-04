@@ -63,7 +63,7 @@ export default function KullaniciListe() {
     a.href = URL.createObjectURL(blob);
     a.download = `kullanicilar-${Date.now()}.csv`;
     a.click();
-    toast.success(`${Math.min(2000, liste.length)} kullanıcı CSV olarak indirildi`);
+    toast.success("Kullanıcı listesi indirildi", { description: `${Math.min(2000, liste.length)} kullanıcı CSV olarak kaydedildi.` });
   };
 
   const kolonlar: Kolon<AdminKullanici>[] = [

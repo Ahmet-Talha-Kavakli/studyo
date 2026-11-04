@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Box, Download, RotateCw, ChevronDown, Check } from "lucide-react";
@@ -67,14 +68,14 @@ export function ModelGoruntuleyici({
     let iptal = false;
     import("@google/model-viewer")
       .then(() => !iptal && setYuklendi(true))
-      .catch(() => toast.error("3D görüntüleyici yüklenemedi."));
+      .catch(() => toast.error("3D görüntüleyici yüklenemedi", { description: "Bağlantını kontrol edip sayfayı yenile." }));
     return () => {
       iptal = true;
     };
   }, [glbUrl]);
 
   const indir = (format = "GLB") => {
-    if (!glbUrl) return toast.info("Demo model — gerçek GLB için Meshy anahtarı ekle.");
+    if (!glbUrl) return toast.info("Örnek model indirilemez", { description: "Bu bir önizleme. Gerçek GLB için Meshy anahtarı gerekli." });
     const ad = baslik.replace(/[^\wğüşiöçİĞÜŞÖÇ -]/gi, "").slice(0, 40) || "vayra-model";
     const a = document.createElement("a");
     a.href = glbUrl;
@@ -83,7 +84,7 @@ export function ModelGoruntuleyici({
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast.success(`Model ${format} olarak indiriliyor 🧊`);
+    toast.success(`Model ${format} olarak indiriliyor`, { description: `${ad}.${format.toLowerCase()}` });
   };
 
   return (
@@ -155,10 +156,7 @@ export function ModelGoruntuleyici({
             <Download className="h-3.5 w-3.5" /> {glbUrl ? "Format indir" : "İndir"}
             {glbUrl && <ChevronDown className={`h-3 w-3 transition-transform ${formatMenu ? "rotate-180" : ""}`} />}
           </button>
-          {formatMenu && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setFormatMenu(false)} />
-              <div className="menu-surface absolute bottom-full right-0 z-50 mb-1 w-32 rounded-xl p-1.5 shadow-2xl shadow-black/50">
+          <Yuzen acik={!!(formatMenu)} onKapat={() => setFormatMenu(false)} alt={"tam"} sag={0} bosluk={4} className="menu-surface w-32 rounded-xl p-1.5">
                 {formatlar.map((f) => (
                   <button key={f} onClick={() => { indir(f); setFormatMenu(false); }}
                     className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
@@ -166,9 +164,7 @@ export function ModelGoruntuleyici({
                     {f === "GLB" && <Check className="h-3.5 w-3.5 text-cyan-glow" />}
                   </button>
                 ))}
-              </div>
-            </>
-          )}
+              </Yuzen>
         </div>
       </div>
     </div>

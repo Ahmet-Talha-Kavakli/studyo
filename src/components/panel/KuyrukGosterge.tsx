@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -33,15 +34,12 @@ export function KuyrukGosterge() {
       </button>
 
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setAcik(false)} />
-            <motion.div
+        <Yuzen acik={!!(acik)} onKapat={() => setAcik(false)} sag={0} ust={"tam"} bosluk={8}><motion.div
               initial={{ opacity: 0, y: 6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 6, scale: 0.98 }}
               transition={{ duration: 0.15 }}
-              className="menu-surface absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl p-3 shadow-2xl shadow-black/50"
+              className="menu-surface w-72 rounded-2xl p-3"
             >
               <div className="mb-2 flex items-center justify-between px-1">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/35">Üretim kuyruğu</p>
@@ -68,9 +66,7 @@ export function KuyrukGosterge() {
                 className="mt-2 flex items-center justify-center gap-1.5 rounded-xl border border-white/10 py-2 text-xs text-white/60 transition-colors hover:bg-white/6 hover:text-white">
                 <CheckCircle2 className="h-3.5 w-3.5" /> Tüm üretimleri gör
               </Link>
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );

@@ -6,5 +6,5 @@
 import { MuzikStudyo } from "@/components/studyo/MuzikStudyo";
 
 export default function MuzikStudyoSayfa() {
-  return <MuzikStudyo />;
+  return <div className="ses-kapsam contents"><MuzikStudyo /></div>;
 }

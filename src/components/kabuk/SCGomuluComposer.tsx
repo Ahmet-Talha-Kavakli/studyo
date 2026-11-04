@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Detay sayfalarına gömülü composer — Higgsfield "TRY X IN SUPERCOMPUTER" birebir (F.md 313-322, G.md 257-260).
- * Başlık + Supercomputer/MCP toggle + composer (+ / Akıllı mod / Sor / lime gönder) + dipnot.
+ * Başlık + Usta/MCP toggle + composer (+ / Akıllı mod / Sor / lime gönder) + dipnot.
  * Gönder = GERÇEK: useSupercomputer.getState().sohbetAc → mesajEkle → calisiyorAyarla → router.push.
  */
 export function SCGomuluComposer({
@@ -41,9 +41,9 @@ export function SCGomuluComposer({
 
   const gonder = () => {
     const t = (metin.trim() || ornek).trim();
-    if (t.length < 3) return toast.error("Ne üretmek istediğini yaz.");
+    if (t.length < 3) return toast.error("İstem çok kısa", { description: "Ne üretmek istediğini birkaç kelimeyle yaz." });
     if (hedef === "mcp") {
-      toast.success("MCP'ye gönderildi", { description: `${cip} · ${t.slice(0, 48)}` });
+      toast.success("MCP'ye gönderildi", { description: `${cip} · ${t.slice(0, 48)}${t.length > 48 ? "…" : ""}` });
     }
     const cipParça = cipVar ? (cipTipi === "beceri" ? `/${cip} ` : `@${cip} `) : "";
     const tamIstem = `${cipParça}${t}`;
@@ -59,7 +59,7 @@ export function SCGomuluComposer({
     <div className="mx-auto max-w-3xl text-center">
       <h2 className="hf-baslik text-[26px] leading-tight sm:text-[30px]">{baslik}</h2>
 
-      {/* Hedef seçici toggle: Supercomputer / MCP (+ opsiyonel Studio dış link) */}
+      {/* Hedef seçici toggle: Usta / MCP (+ opsiyonel Studio dış link) */}
       <div className="mt-5 flex items-center justify-center gap-2">
         <div className="flex items-center gap-1 rounded-full border border-kenar bg-yuzey-2 p-1">
           <button
@@ -67,7 +67,7 @@ export function SCGomuluComposer({
             className={cn("flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[13px] transition-colors",
               hedef === "sc" ? "bg-white text-zemin" : "text-metin-2 hover:text-metin")}
           >
-            <Cpu className="h-3.5 w-3.5" /> Supercomputer
+            <Cpu className="h-3.5 w-3.5" /> Usta
           </button>
           <button
             onClick={() => setHedef("mcp")}
@@ -88,7 +88,7 @@ export function SCGomuluComposer({
       </div>
 
       {/* Composer */}
-      <div className="mt-5 rounded-[22px] border border-kenar-2 bg-[#171717] p-3 text-left shadow-[0_18px_48px_-24px_rgba(0,0,0,0.8)]">
+      <div className="mt-5 rounded-[22px] border border-kenar-2 bg-[#171717] p-3 text-left">
         {/* Element chip satırı — idle: nokta/slash, hover: × kaldır */}
         {cipVar && (
           <div className="mb-2 flex flex-wrap items-center gap-2">

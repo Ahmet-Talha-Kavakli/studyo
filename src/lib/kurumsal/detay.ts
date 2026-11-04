@@ -104,12 +104,11 @@ export const CALISMA_SAATLERI: { gun: string; saat: string }[] = [
   { gun: "Avrupa (CET)", saat: "09:00 – 18:00" },
   { gun: "Amerika (ET)", saat: "09:00 – 18:00" },
   { gun: "Asya-Pasifik (SGT)", saat: "09:00 – 18:00" },
-  { gun: "Canlı destek", saat: "Panel içinden 7/24" },
   { gun: "Hafta sonu", saat: "E-posta ile — 1 iş günü yanıt" },
 ];
 
 export const ILETISIM_SSS: { s: string; c: string }[] = [
-  { s: "Ne kadar sürede yanıt alırım?", c: "Genel talepleri genellikle 1 iş günü içinde yanıtlarız. Panel içi canlı destek 7/24 açıktır." },
+  { s: "Ne kadar sürede yanıt alırım?", c: "Genel talepleri genellikle 1 iş günü içinde yanıtlarız. Destek ekibimiz üç bölgede dönüşümlü çalıştığı için hafta içi her saatte bir ekip açıktır." },
   { s: "Hangi dillerde destek veriyorsunuz?", c: "Destek ekibimiz İngilizce, Türkçe, İspanyolca, Almanca ve Japonca yanıt verebilir." },
   { s: "Kurumsal teklif alabilir miyim?", c: "Evet. İletişim formunda konu olarak 'Satış & Kurumsal' seç; satış ekibimiz özel bir teklifle döner." },
   { s: "Faturamla ilgili soru kime iletmeliyim?", c: "Faturalama sorularını panel içindeki Destek bölümünden veya hello@vayra.ai adresinden iletebilirsin." },

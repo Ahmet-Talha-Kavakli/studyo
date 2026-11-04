@@ -1,98 +1,132 @@
 import type { Metadata } from "next";
-import { Handshake, Puzzle, Megaphone, GraduationCap, Check, Building2, Mail } from "lucide-react";
-import { Hero, BolumBaslik, DegerKart, Kart, CTASerit, SurecAdimlari, MiniSSS } from "@/components/kurumsal/UI";
+import Link from "next/link";
+import { ArrowRight, Building2, Check, Code2, GraduationCap, Sparkles } from "lucide-react";
+import { Belir, Bolum, Kap, SayiSeridi, SirketHero, SurecAdimlari, butonSinif } from "@/components/sirket/ortak";
+import { PartnerFormu } from "@/components/sirket/PartnerFormu";
+import { SikSorulanlar } from "@/components/kesfet/Kapanis";
+import { PARTNER_SSS, PARTNER_SURECI } from "@/lib/kurumsal/detay";
+import { DAVET_INDIRIM, KOMISYON_KADEMELERI, KOMISYON_SURE_AY } from "@/lib/earn/kampanyalar";
 import { ILETISIM } from "@/lib/kurumsal/site";
-import { PARTNER_SURECI, PARTNER_SSS } from "@/lib/kurumsal/detay";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "İş Ortaklığı — Vayra",
-  description: "Vayra partner programı: teknoloji entegrasyonu, ajans ortaklığı, çözüm ortaklığı ve eğitim ortaklığı. Birlikte daha fazla yaratıcıya ulaşalım.",
+  title: "İş ortaklığı",
+  description: "Vayra ortaklık programları: kreatörler için %30'a varan tekrarlayan komisyon, ajanslar için yeniden satış ve marj, teknoloji ortakları için API, eğitim kurumları için indirim.",
 };
 
-const turler = [
-  { ikon: Puzzle, ad: "Teknoloji ortaklığı", ozet: "API ve entegrasyonlarla Vayra'yı kendi ürününe göm; birlikte yeni akışlar kur." },
-  { ikon: Megaphone, ad: "Ajans ortaklığı", ozet: "Ajansın için özel kotalar, ekip yönetimi ve öncelikli destek; müşterilerine Vayra kalitesi sun." },
-  { ikon: Handshake, ad: "Çözüm ortaklığı", ozet: "Vayra'yı müşterilerine kur ve yönet; gelir paylaşımı ve teknik eğitim." },
-  { ikon: GraduationCap, ad: "Eğitim ortaklığı", ozet: "Kurslar ve topluluklar için özel erişim; yaratıcı yeteneği birlikte yetiştirelim." },
-];
+const enYuksek = Math.round(Math.max(...KOMISYON_KADEMELERI.map((k) => k.oran)) * 100);
 
-const avantajlar = [
-  "Gelir paylaşımı ve özel komisyon oranları",
-  "Öncelikli teknik destek ve ayrılmış hesap yöneticisi",
-  "Ortak pazarlama ve ürün tanıtım fırsatları",
-  "Erken erişim: yeni modeller ve özellikler",
-  "Ortaklara özel API kotaları ve fiyatlandırma",
-  "Eğitim materyalleri ve sertifikasyon",
+const PROGRAMLAR = [
+  {
+    ikon: Sparkles, renk: "text-tur-ses bg-tur-ses/12", ad: "Kreatör ortaklığı", kime: "YouTuber'lar, eğitmenler, sosyal medya üreticileri",
+    gorsel: "/gercek/gorsel/gorsel-karakter-Sofia.webp",
+    maddeler: [`%${Math.round(KOMISYON_KADEMELERI[0].oran * 100)}–%${enYuksek} tekrarlayan komisyon, ${KOMISYON_SURE_AY} ay`, `Takipçilerine %${Math.round(DAVET_INDIRIM * 100)} ilk ödeme indirimi`, "Kampanyalara erken erişim ve ücretsiz Ultra plan", "Özel kupon kodu ve canlı panel"],
+    eylem: { ad: "Davet panelini aç", href: "/earn/davet" },
+  },
+  {
+    ikon: Building2, renk: "text-tur-gorsel bg-tur-gorsel/12", ad: "Ajans ortaklığı", kime: "Reklam, sosyal medya ve prodüksiyon ajansları",
+    gorsel: "/gercek/galeri/sinematik2.webp",
+    maddeler: ["Müşterilerine yeniden satışta %20 marj", "Çoklu müşteri çalışma alanı ve marka kitleri", "Ortak satış görüşmeleri ve demo desteği", "Ajans dizinimizde yer al"],
+    eylem: { ad: "Ajans olarak başvur", href: "#basvuru" },
+  },
+  {
+    ikon: Code2, renk: "text-tur-3d bg-tur-3d/12", ad: "Teknoloji ve API", kime: "Yazılım şirketleri, platformlar, entegratörler",
+    gorsel: "/gercek/orig/banner-neonmancer.webp",
+    maddeler: ["Hacme göre indirimli API kredisi", "Ortak teknik ekip ve özel Slack kanalı", "Entegrasyonlar sayfasında listelenme", "Ortak lansman ve duyuru"],
+    eylem: { ad: "API dokümantasyonu", href: "/gelistirici" },
+  },
+  {
+    ikon: GraduationCap, renk: "text-tur-muzik bg-tur-muzik/12", ad: "Eğitim kurumu", kime: "Üniversiteler, akademiler, kurs platformları",
+    gorsel: "/gercek/explainer-video/ex-claymotion.webp",
+    maddeler: ["Öğrenci ve eğitmenlere %50 indirim", "Sınıf çalışma alanları ve kredi havuzu", "Müfredat için hazır ders materyalleri", "Atölye ve konuk eğitmen desteği"],
+    eylem: { ad: "Kurum olarak başvur", href: "#basvuru" },
+  },
 ];
-
-const ortaklar = ["Nova Studios", "Meridyen Ajans", "Atlas Reklam", "Lumen Yapım", "Orbit Ajans", "Vertex Marka"];
 
 export default function Partner() {
   return (
     <>
-      <Hero
-        ustBaslik="İş Ortaklığı"
-        baslik="Birlikte daha fazlasını üretelim"
-        aciklama="Vayra partner programıyla teknoloji, ajans, çözüm ve eğitim ortaklıkları kuruyoruz. Ortak büyüme için doğru yerdesin."
-        cta={
-          <a href={`mailto:${ILETISIM.partner}`} className="kr-cta inline-flex h-12 items-center gap-2 rounded-xl px-6 text-[15px] font-semibold">
-            <Mail className="h-4 w-4" /> Ortaklık başvurusu
-          </a>
-        }
-      />
+      <SirketHero ust="İş ortaklığı" baslik={<>Vayra&apos;yı anlat, birlikte büyüyelim.</>}
+        alt={`Kreatörler için %${enYuksek}'a varan, ${KOMISYON_SURE_AY} ay boyunca tekrarlayan komisyon. Ajanslar, teknoloji şirketleri ve eğitim kurumları için ayrı programlar.`}>
+        <a href="#basvuru" className={butonSinif("beyaz")}>Başvur <ArrowRight className="h-4 w-4" /></a>
+        <a href="#programlar" className={butonSinif("ikincil")}>Programlar</a>
+      </SirketHero>
 
-      {/* Ortaklık türleri */}
-      <section className="mx-auto max-w-6xl px-4 py-12">
-        <BolumBaslik baslik="Ortaklık türleri" ozet="İş modeline uygun ortaklığı seç." />
-        <div className="grid gap-5 sm:grid-cols-2">
-          {turler.map((t) => <DegerKart key={t.ad} {...t} />)}
-        </div>
-      </section>
+      <Kap className="pt-14 sm:pt-20">
+        <SayiSeridi ogeler={[
+          { deger: `%${enYuksek}`, etiket: "kademeye göre en yüksek komisyon" },
+          { deger: `${KOMISYON_SURE_AY} ay`, etiket: "tekrarlayan gelir" },
+          { deger: `%${Math.round(DAVET_INDIRIM * 100)}`, etiket: "kitlene ilk ödeme indirimi" },
+          { deger: "3–5 gün", etiket: "başvuru değerlendirme süresi" },
+        ]} />
+      </Kap>
 
-      {/* Avantajlar */}
-      <section className="mx-auto max-w-4xl px-4 py-12">
-        <BolumBaslik baslik="Ortaklara neler sunuyoruz?" />
-        <Kart className="!p-8">
-          <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-            {avantajlar.map((a) => (
-              <div key={a} className="flex gap-3 text-[15px] text-[color:var(--color-metin-2)]">
-                <Check className="mt-0.5 h-4.5 w-4.5 shrink-0 text-[color:var(--kr-lime-metin)]" /> {a}
+      <Bolum id="programlar" ust="Programlar" baslik="Sana uygun ortaklık.">
+        <div className="grid gap-3 md:grid-cols-2">
+          {PROGRAMLAR.map((p, i) => (
+            <Belir key={p.ad} gecikme={(i % 2) * 0.05} className="h-full">
+              <div className="flex h-full flex-col overflow-hidden rounded-[24px] border border-white/[0.07] bg-yuzey">
+                <div className="relative h-40 overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.gorsel} alt="" loading="lazy" className="h-full w-full object-cover object-[center_30%]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-yuzey to-transparent" />
+                </div>
+                <div className="flex flex-1 flex-col p-7 pt-2">
+                  <span className={cn("flex h-11 w-11 items-center justify-center rounded-xl", p.renk)}><p.ikon className="h-5 w-5" /></span>
+                  <h3 className="mt-5 text-[22px] font-semibold tracking-[-0.02em] text-white">{p.ad}</h3>
+                  <p className="text-[13.5px] text-metin-3">{p.kime}</p>
+                  <ul className="mt-5 flex-1 space-y-2.5">
+                    {p.maddeler.map((m) => <li key={m} className="flex gap-2.5 text-[14.5px] text-metin-2"><Check className="mt-1 h-3.5 w-3.5 shrink-0 text-tur-3d" />{m}</li>)}
+                  </ul>
+                  <Link href={p.eylem.href} className={cn(butonSinif("ikincil"), "mt-6 self-start")}>{p.eylem.ad}</Link>
+                </div>
               </div>
-            ))}
-          </div>
-        </Kart>
-      </section>
+            </Belir>
+          ))}
+        </div>
+      </Bolum>
 
-      {/* Ortaklık süreci */}
-      <section className="mx-auto max-w-3xl px-4 py-12">
-        <BolumBaslik baslik="Nasıl ortak olunur?" ozet="Başvurudan lansmana dört adım." />
-        <SurecAdimlari adimlar={PARTNER_SURECI} />
-      </section>
-
-      {/* Mevcut ortaklar */}
-      <section className="mx-auto max-w-5xl px-4 py-12">
-        <BolumBaslik baslik="Bize güvenen ortaklar" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {ortaklar.map((o) => (
-            <div key={o} className="kr-kart kr-kart-hover flex items-center gap-3 px-4 py-4">
-              <span className="kr-ikon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"><Building2 className="h-4.5 w-4.5" /></span>
-              <span className="truncate text-sm font-semibold text-[color:var(--color-metin-2)]">{o}</span>
+      <Bolum ust="Komisyon" baslik="Kreatör komisyonu nasıl hesaplanır?" alt="Kademen, davet ettiğin kişilerin o ayki toplam ödemelerine göre otomatik belirlenir.">
+        <div className="grid gap-3 sm:grid-cols-3">
+          {KOMISYON_KADEMELERI.map((k, i) => (
+            <div key={k.ad} className={cn("rounded-[22px] border p-6", i === KOMISYON_KADEMELERI.length - 1 ? "border-vurgu/40 bg-[color-mix(in_oklab,var(--vurgu-renk)_12%,#111113)]" : "border-white/[0.07] bg-yuzey")}>
+              <p className="text-[14px] font-semibold text-white">{k.ad}</p>
+              <p className="mt-4 text-[44px] font-semibold leading-none tracking-[-0.04em] text-white">%{Math.round(k.oran * 100)}</p>
+              <p className="mt-3 text-[13.5px] text-metin-2">{k.minAylik ? `Davetlilerin aylık ödemeleri ₺${k.minAylik.toLocaleString("tr-TR")} ve üzeri` : "Başlangıç kademesi"}</p>
             </div>
           ))}
         </div>
-      </section>
+        <Link href="/earn/davet" className="mt-5 inline-flex items-center gap-1.5 text-[14px] font-medium text-white hover:underline">Kazanç hesaplayıcıyı aç <ArrowRight className="h-4 w-4" /></Link>
+      </Bolum>
 
-      {/* Partner SSS */}
-      <section className="mx-auto max-w-3xl px-4 py-12">
-        <BolumBaslik baslik="Sıkça sorulanlar" />
-        <MiniSSS maddeler={PARTNER_SSS} />
-      </section>
+      <Bolum ust="Süreç" baslik="Başvurudan lansmana.">
+        <SurecAdimlari adimlar={PARTNER_SURECI} />
+      </Bolum>
 
-      <CTASerit
-        baslik="Ortaklığa hazır mısın?"
-        ozet="Birkaç dakikada başvur; ekibimiz seninle iletişime geçsin."
-        birincil={{ ad: "Başvuru gönder", href: "/iletisim" }}
-      />
+      <Bolum id="basvuru" ust="Başvuru" baslik="Ortaklık başvurusu" alt={`Sorun varsa ${ILETISIM.partner} adresine de yazabilirsin.`}>
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+          <PartnerFormu />
+          <aside className="space-y-6">
+            {[
+              ["Kaynak kiti", "Logolar, ürün görselleri ve marka kuralları basın odasında hazır."],
+              ["Canlı panel", "Kreatör ortakları tıklama, kayıt ve komisyonlarını Vayra Earn'de anlık izler."],
+              ["Aylık ödeme", "Komisyonlar Earn cüzdanına geçer; IBAN ya da Papara'ya çekilir."],
+            ].map(([a, b]) => (
+              <div key={a} className="border-t border-white/[0.08] pt-5">
+                <p className="text-[16px] font-semibold text-white">{a}</p>
+                <p className="mt-1 text-[14px] leading-relaxed text-metin-2">{b}</p>
+              </div>
+            ))}
+            <Link href="/basin#medya-kiti" className={butonSinif("ikincil")}>Kaynak kitine git</Link>
+          </aside>
+        </div>
+      </Bolum>
+
+      <SikSorulanlar sorular={[
+        ...PARTNER_SSS,
+        { s: "Kreatör olarak başvurmak için takipçi şartı var mı?", c: "Hayır. Davet bağlantını Vayra Earn'den hemen alıp paylaşmaya başlayabilirsin. Ücretsiz Ultra plan ve erken erişim gibi ek ayrıcalıklar için başvurular kanal kalitesine göre değerlendirilir." },
+        { s: "Komisyon ödemeleri ne zaman yapılır?", c: "Davet ettiğin kişinin ödemesi iade süresini doldurduktan sonra komisyonun Earn cüzdanına çekilebilir olarak geçer." },
+      ]} baslik="Ortaklık soruları." />
     </>
   );
 }

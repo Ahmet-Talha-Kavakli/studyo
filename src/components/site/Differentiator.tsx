@@ -28,7 +28,7 @@ export function Differentiator() {
         {/* 3D */}
         <Reveal>
           <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-cyan-glow/5 to-transparent p-8">
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-glow to-blue-500 shadow-lg">
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-glow to-blue-500">
               <Box className="h-7 w-7 text-white" />
             </div>
             <h3 className="text-2xl font-bold">3D Stüdyo · Meshy</h3>
@@ -59,7 +59,7 @@ export function Differentiator() {
         {/* Ses */}
         <Reveal i={1}>
           <div className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-emerald-400/5 to-transparent p-8">
-            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg">
+            <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500">
               <AudioLines className="h-7 w-7 text-white" />
             </div>
             <h3 className="text-2xl font-bold">Ses Stüdyosu · ElevenLabs & Vali</h3>

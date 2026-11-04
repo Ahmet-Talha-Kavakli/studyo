@@ -116,7 +116,6 @@ export const HUB_KARTLAR: HubKart[] = [
   { id: "m-flux2", ad: "Flux 2.0", ozet: "Gelişmiş görsel düzenleme", href: "/panel/gorsel?model=flux-2", sekmeler: ["gorseller", "modeller"], kategori: "soyut" },
   { id: "style-snap", ad: "Style Snap", ozet: "Anında kıyafet dönüşümleri", href: "/panel/gorsel?arac=stylesnap", sekmeler: ["duzenle"], kategori: "moda" },
   { id: "banana-apps", ad: "Banana Pro Uygulamaları", ozet: "Tek dokunuşla stil dönüşümleri", href: "/panel/uygulamalar", sekmeler: ["duzenle"], kategori: "portre" },
-  { id: "popcorn", ad: "Vayra Popcorn", ozet: "Sahne oluştur, düzenle ve rafine et", href: "/panel/popcorn", sekmeler: ["videolar"], kategori: "sinematik" },
   { id: "plushies", ad: "Peluşlar", ozet: "Bir fotoğraftan peluş tarzı videolar oluştur", href: "/panel/video?arac=plushies", sekmeler: ["videolar"], kategori: "3d" },
   { id: "click-to-ad", ad: "Tıkla Reklam Ol", ozet: "Bir bağlantı yapıştır, video reklam al", href: "/panel/pazarlama", rozet: "PRO", sekmeler: ["videolar"], kategori: "urun" },
   { id: "micro-beasts", ad: "Mini Yaratıklar Paketi", ozet: "Kendini sevimli hayvanlarla çevrele", href: "/panel/video?arac=beasts", sekmeler: ["videolar"], kategori: "3d" },

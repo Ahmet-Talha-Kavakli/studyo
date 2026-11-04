@@ -143,7 +143,7 @@ export function SCCiktiIzgarasi({
 
             {/* SOL ALT meta */}
             <span className="absolute inset-x-0 bottom-0 p-3">
-              <span className="block truncate text-[15px] font-bold text-[var(--sc-metin)] drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
+              <span className="block truncate text-[15px] font-bold text-[var(--sc-metin)]">
                 {c.ad}
               </span>
               <span className="mt-1 inline-flex items-center gap-1.5 rounded-md bg-black/55 px-2 py-[3px] text-[12px] text-[var(--sc-metin)] backdrop-blur-sm">

@@ -21,6 +21,9 @@ function gorseliYukselt(u: Uretim): Uretim {
   return { ...u, gorselUrl: onizlemeArka((u.prompt || u.baslik) + u.model, turKategori(u.tur)) };
 }
 
+/** Bu süreden eski "işleniyor" kayıtları yarıda kalmış sayılır. */
+export const YARIM_ESIK = 15 * 60_000;
+
 export interface Uretim {
   id: string;
   baslik: string;
@@ -29,6 +32,10 @@ export interface Uretim {
   prompt: string;
   durum: "kuyrukta" | "isleniyor" | "tamam" | "hata";
   ilerleme: number;
+  /** İşin sağlayıcıda başladığı an (sıradan çıkış) — geçen süre bundan hesaplanır. */
+  baslama?: number;
+  /** Başarısızlık/iptal nedeni (kartta gösterilir). */
+  hata?: string;
   gorselUrl?: string; // önizleme (gradient/placeholder veya gerçek görsel)
   sesUrl?: string; // gerçek ses çıktısı (data-uri/http)
   videoUrl?: string; // gerçek video çıktısı (Replicate http)
@@ -51,14 +58,24 @@ export interface Uretim {
      ayar notları ekleniyor (" · 4K", " · 1 referans görsele sadık kal" …).
      "Bu ayarlarla üret" composer'a bu ham metni yazar; `prompt` yazılsaydı
      notlar her geri yüklemede birikirdi. */
-  meta?: { oran?: string; cozunurluk?: string; sure?: string; ses?: string; gorselUrl?: string; hamIstem?: string }; // gerçekçi çıktı bilgisi
+  meta?: { oran?: string; cozunurluk?: string; sure?: string; taslak?: { cozunurluk?: string; sure?: string }; kurulum?: Record<string, unknown>; demoKlip?: { video: string; poster: string }; hizEgri?: string; tempo?: string; ses?: string; gorselUrl?: string; hamIstem?: string; kaynakId?: string; surumTur?: string; sahneDiyalog?: { kim: string; metin: string; ton?: string }[]; sesNotu?: string; diyalogDili?: string; yenidenKok?: string; ucretsiz?: boolean; akis?: boolean; boyutKb?: number; bitisKareUrl?: string; hareket?: string; bitHizi?: string; cokCekim?: boolean; cekimler?: { istem: string; sn: number }[]; sinirsiz?: boolean; mod?: string; dil?: string; hiz?: number; kararlilik?: number; benzerlik?: number; stil?: number; sesId?: string; hedefDil?: string; kaynakDil?: string; konusmaciSayisi?: number; gurultuTemizle?: boolean; kaynakAd?: string; kaynakUrl?: string; videoUrl?: string; karakter?: number; paylasimSahibi?: string; paylasimId?: string; bicim?: string; tohum?: number; diyalog?: { metin: string; sesId: string; ses?: string; sahip?: string }[]; efektSn?: number; dongu?: boolean; istemEtkisi?: number; elementler?: { ad: string; tur: string }[]; islem?: import("@/lib/saglayicilar/tipler").GorselIslem; referanslar?: string[]; stilRefler?: string[]; stilGuc?: "hafif" | "dengeli" | "guclu"; demoOrnek?: string; maskeUrl?: string; negatif?: string; seffaf?: boolean; kalite?: string; vektor?: boolean; yonlendirme?: number; adim?: number; renkler?: string[]; stilAd?: string; urunGorsel?: string; stilIstem?: string; refRolleri?: string[]; zemin?: string; apiModel?: string; cozulenModel?: string; gonderilenIstem?: string; pano?: string; palet?: string; gelistir?: boolean; giysi?: { kategori?: string; foto?: string; mod?: string }; normalizasyon?: "auto" | "on" | "off"; telaffuz?: { kelime: string; okunus: string }[]; ortam?: { filtre?: string; gurultu?: string; mekan?: string; mesafe?: number }; zamanDamgasi?: boolean; konusmaciGuclendir?: boolean; kelimeler?: { k: string; b: number; s: number; kon?: string }[]; transkript?: string; algilananDil?: string; sureSn?: number; grupId?: string; sira?: number; motor?: string; yon?: string; kanvas?: { w: number; h: number; x: number; y: number; gw: number; gh: number }; istemsiz?: boolean; lora?: { url: string; olcek?: number }; sadakat?: "siki" | "dengeli" | "serbest" }; // gerçekçi çıktı bilgisi; kaynakId: bu üretimin türetildiği üretim (sürüm zinciri)
   saglayici?: string; // "eleven" | "meshy" | "openai" | "replicate" | "simulasyon"
   gercek?: boolean; // gerçek API çıktısı mı, demo mu
   projeId?: string; // bu üretimin ait olduğu ortak proje (useProje). undefined = bağımsız üretim
 }
 
+/** Çöp kutusundaki üretim — 30 gün sonra kalıcı silinir. */
+export type CoptekiUretim = Uretim & { silinme: number };
+export const COP_SURE_GUN = 30;
+
 interface ProjelerState {
   uretimler: Uretim[];
+  /** Kitaplıktan silinen üretimler (geri alınabilir). */
+  cop: CoptekiUretim[];
+  copeTasi: (idler: string[]) => void;
+  copGeriAl: (idler: string[]) => void;
+  kaliciSil: (idler: string[]) => void;
+  copuBosalt: () => void;
   ekle: (u: Omit<Uretim, "id" | "olusturma">) => string;
   guncelle: (id: string, patch: Partial<Uretim>) => void;
   sil: (id: string) => void;
@@ -85,6 +102,18 @@ export const useProjeler = create<ProjelerState>()(
       // ziyarette localStorage'daki kendi verisi bu initial state'i geçersiz kılar.
       // SEED_URETIMLER tamamen deterministik olduğu için bu initial state SSR-güvenli.
       uretimler: SEED_URETIMLER,
+      cop: [],
+      copeTasi: (idler) => set((s) => {
+        const simdi = Date.now();
+        const tasinan = s.uretimler.filter((x) => idler.includes(x.id)).map((x) => ({ ...x, silinme: simdi }));
+        return { uretimler: s.uretimler.filter((x) => !idler.includes(x.id)), cop: [...tasinan, ...s.cop] };
+      }),
+      copGeriAl: (idler) => set((s) => {
+        const geri = s.cop.filter((x) => idler.includes(x.id)).map(({ silinme: _s, ...u }) => u as Uretim);
+        return { cop: s.cop.filter((x) => !idler.includes(x.id)), uretimler: [...geri, ...s.uretimler].sort((a, b) => b.olusturma - a.olusturma) };
+      }),
+      kaliciSil: (idler) => set((s) => ({ cop: s.cop.filter((x) => !idler.includes(x.id)) })),
+      copuBosalt: () => set({ cop: [] }),
       ekle: (u) => {
         const id = yeniId();
         const yeni: Uretim = { ...u, id, olusturma: Date.now() };
@@ -106,16 +135,42 @@ export const useProjeler = create<ProjelerState>()(
     }),
     {
       name: "vayra-projeler",
-      version: 3,
+      version: 4,
       // v2: eski kullanıcıların GRADYAN gorselUrl'lü üretimlerini gerçek stok görsele yükseltir.
       // v3: `projeId?` alanı eklendi (ortak proje mimarisi). Eski üretimler projeId olmadan kalır
       // ("bağımsız üretim") — VERİ KAYBI YOK. Kullanıcı verisi korunur, seed'lerle ezilmez.
+      // v4: örnek (seed_*) üretimler istemleriyle eşleşen gerçek görsellere geçti; kullanıcının
+      // favori/yayın işaretleri korunur, kendi üretimlerine dokunulmaz.
       migrate: (persisted) => {
         const s = persisted as ProjelerState;
         if (s && Array.isArray(s.uretimler)) {
-          return { ...s, uretimler: s.uretimler.map(gorseliYukselt) };
+          const ornek = new Map(SEED_URETIMLER.map((u) => [u.id, u]));
+          return {
+            ...s,
+            uretimler: s.uretimler.map((u) => {
+              const y = ornek.get(u.id);
+              return y ? { ...y, favori: u.favori, yayinda: u.yayinda, projeId: u.projeId, etiketler: u.etiketler } : gorseliYukselt(u);
+            }),
+          };
         }
         return s;
+      },
+      // Süresi (30 gün) dolan çöp kayıtları her açılışta kalıcı olarak temizlenir.
+      onRehydrateStorage: () => (st) => {
+        // Sayfa kapanınca isteği kesilen üretimler sonsuza dek "işleniyor" kalmasın: 15 dakikadan eski
+        // süren işler yarıda kaldı olarak işaretlenir, kredisi iade edilir (sunucu isteği bu sürede çoktan zaman aşımına uğrar).
+        const yarim = st?.uretimler?.filter((u) => (u.durum === "isleniyor" || u.durum === "kuyrukta") && Date.now() - (u.baslama ?? u.olusturma) > YARIM_ESIK) ?? [];
+        // Depo değişkeni oluşmadan (eşzamanlı yükleme) setState çağrılamaz: bir sonraki tikte uygula.
+        if (yarim.length) setTimeout(() => {
+          const ids = new Set(yarim.map((u) => u.id));
+          useProjeler.setState((s) => ({ uretimler: s.uretimler.map((u) => (ids.has(u.id) ? { ...u, durum: "hata" as const, ilerleme: 0, hata: "Yarıda kaldı: sayfa kapanınca üretim tamamlanamadı. Kredin iade edildi." } : u)) }));
+          const iade = yarim.reduce((a, u) => a + (u.kredi > 0 ? u.kredi : 0), 0);
+          if (iade > 0) void import("@/store/useAuth").then((m) => m.useAuth.getState().krediEkle(iade));
+        }, 0);
+        if (!st?.cop?.length) return;
+        const esik = Date.now() - COP_SURE_GUN * 86_400_000;
+        const kalan = st.cop.filter((x) => x.silinme > esik);
+        if (kalan.length !== st.cop.length) setTimeout(() => useProjeler.setState({ cop: kalan }), 0);
       },
     },
   ),

@@ -1,7 +1,11 @@
 import type { Metadata, Viewport } from "next";
+import { PerdeGozcusu } from "@/components/ui/PerdeGozcusu";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { VayraToaster } from "@/components/kabuk/VayraToaster";
+import { CerezBandi } from "@/components/kabuk/CerezBandi";
+import { TercihSaglayici } from "@/components/kabuk/TercihSaglayici";
+import { TERCIH_BETIGI } from "@/lib/vurgu";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -97,8 +101,9 @@ export default function RootLayout({
     ],
   };
   return (
-    <html lang="tr" className={`${inter.variable} ${mono.variable}`}>
+    <html lang="tr" suppressHydrationWarning className={`${inter.variable} ${mono.variable}`}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: TERCIH_BETIGI }} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -112,8 +117,10 @@ export default function RootLayout({
           kabuğunda mount ediliyordu; bu yüzden o sayfalardaki bildirimler
           HİÇ görünmüyordu (sessiz kayıp). Artık tek merkezde. */}
       <body className="antialiased">
-        {children}
+        <TercihSaglayici>{children}</TercihSaglayici>
         <VayraToaster />
+        <PerdeGozcusu />
+        <CerezBandi />
       </body>
     </html>
   );

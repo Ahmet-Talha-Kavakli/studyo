@@ -1,22 +1,36 @@
 "use client";
 
+import { UretimYukleniyor } from "@/components/studyo/UretimYukleniyor";
+import { KrediHap, KrediYildiz } from "@/components/ui/KrediHap";
+import { Rozet } from "@/components/kabuk/MegaNav";
+import { useSaglayicilar } from "@/hooks/useSaglayicilar";
+import { Yuzen } from "@/components/ui/Yuzen";
+import { useIstemParametresi } from "@/lib/useIstemParametresi";
 import type { StudyoGomuluProps } from "@/components/studyo/tipler";
 
-import { useState, useMemo, useRef, useEffect, useTransition } from "react";
+import { useState, useMemo, useRef, useEffect, useLayoutEffect, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, ChevronRight, Heart, Download, Copy, MoreHorizontal,
+  Plus, ChevronRight, Heart, Download, Copy, MoreHorizontal, UserRound, Package,
   Search, Check, BarChart3, Sparkles, Minus, Share2, UserSquare,
   RefreshCw, Recycle, Wand2, Palette, Maximize2, Scissors, Expand, Crop,
   X, XCircle, ChevronLeft, ChevronDown, Info, RotateCcw,
-  MessageCircle, Video as VideoIcon, Smile, ImagePlus, Box, Trash2, Upload, FolderPlus,
+  MessageCircle, Video as VideoIcon, ImagePlus, Box, Trash2, Upload, FolderPlus,
   Sun, Pencil, Eraser, SlidersHorizontal, MousePointer2, Square, ArrowUpRight, Type, Circle, Undo2, Redo2, Layers, Gem,
   Link2, Briefcase, Pin, AtSign,
-  FileImage, FileType2, FileArchive,
+  FileImage, FileType2, FileArchive, Loader2, Lightbulb, History, Images, LayoutGrid,
+  Shuffle, Dices, Ban, Lock, Columns3,
 } from "lucide-react";
+import { IzgaraSec } from "@/components/studyo/Cip";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
+import { neden, uretimGeriYukle } from "@/components/studyo/bildirim";
+import { kapakUrl } from "@/components/kitaplik/yardimci";
+import { usePanolar } from "@/store/usePanolar";
+import { HAZIR_PANOLAR_TAM } from "@/lib/panoVeri";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { GirdiModal } from "@/components/panel/uc-boyut/GirdiModal";
 import { CizimCanvas, type CizimCanvasRef } from "@/components/panel/CizimCanvas";
@@ -24,20 +38,36 @@ import { STOK_GORSELLER } from "@/lib/stok-gorseller";
 import { useAuth } from "@/store/useAuth";
 import { useElements, type ElementTur } from "@/store/useElements";
 import { cn, saltUrl, onizlemeArka, INDIRME_FORMATLARI, gorseliFormatlaIndir, istemTemizle } from "@/lib/utils";
-import { urlIndir, metinIndir } from "@/lib/gercekEylem";
-import { uretimBaslat as uretimBaslatHam, uretimHataToast } from "@/lib/uretimMotoru";
+import { urlIndir, metinIndir, kopyala } from "@/lib/gercekEylem";
+import { uretimBaslat as uretimBaslatHam, uretimIptal, uretimSirasi, uretimHataToast } from "@/lib/uretimMotoru";
 import { useAktifProje } from "@/lib/useAktifProje";
 import { icerikDenetle, kategoriEtiket } from "@/lib/moderasyon";
 import { MODELLER } from "@/lib/catalog";
-import { useProjeler } from "@/store/useProjeler";
-import { useKoleksiyon } from "@/store/useKoleksiyon";
+import { GORSEL_MODELLER, GORSEL_ORANLAR as ORANLAR, cozunurlukCarpani, type GorselModel, type ModelTip } from "@/lib/gorselModelVeri";
+import { ElementKapak } from "@/components/panel/element/elementMeta";
+import { KarakterModal, PanoModal, PaletModal, gorselDepola, dosyaOku, type SeciliPano, type SeciliPalet } from "@/components/studyo/gorsel/RuhModallari";
+import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { useSecim } from "@/store/useSecim";
 import { useReferansKopru } from "@/store/useReferansKopru";
 import { useAyarKopru } from "@/store/useAyarKopru";
-import { useYorumlar, goreliZaman } from "@/store/useYorumlar";
+import { useYorumlar } from "@/store/useYorumlar";
 import { ElementMentionInput } from "@/components/panel/ElementMentionInput";
+import { ElementDuzenleModal } from "@/components/panel/element/ElementDuzenleModal";
+import { bekleyenElement } from "@/components/panel/element/KullanSecici";
 import { ElementSeciciModal } from "@/components/panel/element/ElementSeciciModal";
 import { oranSayi } from "@/components/panel/UretimKarti";
+import { ModelLogo } from "@/components/kitaplik/Simgeler";
+import { MenuKart } from "@/components/kitaplik/Katmanlar";
+import { projeyeTasi } from "@/components/kitaplik/eylemler";
+import { useProje } from "@/store/useSinema";
+import { GorselGoruntuleyici, type AracIstegi } from "@/components/studyo/GorselGoruntuleyici";
+import { YorumSekmesi } from "@/components/studyo/YorumSekmesi";
+import { InfoSekmesi } from "@/components/studyo/gorsel/GorselBilgi";
+import { KartAraclari } from "@/components/studyo/gorsel/KartAraclari";
+import { useEkler, aktifSinirsizlar } from "@/store/useEkler";
+import { GORSEL_STILLER, stilBul, REF_ROLLERI, type RefRol } from "@/lib/gorselStiller";
+import { upscaleAdresi } from "@/lib/upscaleVeri";
+import { SINIRSIZ_TEKLIFLER } from "@/lib/fiyat";
 import {
   MobilComposerKabuk, MobilYukleAlani, MobilIstemKutusu, MobilAltCipler, MobilAltCip, MobilAyarCekmecesi, MobilUretButonu,
   MobilSecici, type SeciciOge,
@@ -49,163 +79,38 @@ import {
  * + model seçici popover + kart hover rayı + boyut kaydırıcı.
  */
 
-// Soul (Ruh) moodboard presetleri — Higgsfield "CREATE YOUR MOODBOARD" birebir
-const MOODBOARD_PRESETLERI = [
-  "Genel", "Sıcak Ambiyans", "Y2K Stüdyo", "Swag Dönemi", "Teatral Işık", "Y2K Sokak",
-  "2000'ler Grup", "Frutiger Aero", "Drain", "Dünya Dışı", "Editöryel Sokak", "Doğa Işığı",
-  "Yeni Indie", "Su Altı", "80'ler Korku", "Tek Kullanımlık Kamera", "Nötr Pastel Film", "Sıcak Canlı Film",
-];
-
-/* GERÇEK gorsel-sayfası görselleri — moodboard/renk/çizim presetleri için Nano Banana ile üretildi. */
-const GORSEL_GERCEK: Record<string, string> = {
-  // Moodboard presetleri (tohum: "gorsel-mood-" + ad)
-  "gorsel-mood-Genel": "/gercek/gorsel/mood-genel.webp",
-  "gorsel-mood-Sıcak Ambiyans": "/gercek/gorsel/mood-sicak-ambiyans.webp",
-  "gorsel-mood-Y2K Stüdyo": "/gercek/gorsel/mood-y2k-studyo.webp",
-  "gorsel-mood-Swag Dönemi": "/gercek/gorsel/mood-swag-donemi.webp",
-  "gorsel-mood-Teatral Işık": "/gercek/gorsel/mood-teatral-isik.webp",
-  "gorsel-mood-Y2K Sokak": "/gercek/gorsel/mood-y2k-sokak.webp",
-  "gorsel-mood-2000'ler Grup": "/gercek/gorsel/mood-2000ler-grup.webp",
-  "gorsel-mood-Frutiger Aero": "/gercek/gorsel/mood-frutiger-aero.webp",
-  "gorsel-mood-Drain": "/gercek/gorsel/mood-drain.webp",
-  "gorsel-mood-Dünya Dışı": "/gercek/gorsel/mood-dunya-disi.webp",
-  "gorsel-mood-Editöryel Sokak": "/gercek/gorsel/mood-editoryel-sokak.webp",
-  "gorsel-mood-Doğa Işığı": "/gercek/gorsel/mood-doga-isigi.webp",
-  "gorsel-mood-Yeni Indie": "/gercek/gorsel/mood-yeni-indie.webp",
-  "gorsel-mood-Su Altı": "/gercek/gorsel/mood-su-alti.webp",
-  "gorsel-mood-80'ler Korku": "/gercek/gorsel/mood-80ler-korku.webp",
-  "gorsel-mood-Tek Kullanımlık Kamera": "/gercek/gorsel/mood-tek-kullanimlik-kamera.webp",
-  "gorsel-mood-Nötr Pastel Film": "/gercek/gorsel/mood-notr-pastel-film.webp",
-  "gorsel-mood-Sıcak Canlı Film": "/gercek/gorsel/mood-sicak-canli-film.webp",
-  // Moodboard hero şerit (a/b/c)
-  "gorsel-mood-a": "/gercek/gorsel/mood-hero-a.webp",
-  "gorsel-mood-b": "/gercek/gorsel/mood-hero-b.webp",
-  "gorsel-mood-c": "/gercek/gorsel/mood-hero-c.webp",
-  // Renk transferi
-  "renk-hero": "/gercek/gorsel/renk-hero.webp",
-  "renk-ornek-Film Renkleri": "/gercek/gorsel/renk-film.webp",
-  "renk-ornek-Lime Jam": "/gercek/gorsel/renk-lime.webp",
-  "renk-ornek-Şeker Pembe": "/gercek/gorsel/renk-pembe.webp",
-  "renk-ornek-Nostaljik Mavi": "/gercek/gorsel/renk-mavi.webp",
-  "renk-ornek-Yumuşak Palet": "/gercek/gorsel/renk-yumusak.webp",
-  "renk-ornek-Siyah Parlak": "/gercek/gorsel/renk-siyah.webp",
-  // Çizim tuvali
-  "cizim-tuval": "/gercek/gorsel/cizim-tuval.webp",
-  // Karakter modal hero örnek portreleri
-  "kar-a": "/gercek/galeri/portre2.webp",
-  "kar-b": "/gercek/galeri/portre4.webp",
-  // Karakter modalı örnek portre ızgarası (6 kayıtlı karakter)
-  "gorsel-karakter-Talha": "/gercek/gorsel/gorsel-karakter-Talha.webp",
-  "gorsel-karakter-Emma": "/gercek/gorsel/gorsel-karakter-Emma.webp",
-  "gorsel-karakter-Kai": "/gercek/gorsel/gorsel-karakter-Kai.webp",
-  "gorsel-karakter-Sofia": "/gercek/gorsel/gorsel-karakter-Sofia.webp",
-  "gorsel-karakter-Leo": "/gercek/gorsel/gorsel-karakter-Leo.webp",
-  "gorsel-karakter-Aria": "/gercek/gorsel/gorsel-karakter-Aria.webp",
-  // İyileştirici tip örnekleri + açı padi
-  "iyilestir-Yumuşak ten": "/gercek/gorsel/iyilestir-yumusak.webp",
-  "iyilestir-Gerçekçi ten": "/gercek/gorsel/iyilestir-gercekci.webp",
-  "iyilestir-Kusurlu ten": "/gercek/gorsel/iyilestir-kusurlu.webp",
-  "acilar-pad": "/gercek/gorsel/acilar-pad.webp",
-};
-/** Tohum için gerçek görsel yolu (yoksa undefined → stok onizlemeArka). */
-function gorselGercek(tohum: string): string | undefined {
-  return GORSEL_GERCEK[tohum];
-}
-/** Gerçek varsa CSS background, yoksa stok. */
-function gorselArkaG(tohum: string, kat: string): string {
-  const g = GORSEL_GERCEK[tohum];
-  return g ? `url("${g}") center/cover no-repeat` : onizlemeArka(tohum, kat);
+/** Geçen süre (m:ss), saniyede bir güncellenir. */
+function GecenSure({ bas }: { bas: number }) {
+  const [, tik] = useState(0);
+  useEffect(() => { const t = setInterval(() => tik((x) => x + 1), 1000); return () => clearInterval(t); }, []);
+  const sn = Math.max(0, Math.round((Date.now() - bas) / 1000));
+  return <>{Math.floor(sn / 60)}:{String(sn % 60).padStart(2, "0")}</>;
 }
 
-// Soul Hex renk transferi presetleri — her biri bir renk paleti
-const RENK_TRANSFER_PRESETLERI: { ad: string; renkler: string[] }[] = [
-  { ad: "Film Renkleri", renkler: ["#3a4a3f", "#c9b596", "#8a6d5a", "#2b2118"] },
-  { ad: "Lime Jam", renkler: ["#a6e22e", "#2d3a12", "#f0f7d4", "#5a7020"] },
-  { ad: "Şeker Pembe", renkler: ["#ff9ec7", "#ffd6e8", "#c44f8a", "#5a1f3a"] },
-  { ad: "Nostaljik Mavi", renkler: ["#4a6b8a", "#a8c4d8", "#2b3a4a", "#dce8f0"] },
-  { ad: "Yumuşak Palet", renkler: ["#d8c4b0", "#a89078", "#f0e4d4", "#6b5a48"] },
-  { ad: "Siyah Parlak", renkler: ["#1c1e20", "#3a3a3a", "#6b6b6b", "#0f1113"] },
-];
-
-/** Seçili renk transferi adından palet renklerini döndür (yoksa undefined). */
-function renkPaleti(ad: string | null): string[] | undefined {
-  if (!ad) return undefined;
-  return RENK_TRANSFER_PRESETLERI.find((p) => p.ad === ad)?.renkler;
+/** Çizim katmanını (şeffaf PNG) beyaz zemin ya da altındaki görselle tek görselde birleştirir. */
+async function cizimBirlestir(cizim: string, arka: string | null): Promise<string> {
+  const yukle = (u: string) => new Promise<HTMLImageElement>((coz, red) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => coz(i); i.onerror = () => red(new Error("Görsel okunamadı")); i.src = u; });
+  const c = await yukle(cizim);
+  const o = document.createElement("canvas");
+  o.width = c.naturalWidth; o.height = c.naturalHeight;
+  const x = o.getContext("2d")!;
+  x.fillStyle = "#fff"; x.fillRect(0, 0, o.width, o.height);
+  if (arka) {
+    // Tuvaldeki gibi "cover" yerleşim: çizim ile görsel aynı yere düşer.
+    const a = await yukle(arka);
+    const k = Math.max(o.width / a.naturalWidth, o.height / a.naturalHeight);
+    const w = a.naturalWidth * k, h = a.naturalHeight * k;
+    x.drawImage(a, (o.width - w) / 2, (o.height - h) / 2, w, h);
+  }
+  x.drawImage(c, 0, 0);
+  return o.toDataURL("image/png");
 }
 
-// Model composer davranışı (Higgsfield birebir: her model kendi çip setini + composer düzenini gösterir).
-//   "standart" → prompt + oran/çözünürlük/adet çipleri
-//   "swap"     → iki yükleme kutusu (Kaynak yüz/karakter + Hedef görsel), prompt yok
-//   "flux"     → prompt + gelişmiş ayar (CFG + Kalite Adımı) çipi
-//   "kontext"  → prompt + Prompt Geliştir (aç/kapa) çipi
-//   "recraft"  → prompt + Vektör modu + Kalite (Standart/HD) çipleri
-//   "vary"     → Nano Banana Pro/2 → Draw çipi + Sınırsız toggle
-type ModelTip = "standart" | "swap" | "flux" | "kontext" | "recraft" | "vary";
-type GorselModel = {
-  ad: string;
-  ozet: string;
-  rozet?: "Yeni" | "Sınırsız";
-  grup?: "one" | "tum"; // "one" = Öne çıkan modeller, "tum" = Tüm modeller
-  tip?: ModelTip;
-  kredi?: number; // temel kredi (adetle çarpılır)
-  cizim?: boolean; // Draw çipi göster
-  // ── Higgsfield birebir: modele göre composer çipleri (higg-gorsel-model analizi) ──
-  cozunurluk?: boolean; // Çözünürlük çipi (2K/1K) göster
-  kaliteSeviye?: string[]; // Çözünürlük yerine kalite seviyesi çipi (örn ["Düşük","Orta","Yüksek"])
-  sinirsizToggle?: boolean; // "Sınırsız" (Unlimited) toggle göster
-  adetGizli?: boolean; // Adet stepper'ı gizle (Face/Character Swap, WAN)
-  soul?: boolean; // Higgsfield Soul: + Karakter kartı göster
-  varsayilanOran?: string; // Model açılınca varsayılan oran (1:1 / 3:4 / Auto)
-};
-const GORSEL_MODELLER: GorselModel[] = [
-  // ── Öne çıkan modeller ── (Higgsfield birebir composer davranışı)
-  { ad: "Vayra Ruh 2.0", ozet: "Yeni nesil ultra-gerçekçi moda görselleri", grup: "one", kredi: 2, soul: true, cozunurluk: true, varsayilanOran: "3:4" },
-  { ad: "Vayra Ruh Sinema", ozet: "Sinema kalitesinde görsel üretimi", grup: "one", kredi: 3, soul: true, cozunurluk: true, varsayilanOran: "3:4" },
-  { ad: "GPT Image 2", ozet: "Neredeyse kusursuz metinle 4K görsel", rozet: "Yeni", grup: "one", kredi: 7, kaliteSeviye: ["Düşük", "Orta", "Yüksek"], varsayilanOran: "1:1" },
-  { ad: "Seedream 5.0 Pro", ozet: "Akıllı görsel akıl yürütmeyle tutarlı görseller", rozet: "Yeni", grup: "one", kredi: 3, cozunurluk: true, varsayilanOran: "3:4" },
-  { ad: "Seedream 5.0 lite", ozet: "Akıllı görsel akıl yürütme", rozet: "Sınırsız", grup: "one", kredi: 2, cozunurluk: true, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "Seedream 4.5", ozet: "ByteDance'in yeni nesil 4K görsel modeli", rozet: "Sınırsız", grup: "one", kredi: 2, cozunurluk: true, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "Nano Banana Pro", ozet: "Google'ın amiral gemisi üretim modeli", grup: "one", tip: "vary", cizim: true, kredi: 4, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "Nano Banana 2", ozet: "Flash hızında Pro kalite", grup: "one", tip: "vary", cizim: true, kredi: 3, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "Nano Banana 2 Lite", ozet: "Hızlı, hafif görsel üretimi", rozet: "Yeni", grup: "one", tip: "vary", cizim: true, kredi: 2, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "Recraft V4.1", ozet: "Fotogerçekçi ve etkileyici görsel üretimi", rozet: "Yeni", grup: "one", tip: "recraft", kredi: 1.25, kaliteSeviye: ["Standart", "HD"], varsayilanOran: "1:1" },
-  // ── Tüm modeller ──
-  { ad: "Auto", ozet: "Her prompt için en iyi model, senin yerine seçilir", grup: "tum", kredi: 2, cozunurluk: true, varsayilanOran: "1:1" },
-  { ad: "Nano Banana", ozet: "Google'ın standart üretim modeli", rozet: "Sınırsız", grup: "tum", tip: "vary", cizim: true, kredi: 1, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "Vayra Ruh", ozet: "Ultra-gerçekçi moda görselleri", grup: "tum", kredi: 2, soul: true, cozunurluk: true, varsayilanOran: "3:4" },
-  { ad: "Vayra Yüz Değiştir", ozet: "Kusursuz yüz değiştirme", grup: "tum", tip: "swap", kredi: 2, adetGizli: true, varsayilanOran: "3:4" },
-  { ad: "Vayra Karakter Değiştir", ozet: "Kusursuz karakter değiştirme", grup: "tum", tip: "swap", kredi: 2, adetGizli: true, varsayilanOran: "3:4" },
-  { ad: "Seedream 4.0", ozet: "ByteDance'in gelişmiş görsel düzenleme modeli", grup: "tum", kredi: 1, kaliteSeviye: ["Temel", "Pro"], varsayilanOran: "3:4" },
-  { ad: "GPT Image 1.5", ozet: "Gerçek-renk hassas render", grup: "tum", kredi: 2, kaliteSeviye: ["Düşük", "Orta", "Yüksek"], varsayilanOran: "1:1" },
-  { ad: "Grok Imagine", ozet: "xAI'nin çok yönlü görsel stilleri", grup: "tum", kredi: 1, kaliteSeviye: ["Standart", "Yüksek"], cozunurluk: true, varsayilanOran: "Auto" },
-  { ad: "Recraft V4.1 Utility", ozet: "Düz, eşit ışıkla sade sahneler", rozet: "Yeni", grup: "tum", tip: "recraft", kredi: 1.25, kaliteSeviye: ["Standart", "HD"], varsayilanOran: "1:1" },
-  { ad: "Z-Image", ozet: "Anında gerçekçi portreler", grup: "tum", kredi: 0.15, varsayilanOran: "3:4" },
-  { ad: "Kling O1", ozet: "Kling'in fotogerçekçi görsel modeli", rozet: "Sınırsız", grup: "tum", kredi: 0.5, cozunurluk: true, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "FLUX.2 Pro", ozet: "Hız için optimize detay", rozet: "Sınırsız", grup: "tum", kredi: 1, cozunurluk: true, sinirsizToggle: true, varsayilanOran: "3:4" },
-  { ad: "FLUX.2 Flex", ozet: "Yeni nesil görsel üretimi", grup: "tum", tip: "flux", kredi: 3, cozunurluk: true, varsayilanOran: "3:4" },
-  { ad: "FLUX.2 Max", ozet: "En üst hassasiyet ve hız", grup: "tum", kredi: 4, cozunurluk: true, varsayilanOran: "3:4" },
-  { ad: "Flux Kontext Max", ozet: "Hassasiyetle düzenle", grup: "tum", tip: "kontext", kredi: 1.5, varsayilanOran: "3:4" },
-  { ad: "GPT Image", ozet: "Çok yönlü metinden görsele AI", rozet: "Sınırsız", grup: "tum", kredi: 2, kaliteSeviye: ["Düşük", "Orta", "Yüksek"], sinirsizToggle: true, varsayilanOran: "1:1" },
-  { ad: "Çoklu Referans", ozet: "Tek seferde çoklu düzenleme", rozet: "Sınırsız", grup: "tum", tip: "kontext", kredi: 1.5, varsayilanOran: "3:4" },
-  { ad: "WAN 2.2", ozet: "Yüksek sadakatli sinematik görseller", grup: "tum", tip: "kontext", kredi: 1, adetGizli: true, varsayilanOran: "3:4" },
-];
 // Aktif modelin tanımını getir (composer davranışını buradan sürer).
 function modelBul(ad: string): GorselModel {
   return GORSEL_MODELLER.find((m) => m.ad === ad) ?? GORSEL_MODELLER[0];
 }
 
-// Higgsfield /ai/image en-boy oranları — dikeyden yataya doğru sıralı (Higgsfield birebir),
-// her oranın w/h değeri satırdaki şekil ikonunu gerçek orana göre çizmek için.
-const ORANLAR: { deger: string; w: number; h: number; sinematik?: boolean }[] = [
-  { deger: "9:16", w: 9, h: 16 },
-  { deger: "3:4", w: 3, h: 4 },
-  { deger: "2:3", w: 2, h: 3 },
-  { deger: "1:1", w: 1, h: 1 },
-  { deger: "4:3", w: 4, h: 3 },
-  { deger: "3:2", w: 3, h: 2 },
-  { deger: "16:9", w: 16, h: 9, sinematik: true },
-  { deger: "21:9", w: 21, h: 9, sinematik: true },
-];
 
 // Oran şekil ikonu — Higgsfield gibi, gerçek en-boy oranını yansıtan çerçeve.
 function OranIkon({ w, h, className }: { w: number; h: number; className?: string }) {
@@ -223,49 +128,20 @@ function OranIkon({ w, h, className }: { w: number; h: number; className?: strin
   );
 }
 
-/* ── Varlık görüntüleyici (lightbox) araç paneli ──────────────────────
-   Higgsfield /ai/image asset viewer'ın araç rayı + drill-down alt panelleri. */
-type AracId =
-  | "renk" | "upscale" | "iyilestirici" | "isik" | "inpaint" | "acilar" | "reframe" | "arkaplan";
-
-// Higgsfield "EDIT IMAGE" araçları birebir: 6 araç, hepsi drill-down alt-panel açar.
-const ARACLAR: { id: AracId; ad: string; ikon: typeof RefreshCw; rozet?: string }[] = [
-  { id: "renk", ad: "Renk Derecelendirme", ikon: Palette, rozet: "Yeni" },
-  { id: "upscale", ad: "Upscale", ikon: Maximize2 },
-  { id: "iyilestirici", ad: "İyileştirici", ikon: Wand2 },
-  { id: "isik", ad: "Yeniden Işıklandır", ikon: Sun },
-  { id: "inpaint", ad: "İç Boyama", ikon: Scissors },
-  { id: "reframe", ad: "Yeniden Çerçevele", ikon: Crop },
-  { id: "arkaplan", ad: "Arka Planı Kaldır", ikon: Eraser },
-  { id: "acilar", ad: "Açılar", ikon: RotateCcw },
-];
-
-// Renk Derecelendirme presetleri (3×3)
-const RENK_PRESETLERI = [
-  "None", "Doğal", "S&B Film",
-  "Split Tone", "Yumuşak Ten", "Doğa",
-  "Sinematik", "16mm Film", "Eski Lens",
-];
-
-// Akordiyon efekt bölümleri: her biri kendi slider'larıyla
-type EfektBolum = { id: string; ad: string; sliderlar: { ad: string; min: number; max: number; on: number }[] };
-const EFEKT_BOLUMLERI: EfektBolum[] = [
-  { id: "renk-duzelt", ad: "Renk Düzelt", sliderlar: [{ ad: "Sıcaklık", min: -100, max: 100, on: 0 }, { ad: "Ton", min: -100, max: 100, on: 0 }, { ad: "Doygunluk", min: -100, max: 100, on: 0 }] },
-  { id: "detay-yumusat", ad: "Detay Yumuşat", sliderlar: [{ ad: "Miktar", min: 0, max: 100, on: 40 }] },
-  { id: "bloom", ad: "Bloom", sliderlar: [{ ad: "Şiddet", min: 0, max: 100, on: 25 }, { ad: "Eşik", min: 0, max: 100, on: 60 }] },
-  { id: "halation", ad: "Halation", sliderlar: [{ ad: "Miktar", min: 0, max: 100, on: 30 }] },
-  { id: "lens-talimatlari", ad: "Lens Talimatları", sliderlar: [{ ad: "Bozulma", min: -100, max: 100, on: 0 }, { ad: "Vinyet", min: 0, max: 100, on: 20 }] },
-  { id: "pozlama", ad: "Pozlama", sliderlar: [{ ad: "Pozlama", min: -100, max: 100, on: 0 }, { ad: "Kontrast", min: -100, max: 100, on: 0 }] },
-  { id: "film-grain", ad: "Film Grain", sliderlar: [{ ad: "Miktar", min: 0, max: 100, on: 15 }, { ad: "Boyut", min: 0, max: 100, on: 50 }] },
-];
-
-// Upscale modelleri
-const UPSCALE_MODELLERI = [
-  { ad: "Topaz", ozet: "Genel amaçlı varsayılan model" },
-  { ad: "Vayra Upscale", ozet: "Yüksek kaliteli detay yeniden yapılandırma" },
-  { ad: "Nano", ozet: "Hızlı, düşük kredili büyütme" },
-];
-const UPSCALE_OLCEK = ["x1", "x2", "x4", "x8", "x16"];
+/** Komut kutusunun büyük çipi: solda yuvarlak simge, üstte etiket, altta değer (popover'ı çağıran yönetir). */
+function BCip({ ikon, etiket, deger, acik, onClick, vurgu, ok = true }: {
+  ikon: React.ReactNode; etiket: string; deger: React.ReactNode; acik: boolean; onClick: () => void; vurgu?: boolean; ok?: boolean;
+}) {
+  return (
+    <button onClick={onClick} aria-expanded={ok ? acik : undefined} title={etiket}
+      className={cn("flex h-12 shrink-0 items-center gap-2.5 rounded-full pl-1.5 text-[13.5px] ring-1 ring-inset transition-[color,background-color,transform] active:scale-[0.97]", ok ? "pr-3" : "pr-4",
+        acik ? "bg-white/[0.12] text-metin ring-white/20" : vurgu ? "bg-white/[0.12] text-metin ring-white/20 hover:bg-white/[0.15]" : "bg-white/[0.08] text-metin ring-transparent hover:bg-white/[0.13]")}>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.1] text-white/85">{ikon}</span>
+      <span className="flex max-w-[180px] flex-col items-start leading-tight"><span className="text-[11px] text-white/55">{etiket}</span><span className="max-w-full truncate whitespace-nowrap font-medium">{deger}</span></span>
+      {ok && <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-metin-3 transition-transform", acik && "rotate-180")} />}
+    </button>
+  );
+}
 
 // Görsel ızgarası — gerçek stok görsellerinden justified feed (SSR güvenli, deterministik)
 // Ana galeri feed — GERÇEK AI-üretimi çeşitli görseller (Nano Banana ile üretildi).
@@ -274,6 +150,45 @@ const GALERI_KATEGORILERI = ["portre", "urun", "sinematik", "soyut", "manzara", 
 const TUM_GORSELLER = GALERI_KATEGORILERI.flatMap((kat) =>
   Array.from({ length: 12 }, (_, i) => `/gercek/galeri/${kat}${i + 1}.webp`),
 );
+
+/** Stüdyo model adı → sınırsız erişim teklifinin model kimliği (yoksa null: bu model için sınırsız paket satılmıyor). */
+function sinirsizKimligi(ad: string): string | null {
+  const a = ad.toLowerCase();
+  if (/nano banana pro/.test(a)) return "nano-banana-pro";
+  if (/gpt image 2/.test(a)) return "gpt-image-2";
+  if (/seedream 5/.test(a)) return "seedream-5";
+  if (/flux\.?2/.test(a)) return "flux-2";
+  return null;
+}
+
+/** "Bugün", "Dün" ya da tarih — üretim ızgarasında gün grupları. */
+function gunEtiketi(t: number) {
+  const g = new Date(t);
+  const bugun = new Date();
+  const dun = new Date(Date.now() - 86_400_000);
+  if (g.toDateString() === bugun.toDateString()) return "Bugün";
+  if (g.toDateString() === dun.toDateString()) return "Dün";
+  return g.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: g.getFullYear() === bugun.getFullYear() ? undefined : "numeric" });
+}
+
+/** Kredi gösterimi: tam sayıysa olduğu gibi, değilse en fazla 2 ondalık. */
+const krediYaz = (k: number) => (Number.isInteger(k) ? String(k) : k.toFixed(2).replace(/\.?0+$/, "").replace(".", ","));
+
+/** Hızlı başlangıç — boş sayfada istemi, oranı ve önerilen modeli tek tıkla doldurur. */
+const HIZLI_BASLANGIC: { baslik: string; etiket: string; gorsel: string; istem: string; oran: string; model: string }[] = [
+  { baslik: "Ürün fotoğrafı", etiket: "E-ticaret", gorsel: "/gercek/galeri/urun1.webp", oran: "1:1", model: "Nano Banana Pro",
+    istem: "Mermer bir yüzeyde duran amber renkli parfüm şişesi, yumuşak stüdyo ışığı, sığ alan derinliği, premium reklam fotoğrafı" },
+  { baslik: "Editoryal portre", etiket: "Moda", gorsel: "/gercek/galeri/portre1.webp", oran: "3:4", model: "Vayra Ruh 2.0",
+    istem: "Koyu arka plan önünde dramatik makyajlı bir model, yüksek yakalı siyah kıyafet, sert yan ışık, moda dergisi kapağı" },
+  { baslik: "Sinematik sahne", etiket: "Film", gorsel: "/gercek/galeri/sinematik1.webp", oran: "16:9", model: "Vayra Ruh Sinema",
+    istem: "Yağmurlu bir gecede neon ışıklı sokakta yürüyen yalnız bir figür, ıslak zeminde yansımalar, 35mm film karesi" },
+  { baslik: "Manzara", etiket: "Doğa", gorsel: "/gercek/galeri/manzara1.webp", oran: "16:9", model: "Seedream 5.0 Pro",
+    istem: "Gün doğumunda sisli dağların ardından yükselen güneş, durgun göl yüzeyinde yansıma, geniş açı, ultra detaylı" },
+  { baslik: "3D karakter", etiket: "İllüstrasyon", gorsel: "/gercek/galeri/3d1.webp", oran: "1:1", model: "GPT Image 2",
+    istem: "Pastel renklerde sevimli küçük bir robot, yumuşak 3D render, stüdyo ışığı, sade açık arka plan" },
+  { baslik: "Soyut afiş", etiket: "Tasarım", gorsel: "/gercek/galeri/soyut1.webp", oran: "2:3", model: "Recraft V4.1",
+    istem: "Akışkan mermer desenli soyut kompozisyon, canlı mor ve turkuaz tonlar, üstte 'VAYRA' yazısı, modern afiş" },
+];
 
 /* GÖMÜLÜ MOD ayrıntıları: @/components/studyo/tipler
    (2026-08-02) — /panel/projeler/[id] "Tüm varlıklar" sekmesi bu
@@ -299,11 +214,12 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   // useMemo: selector'da .filter yeni referans üretip sonsuz döngü yaratır (bilinen bug).
   const tumUretimler = useProjeler((s) => s.uretimler);
   const silUretim = useProjeler((s) => s.sil);
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
+  const tumYorumlar = useYorumlar((s) => s.yorumlar);
   const guncelle = useProjeler((s) => s.guncelle);
-  // Kart menüsündeki "Klasöre ekle" için gerçek koleksiyon store'u.
-  const koleksiyonlar = useKoleksiyon((s) => s.koleksiyonlar);
-  const koleksiyonOlustur = useKoleksiyon((s) => s.olustur);
-  const koleksiyonaEkle = useKoleksiyon((s) => s.uretimEkle);
+  // "Klasöre ekle": Kitaplık'taki projelerle aynı liste (tek klasör sistemi).
+  const projeKayitlari = useProje((s) => s.projeler);
+  const [topluKlasorAcik, setTopluKlasorAcik] = useState(false);
   // Çoklu seçim (Higgsfield birebir: sol-üst kutu → seçim toolbar'ı)
   const secililer = useSecim((s) => s.secililer);
   const secimToggle = useSecim((s) => s.toggle);
@@ -312,10 +228,71 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   // Sayfadan ayrılınca seçimi temizle (seçim geçici UI durumu).
   useEffect(() => () => secimTemizle(), [secimTemizle]);
   const gorselUretimleri = useMemo(
-    () => tumUretimler.filter((u) => u.tur === "gorsel" && (u.durum === "tamam" || u.durum === "isleniyor" || u.durum === "kuyrukta" || u.durum === "hata")),
+    // Tanıtım (seed_) kayıtları kullanıcının üretimi değildir; "Üretimlerim"de gösterilmez.
+    () => tumUretimler.filter((u) => u.tur === "gorsel" && !u.id.startsWith("seed_") && (u.durum === "tamam" || u.durum === "isleniyor" || u.durum === "kuyrukta" || u.durum === "hata")),
     [tumUretimler],
   );
-  const [prompt, setPrompt] = useState("iMac, Apple klavye, Magic Mouse");
+  const [prompt, setPrompt] = useState("");
+  useIstemParametresi(setPrompt);
+  // Keşfet'teki üretim kutusundan gelen ?prompt= varsa composer'a aktar.
+  useEffect(() => {
+    const gelen = new URLSearchParams(window.location.search).get("prompt");
+    if (gelen) setPrompt(gelen);
+  }, []);
+  // Akış sekmesi: kendi üretimlerin | ilham (örnek görseller). Üretimin varsa "benim" ile açılır.
+  const [akis, setAkis] = useState<"benim" | "ilham">("ilham");
+  const akisSecildi = useRef(false);
+  useEffect(() => {
+    if (akisSecildi.current) return;
+    akisSecildi.current = true;
+    if (gorselUretimleri.length) setAkis("benim");
+  }, [gorselUretimleri.length]);
+  // Akış süzgeçleri (yalnız "Üretimlerim"): istem/model araması, favoriler, model, demo gizle.
+  const [akisAra, setAkisAra] = useState("");
+  const [akisFavori, setAkisFavori] = useState(false);
+  const [akisModel, setAkisModel] = useState<string | null>(null);
+  const [demoGizle, setDemoGizle] = useState(false);
+  const [akisModelAcik, setAkisModelAcik] = useState(false);
+  const suzgecAktif = !!akisAra.trim() || akisFavori || !!akisModel || demoGizle;
+  const suzulmus = useMemo(() => {
+    const q = akisAra.trim().toLocaleLowerCase("tr");
+    return gorselUretimleri.filter((u) =>
+      (!q || `${u.meta?.hamIstem ?? u.prompt} ${u.baslik} ${u.model}`.toLocaleLowerCase("tr").includes(q))
+      && (!akisFavori || u.favori)
+      && (!akisModel || u.model === akisModel)
+      && (!demoGizle || u.gercek !== false));
+  }, [gorselUretimleri, akisAra, akisFavori, akisModel, demoGizle]);
+  const akisModelleri = useMemo(() => [...new Set(gorselUretimleri.map((u) => u.model))], [gorselUretimleri]);
+  const aktifIs = gorselUretimleri.filter((u) => u.durum === "kuyrukta" || u.durum === "isleniyor").length;
+  const [gonderiliyor, setGonderiliyor] = useState(false);
+  const [istemAcik, setIstemAcik] = useState(false);
+  // İstem yardımcısı (Gemini metin): "Geliştir" istemi zenginleştirip İngilizceye çevirir; tercih hatırlanır.
+  const [yardimciHazir, setYardimciHazir] = useState<boolean | null>(null);
+  const [gelistir, setGelistirHam] = useState(true);
+  useEffect(() => {
+    try { const v = localStorage.getItem("vayra-istem-gelistir"); if (v !== null) setGelistirHam(v === "1"); } catch { /* depo yok */ }
+    fetch("/api/istem").then((x) => x.json()).then((j: { hazir?: boolean }) => setYardimciHazir(!!j.hazir)).catch(() => setYardimciHazir(false));
+  }, []);
+  const setGelistir = (v: boolean) => { setGelistirHam(v); try { localStorage.setItem("vayra-istem-gelistir", v ? "1" : "0"); } catch { /* depo yok */ } };
+  const gelistirEtkin = gelistir && yardimciHazir === true;
+  // Görselden istem (Describe): referans ya da seçilen dosyadan 3 öneri.
+  const [tarifler, setTarifler] = useState<string[] | null>(null);
+  const [tarifYukleniyor, setTarifYukleniyor] = useState(false);
+  const tarifDosyaRef = useRef<HTMLInputElement>(null);
+  const tarifEt = async (kaynak: string) => {
+    setTarifYukleniyor(true); setTarifler(null);
+    try {
+      const url = await gorselDepola(kaynak);
+      const j = await fetch("/api/istem", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ islem: "tarif", gorselUrl: url, adet: 3 }) })
+        .then((x) => x.json()) as { ok: boolean; istemler?: string[]; hata?: string };
+      if (!j.ok || !j.istemler?.length) throw new Error(j.hata ?? "Öneri çıkmadı");
+      setTarifler(j.istemler);
+    } catch (e) {
+      toast.error("Görselden istem çıkarılamadı", { description: `${neden(e, "Öneri çıkmadı.")} Başka bir görselle ya da biraz sonra yeniden dene.` });
+    } finally { setTarifYukleniyor(false); }
+  };
+  const [surukleUstunde, setSurukleUstunde] = useState(false);
+  const sinirsizlar = useEkler((s) => s.sinirsizlar);
   const [modelAcik, setModelAcik] = useState(false);
   const [model, setModel] = useState("Seedream 5.0 lite");
   // Soul (Ruh) modeli seçiliyse composer'a Karakter + Moodboard + Renk Transferi panelleri gelir.
@@ -335,30 +312,36 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const modelSec = (ad: string) => {
     setModel(ad);
     const t = modelBul(ad);
-    if (t.varsayilanOran && ORANLAR.some((o) => o.deger === t.varsayilanOran)) setOran(t.varsayilanOran);
+    // Seçili oran yeni modelde varsa korunur; yoksa modelin varsayılanına geçilir.
+    setOran((o) => (t.api.oranlar.includes(o) ? o : t.varsayilanOran && t.api.oranlar.includes(t.varsayilanOran) ? t.varsayilanOran : t.api.oranlar[0] ?? o));
     setKaliteSeviye(t.kaliteSeviye?.[0] ?? "");
   };
   const [karakterModal, setKarakterModal] = useState(false);
   const [seciliKarakter, setSeciliKarakter] = useState<string | null>(null);
-  const [karakterSekme, setKarakterSekme] = useState<"tumu" | "soul" | "soul2" | "sinema">("tumu");
+  const seciliKarakterEl = useElements((st) => st.elementler.find((e) => e.ad === seciliKarakter && e.tur === "karakter"));
   const [moodboardModal, setMoodboardModal] = useState(false);
-  const [seciliMoodboard, setSeciliMoodboard] = useState("Genel");
-  const [moodAra, setMoodAra] = useState("");
+  const [seciliPano, setSeciliPano] = useState<SeciliPano | null>(null);
   const [renkModal, setRenkModal] = useState(false);
-  const [seciliRenk, setSeciliRenk] = useState<string | null>(null);
+  const [seciliPalet, setSeciliPalet] = useState<SeciliPalet | null>(null);
+  // Gelişmiş: tohum, kaçınılacaklar, şeffaf arka plan (modelin desteklediği gerçek parametreler).
+  const [gelismisAcik, setGelismisAcik] = useState(false);
+  const [tohum, setTohum] = useState("");
+  const [negatif, setNegatif] = useState("");
+  const [seffaf, setSeffaf] = useState(false);
   // ── Modele özel composer durumları ──
   const [swapKaynak, setSwapKaynak] = useState<string | null>(null); // Your Photo (kaynak yüz/karakter)
   const [swapHedef, setSwapHedef] = useState<string | null>(null);   // Target Image (hedef görsel)
   const swapKaynakRef = useRef<HTMLInputElement>(null);
   const swapHedefRef = useRef<HTMLInputElement>(null);
   const [vektorMod, setVektorMod] = useState(false);        // Recraft: Vektör (SVG) modu
-  const [kaliteMod, setKaliteMod] = useState<"Standart" | "HD">("Standart"); // Recraft kalite
-  const [promptGelistir, setPromptGelistir] = useState(true); // Kontext: Prompt geliştir aç/kapa
-  const [cfg, setCfg] = useState(5);                        // FLUX: Prompt Gücü (CFG)
-  const [kaliteAdim, setKaliteAdim] = useState(30);         // FLUX: Kalite Adımları
+  const [kaliteMod, setKaliteMod] = useState<"Standart" | "Pro">("Standart"); // Recraft: Standart / Pro uç noktası
+  const [cfg, setCfg] = useState(3.5);                      // FLUX.2 Flex: guidance_scale (1.5–10)
+  const [kaliteAdim, setKaliteAdim] = useState(28);         // FLUX.2 Flex: num_inference_steps (2–50)
   const [fluxAyarAcik, setFluxAyarAcik] = useState(false);  // FLUX ayar popover
   const [cizimModal, setCizimModal] = useState(false);      // Draw → çizim modalı
-  const [cizimSekme, setCizimSekme] = useState<"sketch" | "draw" | "edit">("edit");
+  const [cizimSekme, setCizimSekme] = useState<"sketch" | "edit">("edit");
+  const [cizimArka, setCizimArka] = useState<string | null>(null); // "Çizerek düzenle": üstüne çizilen görsel
+  const cizimArkaRef = useRef<HTMLInputElement>(null);
   const [cizimModelAcik, setCizimModelAcik] = useState(false);  // çizim modalı model dropdown'u
   const cizimCanvasRef = useRef<CizimCanvasRef | null>(null);   // GERÇEK çizim tuvali ref'i
   // Nav mega-panelinden ?model=… ile gelindiğinde o modeli seçili başlat (Higgsfield birebir).
@@ -372,12 +355,29 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     const bulunan = GORSEL_MODELLER.find((m) => norm(m.ad) === hedef || norm(m.ad).includes(hedef) || hedef.includes(norm(m.ad)));
     if (bulunan) setModel(bulunan.ad);
   }, [aramaParam]);
+  // ?pano=<id> | hazir:<id> — Ruh panosu sayfasından "Görsel stüdyosunda kullan". Pano stil referansı
+  // Ruh modellerinde gider; seçili model Ruh değilse Vayra Ruh 2.0'a geçilir.
+  useEffect(() => {
+    const p = aramaParam.get("pano");
+    if (!p) return;
+    const h = p.startsWith("hazir:") ? HAZIR_PANOLAR_TAM.find((x) => x.id === p.slice(6)) : undefined;
+    const k = h ? null : usePanolar.getState().panolar.find((x) => x.id === p);
+    const sec = h ? { ad: h.ad, gorseller: h.gorseller } : k ? { ad: k.ad, gorseller: k.gorseller, kullanici: true, tarif: k.tarif, kacin: k.kacin, guc: k.guc, renkler: k.paletGonder ? k.renkler : undefined } : null;
+    if (!sec) return;
+    setSeciliPano(sec);
+    if (!GORSEL_MODELLER.find((m) => m.ad === model)?.soul) setModel("Vayra Ruh 2.0");
+    toast.success(`“${sec.ad}” panosu seçildi`, { description: "Üretimlerinde ışık, renk ve doku olarak uygulanır." });
+  }, [aramaParam]); // eslint-disable-line react-hooks/exhaustive-deps
   const [modelAra, setModelAra] = useState("");
   const [oran, setOran] = useState("1:1");
   const [oranAcik, setOranAcik] = useState(false);
-  const [cozunurluk, setCozunurluk] = useState("4K");
+  const [cozunurlukSecim, setCozunurluk] = useState("2K");
   const [cozunurlukAcik, setCozunurlukAcik] = useState(false);
-  const COZUNURLUKLER = ["1K", "2K", "4K"];
+  // Modelin gerçekten desteklediği kademeler; seçim desteklenmiyorsa en yakın kademe kullanılır.
+  const COZUNURLUKLER = aktifModelTanim.api.cozunurluklar;
+  const cozunurluk = COZUNURLUKLER.includes(cozunurlukSecim) ? cozunurlukSecim
+    : COZUNURLUKLER.find((c) => c === "2K") ?? COZUNURLUKLER[COZUNURLUKLER.length - 1] ?? cozunurlukSecim;
+  const modelOranlari = ORANLAR.filter((o) => aktifModelTanim.api.oranlar.includes(o.deger));
   const [adet, setAdet] = useState(1);
   const [mobilModelAcik, setMobilModelAcik] = useState(false);
   const [elementSeciciAcik, setElementSeciciAcik] = useState(false);
@@ -392,23 +392,23 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
 
   // ── Varlık görüntüleyici (lightbox) ──
   const [seciliKart, setSeciliKart] = useState<string | null>(null); // görsel URL | null
-  const [aktifArac, setAktifArac] = useState<AracId | null>(null);
-  const [lbSekme, setLbSekme] = useState<"info" | "araclar" | "yorumlar">("info"); // Higgsfield: Info/Tools/Comments
   const [yorum, setYorum] = useState("");
-  // Renk derecelendirme durumu
-  const [preset, setPreset] = useState("None");
-  const [efektAcik, setEfektAcik] = useState<Record<string, boolean>>({});
-  const [efektGenis, setEfektGenis] = useState<string | null>("renk-duzelt");
-  // Upscale durumu
-  const [upModel, setUpModel] = useState("Topaz");
-  const [upModelAcik, setUpModelAcik] = useState(false);
-  const [upOlcek, setUpOlcek] = useState("x2");
-  const [upGelismis, setUpGelismis] = useState(false);
-  const [upKeskinlik, setUpKeskinlik] = useState(30);
-  const [upDenoise, setUpDenoise] = useState(20);
-  const [upYuz, setUpYuz] = useState(false);
   // Referans görsel (composer + butonuyla yüklenir; üretimde prompt'a not düşer)
-  const [referanslar, setReferanslar] = useState<{ ad: string; url: string }[]>([]);
+  const [referanslar, setReferanslar] = useState<{ ad: string; url: string; rol?: RefRol; depo?: string }[]>([]);
+  const [rolMenu, setRolMenu] = useState<number | null>(null);
+  // Referansın üzerine gelince büyük önizleme (element çipiyle aynı davranış).
+  const [refHover, setRefHover] = useState<{ i: number; r: DOMRect } | null>(null);
+  // Stil ön ayarı (gerçek örnek kapaklı): sağlayıcıya "Visual style" yönergesi olarak gider.
+  const [stilId, setStilId] = useState<string | null>(null);
+  const [stilAcik, setStilAcik] = useState(false);
+  const seciliStil = stilBul(stilId);
+  // Birden çok modelle karşılaştır: aynı istem seçilen her modelde ayrı üretilir (en fazla 4).
+  const [cokluModel, setCokluModel] = useState<string[]>([]);
+  const karsilastir = cokluModel.length > 0;
+  // Son kullanılan modeller (model menüsünün başında).
+  const [sonModeller, setSonModeller] = useState<string[]>([]);
+  useEffect(() => { try { const v = JSON.parse(localStorage.getItem("vayra-gorsel-son-model") || "[]"); if (Array.isArray(v)) setSonModeller(v.slice(0, 4)); } catch { /* depo yok */ } }, []);
+  const sonModelYaz = (adlar: string[]) => setSonModeller((v) => { const y = [...adlar, ...v.filter((x) => !adlar.includes(x))].slice(0, 4); try { localStorage.setItem("vayra-gorsel-son-model", JSON.stringify(y)); } catch { /* depo yok */ } return y; });
   // m54: stok galeriden gizlenen görseller (kullanıcı "Sil" der demez galeriden çıkar).
   const [gizliStok, setGizliStok] = useState<string[]>([]);
   const [medyaOnizle, setMedyaOnizle] = useState<string | null>(null); // referans tam-ekran önizleme (madde 11)
@@ -421,20 +421,41 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     const ta = promptRef.current;
     const baslaY = e.clientY;
     const baslaH = ta ? ta.getBoundingClientRect().height : (promptYuk ?? 48);
-    const tasi = (ev: PointerEvent) => setPromptYuk(Math.max(48, Math.min(340, baslaH + (baslaY - ev.clientY))));
-    const birak = () => { window.removeEventListener("pointermove", tasi); window.removeEventListener("pointerup", birak); };
+    /* Sürüklerken React durumu GÜNCELLENMEZ (her harekette 2400 satırlık bileşen yeniden
+       çiziliyor, kasıyordu): yükseklik karede bir doğrudan textarea'ya yazılır, bırakınca kaydedilir. */
+    let son = baslaH, kare = 0;
+    if (ta) { ta.style.overflowY = "auto"; ta.style.transition = "none"; }
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+    const tasi = (ev: PointerEvent) => {
+      son = Math.max(48, Math.min(340, baslaH + (baslaY - ev.clientY)));
+      if (kare) return;
+      kare = requestAnimationFrame(() => { kare = 0; if (ta) ta.style.height = `${son}px`; });
+    };
+    const birak = () => {
+      window.removeEventListener("pointermove", tasi); window.removeEventListener("pointerup", birak); window.removeEventListener("pointercancel", birak);
+      if (kare) cancelAnimationFrame(kare);
+      document.body.style.cursor = ""; document.body.style.userSelect = "";
+      if (ta) ta.style.height = `${son}px`;
+      setPromptYuk(Math.round(son));
+    };
     window.addEventListener("pointermove", tasi);
     window.addEventListener("pointerup", birak);
+    window.addEventListener("pointercancel", birak);
   };
   const medyaRef = useRef<HTMLInputElement>(null);
+  /** Composer'ın tutabileceği referans sayısı; modele giden kısım modelin kendi sınırıdır (refMax). */
+  const REF_UST = 14;
   const referansYukle = (dosyalar: FileList | null) => {
     if (!dosyalar?.length) return;
-    Array.from(dosyalar).slice(0, 4).forEach((d) => {
+    const gorseller = Array.from(dosyalar).filter((d) => d.type.startsWith("image/"));
+    if (!gorseller.length) return void mesaj.desteklenmeyenDosya("PNG, JPG ya da WebP");
+    gorseller.slice(0, REF_UST).forEach((d) => {
       const okuyucu = new FileReader();
-      okuyucu.onload = () => setReferanslar((v) => [...v, { ad: d.name, url: String(okuyucu.result) }].slice(0, 4));
+      okuyucu.onload = () => setReferanslar((v) => [...v, { ad: d.name, url: String(okuyucu.result) }].slice(0, REF_UST));
       okuyucu.readAsDataURL(d);
     });
-    toast.success("Referans eklendi 🖼", { description: "Üretimde bu görsel(ler) referans alınacak" });
+    toast.success(gorseller.length > 1 ? `${Math.min(gorseller.length, REF_UST)} referans eklendi` : "Referans eklendi", { description: "Sonraki üretim bu görselleri referans alacak." });
   };
 
   // Swap modelleri için tek görsel yükleyici (kaynak/hedef kutuları).
@@ -453,12 +474,10 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   // gorselUrl CSS gradient/url() olabilir → saltUrl ile ham görsel adresini çıkar (boş kutu bug fix).
   const referansEkle = (ham: string) => {
     const url = saltUrl(ham) ?? ham;
-    if (!/^(data:|https?:|\/)/.test(url)) { toast.error("Bu görsel referans olarak eklenemedi"); return; }
-    setReferanslar((v) => {
-      if (v.some((r) => r.url === url)) { toast("Bu görsel zaten referansta"); return v; }
-      return [...v, { ad: "Üretilen görsel", url }].slice(0, 4);
-    });
-    toast.success("Referans olarak eklendi 🖼", { description: "Sonraki üretim bu görseli referans alacak." });
+    if (!/^(data:|https?:|\/)/.test(url)) { toast.error("Referans eklenemedi", { description: "Bu görselin dosyası yok, yalnız örnek önizleme. Gerçek bir görsel seç." }); return; }
+    if (referanslar.some((r) => r.url === url)) { toast.info("Bu görsel zaten referansta"); return; }
+    setReferanslar((v) => (v.some((r) => r.url === url) ? v : [...v, { ad: "Üretilen görsel", url }].slice(0, REF_UST)));
+    toast.success("Referans eklendi", { description: "Sonraki üretim bu görseli referans alacak." });
   };
 
   // m7/m13: referans köprüsünü dinle — UretimDetay "Referans" dediğinde (aynı sayfa
@@ -471,13 +490,13 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     if (refIstek.url && /^(data:|https?:|\/)/.test(refIstek.url)) {
       setReferanslar((v) => {
         if (v.some((r) => r.url === refIstek.url)) return v;
-        return [...v, { ad: refIstek.baslik || "Referans", url: refIstek.url }].slice(0, 4);
+        return [...v, { ad: refIstek.baslik || "Referans", url: refIstek.url }].slice(0, REF_UST);
       });
-      toast.success("Referans olarak eklendi 🖼", { description: "Sonraki üretim bu görseli referans alacak." });
+      toast.success("Referans eklendi", { description: "Sonraki üretim bu görseli referans alacak." });
     } else if (refIstek.prompt) {
       // görsel yoksa prompt'u composer'a taşı
       setPrompt((p) => (p ? p : refIstek.prompt));
-      toast.success("Referans prompt eklendi", { description: refIstek.baslik });
+      toast.success("Referans istem eklendi", refIstek.baslik ? { description: `“${refIstek.baslik}” isteme yazıldı.` } : undefined);
     }
     refTuket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -502,7 +521,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
         for (const r of ayarIstek.referanslar!) {
           if (!yeni.some((x) => x.url === r.url)) yeni.push(r);
         }
-        return yeni.slice(0, 4);
+        return yeni.slice(0, REF_UST);
       });
     }
     ayarTuket();
@@ -511,16 +530,15 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
 
   /* Kart menüsü "Klasöre ekle" alt-menüsü için GERÇEK klasör listesi (madde 1).
      Adet bilgisi kullanıcıya hangi klasörün dolu olduğunu gösterir. */
-  const klasorListesi = useMemo(
-    () => koleksiyonlar.map((k) => ({ id: k.id, ad: k.ad, adet: k.uretimIdler.length })),
-    [koleksiyonlar],
-  );
-  /** Bir üretimi/stok görseli seçilen klasöre ekler. */
-  const klasoreEkle = (klasorId: string, uretimId: string) => {
-    koleksiyonaEkle(klasorId, uretimId);
-    const k = koleksiyonlar.find((x) => x.id === klasorId);
-    toast.success("Klasöre eklendi", { description: k?.ad });
-  };
+  const klasorListesi = useMemo(() => {
+    const tum = useProjeler.getState().uretimler;
+    return projeKayitlari.filter((p) => !p.klasor)
+      .map((p) => { const set = new Set(p.uretimIdler); return { id: p.id, ad: p.ad, adet: tum.filter((u) => u.projeId === p.id || set.has(u.id)).length, g: p.guncelleme ?? 0 }; })
+      .sort((a, b) => b.g - a.g)
+      .map(({ id, ad, adet }) => ({ id, ad, adet }));
+  }, [projeKayitlari]);
+  /** Üretimleri seçilen klasöre (Kitaplık projesine) ekler. */
+  const klasoreEkle = (klasorId: string, uretimId: string | string[]) => projeyeTasi(Array.isArray(uretimId) ? uretimId : [uretimId], klasorId);
   /* Yeni klasör — GERÇEK isim sorma ekranı (kullanıcı kararı 2026-07-31).
      Önce "Klasör 3" gibi otomatik ad veriyordu; kullanıcı adı belirleyemiyordu.
      Artık GirdiModal açılır, ad girilir, klasör kurulup varlık içine eklenir. */
@@ -531,9 +549,9 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     const hedef = yeniKlasorIcin;
     setYeniKlasorIcin(null);
     if (!temiz || !hedef) return;
-    const kid = koleksiyonOlustur(temiz);
-    koleksiyonaEkle(kid, hedef);
-    toast.success("Klasör oluşturuldu", { description: `${temiz} — 1 varlık` });
+    const kid = useProje.getState().projeOlustur(temiz, "Genel", { kaynakStudyo: "Görsel" });
+    projeyeTasi(hedef.split(","), kid);
+    toast.success(`${temiz} klasörü oluşturuldu`, { description: "Görsel bu klasöre eklendi." });
   };
 
   /* "Yeniden kullan" — bir ÜRETİMİ composer'a geri yükler (2026-08-02).
@@ -555,8 +573,8 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     const c = u.meta?.cozunurluk as string | undefined;
     if (o) setOran(o);
     if (c) setCozunurluk(c);
-    toast.success("Ayarlar composer'a yüklendi", {
-      description: [u.model, c, o].filter(Boolean).join(" · ") || undefined,
+    toast.success("Ayarlar yüklendi", {
+      description: `${[u.model, c, o].filter(Boolean).join(" · ") || "İstem"} komut kutusuna yazıldı.`,
     });
   };
 
@@ -570,35 +588,35 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
        hamIstem yoksa notları söküp temizleyerek düşeriz. */
     const p = u?.meta?.hamIstem ?? istemTemizle(u?.prompt || acikPrompt);
     if (p) setPrompt(p);
-    if (u?.model) setModel(u.model);
-    if (u?.meta?.oran) setOran(u.meta.oran);
-    if (u?.meta?.cozunurluk) setCozunurluk(u.meta.cozunurluk);
+    const mt = u?.meta;
+    if (u?.model && GORSEL_MODELLER.some((x) => x.ad === u.model)) setModel(u.model);
+    if (mt?.oran) setOran(mt.oran);
+    if (mt?.cozunurluk) setCozunurluk(mt.cozunurluk);
+    if (mt?.kalite) { setKaliteSeviye(mt.kalite); if (mt.kalite === "Pro" || mt.kalite === "Standart") setKaliteMod(mt.kalite); }
+    setNegatif(mt?.negatif ?? "");
+    setTohum(Number.isInteger(mt?.tohum) ? String(mt!.tohum) : "");
+    setSeffaf(!!mt?.seffaf);
+    // Özgün referanslar geri gelir (çıktının kendisi değil — bu "yeniden üret", varyasyon değil).
+    setReferanslar((mt?.referanslar ?? []).slice(0, 14).map((url, i) => ({ ad: `Referans ${i + 1}`, url })));
 
-    // Üretimin kendi görseli sonraki işe referans olur.
-    const refUrl = saltUrl(u?.gorselUrl ?? seciliKart ?? "") ?? "";
-    if (refUrl && /^(data:|https?:|\/)/.test(refUrl)) {
-      setReferanslar((v) => (v.some((r) => r.url === refUrl)
-        ? v
-        : [...v, { ad: u?.baslik || "Referans", url: refUrl }].slice(0, 4)));
-    }
-
-    toast.success("Ayarlar composer'a yüklendi", {
-      description: [u?.model ?? model, u?.meta?.cozunurluk, u?.meta?.oran].filter(Boolean).join(" · ") || undefined,
+    toast.success("Ayarlar yüklendi", {
+      description: `${[u?.model ?? model, u?.meta?.cozunurluk, u?.meta?.oran].filter(Boolean).join(" · ") || "İstem"} komut kutusuna yazıldı.`,
     });
     lightboxKapat();
   };
 
   // "Animate" → görseli video stüdyosuna başlangıç karesi olarak taşı ve yönlendir.
   const animasyonaGec = (url: string) => {
-    if (typeof window !== "undefined") sessionStorage.setItem("vayra-animate-ref", url);
-    toast.success("Video stüdyosuna aktarılıyor 🎬");
+    // Demo üretimlerde adres CSS arka planı biçiminde saklanır; stüdyoya ham görsel adresi gider.
+    if (typeof window !== "undefined") sessionStorage.setItem("vayra-animate-ref", saltUrl(url) ?? url);
+    toast.success("Video stüdyosuna aktarılıyor", { description: "Görsel başlangıç karesi olarak eklenecek." });
     router.push("/panel/video");
   };
 
   // "3D sahne oluştur" → görseli 3D stüdyosuna referans olarak taşı ve yönlendir.
   const sahne3dOlustur = (url: string) => {
-    if (typeof window !== "undefined") sessionStorage.setItem("vayra-3d-ref", url);
-    toast.success("3D sahne oluşturuluyor 🧊", { description: "Görselden 3D model üretiliyor." });
+    if (typeof window !== "undefined") sessionStorage.setItem("vayra-3d-ref", saltUrl(url) ?? url);
+    toast.success("3D stüdyosuna aktarılıyor", { description: "Görsel, Görselden 3D için girdi olarak eklenecek." });
     router.push("/panel/3d");
   };
 
@@ -607,16 +625,13 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const elementEkle = (ad: string) => {
     setPrompt((p) => `${p}${p && !p.endsWith(" ") ? " " : ""}@${ad} `);
     setElementSeciciModal(false);
-    toast.success(`@${ad} eklendi`, { description: "Referans prompt'a bağlandı" });
+    toast.success(`@${ad} eklendi`, { description: "İstemine element olarak bağlandı." });
   };
   // Yeni Element modalı
-  const [elementModal, setElementModal] = useState(false);
-  const [elementAd, setElementAd] = useState("Freya");
-  const [elementAciklama, setElementAciklama] = useState("");
-  const [elementKategori, setElementKategori] = useState("Oto");
-  const [elementKategoriAcik, setElementKategoriAcik] = useState(false);
-  const [elementMedya, setElementMedya] = useState<string | null>(null);
-  const elementMedyaRef = useRef<HTMLInputElement>(null);
+  // Yeni element: ortak düzenleyici (üretimden açılınca görsel + istem ön-dolu gelir).
+  const [elementTohum, setElementTohum] = useState<{ gorsel?: string; aciklama?: string; ad?: string; tur?: "karakter" } | null>(null);
+  const elementModal = elementTohum !== null;
+  const setElementModal = (a: boolean) => setElementTohum(a ? {} : null);
 
   /* Element Stüdyosu'ndan "Kullan" ile gelen element — composer'a ekle.
      Eskiden o buton yalnız sayaç artırıp toast gösteriyordu; kullanıcı
@@ -624,14 +639,70 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
      sayfası sessionStorage'a yazıp buraya yönlendiriyor, burada tüketiliyor. */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const ad = sessionStorage.getItem("vayra-element-kullan");
+    const ad = bekleyenElement("gorsel");
     if (!ad) return;
-    sessionStorage.removeItem("vayra-element-kullan");
     setPrompt((p) => `${p}${p && !p.endsWith(" ") ? " " : ""}@${ad} `);
-    toast.success(`@${ad} eklendi`, { description: "Referans prompt'a bağlandı" });
+    toast.success(`@${ad} eklendi`, { description: "İstemine element olarak bağlandı." });
   }, []);
 
-  const modelListe = GORSEL_MODELLER.filter((m) => m.ad.toLocaleLowerCase("tr").includes(modelAra.toLocaleLowerCase("tr")));
+  // Model → kredi. Önce GORSEL_MODELLER kataloğu (kredi alanı), sonra MODELLER, sonra lite kuralı.
+  const modelKredi = (ad: string): number => {
+    const g = GORSEL_MODELLER.find((x) => x.ad === ad);
+    if (g?.kredi != null) return g.kredi;
+    const m = MODELLER.find((x) => x.ad === ad);
+    if (m) return m.kredi;
+    if (/lite/i.test(ad)) return 1; // Seedream 5.0 lite = 1 kredi (Higgsfield birebir)
+    return 4;
+  };
+
+  // Sağlayıcı bağlantısı: bağlı değilse model "Demo" olarak işaretlenir (kredi düşmez, örnek görsel).
+  const saglayicilar = useSaglayicilar();
+  const modelBagli = (m: GorselModel) => !saglayicilar ? true
+    : m.ad === "Auto" ? ["gemini", "seedream", "openai", "fal"].some((k) => saglayicilar[k]) : !!saglayicilar[m.api.saglayici];
+  const hicSaglayiciYok = !!saglayicilar && !["gemini", "seedream", "openai", "fal"].some((k) => saglayicilar[k]);
+  const modelListe = GORSEL_MODELLER.filter((m) => !m.gizli && m.ad.toLocaleLowerCase("tr").includes(modelAra.toLocaleLowerCase("tr")));
+  // Sınırsız: yalnız bu model için satılan bir paket varsa gösterilir; açılabilmesi için aktif erişim gerekir.
+  const sinirsizKimlik = sinirsizKimligi(model);
+  const sinirsizSatiliyor = !!sinirsizKimlik && SINIRSIZ_TEKLIFLER.some((t) => t.model === sinirsizKimlik);
+  const sinirsizAktif = !!sinirsizKimlik && aktifSinirsizlar(sinirsizlar).some((x) => x.model === sinirsizKimlik);
+  const sinirsizGecerli = sinirsiz && sinirsizAktif;
+  useEffect(() => { if (!sinirsizAktif) setSinirsiz(false); }, [sinirsizAktif]);
+  const sinirsizDegistir = () => {
+    if (!sinirsizAktif) {
+      toast.info(`${model} için sınırsız erişimin yok`, { description: "Sınırsız erişim alırsan bu modelde kredi harcamadan üretirsin. Seçenekler açılıyor." });
+      router.push("/panel/kredi?sekme=sinirsiz");
+      return;
+    }
+    setSinirsiz((v) => !v);
+  };
+  // Son istemler — istem fikirleri menüsü (kendi üretimlerinden, tekrarsız).
+  const sonIstemler = useMemo(() => {
+    const goruldu = new Set<string>();
+    const l: string[] = [];
+    for (const u of gorselUretimleri) {
+      const p = ((u.meta?.hamIstem as string | undefined) ?? "").trim();
+      if (p.length < 3 || goruldu.has(p)) continue;
+      goruldu.add(p); l.push(p);
+      if (l.length >= 6) break;
+    }
+    return l;
+  }, [gorselUretimleri]);
+  const cizimModelTanim = aktifModelTanim;
+  const cizimKredi = !modelBagli(aktifModelTanim) ? 0 : modelKredi(model);
+  const birimKredi = modelKredi(model) * (aktifModelTanim.cozunurluk ? cozunurlukCarpani(cozunurluk) : 1);
+  const demoModu = !modelBagli(aktifModelTanim);
+  /** Bir modelin seçili ayarlarla görsel başına bedeli (karşılaştırmada her model ayrı hesaplanır). */
+  const modelBirim = (ad: string) => {
+    const t = modelBul(ad);
+    if (!modelBagli(t)) return 0;
+    if (ad === model) return sinirsizGecerli ? 0 : birimKredi;
+    const c = t.api.cozunurluklar.includes(cozunurluk) ? cozunurluk : t.api.cozunurluklar.find((x) => x === "2K") ?? t.api.cozunurluklar[t.api.cozunurluklar.length - 1];
+    return modelKredi(ad) * (t.cozunurluk && c ? cozunurlukCarpani(c) : 1);
+  };
+  const toplamKredi = karsilastir
+    ? cokluModel.reduce((t, ad) => t + modelBirim(ad) * (modelBul(ad).adetGizli ? 1 : adet), 0)
+    : sinirsizGecerli || demoModu ? 0 : birimKredi * (aktifModelTanim.adetGizli ? 1 : adet);
+  const karsilastirAday = (m: GorselModel) => m.tip !== "swap" && !m.api.refZorunlu && m.ad !== "Auto";
 
   // Lightbox/modal açıkken arka plan sayfası SABİT kalır (madde 10).
   useScrollKilit(seciliKart !== null || elementModal || medyaOnizle !== null || karakterModal || moodboardModal || renkModal || cizimModal);
@@ -643,7 +714,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     else if (karakterModal) setKarakterModal(false);
     else if (medyaOnizle !== null) setMedyaOnizle(null);
     else if (elementModal) setElementModal(false);
-    else if (seciliKart !== null) setSeciliKart(null);
+    // Görüntüleyici Esc'yi kendisi yönetir (önce açık aracı, sonra kendini kapatır).
   });
   // Escape: açık composer dropdown'larını da kapat (Higgsfield birebir).
   useEscKapat(modelAcik || oranAcik || cozunurlukAcik, () => {
@@ -651,44 +722,13 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   });
 
   // Lightbox aç
-  const lightboxAc = (url: string) => { setSeciliKart(url); setAktifArac(null); setLbSekme("info"); };
-  const lightboxKapat = () => { setSeciliKart(null); setAktifArac(null); };
-  const lbImgRef = useRef<HTMLImageElement>(null);
+  const lightboxAc = (url: string) => { setSeciliKart(url); };
+  const lightboxKapat = () => { setSeciliKart(null); };
 
-  // ── Soul hero'ları (Karakter / Ruh panosu / Renk transferi): gerçek dosya yükleme + üretim ──
-  const soulRef = useRef<HTMLInputElement>(null);
-  const soulTuru = useRef<"karakter" | "moodboard" | "renk">("karakter");
-  const soulAc = (tur: "karakter" | "moodboard" | "renk") => { soulTuru.current = tur; soulRef.current?.click(); };
-  const soulYukle = (dosyalar: FileList | null) => {
-    const tur = soulTuru.current;
-    if (!dosyalar?.length) return;
-    const okuyucu = new FileReader();
-    okuyucu.onload = () => {
-      const url = String(okuyucu.result);
-      if (tur === "karakter") {
-        const sonuc = uretimBaslat({ baslik: "Karakter eğitimi", tur: "gorsel", model: "Ruh Karakter", prompt: "Yüklenen fotoğraflardan karakter eğitiliyor", kredi: 5, arac: "Karakter", projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
-        if (!sonuc.ok) return uretimHataToast(sonuc, "Karakter oluşturulamadı");
-        toast.success("Karakterin eğitiliyor 📸", { description: "Fotoğraflarından tutarlı karakter üretiliyor · 5 kredi" });
-        setKarakterModal(false);
-      } else if (tur === "moodboard") {
-        const sonuc = uretimBaslat({ baslik: "Ruh panosu", tur: "gorsel", model: "Ruh Panosu", prompt: "Referanslardan ruh panosu üretiliyor", kredi: 2, arac: "Moodboard", projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
-        if (!sonuc.ok) return uretimHataToast(sonuc, "Pano oluşturulamadı");
-        setSeciliMoodboard("Özel pano");
-        setReferanslar((v) => [...v, { ad: "Ruh panosu", url }].slice(0, 4));
-        toast.success("Ruh panosu oluşturuluyor ✦", { description: "Referanslarından özel pano üretiliyor · 2 kredi" });
-        setMoodboardModal(false);
-      } else {
-        const sonuc = uretimBaslat({ baslik: "Renk transferi", tur: "gorsel", model: "Vayra Hex", prompt: "Referans görselden renk paleti çıkarılıyor", kredi: 1, arac: "Renk Transferi", projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
-        if (!sonuc.ok) return uretimHataToast(sonuc, "Palet çıkarılamadı");
-        setReferanslar((v) => [...v, { ad: "Renk referansı", url }].slice(0, 4));
-        toast.success("Renk paleti çıkarılıyor ✦", { description: "Yüklediğin görselden palet üretiliyor · 1 kredi" });
-        setRenkModal(false);
-      }
-    };
-    okuyucu.readAsDataURL(dosyalar[0]);
-  };
   // seciliKart'ın TUM_GORSELLER içindeki konumu (ileri/geri navigasyon için). Üretilen/harici görselde -1.
-  const lbIndex = seciliKart ? TUM_GORSELLER.indexOf(seciliKart) : -1;
+  const kendiUrller = useMemo(() => gorselUretimleri.filter((u) => u.durum === "tamam" && u.gorselUrl).map((u) => u.gorselUrl!), [gorselUretimleri]);
+  const gezListe = seciliKart && kendiUrller.includes(seciliKart) ? kendiUrller : TUM_GORSELLER.filter((u, i) => !gizliStok.includes(u + i));
+  const lbIndex = seciliKart ? gezListe.indexOf(seciliKart) : -1;
 
   /* Açık görselin KENDİ kayıtlı üretimi.
      Lightbox'a eskiden composer'ın CANLI `prompt` state'i veriliyordu; bu
@@ -717,7 +757,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const gorselAdi = useMemo(() => {
     if (acikUretim?.baslik) return acikUretim.baslik;
     if (seciliKart && stokAdlari[seciliKart]) return stokAdlari[seciliKart];
-    return "İsimsiz görsel";
+    return acikUretim ? "İsimsiz görsel" : "Örnek görsel";
   }, [acikUretim, seciliKart, stokAdlari]);
   const adKaydet = () => {
     const yeni = adTaslak.trim();
@@ -725,112 +765,101 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     if (!yeni || yeni === gorselAdi) return;
     if (acikUretim) guncelle(acikUretim.id, { baslik: yeni });
     else if (seciliKart) setStokAdlari((v) => ({ ...v, [seciliKart]: yeni }));
-    toast.success("Ad güncellendi", { description: `${yeni}.png olarak inecek` });
+    toast.success("Ad değiştirildi", { description: `${yeni}.png olarak inecek.` });
+  };
+
+  const adDegistir = (yeni: string) => {
+    if (acikUretim) guncelle(acikUretim.id, { baslik: yeni });
+    else if (seciliKart) setStokAdlari((v) => ({ ...v, [seciliKart]: yeni }));
+    toast.success("Ad değiştirildi", { description: `${yeni}.png olarak inecek.` });
+  };
+  /** Görüntüleyicideki yapay zekâ araçları: kaynak görsel + seçilen ayarlarla yeni üretim. */
+  const aracCalistir = (i: AracIstegi, dis?: { url: string; u?: Uretim }): boolean => {
+    const ham = dis?.url ?? seciliKart;
+    if (!ham) return false;
+    const kaynakUretim = dis ? dis.u : acikUretim;
+    const kaynak = saltUrl(ham) ?? ham;
+    const kaynakId = kaynakUretim?.id;
+    const oranHedef = i.oran ?? (kaynakUretim?.meta?.oran as string | undefined);
+    // Kaynak görsel ve maske sağlayıcıya GİDER (eskiden yalnız metin gidiyordu → ilgisiz yeni görsel).
+    void (async () => {
+      let maskeUrl: string | undefined;
+      let kaynakUrl = kaynak;
+      try {
+        if (kaynak.startsWith("data:")) kaynakUrl = await gorselDepola(kaynak);
+        if (i.maske) maskeUrl = await gorselDepola(i.maske);
+      } catch (e) {
+        return void toast.error(`${i.arac} başlatılamadı`, { description: `${neden(e, "Görsel yüklenemedi.")} Yeniden dene.` });
+      }
+      const sonuc = uretimBaslat({
+        // Hiç görsel sağlayıcısı bağlı değilse araç demo çalışır ve kredi almaz.
+        baslik: i.baslik, tur: "gorsel", model: i.arac, prompt: i.not, kredi: hicSaglayiciYok ? 0 : i.kredi, arac: i.arac,
+        projeId: aktifProjeId ?? undefined,
+        meta: { islem: i.islem, oran: oranHedef, gorselUrl: kaynakUrl, ...(maskeUrl ? { maskeUrl } : {}), ...(i.zemin ? { zemin: i.zemin } : {}), hamIstem: i.not, kaynakId },
+      });
+      if (!sonuc.ok) uretimHataToast(sonuc, `${i.arac} başlatılamadı`);
+    })();
+    lightboxKapat();
+    setAkis("benim");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast.success(`${i.arac} başladı`, { description: `${hicSaglayiciYok ? "Kredi düşmez" : `${i.kredi} kredi`}. Sonuç Üretimlerim'in en üstünde görünecek.` });
+    return true;
+  };
+  /** Kart üstü varyasyon: görüntüleyicideki Varyasyon aracıyla aynı talimat. */
+  const varyasyonUret = (url: string, u: Uretim | undefined, guc: "hafif" | "guclu") => {
+    aracCalistir({
+      islem: "duzenle", arac: "Varyasyon", baslik: `Varyasyon · ${guc === "hafif" ? "hafif" : "güçlü"}`, kredi: 2,
+      not: guc === "hafif"
+        ? "Bu görselin hafif bir varyasyonunu üret: kompozisyonu, özneyi, stili ve ışığı koru; yalnız küçük ayrıntıları (ifade, kumaş kıvrımı, arka plandaki küçük öğeler) değiştir."
+        : "Bu görselin güçlü bir varyasyonunu üret: aynı özneyi ve stili koru, ama kompozisyonu, pozu, kamera açısını ve kadrajı belirgin biçimde değiştir.",
+    }, { url, u });
+  };
+  const buyutAc = (url: string, id?: string) => router.push(upscaleAdresi(saltUrl(url) ?? url, id));
+  /** Renk ayarı tarayıcıda uygulanır: sonuç yeni bir görsel olarak eklenir, kredi düşmez. */
+  const projeEkle = useProjeler((s) => s.ekle);
+  const yerelKaydet = (dataUrl: string, baslik: string) => {
+    const kaynakId = acikUretim?.id;
+    try {
+      projeEkle({
+        baslik, tur: "gorsel", model: "Renk ayarı", prompt: baslik, durum: "tamam", ilerleme: 100, kredi: 0, arac: "Renk ayarı",
+        gorselUrl: dataUrl, gercek: true, projeId: aktifProjeId ?? undefined,
+        meta: { oran: acikUretim?.meta?.oran as string | undefined, hamIstem: (acikUretim?.meta?.hamIstem as string | undefined) ?? undefined, kaynakId },
+      });
+    } catch {
+      toast.error("Görsel kaydedilemedi", { description: "Tarayıcı depolama alanı dolu olabilir. Görseli indirip saklayabilirsin." });
+      return;
+    }
+    setAkis("benim");
+    setSeciliKart(dataUrl);
+    toast.success("Renk ayarlı görsel kaydedildi", { description: "Üretimlerim'e eklendi. Kredi düşmedi." });
   };
 
   // Önceki/sonraki üretime geç (Higgsfield birebir sağ/sol ok).
   const lightboxGez = (yon: 1 | -1) => {
     if (lbIndex < 0) return;
     const yeni = lbIndex + yon;
-    if (yeni < 0 || yeni >= TUM_GORSELLER.length) return;
-    setSeciliKart(TUM_GORSELLER[yeni]);
-    setAktifArac(null);
+    if (yeni < 0 || yeni >= gezListe.length) return;
+    setSeciliKart(gezListe[yeni]);
   };
-  // Görselin KENDİSİNİ tarayıcı tam ekranına al (o modal ekranı değil).
-  const tamEkranAc = () => {
-    const el = lbImgRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) { document.exitFullscreen?.(); return; }
-    (el.requestFullscreen?.() ?? Promise.reject()).catch(() => toast.error("Tam ekran açılamadı."));
-  };
-
-  // Araç rayı tıklaması → ya alt panel aç ya da doğrudan aksiyon
-  // Higgsfield birebir: tüm "EDIT IMAGE" araçları drill-down alt-panel açar.
-  const aracTikla = (id: AracId) => { setAktifArac(id); };
-  // İyileştir / Işık / Açılar için basit üretim eylemi (alt panelde "Uygula" ile tetiklenir).
-  const aracUygula = (ad: string, kredi: number, ek: string) => {
-    const sonuc = uretimBaslat({ baslik: ad, tur: "gorsel", model: ad, prompt: (prompt || "görsel") + " · " + ek, kredi, arac: ad, projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
-    if (!sonuc.ok) return uretimHataToast(sonuc, "İşlenemedi");
-    toast.success(`${ad} başladı ✦`, { description: `${ek} · ${kredi} kredi` });
-    setAktifArac(null);
-  };
-
-  const efektUygula = () => {
-    const etiket = preset === "None" ? "Özel ayarlar" : preset;
-    const sonuc = uretimBaslat({ baslik: `Renk · ${etiket}`, tur: "gorsel", model: "Renk Derecelendirme", prompt: (prompt || "görsel") + " · renk: " + etiket, kredi: 1, arac: "Renk", projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
-    if (!sonuc.ok) return uretimHataToast(sonuc, "Efekt uygulanamadı");
-    toast.success("Efekt uygulanıyor ✦", { description: `${etiket} · 1 kredi` });
-    setAktifArac(null);
-  };
-  const upscaleUygula = () => {
-    const sonuc = uretimBaslat({ baslik: `Upscale ${upOlcek}`, tur: "gorsel", model: upModel, prompt: (prompt || "görsel") + ` · upscale ${upOlcek}`, kredi: 2, arac: "Upscale", projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
-    if (!sonuc.ok) return uretimHataToast(sonuc, "Büyütülemedi");
-    toast.success(`${upModel} ile ${upOlcek} büyütülüyor ✦`, { description: "Upscale · 2 kredi" });
-    setAktifArac(null);
-  };
-  const elementOlustur = () => {
-    if (elementAd.trim().length < 1) return toast.error("Element adı gir.");
-    const turHarita: Record<string, ElementTur> = { Karakter: "karakter", Nesne: "obje", Stil: "stil", Sahne: "mekan", Oto: "karakter" };
-    const ad = elementAd.trim().replace(/\s+/g, "");
-    elementEkleStore({
-      ad, tur: turHarita[elementKategori] ?? "karakter",
-      aciklama: elementAciklama.trim() || `${elementKategori} elementi`,
-      tohum: "el-" + ad.toLowerCase(),
-      // m7: modaldaki (ön-yüklenen veya seçilen) medya elemente eklensin.
-      gorseller: elementMedya ? [elementMedya] : [],
-    });
-    toast.success(`"@${ad}" elementi oluşturuldu`, { description: "Artık istemlerde @ ile çağırabilirsin." });
-    setElementModal(false);
-    setElementAd("Freya"); setElementAciklama(""); setElementKategori("Oto"); setElementMedya(null);
-  };
-
-  /* m7: "Element oluştur" — artık anında element YARATMAZ. Yeni Element modalını
-     seçilen görseli MEDYA olarak ön-yükleyip açar (higgs birebir). Kullanıcı adı/
-     kategoriyi görüp onaylar; kayıt modaldeki "Oluştur" ile yapılır. */
+  /** "Element oluştur" (üretim kartı/menü): ortak düzenleyiciyi görsel ve istemle ön-dolu açar. */
   const elementModalAc = (gorsel?: string | null, istem?: string) => {
-    const g = gorsel ? (saltUrl(gorsel) ?? gorsel) : null;
-    setElementMedya(g && /^(data:|https?:|\/)/.test(g) ? g : null);
-    setElementAd((istem || "").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 14) || "Element");
-    setElementAciklama((istem || "").slice(0, 80));
-    setElementKategori("Oto");
-    setElementModal(true);
-  };
-
-  /* Menüdeki "Element oluştur" — modal açmadan GERÇEK element yazar (useElements).
-     Görsel varsa elementin görsellerine eklenir; ad çakışırsa sonuna sayı gelir. */
-  const elementOlusturHizli = (istem: string, mdl: string, gorsel?: string | null) => {
-    const kaynak = (istem || "Element").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 12) || "Element";
-    let ad = kaynak;
-    let n = 2;
-    while (elementListe.some((e) => e.ad.toLocaleLowerCase("tr") === ad.toLocaleLowerCase("tr"))) {
-      ad = `${kaynak}${n++}`;
-    }
-    elementEkleStore({
-      ad,
-      tur: "karakter",
-      aciklama: (istem || "Görselden oluşturuldu").slice(0, 60),
-      tohum: (istem || "element") + mdl,
-      gorseller: gorsel ? [gorsel] : [],
+    const g = gorsel ? (saltUrl(gorsel) ?? gorsel) : undefined;
+    setElementTohum({
+      gorsel: g && /^(data:image|https?:|\/)/.test(g) ? g : undefined,
+      aciklama: (istem || "").slice(0, 300),
+      ad: (istem || "").replace(/[^\p{L}\p{N}]/gu, "").slice(0, 14) || undefined,
     });
-    toast.success(`"@${ad}" elementi oluşturuldu`, { description: "Artık istemlerde @ ile çağırabilirsin." });
   };
 
-  // Model → kredi. Önce GORSEL_MODELLER kataloğu (kredi alanı), sonra MODELLER, sonra lite kuralı.
-  const modelKredi = (ad: string): number => {
-    const g = GORSEL_MODELLER.find((x) => x.ad === ad);
-    if (g?.kredi != null) return g.kredi;
-    const m = MODELLER.find((x) => x.ad === ad);
-    if (m) return m.kredi;
-    if (/lite/i.test(ad)) return 1; // Seedream 5.0 lite = 1 kredi (Higgsfield birebir)
-    return 4;
-  };
-
-  const uret = () => {
+  const uret = async () => {
     // Swap modelleri: prompt yerine iki görsel gerekir (Higgsfield birebir doğrulama).
     if (swapMu) {
-      if (!swapKaynak) return toast.error(yuzMu ? "Kaynak yüzü yükle." : "Kaynak karakteri yükle.", { description: "Sol kutuya eklemek istediğin görseli yükle." });
-      if (!swapHedef) return toast.error("Hedef görseli yükle.", { description: "Sağ kutuya değiştirilecek görseli yükle." });
-      const birim = modelKredi(model);
+      if (!swapKaynak) return toast.error(yuzMu ? "Kaynak yüz eksik" : "Kaynak karakter eksik", { description: "Sol kutuya eklemek istediğin görseli yükle." });
+      if (!swapHedef) return toast.error("Hedef görsel eksik", { description: "Sağ kutuya değiştirilecek görseli yükle." });
+      const birim = demoModu ? 0 : modelKredi(model);
+      let kaynakUrl: string, hedefUrl: string;
+      try { [kaynakUrl, hedefUrl] = await Promise.all([gorselDepola(swapKaynak), gorselDepola(swapHedef)]); }
+      catch (e) { return toast.error("Görsel yüklenemedi", { description: `${neden(e, "Sunucuya ulaşılamadı.")} Bağlantını kontrol edip yeniden dene.` }); }
       const sonuc = uretimBaslat({
         baslik: `${yuzMu ? "Yüz" : "Karakter"} değiştirme`,
         tur: "gorsel",
@@ -838,14 +867,14 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
         prompt: `${yuzMu ? "Yüz" : "Karakter"} değiştirme · kaynak → hedef`,
         kredi: birim,
         projeId: aktifProjeId ?? undefined,
-        meta: { oran, cozunurluk },
+        meta: { islem: yuzMu ? "swap-yuz" : "swap-karakter", referanslar: [kaynakUrl, hedefUrl], gorselUrl: hedefUrl },
       });
       if (!sonuc.ok) return uretimHataToast(sonuc);
-      toast.success(`${yuzMu ? "Yüz" : "Karakter"} değiştiriliyor ✦`, { description: `${model} · ${oran}` });
+      toast.success(`${yuzMu ? "Yüz" : "Karakter"} değiştirme başladı`, { description: `${model} · ${oran}. Sonuç Üretimlerim'de görünecek.` });
       return;
     }
 
-    if (prompt.trim().length < 2) return toast.error("Bir istem yaz.", { description: "Ne üretmek istediğini birkaç kelimeyle anlat." });
+    if (prompt.trim().length < 2) return toast.error("İstem eksik", { description: "Ne üretmek istediğini birkaç kelimeyle anlat." });
 
     // İçerik moderasyonu — üretimden ÖNCE. Engellenirse kredi HİÇ düşmez.
     const denetim = icerikDenetle(prompt);
@@ -854,40 +883,85 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
       return;
     }
 
-    const birim = modelKredi(model);
-    const toplam = sinirsiz ? birim : birim * adet;
-    // Yüklenen referanslar prompt'a not olarak eklenir (görsel-güdümlü üretim).
-    const referansNot = referanslar.length ? ` · ${referanslar.length} referans görsele sadık kal` : "";
-    // Ruh (Soul) modeli seçimleri prompt'a işlenir (moodboard/karakter/renk paleti).
-    const soulNot = soulMu
-      ? `${seciliMoodboard !== "Genel" ? ` · ${seciliMoodboard} ruh panosu` : ""}${seciliKarakter ? ` · @${seciliKarakter} karakteri` : ""}${seciliRenk ? ` · ${seciliRenk} renk paleti` : ""}`
-      : "";
-    // Modele özel notlar (Recraft vektör/kalite, Kontext prompt-geliştir, FLUX CFG/adım, kalite seviyesi).
-    const modelNot = [
-      modelTip === "recraft" && vektorMod ? " · vektör (SVG)" : "",
-      modelTip === "recraft" ? ` · ${kaliteMod}` : "",
-      modelTip === "kontext" && promptGelistir ? " · prompt geliştirildi" : "",
-      modelTip === "flux" ? ` · CFG ${cfg} · ${kaliteAdim} adım` : "",
-      seciliRenk && modelTip === "recraft" ? ` · ${seciliRenk} paleti` : "",
-      kaliteSecenek && aktifKalite ? ` · ${aktifKalite} kalite` : "",
-      aktifModelTanim.cozunurluk ? ` · ${cozunurluk}` : "",
-    ].join("");
+    if (gonderiliyor) return;
+    // Demo (sağlayıcı bağlı değil) kredi almaz.
+    const birim = sinirsizGecerli || demoModu ? 0 : birimKredi;
+    const kac = aktifModelTanim.adetGizli ? 1 : adet;
+    const api = aktifModelTanim.api;
+    if (api.refZorunlu && !referanslar.length) return toast.error(`${model} için görsel gerekli`, { description: "Düzenlenecek görseli + ile ekle ya da sürükle." });
+    // Seçili karakter istemde @ad olarak geçer: element çözümleyici fotoğraflarını referans olarak gönderir.
+    const istemSon = seciliKarakter && soulMu && !new RegExp(`@${seciliKarakter}(?![\\p{L}\\p{N}_])`, "iu").test(prompt) ? `${prompt.trim()} @${seciliKarakter}` : prompt.trim();
+    const tohumSayi = tohum.trim() ? Number(tohum) : undefined;
 
-    const sonuc = uretimBaslat({
-      baslik: prompt.slice(0, 48),
-      tur: "gorsel",
-      model,
-      prompt: prompt + referansNot + soulNot + modelNot,
-      kredi: toplam,
-      projeId: aktifProjeId ?? undefined,
-      /* hamIstem: kullanıcının YAZDIĞI metin — ayar notları (" · 4K",
-         " · 1 referans görsele sadık kal" …) hariç. "Bu ayarlarla üret"
-         composer'a bunu yazar; aksi halde notlar prompt kutusuna girip her
-         geri yüklemede birikiyordu (kullanıcı: "saçma sapan bir hareket"). */
-      meta: { oran, cozunurluk, hamIstem: prompt },
+    /* Her varyasyon ayrı bir üretimdir: kullanıcı kaç görsel öderse o kadar kart görür.
+       Referans görseller önce sunucu deposuna yazılır; üretim kaydı yalnız adres tutar. */
+    setGonderiliyor(true);
+    let refUrller: string[];
+    try {
+      refUrller = await Promise.all(referanslar.map((x) => x.depo ? Promise.resolve(x.depo) : gorselDepola(x.url)));
+      // Görünen küçük resim yerel kalır (yeniden yüklenip boş görünmesin); depo adresi tekrar yüklememek için saklanır.
+      setReferanslar((v) => v.map((x, k) => ({ ...x, depo: refUrller[k] ?? x.depo })));
+    } catch (e) {
+      setGonderiliyor(false);
+      return toast.error("Referans görsel yüklenemedi", { description: `${neden(e, "Sunucuya ulaşılamadı.")} Yeniden dene.` });
+    }
+    let basarili = 0;
+    let harcanan = 0;
+    const hedefler = karsilastir ? cokluModel : [model];
+    const grupId = `g_${Date.now().toString(36)}`;
+    const roller = referanslar.map((r) => r.rol ?? "genel");
+    dis: for (const hm of hedefler) {
+      const ana = hm === model;
+      const t = modelBul(hm);
+      const ta = t.api;
+      // Karşılaştırmada her model kendi desteklediği en yakın ayarla çalışır.
+      const hOran = ta.oranlar.includes(oran) ? oran : (t.varsayilanOran && ta.oranlar.includes(t.varsayilanOran) ? t.varsayilanOran : ta.oranlar[0] ?? oran);
+      const hCoz = ta.cozunurluklar.includes(cozunurluk) ? cozunurluk : ta.cozunurluklar.find((c) => c === "2K") ?? ta.cozunurluklar[ta.cozunurluklar.length - 1];
+      const hBirim = ana ? birim : !modelBagli(t) ? 0 : modelKredi(hm) * (t.cozunurluk && hCoz ? cozunurlukCarpani(hCoz) : 1);
+      const hKac = t.adetGizli ? 1 : adet;
+      const hKalite = ana ? aktifKalite : t.kaliteSeviye?.[0] ?? "";
+      const refSinir = refUrller.slice(0, ta.refMax || 0);
+      for (let i = 0; i < hKac; i++) {
+        const sonuc = uretimBaslat({
+          baslik: prompt.slice(0, 48),
+          tur: "gorsel",
+          model: hm,
+          prompt: istemSon,
+          kredi: hBirim,
+          projeId: aktifProjeId ?? undefined,
+          meta: {
+            islem: "uret",
+            oran: hOran,
+            ...(ta.cozunurluklar.length && hCoz ? { cozunurluk: hCoz } : {}),
+            ...(hKalite ? { kalite: hKalite } : ana && modelTip === "recraft" ? { kalite: kaliteMod } : {}),
+            hamIstem: prompt,
+            grupId, sira: i,
+            ...(refSinir.length ? { referanslar: refSinir, gorselUrl: refSinir[0], ...(roller.some((r) => r !== "genel") ? { refRolleri: roller.slice(0, refSinir.length) } : {}) } : {}),
+            ...(seciliStil ? { stilAd: seciliStil.ad, stilIstem: seciliStil.istem } : {}),
+            ...(t.soul && seciliPano ? { stilRefler: seciliPano.gorseller.slice(0, 4), pano: seciliPano.ad, ...(seciliPano.guc ? { stilGuc: seciliPano.guc } : {}), ...(seciliPano.tarif ? { stilIstem: [seciliStil?.istem, seciliPano.tarif].filter(Boolean).join(". ") } : {}) } : {}),
+            ...(seciliPalet && (t.soul || t.tip === "recraft") ? { renkler: seciliPalet.renkler, palet: seciliPalet.ad } : {}),
+            ...(negatif.trim() || (t.soul && seciliPano?.kacin) ? { negatif: [negatif.trim(), t.soul ? seciliPano?.kacin : ""].filter(Boolean).join(", ") } : {}),
+            ...(ta.tohum && Number.isInteger(tohumSayi) ? { tohum: tohumSayi! + i } : {}),
+            ...(ta.seffaf && seffaf ? { seffaf: true } : {}),
+            ...(ana && modelTip === "recraft" && vektorMod ? { vektor: true } : {}),
+            ...(ana && modelTip === "flux" ? { yonlendirme: cfg, adim: kaliteAdim } : {}),
+            ...(gelistirEtkin ? { gelistir: true } : {}),
+          },
+        });
+        if (!sonuc.ok) { if (!basarili) uretimHataToast(sonuc); break dis; }
+        basarili++; harcanan += hBirim;
+      }
+    }
+    setTimeout(() => setGonderiliyor(false), 600);
+    if (!basarili) return;
+    sonModelYaz(hedefler);
+    if (!gomulu) {
+      setAkis("benim");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    toast.success(basarili > 1 ? `${basarili} görsel üretiliyor` : "Görsel üretiliyor", {
+      description: `${karsilastir ? `${hedefler.length} model karşılaştırılıyor` : model} · ${oran} · ${sinirsizGecerli && !karsilastir ? "Sınırsız erişim, kredi düşmedi." : harcanan === 0 ? "Kredi düşmedi." : `${krediYaz(harcanan)} kredi.`}`,
     });
-    if (!sonuc.ok) return uretimHataToast(sonuc);
-    toast.success("Görsel üretiliyor ✦", { description: `${model} · ${oran} · ${sinirsiz ? "sınırsız" : `${adet} varyasyon`}` });
   };
 
   // ── Gerçek indirme: data-uri/http ise dosya indir; gradient placeholder ise bilgi ver ──
@@ -900,8 +974,8 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     if (kaynak) {
       const ok = urlIndir(kaynak, `${dosya}.png`);
       if (!sessiz) {
-        if (ok) toast.success("İndiriliyor 📦", { description: `${dosya}.png` });
-        else toast.error("İndirilemedi", { description: "Tarayıcı indirmeyi engelledi." });
+        if (ok) toast.success("Görsel indiriliyor", { description: `${dosya}.png` });
+        else toast.error("Görsel indirilemedi", { description: "Tarayıcı indirmeyi engelledi. İndirme izinlerini kontrol edip yeniden dene." });
       }
       return ok;
     }
@@ -912,8 +986,8 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
       "application/json",
     );
     if (!sessiz) {
-      if (ok) toast.success("Künye indirildi ✓", { description: "Medya dosyası yok — künye JSON olarak kaydedildi" });
-      else toast.error("İndirilemedi");
+      if (ok) toast.success("Künye indirildi", { description: "Bu kartın görsel dosyası yok, bilgileri JSON olarak kaydedildi." });
+      else toast.error("Künye indirilemedi", { description: "Tarayıcı indirmeyi engelledi. İndirme izinlerini kontrol edip yeniden dene." });
     }
     return ok;
   };
@@ -929,10 +1003,10 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
         return gal ? { arka: gal, ad: "vayra-gorsel" } : null;
       })
       .filter(Boolean) as { arka?: string; ad: string }[];
-    if (!hedefler.length) return void toast.error("İndirilecek seçim yok");
+    if (!hedefler.length) return void toast.error("İndirilecek görsel yok", { description: "Önce indirmek istediğin görselleri seç." });
     // Tarayıcı çoklu indirmeyi engellemesin diye aralıklı tetikle.
     hedefler.forEach((h, i) => setTimeout(() => gorseliIndir(h.arka, h.ad, true), i * 320));
-    toast.success(`${hedefler.length} görsel indiriliyor ✓`, { description: "Tarayıcı indirmeleri sırayla başlatıldı" });
+    toast.success(`${hedefler.length} görsel indiriliyor`, { description: "Tarayıcı indirmeleri sırayla başlatır." });
   };
 
   /* Seçimin kaç tanesi GERÇEK üretim kaydı? (kalanlar stok galeri görselleri —
@@ -942,20 +1016,19 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   /* Toplu yayınla — GERÇEK: store'da yayinda:true yapar. */
   const topluYayinla = () => {
     const idler = seciliUretimIdler();
-    if (!idler.length) return void toast.info("Yayınlanacak üretim yok", { description: "Yalnızca kendi üretimlerin toplulukta yayınlanabilir." });
+    if (!idler.length) return void toast.info("Yayınlanacak üretim yok", { description: "Yalnız kendi üretimlerin toplulukta yayınlanabilir." });
     idler.forEach((id) => guncelle(id, { yayinda: true }));
-    toast.success(`${idler.length} üretim toplulukta yayınlandı 🌍`, { description: "Keşfet akışında görünecek." });
+    toast.success(`${idler.length} üretim toplulukta yayınlandı`, { description: "Keşfet akışında görünecek." });
     secimTemizle();
   };
 
-  /* Toplu koleksiyona ekle — GERÇEK: "Görseller" koleksiyonuna yazar. */
-  const topluKoleksiyonaEkle = () => {
+  /* Toplu klasöre ekle: Kitaplık projelerinden seçilir. */
+  const topluKlasoreEkle = (kid: string | null) => {
     const idler = seciliUretimIdler();
-    if (!idler.length) return void toast.info("Eklenecek üretim yok", { description: "Yalnızca kendi üretimlerin koleksiyona eklenebilir." });
-    const mevcut = koleksiyonlar.find((k) => k.ad === "Görseller");
-    const kid = mevcut?.id ?? koleksiyonOlustur("Görseller");
-    idler.forEach((id) => koleksiyonaEkle(kid, id));
-    toast.success(`${idler.length} görsel klasöre eklendi`, { description: "Görseller" });
+    setTopluKlasorAcik(false);
+    if (!idler.length) return void toast.info("Eklenecek üretim yok", { description: "Yalnız kendi üretimlerin klasöre eklenebilir." });
+    if (kid === null) { setYeniKlasorIcin(idler.join(",")); secimTemizle(); return; }
+    klasoreEkle(kid, idler);
     secimTemizle();
   };
 
@@ -963,24 +1036,26 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const topluSil = () => {
     const idler = seciliUretimIdler();
     if (!idler.length) return void toast.info("Silinecek üretim yok", { description: "Stok galeri görselleri silinemiyor." });
+    const silinenler = gorselUretimleri.filter((x) => idler.includes(x.id));
     idler.forEach((id) => silUretim(id));
-    toast.success(`${idler.length} üretim silindi`);
+    mesaj.silindi(`${idler.length} üretim`, () => uretimGeriYukle(silinenler));
     secimTemizle();
   };
 
   // ── Gerçek yeniden-üret: verilen istemle uret akışını tekrar çağır (kredi düşer) ──
   const yenidenUret = (istem?: string) => {
     const kaynak = (istem ?? prompt).trim();
-    if (kaynak.length < 2) return toast.error("Yeniden üretmek için bir istem gerekli.");
+    if (kaynak.length < 2) return toast.error("Yeniden üretilemedi", { description: "Bu görselin istemi yok. Komut kutusuna bir istem yazıp üret." });
     const denetim = icerikDenetle(kaynak);
     if (!denetim.izin) return toast.error(`İçerik engellendi · ${kategoriEtiket(denetim.kategori)}`, { description: denetim.mesaj });
-    const birim = modelKredi(model);
-    const sonuc = uretimBaslat({ baslik: kaynak.slice(0, 48), tur: "gorsel", model, prompt: kaynak, kredi: birim, projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk } });
+    const birim = sinirsizGecerli ? 0 : modelKredi(model);
+    const sonuc = uretimBaslat({ baslik: kaynak.slice(0, 48), tur: "gorsel", model, prompt: kaynak, kredi: birim, projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk, hamIstem: istemTemizle(kaynak) } });
     if (!sonuc.ok) return uretimHataToast(sonuc);
     // Üretim başladı → lightbox'ı kapat, kullanıcı grid'in başında üretilen görseli görsün (madde 9).
     lightboxKapat();
+    setAkis("benim");
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-    toast.success("Yeniden üretiliyor ✦", { description: `${model} · ${oran}` });
+    toast.success("Yeniden üretim başladı", { description: `${model} · ${oran}. Sonuç Üretimlerim'in en üstünde görünecek.` });
   };
 
   // Boyut kaydırıcı → sütun genişliği (Higgsfield birebir: nav altı ince slider)
@@ -991,7 +1066,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
      Referansta `Create Image` ekranı tam ekran bir formdur; masaüstündeki
      galeri + araç panelleri mobilde görünmez. Ortak MobilComposer'ı burada
      mevcut prompt/model/oran/adet state'leriyle bağlıyoruz. */
-  const mobilModeller: SeciciOge[] = GORSEL_MODELLER.map((m) => ({ id: m.ad, ad: m.ad, ozet: m.ozet, rozet: m.rozet }));
+  const mobilModeller: SeciciOge[] = GORSEL_MODELLER.map((m) => ({ id: m.ad, ad: m.ad, ozet: `${m.ozet} · ${modelBagli(m) ? `${krediYaz(m.kredi ?? 2)} kredi` : "kredi düşmez"}`, rozet: m.rozet }));
 
   return (
     <>
@@ -1008,26 +1083,30 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
            - adetGizli modellerde (Yüz/Karakter Değiştir, WAN) adet çipi YOK.
            - sinirsizToggle modellerde "Sınırsız" anahtarı eklenir. */
         const m = modelBul(model);
-        const kaliteSecenek = m.kaliteSeviye ?? (m.cozunurluk ? ["1K", "2K", "4K"] : undefined);
+        // Çözünürlük ve kalite ayrı çiplerdir (ikisini de destekleyen modeller var: GPT Image 2).
+        const cozSecenek = m.cozunurluk && COZUNURLUKLER.length > 1 ? COZUNURLUKLER : undefined;
         return (
           <MobilAltCipler
-            oran={oran} oranSecenek={["1:1", "3:4", "4:3", "2:3", "3:2", "9:16", "16:9", "21:9"]} onOran={setOran}
-            kalite={kaliteSecenek ? cozunurluk : undefined} kaliteSecenek={kaliteSecenek}
-            onKalite={kaliteSecenek ? setCozunurluk : undefined}
-            adet={m.adetGizli ? undefined : String(adet)} adetSecenek={m.adetGizli ? undefined : ["1", "2", "3", "4"]}
+            oran={m.api.oranlar.length ? oran : undefined} oranSecenek={m.api.oranlar.length ? modelOranlari.map((o) => o.deger) : undefined} onOran={setOran}
+            kalite={cozSecenek ? cozunurluk : undefined} kaliteSecenek={cozSecenek}
+            onKalite={cozSecenek ? setCozunurluk : undefined}
+            adet={m.adetGizli ? undefined : String(adet)} adetSecenek={m.adetGizli ? undefined : ["1", "2", "3", "4", "6", "8"]}
             onAdet={m.adetGizli ? undefined : (v) => setAdet(Number(v))}
             ekstra={
               <>
-                {m.sinirsizToggle && (
-                  <button onClick={() => setSinirsiz((v) => !v)}
+                {kaliteSecenek && kaliteSecenek.length > 0 && (
+                  <MobilAltCip tip="kalite" deger={aktifKalite} secenekler={kaliteSecenek} onSec={setKaliteSeviye} baslik="Kalite" />
+                )}
+                {sinirsizSatiliyor && (
+                  <button onClick={sinirsizDegistir}
                     className={cn("flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium transition-colors",
-                      sinirsiz ? "bg-aksan text-zemin" : "bg-[#2a2c2e] text-white")}>
+                      sinirsizGecerli ? "bg-white text-black" : "bg-[#2a2c2e] text-white")}>
                     ∞ Sınırsız
                   </button>
                 )}
                 {/* Renk Transferi — seçiliyse butonun ARKA PLANI seçilen paletten (isim yerine renkler). */}
                 {(m.soul || m.tip === "recraft") && (() => {
-                  const palet = renkPaleti(seciliRenk);
+                  const palet = seciliPalet?.renkler;
                   return (
                     <button onClick={() => setRenkModal(true)}
                       className="relative flex h-9 items-center gap-1.5 overflow-hidden rounded-full px-3 text-[14px] font-medium text-white transition-colors"
@@ -1037,10 +1116,10 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                       {/* Okunurluk için hafif koyu örtü (palet açık renkli olabilir) */}
                       {palet && <span aria-hidden className="absolute inset-0 bg-black/25" />}
                       <span className="relative flex items-center gap-1.5">
-                        <Palette className="h-4 w-4 drop-shadow" />
+                        <Palette className="h-4 w-4" />
                         {palet ? (
                           <span className="flex gap-1">
-                            {palet.map((c) => <span key={c} className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ background: c }} />)}
+                            {palet.map((c, i) => <span key={c + i} className="h-3.5 w-3.5 rounded-full ring-1 ring-white/40" style={{ background: c }} />)}
                           </span>
                         ) : "Renk"}
                       </span>
@@ -1052,26 +1131,18 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                   <>
                     <button onClick={() => setVektorMod((v) => !v)}
                       className={cn("flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium transition-colors",
-                        vektorMod ? "bg-aksan text-zemin" : "bg-[#2a2c2e] text-white")}>
+                        vektorMod ? "bg-white text-black" : "bg-[#2a2c2e] text-white")}>
                       <Layers className="h-4 w-4" /> Vektör
                     </button>
-                    <MobilAltCip tip="kalite" deger={kaliteMod} secenekler={["Standart", "HD"]} onSec={(v) => setKaliteMod(v as "Standart" | "HD")} baslik="KALİTE" />
+                    <MobilAltCip tip="kalite" deger={kaliteMod} secenekler={["Standart", "Pro"]} onSec={(v) => setKaliteMod(v as "Standart" | "Pro")} baslik="Kalite" />
                   </>
-                )}
-                {/* Kontext — Prompt Geliştir aç/kapa */}
-                {m.tip === "kontext" && (
-                  <button onClick={() => setPromptGelistir((v) => !v)}
-                    className={cn("flex h-9 items-center gap-1.5 rounded-full px-3 text-[14px] font-medium transition-colors",
-                      promptGelistir ? "bg-aksan text-zemin" : "bg-[#2a2c2e] text-white")}>
-                    <Wand2 className="h-4 w-4" /> Prompt Geliştir
-                  </button>
                 )}
               </>
             }
           />
         );
       })()}
-      uretButonu={<MobilUretButonu kredi={modelKredi(model) * adet} onTikla={uret} devreDisi={!prompt.trim()} />}
+      uretButonu={<MobilUretButonu kredi={toplamKredi} etiket={karsilastir ? "Karşılaştır" : "Üret"} onTikla={uret} devreDisi={swapMu ? !(swapKaynak && swapHedef) : !prompt.trim()} />}
     >
       {(() => {
         const m = modelBul(model);
@@ -1107,22 +1178,65 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
             {m.soul && (
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setKarakterModal(true)}
-                  className="flex h-[68px] items-center justify-center gap-2 rounded-[12px] bg-yuzey-2 text-[14px] font-medium text-white">
-                  <UserSquare className="h-[18px] w-[18px] text-metin-2" /> Karakter
+                  className={cn("flex h-[68px] items-center justify-center gap-2 rounded-[12px] bg-yuzey-2 px-2 text-[14px] font-medium text-white", seciliKarakter && "ring-2 ring-white")}>
+                  <UserSquare className="h-[18px] w-[18px] shrink-0 text-metin-2" /> <span className="truncate">{seciliKarakter ? `@${seciliKarakter}` : "Karakter"}</span>
                 </button>
                 <button onClick={() => setMoodboardModal(true)}
-                  className="flex h-[68px] items-center justify-center gap-2 rounded-[12px] bg-yuzey-2 text-[14px] font-medium text-white">
-                  <Sparkles className="h-[18px] w-[18px] text-metin-2" /> Moodboard
+                  className={cn("flex h-[68px] items-center justify-center gap-2 rounded-[12px] bg-yuzey-2 px-2 text-[14px] font-medium text-white", seciliPano && "ring-2 ring-white")}>
+                  <Sparkles className="h-[18px] w-[18px] shrink-0 text-metin-2" /> <span className="truncate">{seciliPano?.ad ?? "Moodboard"}</span>
                 </button>
               </div>
             )}
             <MobilIstemKutusu deger={prompt} onDegis={setPrompt} modelAdi={model} onModelTikla={() => setMobilModelAcik(true)}
               onElementAc={() => setElementSeciciAcik(true)} />
+            {/* Stil ön ayarları: gerçek örnek kapaklı yatay şerit */}
+            <div className="overflow-hidden rounded-[16px] bg-yuzey-2">
+              <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+                <Palette className="h-4 w-4 text-metin-2" /><span className="text-[13px] font-semibold text-white">Stil</span>
+                <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-metin-2">{seciliStil?.ad ?? "Yok"}</span>
+                {seciliStil && <button onClick={() => setStilId(null)} className="ml-auto text-[12.5px] text-metin-2">Kaldır</button>}
+              </div>
+              <div className="flex gap-2 overflow-x-auto p-2 [scrollbar-width:none]">
+                {GORSEL_STILLER.map((x) => (
+                  <button key={x.id} onClick={() => setStilId(stilId === x.id ? null : x.id)} aria-pressed={stilId === x.id} className="w-[68px] shrink-0 text-left">
+                    <span className={cn("relative block h-[84px] overflow-hidden rounded-[12px]", stilId === x.id ? "outline outline-2 -outline-offset-2 outline-white" : "outline outline-1 -outline-offset-1 outline-white/10")}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={x.kapak} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      {stilId === x.id && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-black"><Check className="h-2.5 w-2.5" strokeWidth={3} /></span>}
+                    </span>
+                    <span className={cn("mt-1 block truncate text-[11.5px]", stilId === x.id ? "text-white" : "text-metin-2")}>{x.ad}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {/* Son üretimler — mobilde sonuçlar burada görünür; dokununca kitaplıkta açılır. */}
+            {gorselUretimleri.length > 0 && (
+              <div className="overflow-hidden rounded-[16px] bg-yuzey-2">
+                <div className="flex items-center gap-2 border-b border-white/[0.06] px-3 py-2">
+                  <Images className="h-4 w-4 text-metin-2" /><span className="text-[13px] font-semibold text-white">Son üretimlerin</span>
+                  <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] tabular-nums text-metin-2">{gorselUretimleri.length}</span>
+                  <button onClick={() => router.push("/panel/kitaplik")} className="ml-auto flex h-7 items-center gap-1 rounded-full px-2.5 text-[12.5px] text-metin-2 ring-1 ring-inset ring-white/[0.1]">Tümü<ChevronRight className="h-3.5 w-3.5" /></button>
+                </div>
+                <div className="flex gap-2 overflow-x-auto p-2 [scrollbar-width:none]">
+                  {gorselUretimleri.slice(0, 12).map((u) => {
+                    const calisiyor = u.durum === "kuyrukta" || u.durum === "isleniyor";
+                    const arka = u.gorselUrl ? (/^(data:|https?:|\/)/.test(u.gorselUrl) ? `url("${u.gorselUrl}") center/cover no-repeat` : u.gorselUrl) : "#1c1e20";
+                    return (
+                      <button key={u.id} onClick={() => !calisiyor && router.push(`/panel/kitaplik?u=${u.id}`)} aria-label={calisiyor ? "Üretiliyor" : "Üretimi aç"}
+                        className="relative h-24 w-[72px] shrink-0 overflow-hidden rounded-xl bg-yuzey-2" style={{ background: u.durum === "tamam" ? arka : undefined }}>
+                        {calisiyor && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-[11px] text-white/80"><Loader2 className="h-4 w-4 animate-spin" />{u.durum === "kuyrukta" ? "Sırada" : <GecenSure bas={u.baslama ?? u.olusturma} />}</span>}
+                        {u.durum === "hata" && <span className="absolute inset-0 flex items-center justify-center text-[11px] text-rose-300">Başarısız</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {/* FLUX modelleri: gelişmiş ayarlar (CFG + kalite adımları) */}
             {m.tip === "flux" && (
               <button onClick={() => setFluxAyarAcik(true)}
                 className="flex items-center gap-2 self-start rounded-full bg-[#2a2c2e] px-4 py-2.5 text-[14px] font-medium text-white">
-                ⚙ Gelişmiş · CFG {cfg} · {kaliteAdim} adım
+                <SlidersHorizontal className="h-4 w-4" /> Gelişmiş: CFG {cfg}, {kaliteAdim} adım
               </button>
             )}
             {/* Çizerek düzenleme destekli modeller (Nano Banana / Vary): Çiz butonu */}
@@ -1138,7 +1252,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     </MobilComposerKabuk>
 
     <MobilSecici acik={mobilModelAcik} onKapat={() => setMobilModelAcik(false)}
-      ogeler={mobilModeller} seciliId={model} onSec={(o) => setModel(o.id)} aramaYerTutucu="Model ara…" />
+      ogeler={mobilModeller} seciliId={model} onSec={(o) => modelSec(o.id)} aramaYerTutucu="Model ara…" />
 
     {/* @mention element seçici — seçince prompt'a @ad ekler */}
     <MobilSecici acik={elementSeciciAcik} onKapat={() => setElementSeciciAcik(false)} baslik="Element ekle"
@@ -1151,11 +1265,11 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
       onSifirla={() => { setCfg(5); setKaliteAdim(30); }} onKaydet={() => setFluxAyarAcik(false)}>
       <div>
         <div className="mb-1.5 flex items-center justify-between text-[14px]"><span className="text-white">Prompt Gücü (CFG)</span><span className="text-metin-2">{cfg}</span></div>
-        <input type="range" min={1} max={15} step={0.5} value={cfg} onChange={(e) => setCfg(Number(e.target.value))} className="h-1.5 w-full cursor-pointer accent-aksan" />
+        <input type="range" min={1} max={15} step={0.5} value={cfg} onChange={(e) => setCfg(Number(e.target.value))} className="h-1.5 w-full cursor-pointer accent-white" />
       </div>
       <div>
         <div className="mb-1.5 flex items-center justify-between text-[14px]"><span className="text-white">Kalite Adımları</span><span className="text-metin-2">{kaliteAdim}</span></div>
-        <input type="range" min={10} max={60} step={1} value={kaliteAdim} onChange={(e) => setKaliteAdim(Number(e.target.value))} className="h-1.5 w-full cursor-pointer accent-aksan" />
+        <input type="range" min={10} max={60} step={1} value={kaliteAdim} onChange={(e) => setKaliteAdim(Number(e.target.value))} className="h-1.5 w-full cursor-pointer accent-white" />
       </div>
     </MobilAyarCekmecesi>
     </>
@@ -1163,34 +1277,251 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
 
     {/* Gömülüyken: galeri/boyut kaydırıcı yok, YALNIZ composer dock'u.
         `relative` + min-h kaldırılır ki dock dış düzenin akışına otursun. */}
-    <div className={gomulu ? "relative" : "relative hidden min-h-[calc(100vh-3rem)] sm:block"}>
-      {/* Boyut kaydırıcı — nav'ın hemen altında, sağ tarafta. Mobilde gizli (dokunma ekranı). */}
-      <div className={cn("justify-end px-4 py-2", gomulu ? "hidden" : "hidden sm:flex")}>
-        <input
-          type="range" min={0} max={100} value={boyutGorsel}
-          onChange={(e) => setBoyutGorsel(Number(e.target.value))}
-          onPointerUp={boyutuKomite}
-          onKeyUp={boyutuKomite}
-          onBlur={boyutuKomite}
-          className="h-1 w-40 cursor-pointer appearance-none rounded-full bg-white/12 accent-aksan"
-          aria-label="Küçük resim boyutu"
-        />
-      </div>
+    <div className={gomulu ? "relative" : "relative hidden min-h-[calc(100vh-3rem)] bg-[#0d0e10] sm:block"}>
+      {/* Akış çubuğu: kayan beyaz sekmeler · arama · süzgeç hapları · süren işler · ızgara yoğunluğu */}
+      {!gomulu && (
+        <div className="sticky top-[var(--ust-nav)] z-20 flex h-[60px] items-center gap-2 border-b border-white/[0.08] px-4" style={{ background: "rgba(13,14,16,0.82)", backdropFilter: "blur(14px) saturate(1.25)", WebkitBackdropFilter: "blur(14px) saturate(1.25)" }}>
+          <div role="tablist" aria-label="Görsel akışı" className="isolate flex shrink-0 gap-0.5 rounded-full p-[3px] bg-white/[0.06]">
+            {([["benim", "Üretimlerim", gorselUretimleri.length, Images], ["ilham", "İlham", TUM_GORSELLER.length - gizliStok.length, Lightbulb]] as const).map(([id, ad, n, I]) => (
+              <button key={id} role="tab" aria-selected={akis === id} onClick={() => { setAkis(id); window.scrollTo({ top: 0 }); }}
+                className={cn("relative flex h-9 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-medium transition-colors active:scale-[0.97]", akis === id ? "text-black" : "text-metin-2 hover:text-metin")}>
+                {akis === id && <motion.span layoutId="akisSekme" transition={{ type: "spring", stiffness: 480, damping: 36 }} className="absolute inset-0 -z-10 rounded-full bg-white" />}
+                <I className="h-4 w-4" />{ad}
+                {n > 0 && <span className={cn("rounded-full px-1.5 text-[11px] font-semibold tabular-nums", akis === id ? "bg-black/10" : "bg-white/[0.08]")}>{n}</span>}
+              </button>
+            ))}
+          </div>
 
-      {/* ══ Higgsfield birebir: TEK AKIŞ masonry feed (tarih grubu YOK — madde 1) ══
-          Gerçek görsel oranını koruyan CSS multi-column masonry (madde 14): görseller
-          kendi en-boy oranında, aralarında boşluksuz dizilir. Üretimler en başta. */}
+          <AnimatePresence initial={false}>
+          {akis === "benim" && gorselUretimleri.length > 0 && (
+            <motion.div key="suzgec" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.16 }} className="flex min-w-0 items-center gap-1.5">
+              <label className="group ml-1 flex h-9 w-[230px] items-center gap-2 rounded-full px-3 bg-white/[0.08] ring-1 ring-inset ring-transparent transition-[width,box-shadow,background-color] focus-within:w-[300px] focus-within:bg-white/[0.11] focus-within:ring-white/20 hover:bg-white/[0.11]">
+                <Search className="h-4 w-4 shrink-0 text-metin-3 group-focus-within:text-metin" />
+                <input value={akisAra} onChange={(e) => setAkisAra(e.target.value)} placeholder="İstemde ya da modelde ara" aria-label="Üretimlerde ara"
+                  className="min-w-0 flex-1 bg-transparent text-[13px] text-metin outline-none placeholder:text-metin-2" />
+                {akisAra && <button onClick={() => setAkisAra("")} aria-label="Aramayı temizle" className="flex h-5 w-5 items-center justify-center rounded-full text-metin-3 hover:bg-white/[0.08] hover:text-metin"><X className="h-3 w-3" /></button>}
+              </label>
+              <button onClick={() => setAkisFavori((v) => !v)} aria-pressed={akisFavori}
+                className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium ring-1 ring-inset transition active:scale-[0.97]", akisFavori ? "bg-white text-black ring-white" : "bg-white/[0.08] text-metin-2 ring-transparent hover:bg-white/[0.13] hover:text-metin")}>
+                <Heart className={cn("h-4 w-4", akisFavori && "fill-rose-500 text-rose-500")} />Favoriler
+              </button>
+              <div className="relative shrink-0">
+                <button onClick={() => setAkisModelAcik((v) => !v)} aria-expanded={akisModelAcik}
+                  className={cn("flex h-9 items-center gap-2 rounded-full pl-2.5 pr-3 text-[13px] font-medium ring-1 ring-inset transition active:scale-[0.97]", akisModel ? "bg-white text-black ring-white" : "bg-white/[0.08] text-metin-2 ring-transparent hover:bg-white/[0.13] hover:text-metin")}>
+                  {akisModel ? <ModelLogo ad={akisModel} boyut={16} /> : <LayoutGrid className="h-4 w-4" />}
+                  <span className="max-w-[150px] truncate">{akisModel ?? "Tüm modeller"}</span>
+                  <ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", akisModelAcik && "rotate-180")} />
+                </button>
+                <Yuzen acik={akisModelAcik} onKapat={() => setAkisModelAcik(false)} yerlesim="alt-sol" bosluk={8} etiket="Modele göre süz"
+                  className="max-h-80 w-64 overflow-y-auto rounded-[18px] border border-white/[0.09] bg-[#1b1c1f] p-1.5 [scrollbar-width:thin]">
+                  {[null, ...akisModelleri].map((ad) => {
+                    const sec = akisModel === ad;
+                    return (
+                      <button key={ad ?? "tum"} onClick={() => { setAkisModel(ad); setAkisModelAcik(false); }}
+                        className={cn("flex w-full items-center gap-2.5 rounded-[12px] px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-white/[0.05]", sec && "bg-white/[0.07]")}>
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06]">{ad ? <ModelLogo ad={ad} boyut={15} /> : <LayoutGrid className="h-3.5 w-3.5 text-metin-2" />}</span>
+                        <span className={cn("min-w-0 flex-1 truncate", sec ? "text-metin" : "text-metin-2")}>{ad ?? "Tüm modeller"}</span>
+                        <span className="rounded-full bg-white/[0.06] px-1.5 text-[11px] tabular-nums text-metin-2">{ad ? gorselUretimleri.filter((u) => u.model === ad).length : gorselUretimleri.length}</span>
+                        {sec && <Check className="h-3.5 w-3.5 shrink-0 text-metin" />}
+                      </button>
+                    );
+                  })}
+                </Yuzen>
+              </div>
+              {gorselUretimleri.some((u) => u.gercek === false) && (
+                <button role="switch" aria-checked={demoGizle} onClick={() => setDemoGizle((v) => !v)} title="Sağlayıcı bağlı değilken üretilen örnek görselleri gizle"
+                  className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-[13px] font-medium bg-white/[0.08] text-metin-2 transition hover:bg-white/[0.13] hover:text-metin max-xl:hidden">
+                  <span className={cn("relative h-[18px] w-8 shrink-0 rounded-full transition-colors", demoGizle ? "bg-white" : "bg-white/15")}>
+                    <span className={cn("absolute top-[2px] h-3.5 w-3.5 rounded-full transition-[left,background-color] duration-200", demoGizle ? "left-[16px] bg-black" : "left-[2px] bg-white")} />
+                  </span>
+                  Demoları gizle
+                </button>
+              )}
+              <AnimatePresence>
+                {suzgecAktif && (
+                  <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                    onClick={() => { setAkisAra(""); setAkisFavori(false); setAkisModel(null); setDemoGizle(false); }} aria-label="Süzgeçleri temizle" title="Süzgeçleri temizle"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-metin-2 transition hover:bg-white/[0.06] hover:text-metin active:scale-90">
+                    <RotateCcw className="h-4 w-4" />
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+          </AnimatePresence>
+
+          <div className="ml-auto flex shrink-0 items-center gap-2">
+            <AnimatePresence>
+              {aktifIs > 0 && (
+                <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                  onClick={() => { setAkis("benim"); window.scrollTo({ top: 0, behavior: "smooth" }); }} aria-live="polite"
+                  className="flex h-9 items-center gap-2 rounded-full bg-white/[0.08] px-3.5 text-[13px] font-medium text-metin">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /><span><span className="tabular-nums">{aktifIs}</span> görsel üretiliyor</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
+            {/* Izgara yoğunluğu: 3 adım (büyük · orta · sık) */}
+            <div role="radiogroup" aria-label="Izgara yoğunluğu" className="isolate hidden items-center gap-0.5 rounded-full p-[3px] bg-white/[0.06] sm:flex">
+              {([[85, "Büyük kartlar", 2], [45, "Orta kartlar", 3], [10, "Sık ızgara", 4]] as const).map(([d, ad, n]) => {
+                const sec = Math.abs(boyut - d) < 18;
+                return (
+                  <button key={d} role="radio" aria-checked={sec} aria-label={ad} title={ad} onClick={() => { setBoyutGorsel(d); setBoyut(d); }}
+                    className={cn("relative flex h-8 w-8 items-center justify-center rounded-full transition-colors", sec ? "text-black" : "text-metin-3 hover:text-metin-2")}>
+                    {sec && <motion.span layoutId="izgaraYog" transition={{ type: "spring", stiffness: 480, damping: 36 }} className="absolute inset-0 -z-10 rounded-full bg-white" />}
+                    <span className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
+                      {Array.from({ length: n * n }).map((_, k) => <span key={k} className="rounded-[1.5px] bg-current" style={{ width: 12 / n, height: 12 / n }} />)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Gömülüyken galeri YOK: üretimleri dış sayfa (proje varlıkları) gösterir. */}
-      <div className={gomulu ? "hidden" : "px-1 pb-40"}>
+      <div className={gomulu ? "hidden" : "space-y-3 px-3 pb-[280px] pt-3"}>
         {(() => {
           const sutunSayisi = Math.max(2, Math.round(1400 / sutunGen));
-          return (
-            <div
-              className="[column-fill:balance]"
-              style={{ columnCount: sutunSayisi, columnGap: 4 }}
-            >
-        {/* Gerçek üretimlerin — en başta (Higgsfield canlılık: üretince anında belirir) */}
-        {gorselUretimleri.map((u) => {
+          const KART = "overflow-hidden rounded-[22px]";
+          // İstem kutusuyla aynı cam
+          const YUZ: React.CSSProperties = { background: "rgba(34,35,40,0.8)", backdropFilter: "blur(14px) saturate(1.25)", WebkitBackdropFilter: "blur(14px) saturate(1.25)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px rgba(255,255,255,0.1)" };
+          /** Galeriden komut kutusuna sürükle: referans olarak eklenir. */
+          const surukleBasla = (e: React.DragEvent, url: string) => {
+            const u = saltUrl(url) ?? url;
+            e.dataTransfer.setData("application/x-vayra-gorsel", u);
+            e.dataTransfer.effectAllowed = "copy";
+          };
+          // Hiç üretim yokken: hızlı başlangıç kartı (her iki sekmede de üstte)
+          const baslangic = !gorselUretimleri.length && (
+            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={cn(KART, "mx-auto max-w-[880px]")} style={YUZ}>
+              <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-white/[0.06] ring-1 ring-inset ring-white/[0.08]"><Sparkles className="h-4 w-4" /></span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block text-[15px] font-semibold text-metin">Hızlı başlangıç</span>
+                  <span className="block text-[12.5px] text-metin-2">Bir kart seç; istem, model ve oran komut kutusuna hazır gelir.</span>
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 p-3 sm:grid-cols-6">
+                {HIZLI_BASLANGIC.map((h, i) => (
+                  <motion.button key={h.baslik} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+                    onClick={() => { setPrompt(h.istem); modelSec(h.model); setOran(h.oran); promptRef.current?.focus(); toast.success(`${h.baslik} yüklendi`, { description: `${h.model} · ${h.oran}. İstemi düzenleyip Üret'e bas.` }); }}
+                    className="group relative overflow-hidden rounded-[14px] text-left outline outline-1 -outline-offset-1 outline-white/[0.08] transition active:scale-[0.97] hover:outline-white/30" style={{ aspectRatio: "4 / 5" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={h.gorsel} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+                    <span className="absolute inset-x-2.5 bottom-2.5">
+                      <span className="block text-[11px] text-white/65">{h.etiket}</span>
+                      <span className="block text-[13px] font-semibold leading-tight text-white">{h.baslik}</span>
+                    </span>
+                  </motion.button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 border-t border-white/[0.06] px-4 py-2.5">
+                {([[Pencil, "İstemini yaz"], [ImagePlus, "İstersen referans ekle"], [Sparkles, "Model ve oranı seç, üret"]] as const).map(([I, ad], i) => (
+                  <span key={ad} className="flex h-8 items-center gap-2 rounded-full pl-1 pr-3 text-[12.5px] text-metin-2 ring-1 ring-inset ring-white/[0.08]" style={{ background: "rgba(255,255,255,0.03)" }}>
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/[0.08] text-[11px] font-semibold tabular-nums text-metin">{i + 1}</span><I className="h-3.5 w-3.5" />{ad}
+                  </span>
+                ))}
+              </div>
+            </motion.section>
+          );
+
+          if (akis === "benim") {
+            if (!gorselUretimleri.length) return (
+              <>
+                {baslangic}
+                <div className={cn(KART, "mx-auto flex max-w-[880px] flex-wrap items-center gap-3 px-4 py-3")} style={YUZ}>
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06]"><Images className="h-4 w-4 text-metin-2" /></span>
+                  <span className="min-w-0 flex-1 leading-tight">
+                    <span className="block text-[14px] font-medium text-metin">Henüz görsel üretmedin</span>
+                    <span className="block text-[12.5px] text-metin-2">Ürettiğin her görsel burada, en yenisi en üstte görünür.</span>
+                  </span>
+                  <button onClick={() => setAkis("ilham")} className="flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-medium text-metin ring-1 ring-inset ring-white/[0.12] transition hover:bg-white/[0.06] active:scale-[0.97]">
+                    <Lightbulb className="h-4 w-4" />İlham galerisine bak
+                  </button>
+                </div>
+              </>
+            );
+            if (!suzulmus.length) {
+              // Sonuç yok: hangi süzgeçlerin daralttığını göster, tek tek kaldırılabilsin; aramadan doğrudan üretime geç.
+              const temizle = () => { setAkisAra(""); setAkisFavori(false); setAkisModel(null); setDemoGizle(false); };
+              const cipler: { ad: string; ikon: typeof Search; kaldir: () => void }[] = [
+                ...(akisAra.trim() ? [{ ad: `“${akisAra.trim()}”`, ikon: Search, kaldir: () => setAkisAra("") }] : []),
+                ...(akisFavori ? [{ ad: "Yalnız favoriler", ikon: Heart, kaldir: () => setAkisFavori(false) }] : []),
+                ...(akisModel ? [{ ad: akisModel, ikon: LayoutGrid, kaldir: () => setAkisModel(null) }] : []),
+                ...(demoGizle ? [{ ad: "Demolar gizli", ikon: X, kaldir: () => setDemoGizle(false) }] : []),
+              ];
+              const ornek = gorselUretimleri.map((u) => kapakUrl(u)).filter(Boolean).slice(0, 3) as string[];
+              return (
+                <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className={cn(KART, "mx-auto mt-[6vh] max-w-[520px]")} style={YUZ}>
+                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+                    <Search className="h-4 w-4 text-metin-2" /><span className="text-[14px] font-semibold text-metin">Eşleşen üretim yok</span>
+                    <span className="ml-auto rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] tabular-nums text-metin-2">{gorselUretimleri.length} üretim tarandı</span>
+                  </div>
+                  <div className="flex flex-col items-center px-5 py-6 text-center">
+                    <div className="relative h-[110px] w-[200px]">
+                      {(ornek.length ? ornek : [null, null, null]).map((src, i) => (
+                        <span key={i} className="absolute left-1/2 top-1 h-[100px] w-[78px] overflow-hidden rounded-[14px] bg-white/[0.05] ring-1 ring-white/[0.1]"
+                          style={{ transform: `translateX(-50%) translateX(${(i - 1) * 46}px) rotate(${(i - 1) * 9}deg)`, zIndex: i === 1 ? 2 : 1 }}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          {src && <img src={src} alt="" className="h-full w-full object-cover opacity-45 grayscale" />}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-[13.5px] leading-relaxed text-metin-2">Bu süzgeçlere uyan görsel yok. Bir süzgeci kaldır ya da hepsini temizle.</p>
+                    {cipler.length > 0 && (
+                      <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+                        {cipler.map((c) => (
+                          <button key={c.ad} onClick={c.kaldir} title="Bu süzgeci kaldır"
+                            className="group flex h-8 max-w-[240px] items-center gap-1.5 rounded-full bg-white/[0.05] pl-2.5 pr-1.5 text-[12.5px] font-medium text-metin-2 ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.09] hover:text-metin">
+                            <c.ikon className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{c.ad}</span>
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.06] group-hover:bg-white/[0.14]"><X className="h-3 w-3" /></span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2 border-t border-white/[0.06] px-4 py-3">
+                    <button onClick={temizle} className="flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-medium text-metin ring-1 ring-inset ring-white/[0.12] transition hover:bg-white/[0.06] active:scale-[0.97]">
+                      <RotateCcw className="h-4 w-4" />Süzgeçleri temizle
+                    </button>
+                    {akisAra.trim() && (
+                      <button onClick={() => { setPrompt(akisAra.trim()); temizle(); toast.success("İstem komut kutusuna yazıldı", { description: "Modeli ve oranı seçip üret." }); }}
+                        className="flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[13.5px] font-semibold text-black transition active:scale-[0.97]">
+                        <Sparkles className="h-4 w-4" />Bununla görsel üret
+                      </button>
+                    )}
+                  </div>
+                </motion.section>
+              );
+            }
+            const gruplar: { etiket: string; liste: typeof gorselUretimleri }[] = [];
+            for (const u of suzulmus) {
+              const e = gunEtiketi(u.olusturma);
+              const son = gruplar[gruplar.length - 1];
+              if (son && son.etiket === e) son.liste.push(u); else gruplar.push({ etiket: e, liste: [u] });
+            }
+            return gruplar.map((g, gi) => {
+              const bitenler = g.liste.filter((u) => u.durum === "tamam").map((u) => u.id);
+              const hepsiSecili = bitenler.length > 0 && bitenler.every((id) => secililer.includes(id));
+              const suren = g.liste.length - bitenler.length - g.liste.filter((u) => u.durum === "hata").length;
+              return (
+              <motion.section key={g.etiket} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(gi * 0.05, 0.2) }} >
+                <div className="flex items-center gap-2 px-1 pb-2.5 pt-1">
+                  <h2 className="flex h-8 items-center rounded-full bg-white/[0.08] px-3 text-[14px] font-semibold text-metin">{g.etiket}</h2>
+                  <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] tabular-nums text-metin-2">{g.liste.length} görsel</span>
+                  {suren > 0 && <span className="flex items-center gap-1.5 rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] text-metin-2"><Loader2 className="h-3 w-3 animate-spin" />{suren} sürüyor</span>}
+                  <span className="flex-1" />
+                  {bitenler.length > 1 && (
+                    <button onClick={() => { if (hepsiSecili) bitenler.forEach((id) => secimToggle(id)); else bitenler.filter((id) => !secililer.includes(id)).forEach((id) => secimToggle(id)); }}
+                      className={cn("flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition active:scale-[0.97]", hepsiSecili ? "bg-white text-black" : "bg-white/[0.08] text-metin-2 hover:bg-white/[0.13] hover:text-metin")}>
+                      <Check className="h-3.5 w-3.5" />{hepsiSecili ? "Seçimi kaldır" : "Tümünü seç"}
+                    </button>
+                  )}
+                </div>
+                <div className="[column-fill:balance]" style={{ columnCount: sutunSayisi, columnGap: 6 }}>
+        {g.liste.map((u) => {
           const bitti = u.durum === "tamam";
           const hata = u.durum === "hata";
           // Gerçek en-boy oranı — kartın doğal yüksekliğini belirler (madde 14).
@@ -1198,163 +1529,164 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
           const arka = u.gorselUrl
             ? (/^(data:|https?:|\/)/.test(u.gorselUrl) ? `url("${u.gorselUrl}") center/cover no-repeat` : u.gorselUrl)
             : "linear-gradient(135deg,#1a1725,#12101a)";
+          const secili = secililer.includes(u.id);
           return (
             <motion.div
               key={u.id}
-              layout
-              initial={{ opacity: 0, scale: 0.94 }}
+             
+              initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="group relative mb-1 block break-inside-avoid overflow-hidden rounded-[4px]"
+              draggable={bitti && !!u.gorselUrl}
+              onDragStart={(e) => bitti && u.gorselUrl && surukleBasla(e as unknown as React.DragEvent, u.gorselUrl)}
+              className={cn("group relative mb-1.5 block break-inside-avoid overflow-hidden rounded-[12px]", secili && "outline outline-2 -outline-offset-2 outline-white")}
             >
-              <button
-                type="button"
+              <div
+                role={bitti ? "button" : undefined}
+                tabIndex={bitti ? 0 : undefined}
                 onClick={() => bitti && u.gorselUrl && lightboxAc(u.gorselUrl)}
-                className={cn("block w-full", bitti ? "cursor-pointer" : "cursor-default")}
+                onKeyDown={(e) => { if (bitti && u.gorselUrl && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); lightboxAc(u.gorselUrl); } }}
+                className={cn("relative block w-full", bitti ? "cursor-pointer" : "cursor-default")}
                 style={{ aspectRatio: String(or), background: hata ? "linear-gradient(135deg,#181818,#0f1113)" : arka }}
                 aria-label={bitti ? "Üretilen görseli aç" : hata ? "Üretim başarısız" : "Üretiliyor"}
               >
-                {/* Üretiliyor — ChatGPT tarzı ışıltı/tarama animasyonu (madde 13) */}
-                {!bitti && !hata && (
-                  <span className="hf-uretiliyor absolute inset-0 flex flex-col items-center justify-center gap-2.5">
-                    <span className="hf-uretiliyor-tara" />
-                    <span className="relative z-10 flex flex-col items-center gap-2">
-                      <span className="hf-shimmer text-[13px] font-medium">Üretiliyor…</span>
-                      <span className="h-1 w-24 overflow-hidden rounded-full bg-white/15">
-                        <span className="block h-full rounded-full bg-aksan transition-all duration-500" style={{ width: `${Math.max(8, u.ilerleme)}%` }} />
-                      </span>
-                      <span className="text-[11px] tabular-nums text-white/70">%{u.ilerleme}</span>
-                    </span>
-                  </span>
-                )}
-                {/* Başarısız — Failed + Kredi iade + Retry/Delete (madde 12) */}
+                {/* Üretiliyor — oluşan görsel animasyonu, model, süre, istem, iptal */}
+                {!bitti && !hata && <UretimYukleniyor u={u} siraNo={uretimSirasi(u.id) || undefined} onIptal={() => uretimIptal(u.id)} />}
+                {/* Başarısız — neden + kredi iadesi + Tekrar dene / Sil */}
                 {hata && (
-                  <span className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-4 text-center">
-                    <span className="flex flex-wrap items-center justify-center gap-2">
-                      <span className="glass-cip flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white">
-                        <XCircle className="h-4 w-4" /> Başarısız
+                  <span className="absolute inset-0 flex flex-col items-center justify-center gap-2.5 p-3 text-center">
+                    <span className="flex flex-wrap items-center justify-center gap-1.5">
+                      <span className="flex items-center gap-1.5 rounded-full bg-rose-400/[0.12] px-2.5 py-1 text-[12px] font-semibold text-rose-200 ring-1 ring-inset ring-rose-300/25">
+                        <XCircle className="h-3.5 w-3.5" /> {u.hata === "İptal edildi" ? "İptal edildi" : "Başarısız"}
                       </span>
-                      <span className="glass-cip flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-semibold text-white">
-                        <Info className="h-4 w-4" /> Kredi iade edildi
-                      </span>
+                      {u.kredi > 0 && <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[12px] text-metin-2">Kredi iade edildi</span>}
                     </span>
-                    <span className="text-[12px] leading-snug text-metin-3">Tekrar dene ya da istemini/girdini değiştir.</span>
-                    <span className="flex items-center gap-2">
+                    <span className="line-clamp-2 text-[12px] leading-snug text-metin-2" title={u.hata}>{u.hata && u.hata !== "İptal edildi" ? u.hata : "Tekrar dene ya da istemini değiştir."}</span>
+                    <span className="flex flex-wrap items-center justify-center gap-1.5">
                       <button onClick={(e) => { e.stopPropagation(); yenidenUret(u.prompt || u.baslik); }}
-                        className="flex items-center gap-1.5 rounded-full bg-white px-3.5 py-2 text-[13px] font-semibold text-zemin transition-transform hover:scale-105">
+                        className="flex h-8 items-center gap-1.5 whitespace-nowrap rounded-full bg-white px-3 text-[12.5px] font-semibold text-black transition active:scale-95">
                         <RotateCcw className="h-3.5 w-3.5" /> Tekrar dene
                       </button>
-                      <button onClick={(e) => { e.stopPropagation(); silUretim(u.id); }}
-                        className="hf-btn glass-cip flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[13px] font-semibold text-white">
-                        <Trash2 className="h-3.5 w-3.5" /> Sil
+                      <button onClick={(e) => { e.stopPropagation(); silUretim(u.id); mesaj.silindi("Üretim", () => uretimGeriYukle(u)); }} aria-label="Sil"
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 ring-1 ring-inset ring-white/[0.12] transition hover:text-metin active:scale-95">
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </span>
                   </span>
                 )}
-              </button>
+              </div>
 
               {bitti && u.gorselUrl && (
                 <>
-                  {/* Hover vignette — dört kenardan içeri koyu (Higgsfield birebir) */}
+                  {/* Hover vignette — dört kenardan içeri koyu */}
                   <span className="uretim-vignette" />
-                  {/* Seçim kutusu sol-üst (madde 11) */}
+                  {/* Gerçek sağlayıcı çıktısı değilse dürüstçe belirt */}
+                  {/* Seçim kutusu sol üst */}
                   <button
                     onClick={(e) => { e.stopPropagation(); secimToggle(u.id); }}
-                    aria-label="Seç"
+                    aria-label={secili ? "Seçimi kaldır" : "Seç"} aria-pressed={secili}
                     className={cn(
                       "absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md border-2 backdrop-blur-sm transition-all",
-                      secililer.includes(u.id) ? "border-aksan bg-aksan text-zemin opacity-100" : "pointer-events-none border-white/70 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
+                      secili ? "border-white bg-white text-black opacity-100" : "pointer-events-none border-white/70 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
                     )}
                   >
-                    {secililer.includes(u.id) && <Check className="h-3 w-3" strokeWidth={3.5} />}
+                    {secili && <Check className="h-3 w-3" strokeWidth={3.5} />}
                   </button>
                   <KartAraclari
-                    begenili={begeni.includes(u.id)}
-                    onBegen={() => setBegeni((v) => v.includes(u.id) ? v.filter((x) => x !== u.id) : [...v, u.id])}
+                    begenili={!!u.favori}
+                    onBegen={() => { favoriToggle(u.id); toast.success(u.favori ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); }}
                     onIndir={() => gorseliIndir(u.gorselUrl, u.baslik || "vayra-gorsel")}
                     onKopyala={() => uretimiGeriYukle(u)}
                     onAc={() => lightboxAc(u.gorselUrl!)}
+                    gorselUrl={u.gorselUrl}
                     onYenidenUret={() => yenidenUret(u.prompt || u.baslik)}
                     onReferans={() => referansEkle(u.gorselUrl!)}
                     onAnimate={() => animasyonaGec(u.gorselUrl!)}
                     on3d={() => sahne3dOlustur(u.gorselUrl!)}
+                    onVaryasyon={(g) => varyasyonUret(u.gorselUrl!, u, g)}
+                    onBuyut={() => buyutAc(u.gorselUrl!, u.id)}
                     onElement={() => elementModalAc(u.gorselUrl, u.baslik || u.prompt)}
-                    onYayinla={() => { guncelle(u.id, { yayinda: true }); toast.success("Toplulukta yayınlandı 🌍"); }}
+                    onYayinla={() => { guncelle(u.id, { yayinda: true }); toast.success("Toplulukta yayınlandı", { description: "Keşfet akışında görünecek.", action: { label: "Geri al", onClick: () => guncelle(u.id, { yayinda: false }) } }); }}
                     klasorler={klasorListesi}
                     onKlasoreEkle={(kid) => klasoreEkle(kid, u.id)}
                     onYeniKlasor={() => yeniKlasoreEkle(u.id)}
                     indirmeFormatlari={[...INDIRME_FORMATLARI]}
-                    onFormatIndir={(f) => void gorseliFormatlaIndir(u.gorselUrl!, u.baslik || "vayra-gorsel", f)}
-                    onSil={() => { silUretim(u.id); toast("Üretim silindi"); }}
+                    onFormatIndir={(f) => { void gorseliFormatlaIndir(u.gorselUrl!, u.baslik || "vayra-gorsel", f); toast.success("Görsel indiriliyor", { description: `${f.toUpperCase()} biçiminde iner.` }); }}
+                    onSil={() => { silUretim(u.id); mesaj.silindi("Üretim", () => uretimGeriYukle(u)); }}
                   />
                 </>
               )}
             </motion.div>
           );
         })}
+                </div>
+              </motion.section>
+              );
+            });
+          }
+
+          return (
+            <>
+              {baslangic}
+              <section>
+                <div className="flex items-center gap-2 px-1 pb-2.5 pt-1">
+                  <h2 className="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-[14px] font-semibold text-metin"><Lightbulb className="h-4 w-4 text-metin-2" />İlham galerisi</h2>
+                  <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] text-metin-2">Örnek görseller</span>
+                  <span className="flex-1" />
+                  <span className="flex items-center gap-1.5 rounded-full bg-white/[0.08] px-2.5 py-1 text-[12px] text-metin-2 max-md:hidden"><ImagePlus className="h-3.5 w-3.5" />Referans için kutuya sürükle</span>
+                </div>
+                <div className="[column-fill:balance]" style={{ columnCount: sutunSayisi, columnGap: 6 }}>
         {TUM_GORSELLER.map((url, i) => {
           const id = url + i;
-          if (gizliStok.includes(id)) return null; // m54: "Sil" denen stok görsel gizlenir
+          if (gizliStok.includes(id)) return null; // "Sil" denen stok görsel gizlenir
           const begenili = begeni.includes(id);
+          const secili = secililer.includes(id);
           return (
             <motion.div
               key={id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: Math.min(i * 0.01, 0.35) }}
+              draggable
+              onDragStart={(e) => surukleBasla(e as unknown as React.DragEvent, url)}
               onMouseEnter={() => setHover(id)}
               onMouseLeave={() => { setHover(id === hover ? null : hover); if (menu !== id) setMenu((m) => (m === id ? null : m)); }}
-              className="group relative mb-1 block break-inside-avoid overflow-hidden rounded-[4px]"
+              className={cn("group relative mb-1.5 block break-inside-avoid overflow-hidden rounded-[12px]", secili && "outline outline-2 -outline-offset-2 outline-white")}
             >
-              <button
-                type="button"
-                onClick={() => lightboxAc(url)}
-                className="block w-full cursor-pointer"
-                aria-label="Görseli aç"
-              >
-                {/* Gerçek en-boy oranı korunur — object-cover değil doğal yükseklik (madde 14) */}
-                <img src={url} alt="" loading="lazy" className="block w-full transition-transform duration-300 group-hover:scale-[1.03]" />
+              <button type="button" onClick={() => lightboxAc(url)} className="block w-full cursor-pointer" aria-label="Görseli aç">
+                <img src={url} alt="" loading="lazy" draggable={false} className="block w-full transition-transform duration-300 group-hover:scale-[1.03]" />
               </button>
-
-              {/* Seçim kutusu sol üst — tıkla → çoklu seçim (Higgsfield birebir) */}
               <button
                 onClick={(e) => { e.stopPropagation(); secimToggle(id); }}
-                aria-label="Seç"
+                aria-label={secili ? "Seçimi kaldır" : "Seç"} aria-pressed={secili}
                 className={cn(
                   "absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md border-2 backdrop-blur-sm transition-all",
-                  secililer.includes(id)
-                    ? "border-aksan bg-aksan text-zemin opacity-100"
-                    : "pointer-events-none border-white/70 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
+                  secili ? "border-white bg-white text-black opacity-100" : "pointer-events-none border-white/70 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100",
                 )}
               >
-                {secililer.includes(id) && <Check className="h-3 w-3" strokeWidth={3.5} />}
+                {secili && <Check className="h-3 w-3" strokeWidth={3.5} />}
               </button>
-
-              {/* Hover vignette — DÖRT KENARDAN içeri koyu (Higgsfield birebir):
-                  merkez berrak, kenarlar/köşeler kararır → köşe ikonları okunur. */}
               <span className="uretim-vignette" />
               <KartAraclari
                 begenili={begenili}
-                onBegen={() => setBegeni((v) => begenili ? v.filter((x) => x !== id) : [...v, id])}
+                onBegen={() => { setBegeni((v) => begenili ? v.filter((x) => x !== id) : [...v, id]); toast.success(begenili ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); }}
                 onIndir={() => gorseliIndir(url, "vayra-gorsel")}
-                onKopyala={() => { setPrompt("Bu görseli yeniden kullan"); toast.success("İstem panele yazıldı"); }}
                 onAc={() => lightboxAc(url)}
-                onYenidenUret={() => yenidenUret()}
                 onReferans={() => referansEkle(url)}
                 onAnimate={() => animasyonaGec(url)}
                 on3d={() => sahne3dOlustur(url)}
+                onVaryasyon={(g) => varyasyonUret(url, undefined, g)}
+                onBuyut={() => buyutAc(url)}
                 onElement={() => elementModalAc(url)}
-                klasorler={klasorListesi}
-                onKlasoreEkle={(kid) => klasoreEkle(kid, id)}
-                onYeniKlasor={() => yeniKlasoreEkle(id)}
+                gorselUrl={url}
                 indirmeFormatlari={[...INDIRME_FORMATLARI]}
-                onFormatIndir={(f) => void gorseliFormatlaIndir(url, `vayra-gorsel`, f)}
-                onYayinla={() => { referansEkle(url); }}
-                onSil={() => { setGizliStok((v) => [...v, id]); toast("Galeriden gizlendi"); }}
+                onFormatIndir={(f) => { void gorseliFormatlaIndir(url, `vayra-ornek`, f); toast.success("Görsel indiriliyor", { description: `${f.toUpperCase()} biçiminde iner.` }); }}
               />
             </motion.div>
           );
         })}
-            </div>
+                </div>
+              </section>
+            </>
           );
         })()}
       </div>
@@ -1370,16 +1702,40 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                 py-2→py-2.5, metin 13→14.5px, ikonlar 4→4.5, dokunma
                 hedefleri 9→10 birim. Alt composer dock'una yakın durduğu için
                 fazlası dengeyi bozardı. */}
-            <div className="glass-cip flex items-center gap-2 rounded-full py-2.5 pl-5 pr-2.5 shadow-2xl shadow-black/50">
-              <span className="mr-1 text-[14.5px] font-semibold text-metin">{secililer.length} seçili</span>
-              <span className="mx-1 h-6 w-px bg-kenar" />
-              <button onClick={topluGorselIndir} className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] text-metin-2 transition-colors hover:bg-white/8 hover:text-metin"><Download className="h-4.5 w-4.5" /> İndir</button>
-              <button onClick={topluYayinla} className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] text-metin-2 transition-colors hover:bg-white/8 hover:text-metin"><Sparkles className="h-4.5 w-4.5" /> Yayınla</button>
-              <button onClick={topluKoleksiyonaEkle} className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[14px] text-metin-2 transition-colors hover:bg-white/8 hover:text-metin"><FolderPlus className="h-4.5 w-4.5" /> Ekle</button>
-              <button onClick={() => { setBegeni((v) => [...new Set([...v, ...secililer])]); toast.success("Beğenildi ❤️"); }} className="flex h-10 w-10 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/8 hover:text-rose-400" aria-label="Beğen"><Heart className="h-4.5 w-4.5" /></button>
-              <button onClick={topluSil} className="flex h-10 w-10 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/8 hover:text-tehlike" aria-label="Sil"><Trash2 className="h-4.5 w-4.5" /></button>
-              <span className="mx-0.5 h-6 w-px bg-kenar" />
-              <button onClick={secimTemizle} className="flex h-10 w-10 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/8 hover:text-metin" aria-label="Seçimi temizle"><X className="h-4.5 w-4.5" /></button>
+            <div className="cam-istemci relative flex items-center gap-1 rounded-full p-2 pl-2.5">
+              <span className="hidden -space-x-3 sm:flex">
+                {secililer.slice(0, 3).map((id) => { const s = gorselUretimleri.find((u) => u.id === id)?.gorselUrl; return s ? <img key={id} src={s} alt="" onError={(e) => { e.currentTarget.style.display = "none"; }} className="h-10 w-10 rounded-full bg-white/10 object-cover ring-2 ring-[#1c1d20]" /> : null; })}
+              </span>
+              <span className="whitespace-nowrap pl-2.5 pr-1.5 text-[16px] font-semibold tabular-nums text-white">{secililer.length} seçili</span>
+              <span className="mx-1 h-7 w-px bg-white/10" />
+              <button onClick={topluGorselIndir} className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95"><Download className="h-5 w-5" /><span className="hidden sm:inline">İndir</span></button>
+              <button onClick={topluYayinla} className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95"><Sparkles className="h-5 w-5" /><span className="hidden sm:inline">Yayınla</span></button>
+              <div className="relative">
+                <button onClick={() => setTopluKlasorAcik((v) => !v)} aria-expanded={topluKlasorAcik} className={cn("flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium transition-colors active:scale-95", topluKlasorAcik ? "bg-white/[0.12] text-white" : "text-white/75 hover:bg-white/[0.07] hover:text-white")}><FolderPlus className="h-5 w-5" /><span className="hidden sm:inline">Klasöre ekle</span></button>
+                <AnimatePresence>
+                  {topluKlasorAcik && (
+                    <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.98 }} transition={{ duration: 0.16 }}
+                      className="absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 overflow-hidden rounded-[18px] border border-white/[0.09] bg-[#1b1c1f]">
+                      <MenuKart className="rounded-none ring-0" baslik="Klasöre ekle" sag={<span className="text-[11.5px] tabular-nums text-metin-3">{klasorListesi.length}</span>}>
+                        <div className="max-h-[260px] overflow-y-auto p-1 [scrollbar-width:thin]">
+                          {klasorListesi.map((k) => (
+                            <button key={k.id} onClick={() => topluKlasoreEkle(k.id)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] text-metin transition-colors hover:bg-white/[0.06]">
+                              <FolderPlus className="h-4 w-4 shrink-0 text-metin-2" /><span className="min-w-0 flex-1 break-words">{k.ad}</span><span className="text-[11.5px] tabular-nums text-metin-3">{k.adet}</span>
+                            </button>
+                          ))}
+                          <button onClick={() => topluKlasoreEkle(null)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] font-medium text-metin transition-colors hover:bg-white/[0.06]"><Plus className="h-4 w-4 shrink-0" />Yeni klasör</button>
+                        </div>
+                      </MenuKart>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              {(() => { const hepsi = secililer.length > 0 && secililer.every((id) => begeni.includes(id)); return (
+                <button onClick={() => { if (hepsi) { setBegeni((v) => v.filter((x) => !secililer.includes(x))); toast.success("Beğeniler kaldırıldı"); } else { setBegeni((v) => [...new Set([...v, ...secililer])]); toast.success(`${secililer.length} görsel beğenilere eklendi`); } }}
+                  className={cn("flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/[0.07] active:scale-95", hepsi ? "text-rose-400" : "text-white/75 hover:text-white")} aria-label={hepsi ? "Beğeniyi kaldır" : "Beğen"}><Heart className={cn("h-5 w-5", hepsi && "fill-current")} /></button>); })()}
+              <button onClick={topluSil} className="flex h-11 w-11 items-center justify-center rounded-full text-rose-300 transition-colors hover:bg-rose-500/10 active:scale-95" aria-label="Sil"><Trash2 className="h-5 w-5" /></button>
+              <span className="mx-1 h-7 w-px bg-white/10" />
+              <button onClick={() => { setTopluKlasorAcik(false); secimTemizle(); }} className="flex h-11 w-11 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95" aria-label="Seçimi temizle"><X className="h-5 w-5" /></button>
             </div>
           </motion.div>
         )}
@@ -1388,636 +1744,733 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
       {/* Yüzen alt prompt dock (seçim yokken görünür) */}
       {/* Gömülüyken dock SABİT DEĞİL, akışta durur (dış sayfa altta konumlar). */}
       <div className={cn("flex justify-center transition-opacity",
-        gomulu ? "w-full" : "pointer-events-none fixed inset-x-0 bottom-6 z-30 px-4",
+        gomulu ? "w-full" : "pointer-events-none fixed inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[#0d0e10]/80 via-transparent to-transparent px-4 pb-5 pt-14",
         secimVar && !gomulu && "pointer-events-none opacity-0")}>
-        <div className={cn("hf-kart pointer-events-auto relative w-full rounded-[26px] bg-[#1c1e20] p-4 shadow-2xl shadow-black/50",
-          gomulu ? "max-w-none" : "max-w-5xl")}>
-          {/* Boyut tutamağı — DOCK'UN EN TEPESİNDE sabit, ortada. İçerik ne olursa
-              olsun hep yukarıda durur (metin kutusunun içinde değil). Yukarı çek =
-              büyüt, aşağı = küçült. */}
-          {!swapMu && (
+        <div
+          className={cn("cam-istemci pointer-events-auto relative w-full rounded-[26px] p-3 transition-shadow",
+          gomulu ? "max-w-none" : "max-w-[1120px]", surukleUstunde && "ring-2 ring-white/60")}
+          onPaste={(e) => {
+            const dosyalar = Array.from(e.clipboardData?.files ?? []).filter((d) => d.type.startsWith("image/"));
+            if (!dosyalar.length || swapMu) return;
+            e.preventDefault();
+            const dt = new DataTransfer(); dosyalar.forEach((d) => dt.items.add(d));
+            referansYukle(dt.files);
+          }}
+          onDragOver={(e) => { if (swapMu || !(e.dataTransfer.types.includes("Files") || e.dataTransfer.types.includes("application/x-vayra-gorsel"))) return; e.preventDefault(); setSurukleUstunde(true); }}
+          onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setSurukleUstunde(false); }}
+          onDrop={(e) => {
+            if (swapMu) return;
+            e.preventDefault(); setSurukleUstunde(false);
+            // Galeriden sürüklenen görsel: doğrudan referans olur.
+            const galeri = e.dataTransfer.getData("application/x-vayra-gorsel");
+            if (galeri) return void referansEkle(galeri);
+            const dosyalar = Array.from(e.dataTransfer.files).filter((d) => d.type.startsWith("image/"));
+            if (!dosyalar.length) return void mesaj.desteklenmeyenDosya("PNG, JPG ya da WebP");
+            const dt = new DataTransfer(); dosyalar.forEach((d) => dt.items.add(d));
+            referansYukle(dt.files);
+          }}>
+          <AnimatePresence>
+            {surukleUstunde && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center rounded-[26px] bg-[#26272c]/95 text-[14px] font-semibold text-metin">
+                <ImagePlus className="mr-2 h-5 w-5" /> Referans olarak eklemek için bırak
+              </motion.div>
+            )}
+          </AnimatePresence>
+          {/* Boyut tutamağı — kutunun tepesinde: yukarı çek büyüt, aşağı küçült. */}
+          {!swapMu && !gomulu && (
             <div onPointerDown={promptSurukle}
               className="group/tut absolute -top-1.5 left-1/2 z-20 flex h-5 w-24 -translate-x-1/2 cursor-ns-resize items-center justify-center"
-              aria-label="Kutu boyutunu ayarla" title="Sürükleyerek kutuyu büyüt/küçült">
-              <span className="h-[5px] w-12 rounded-full transition-all group-hover/tut:h-[6px] group-hover/tut:w-14"
-                style={{ background: "#55d6fd", opacity: 0.75 }} />
-            </div>
-          )}
-          {/* Yüklenen referans thumbnail'ları — Higgsfield birebir: üst satırda
-              görsel(ler) + yanlarında AYNI BOYUTTA kare "+" (görsel ekle) kutusu.
-              Referans varken soldaki dairesel + gizlenir; metin altta tam genişlik. */}
-          {referanslar.length > 0 && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              {referanslar.map((r, i) => (
-                <span key={i} className="group/ref relative h-16 w-16 overflow-visible rounded-xl border border-kenar">
-                  {/* Hover'da yukarıda açılan büyük önizleme kartı (elementteki gibi) */}
-                  <span className="menu-surface pointer-events-none absolute bottom-full left-1/2 z-[70] mb-2 w-52 -translate-x-1/2 overflow-hidden rounded-2xl opacity-0 shadow-2xl shadow-black/60 transition-opacity duration-150 group-hover/ref:opacity-100">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.url} alt={r.ad} className="block max-h-56 w-full object-cover" />
-                    <span className="flex items-center gap-1.5 px-3 py-2 text-[12px] text-white/70">
-                      <ImagePlus className="h-3.5 w-3.5 text-aksan" /> {r.ad}
-                    </span>
-                  </span>
-                  {/* Tıkla → tam ekran önizleme */}
-                  <button onClick={() => setMedyaOnizle(r.url)} className="block h-full w-full overflow-hidden rounded-xl" aria-label="Referansı büyüt">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.url} alt={r.ad} className="h-full w-full rounded-xl object-cover" />
-                    <span className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-opacity group-hover/ref:opacity-100">
-                      <Maximize2 className="h-4 w-4 text-white" />
-                    </span>
-                  </button>
-                  {/* Hover'da sağ üst köşede çarpı → kaldır */}
-                  <button
-                    onClick={() => setReferanslar((v) => v.filter((_, j) => j !== i))}
-                    className="absolute -right-1.5 -top-1.5 z-[71] flex h-5 w-5 items-center justify-center rounded-full bg-zemin text-white pointer-events-none opacity-0 shadow-lg ring-1 ring-white/20 transition-opacity group-hover/ref:opacity-100 group-hover/ref:pointer-events-auto hover:bg-tehlike"
-                    aria-label="Referansı kaldır"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-              {/* Görselin SAĞINDA, aynı boyutta kare "+" — Higgsfield birebir */}
-              <button onClick={() => medyaRef.current?.click()}
-                className="hf-btn glass-ikon flex h-16 w-16 shrink-0 items-center justify-center rounded-xl text-metin-2 hover:text-metin"
-                aria-label="Görsel ekle">
-                <Plus className="h-6 w-6" />
-              </button>
+              aria-label="Kutu boyutunu ayarla" title="Sürükleyerek kutuyu büyüt ya da küçült">
+              <span className="h-[5px] w-12 rounded-full bg-white/25 transition-all group-hover/tut:h-[6px] group-hover/tut:w-14 group-hover/tut:bg-white/50" />
             </div>
           )}
 
-          {/* Higgsfield birebir: sol kolon (prompt + çipler) · sağda SABİT Üret butonu.
-              items-end → prompt kutusu yukarı büyürken buton altta sabit kalır. */}
-          <div className="flex items-end gap-3">
+          <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
+              {/* Referanslar: küçük resim + altında rol seçici (Genel, Stil, Karakter, Kompozisyon, Ürün). */}
+              <AnimatePresence initial={false}>
+              {referanslar.length > 0 && !swapMu && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                <div className="mb-2.5 flex items-start gap-2 overflow-x-auto px-0.5 pb-0.5 pt-1 [scrollbar-width:none]">
+                  {referanslar.map((r, i) => {
+                    const rol = REF_ROLLERI.find((x) => x.id === (r.rol ?? "genel"))!;
+                    const gonderilmez = aktifModelTanim.api.refMax > 0 && i >= aktifModelTanim.api.refMax;
+                    return (
+                    <motion.div key={r.url + i} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} className="relative flex w-16 shrink-0 flex-col items-center gap-1">
+                      <span onMouseEnter={(e) => setRefHover({ i, r: e.currentTarget.getBoundingClientRect() })} onMouseLeave={() => setRefHover(null)}
+                        className={cn("group/ref relative h-16 w-16 overflow-hidden rounded-[14px] ring-1 ring-inset ring-white/15", gonderilmez && "opacity-40")}>
+                        <button onClick={() => setMedyaOnizle(r.url)} className="block h-full w-full" aria-label="Referansı büyüt" title={r.ad}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={r.url} alt={r.ad} className="h-full w-full object-cover" />
+                          <span className="pointer-events-none absolute inset-0 bg-black/35 opacity-0 transition-opacity group-hover/ref:opacity-100" />
+                        </button>
+                        <span className="pointer-events-none absolute bottom-1 left-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black/60 px-1 text-[10px] font-semibold tabular-nums text-white">{i + 1}</span>
+                        <button onClick={() => setReferanslar((v) => v.filter((_, j) => j !== i))} aria-label="Referansı kaldır"
+                          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/70 text-white opacity-0 backdrop-blur transition-opacity hover:bg-rose-500 focus-visible:opacity-100 group-hover/ref:opacity-100 [@media(hover:none)]:opacity-100">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                      <button onClick={() => { setRefHover(null); setRolMenu(rolMenu === i ? null : i); }} aria-expanded={rolMenu === i} title={gonderilmez ? `${model} bu referansı kullanmaz` : rol.alt}
+                        className={cn("flex h-6 max-w-full items-center gap-0.5 rounded-full px-2 text-[11px] font-medium transition", rol.id === "genel" ? "text-metin-2 hover:bg-white/[0.06] hover:text-metin" : "bg-white text-black")}>
+                        <span className="truncate">{rol.ad}</span><ChevronDown className="h-3 w-3 shrink-0 opacity-70" />
+                      </button>
+                      <Yuzen acik={rolMenu === i} onKapat={() => setRolMenu(null)} yerlesim="ust-sol" bosluk={8} etiket="Referansın rolü"
+                        className="w-[min(290px,calc(100vw-24px))] overflow-hidden rounded-[20px] border border-white/[0.09] bg-[#1b1c1f]">
+                        <MenuKart className="rounded-none ring-0" baslik={<span className="flex items-center gap-2.5">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={r.url} alt="" className="h-7 w-7 shrink-0 rounded-[8px] object-cover ring-1 ring-white/15" />
+                            <span className="leading-tight"><span className="block">{i + 1}. referans ne için?</span><span className="block text-[11.5px] font-normal text-metin-3">Model bu görselden neyi alsın</span></span>
+                          </span>}>
+                          <div className="space-y-1 p-1.5">
+                            {REF_ROLLERI.map((x, k) => {
+                              const I = ({ genel: Sparkles, stil: Palette, karakter: UserRound, kompozisyon: Crop, urun: Package } as Record<string, typeof Sparkles>)[x.id] ?? Sparkles;
+                              const sec = rol.id === x.id;
+                              return (
+                                <motion.button key={x.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.025 * k }} whileTap={{ scale: 0.98 }} aria-pressed={sec}
+                                  onClick={() => { setReferanslar((v) => v.map((y, j) => (j === i ? { ...y, rol: x.id } : y))); setRolMenu(null); }}
+                                  className={cn("flex w-full items-center gap-3 rounded-[12px] px-2 py-2 text-left ring-1 ring-inset transition-[background-color,box-shadow]", sec ? "bg-white/[0.07] ring-white/60" : "ring-transparent hover:bg-white/[0.05]")}>
+                                  <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors", sec ? "bg-white text-black" : "bg-white/[0.06] text-metin-2")}><I className="h-4 w-4" /></span>
+                                  <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold text-metin">{x.ad}</span><span className="block text-[11.5px] leading-snug text-metin-2">{x.alt}</span></span>
+                                </motion.button>
+                              );
+                            })}
+                          </div>
+                        </MenuKart>
+                      </Yuzen>
+                    </motion.div>
+                    );
+                  })}
+                  {typeof document !== "undefined" && createPortal(
+                    <AnimatePresence>
+                      {refHover && referanslar[refHover.i] && rolMenu === null && (() => {
+                        const x = referanslar[refHover.i];
+                        const rl = REF_ROLLERI.find((y) => y.id === (x.rol ?? "genel"))!;
+                        const disarida = aktifModelTanim.api.refMax > 0 && refHover.i >= aktifModelTanim.api.refMax;
+                        const rr = refHover.r;
+                        return (
+                          <motion.span key={"rh" + refHover.i} initial={{ opacity: 0, y: 6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.97 }} transition={{ duration: 0.14 }}
+                            className="menu-surface pointer-events-none fixed z-[300] w-60 overflow-hidden rounded-2xl"
+                            style={{ left: Math.max(8, Math.min(rr.left, window.innerWidth - 252)), bottom: window.innerHeight - rr.top + 8 }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={x.url} alt="" className="block max-h-[300px] w-full object-cover" />
+                            <span className="block p-3">
+                              <span className="flex items-center gap-1.5">
+                                <span className="truncate text-[13.5px] font-semibold text-metin">{refHover.i + 1}. referans</span>
+                                <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", rl.id === "genel" ? "bg-white/[0.08] text-metin-2" : "bg-white text-black")}>{rl.ad}</span>
+                              </span>
+                              <span className="mt-1 block text-[12px] leading-relaxed text-metin-2">{disarida ? `${model} en fazla ${aktifModelTanim.api.refMax} referans kullanır; bu görsel gönderilmez.` : rl.alt}</span>
+                              {x.ad && !/^(Referans|Üretilen görsel|Remix kaynağı)/.test(x.ad) && <span className="mt-1 block truncate text-[11.5px] text-metin-3">{x.ad}</span>}
+                            </span>
+                          </motion.span>
+                        );
+                      })()}
+                    </AnimatePresence>,
+                    document.body,
+                  )}
+                  {referanslar.length < REF_UST && (
+                    <button onClick={() => medyaRef.current?.click()}
+                      className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[14px] bg-white/[0.08] text-metin-2 transition hover:bg-white/[0.13] hover:text-metin active:scale-95"
+                      aria-label="Görsel ekle">
+                      <Plus className="h-6 w-6" />
+                    </button>
+                  )}
+                  {/* Modelin referans sınırı: fazlası gönderilmez, açıkça söylenir. */}
+                  <span className={cn("ml-1 mt-5 shrink-0 rounded-full px-2.5 py-1 text-[11.5px] tabular-nums ring-1 ring-inset", referanslar.length > aktifModelTanim.api.refMax ? "bg-amber-300/10 text-amber-100 ring-amber-300/25" : "text-metin-2 ring-white/[0.08]")}
+                    title={aktifModelTanim.api.refMax ? `${model} en fazla ${aktifModelTanim.api.refMax} referans görsel kullanır` : `${model} referans görsel kullanmaz`}>
+                    {aktifModelTanim.api.refMax
+                      ? `${Math.min(referanslar.length, aktifModelTanim.api.refMax)}/${aktifModelTanim.api.refMax} referans${referanslar.length > aktifModelTanim.api.refMax ? `, ${referanslar.length - aktifModelTanim.api.refMax} tanesi gönderilmez` : ""}`
+                      : `${model} referans almaz`}
+                  </span>
+                </div>
+                </motion.div>
+              )}
+              </AnimatePresence>
+                </div>
+          {/* İstem araçları: element, istem fikirleri, geliştir, çiz */}
+          {!swapMu && (
+            <div className="ml-auto flex shrink-0 flex-row-reverse items-center gap-2">
+              <div className="flex items-center gap-0.5 rounded-full p-1" style={{ background: "rgba(255,255,255,0.07)", backdropFilter: "blur(14px) saturate(1.25)", WebkitBackdropFilter: "blur(14px) saturate(1.25)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.12), 0 0 0 1px rgba(255,255,255,0.09)" }}>
+              <button onClick={() => setElementSeciciModal(true)}
+                className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.1] hover:text-metin active:scale-[0.97]">
+                <AtSign className="h-3.5 w-3.5" /> Element
+              </button>
+              <div className="relative">
+                <button onClick={() => setIstemAcik((v) => !v)} aria-expanded={istemAcik}
+                  className={cn("flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition active:scale-[0.97]", istemAcik ? "bg-white/[0.14] text-metin" : "text-metin-2 hover:bg-white/[0.1] hover:text-metin")}>
+                  <Lightbulb className="h-3.5 w-3.5" /> İstem fikirleri
+                </button>
+                <Yuzen acik={istemAcik} onKapat={() => setIstemAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="İstem fikirleri"
+                  className="max-h-[min(72vh,600px)] w-[min(420px,calc(100vw-24px))] overflow-y-auto rounded-[20px] border border-white/[0.09] bg-[#1b1c1f] p-2 [scrollbar-width:thin]">
+                  {sonIstemler.length > 0 && (
+                    <MenuKart baslik={<span className="flex items-center gap-1.5"><History className="h-3.5 w-3.5 text-metin-2" />Son istemlerin</span>}
+                      sag={<span className="text-[11.5px] tabular-nums text-metin-3">{sonIstemler.length}</span>}>
+                      <div className="divide-y divide-white/[0.05]">
+                        {sonIstemler.map((p, i) => (
+                          <motion.button key={p} role="menuitem" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.02 * i }}
+                            onClick={() => { setPrompt(p); setIstemAcik(false); promptRef.current?.focus(); }}
+                            className="group flex w-full items-start gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-white/[0.04]">
+                            <span className="min-w-0 flex-1 text-[13px] leading-snug text-metin-2 transition-colors group-hover:text-metin">{p}</span>
+                            <span className="mt-0.5 shrink-0 text-[11.5px] font-medium text-metin-3 opacity-0 transition-opacity group-hover:opacity-100">Kullan</span>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </MenuKart>
+                  )}
+                  <MenuKart baslik={<span className="flex items-center gap-1.5"><Sparkles className="h-3.5 w-3.5 text-metin-2" />Fikirler</span>}
+                    sag={<span className="text-[11.5px] text-metin-3">Model ve oranıyla gelir</span>}>
+                    <div className="grid grid-cols-2 gap-1.5 p-1.5">
+                      {HIZLI_BASLANGIC.map((h, i) => (
+                        <motion.button key={h.baslik} role="menuitem" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.03 * i }} whileTap={{ scale: 0.97 }}
+                          onClick={() => { setPrompt(h.istem); modelSec(h.model); setOran(h.oran); setIstemAcik(false); promptRef.current?.focus(); }}
+                          title={h.istem}
+                          className="group relative aspect-[4/3] overflow-hidden rounded-[12px] text-left ring-1 ring-inset ring-white/[0.07] transition-[box-shadow] hover:ring-white/40">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={h.gorsel} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
+                          <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
+                          <span className="absolute left-1.5 top-1.5 rounded-full bg-black/45 px-1.5 py-px text-[10.5px] font-medium tabular-nums text-white/90 backdrop-blur-md">{h.oran}</span>
+                          <span className="absolute inset-x-2 bottom-1.5">
+                            <span className="block text-[12.5px] font-semibold leading-tight text-white">{h.baslik}</span>
+                            <span className="block text-[11px] leading-tight text-white/65">{h.model}</span>
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </MenuKart>
+                  <MenuKart baslik={<span className="flex items-center gap-1.5"><ImagePlus className="h-3.5 w-3.5 text-metin-2" />Görselden istem çıkar</span>}
+                    sag={yardimciHazir === false ? <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11px] font-medium text-metin-2">Kapalı</span> : undefined}>
+                    <p className="px-3 pt-2.5 text-[12.5px] leading-snug text-metin-2">
+                      {yardimciHazir === false ? "İstem yardımcısı (Gemini) bağlı değil. Bağlanınca bir görseli tarif eden istemler önerilir." : "Bir görsel ver, onu yeniden üretecek istemler önerilsin."}
+                    </p>
+                    <div className="flex gap-1.5 p-2">
+                      {referanslar[0] && (
+                        <button onClick={() => void tarifEt(referanslar[0].url)} disabled={tarifYukleniyor || yardimciHazir === false}
+                          className="flex h-10 flex-1 items-center gap-2 rounded-[11px] bg-white/[0.04] pl-1.5 pr-2.5 text-left text-[12.5px] font-medium text-metin ring-1 ring-inset ring-white/[0.06] transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={referanslar[0].url} alt="" className="h-7 w-7 rounded-[8px] object-cover" /> İlk referanstan
+                        </button>
+                      )}
+                      <button onClick={() => tarifDosyaRef.current?.click()} disabled={tarifYukleniyor || yardimciHazir === false}
+                        className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-[11px] bg-white/[0.04] px-3 text-[12.5px] font-medium text-metin ring-1 ring-inset ring-white/[0.06] transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-45">
+                        {tarifYukleniyor ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} Görsel seç
+                      </button>
+                    </div>
+                    {tarifler && tarifler.length > 0 && (
+                      <div className="divide-y divide-white/[0.05] border-t border-white/[0.06]">
+                        {tarifler.map((t, i) => (
+                          <motion.button key={t} role="menuitem" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.04 * i }}
+                            onClick={() => { setPrompt(t); setIstemAcik(false); setTarifler(null); promptRef.current?.focus(); }}
+                            className="block w-full px-3 py-2.5 text-left text-[12.5px] leading-snug text-metin-2 transition-colors hover:bg-white/[0.04] hover:text-metin">{t}</motion.button>
+                        ))}
+                      </div>
+                    )}
+                    <input ref={tarifDosyaRef} type="file" accept="image/png,image/jpeg,image/webp" hidden
+                      onChange={(e) => { const d = e.target.files?.[0]; e.target.value = ""; if (d) void dosyaOku(d).then(tarifEt); }} />
+                  </MenuKart>
+                </Yuzen>
+              </div>
+              <Tooltip side="top" label={yardimciHazir === false ? "İstem yardımcısı (Gemini) bağlı değil" : gelistir ? "Açık: istemin ayrıntılandırılıp İngilizceye çevrilerek gönderilir. Gönderilen hâli bilgi panelinde." : "Kapalı: istem olduğu gibi gönderilir (Türkçe ise yalnız çevrilir)."}>
+                <button onClick={() => setGelistir(!gelistir)} disabled={yardimciHazir === false} role="switch" aria-checked={gelistirEtkin}
+                  className={cn("flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-medium transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45",
+                    gelistirEtkin ? "bg-white/[0.1] text-metin" : "text-metin-2 hover:bg-white/[0.06] hover:text-metin")}>
+                  <Wand2 className="h-3.5 w-3.5" /> İstemi geliştir
+                  <span className={cn("relative ml-0.5 h-3.5 w-6 rounded-full transition-colors", gelistirEtkin ? "bg-white" : "bg-white/20")}>
+                    <span className={cn("absolute top-[2px] h-2.5 w-2.5 rounded-full transition-[left,background-color]", gelistirEtkin ? "left-[12px] bg-black" : "left-[2px] bg-white")} />
+                  </span>
+                </button>
+              </Tooltip>
+              {aktifModelTanim.cizim && (
+                <button onClick={() => { setCizimSekme("edit"); if (referanslar[0]) setCizimArka(referanslar[0].url); setCizimModal(true); }}
+                  className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.06] hover:text-metin active:scale-[0.97]">
+                  <Pencil className="h-3.5 w-3.5" /> Çizerek düzenle
+                </button>
+              )}
+              </div>
+            </div>
+          )}
+  
+            </div>
+
           {swapMu ? (
-            /* Swap modelleri (Yüz/Karakter Değiştir): prompt yerine iki yükleme kutusu — Higgsfield birebir */
+            /* Swap modelleri (Yüz/Karakter Değiştir): istem yerine iki yükleme kutusu */
             <div className="grid grid-cols-2 gap-3">
               <input ref={swapKaynakRef} type="file" accept="image/*" className="hidden" onChange={(e) => { swapYukle(e.target.files, "kaynak"); e.target.value = ""; }} />
               <input ref={swapHedefRef} type="file" accept="image/*" className="hidden" onChange={(e) => { swapYukle(e.target.files, "hedef"); e.target.value = ""; }} />
               {([
-                { url: swapKaynak, ref: swapKaynakRef, temizle: () => setSwapKaynak(null), ik: UserSquare, baslik: "Senin Fotoğrafın", alt: yuzMu ? "Eklemek istediğin yüzü yükle" : "Eklemek istediğin karakteri yükle" },
-                { url: swapHedef, ref: swapHedefRef, temizle: () => setSwapHedef(null), ik: ImagePlus, baslik: "Hedef Görsel", alt: yuzMu ? "Değiştirilecek yüzün olduğu foto" : "Değiştirilecek karakterin olduğu foto" },
+                { url: swapKaynak, ref: swapKaynakRef, temizle: () => setSwapKaynak(null), ik: UserSquare, baslik: "Senin fotoğrafın", alt: yuzMu ? "Eklemek istediğin yüzü yükle" : "Eklemek istediğin karakteri yükle" },
+                { url: swapHedef, ref: swapHedefRef, temizle: () => setSwapHedef(null), ik: ImagePlus, baslik: "Hedef görsel", alt: yuzMu ? "Değiştirilecek yüzün olduğu fotoğraf" : "Değiştirilecek karakterin olduğu fotoğraf" },
               ] as const).map((k, i) => (
                 <button key={i} onClick={() => k.ref.current?.click()}
-                  className="group/swap relative flex min-h-[128px] flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border border-dashed border-kenar-2 p-4 text-center transition-colors hover:border-aksan/50">
+                  className="group/swap relative flex min-h-[120px] flex-col items-center justify-center gap-2 overflow-hidden rounded-[18px] border border-dashed border-white/15 p-4 text-center transition-colors hover:border-white/35">
                   {k.url ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={k.url} alt={k.baslik} className="absolute inset-0 h-full w-full object-cover" />
-                      <span className="absolute inset-0 bg-black/35 pointer-events-none opacity-0 transition-opacity group-hover/swap:opacity-100 group-hover/swap:pointer-events-auto" />
+                      <span className="pointer-events-none absolute inset-0 bg-black/35 opacity-0 transition-opacity group-hover/swap:opacity-100" />
                       <span onClick={(e) => { e.stopPropagation(); k.temizle(); }}
-                        className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full glass-ikon text-white pointer-events-none opacity-0 transition-opacity group-hover/swap:opacity-100 group-hover/swap:pointer-events-auto hover:bg-tehlike"><X className="h-3.5 w-3.5" /></span>
+                        className="glass-ikon pointer-events-none absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full text-white opacity-0 transition-opacity hover:bg-tehlike group-hover/swap:pointer-events-auto group-hover/swap:opacity-100"><X className="h-3.5 w-3.5" /></span>
                     </>
                   ) : (
                     <>
-                      <k.ik className="h-5 w-5 text-metin-2" />
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06]"><k.ik className="h-5 w-5 text-metin-2" /></span>
                       <span className="text-[14px] font-semibold text-metin">{k.baslik}</span>
-                      <span className="text-[12px] text-metin-3">{k.alt}</span>
+                      <span className="text-[12px] text-metin-2">{k.alt}</span>
                     </>
                   )}
                 </button>
               ))}
             </div>
           ) : (
-          /* Satır 1: + · prompt (standart composer) — kutu yukarı doğru büyür (items-end) */
-          <div className="flex items-end gap-3">
-            <input ref={medyaRef} type="file" accept="image/*" multiple className="hidden"
-              onChange={(e) => { referansYukle(e.target.files); e.target.value = ""; }} />
-            {/* Dairesel + yalnız referans YOKKEN. Referans varken kare + üstte
-                (görselin sağında) durur; burada gösterince çift + olurdu. */}
-            {referanslar.length === 0 && (
-              <button onClick={() => medyaRef.current?.click()}
-                className="hf-btn glass-ikon flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-metin-2 hover:text-metin" aria-label="Medya ekle">
-                <Plus className="h-5 w-5" />
-              </button>
-            )}
-            <ElementMentionInput
-              inputRef={promptRef}
-              deger={prompt}
-              onDeger={setPrompt}
-              onEnter={uret}
-              cokSatir
-              otoBuyu
-              enBuyuk={340}
-              elYukseklikDis={promptYuk}
-              placeholder="Ne üretmek istediğini yaz…  (@ ile element ekle)"
-              className="block w-full bg-transparent py-3 text-[16px] leading-relaxed outline-none placeholder:text-metin-3"
-            />
-          </div>
+            <div className="flex items-start gap-2.5 px-0.5">
+              <input ref={medyaRef} type="file" accept="image/*" multiple className="hidden"
+                onChange={(e) => { referansYukle(e.target.files); e.target.value = ""; }} />
+              {referanslar.length === 0 && (
+                <Tooltip side="top" label="Referans görsel ekle (sürükle ya da Ctrl+V da olur)">
+                  <button onClick={() => medyaRef.current?.click()}
+                    className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white/[0.08] text-metin-2 transition hover:bg-white/[0.13] hover:text-metin active:scale-95" aria-label="Referans görsel ekle">
+                    <ImagePlus className="h-5 w-5" />
+                  </button>
+                </Tooltip>
+              )}
+              <ElementMentionInput
+                inputRef={promptRef}
+                deger={prompt}
+                onDeger={setPrompt}
+                onEnter={uret}
+                cokSatir
+                otoBuyu
+                enBuyuk={340}
+                elYukseklikDis={promptYuk}
+                placeholder="Ne görmek istediğini anlat. @ ile element ekle, görsel sürükle ya da yapıştır"
+                className="block w-full bg-transparent px-1 py-2.5 text-[16px] leading-relaxed text-metin outline-none placeholder:text-metin-2"
+              />
+            </div>
           )}
 
-          {/* Satır 2: çipler */}
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            {/* Model seçici */}
-            <div className="relative">
-              <button
-                onClick={() => setModelAcik((v) => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors",
-                  modelAcik ? "bg-transparent text-aksan ring-1 ring-aksan" : "glass-cip text-metin",
+          {/* ═══ RUH modeli: Karakter + Ruh panosu ═══ */}
+          {soulMu && !karsilastir && (
+            <div className="mt-2 flex items-stretch gap-2 px-0.5">
+              <button onClick={() => setKarakterModal(true)}
+                className={cn("flex h-[60px] w-[60px] shrink-0 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-[14px] text-metin-2 transition hover:text-metin", seciliKarakterEl ? "ring-2 ring-white" : "border border-dashed border-white/15 hover:border-white/35")}>
+                {seciliKarakterEl ? (
+                  <ElementKapak e={seciliKarakterEl} className="h-full w-full" ikonBoyut={14} />
+                ) : (
+                  <><Plus className="h-4 w-4" /><span className="text-[10.5px] font-medium">Karakter</span></>
                 )}
-              >
-                <BarChart3 className="h-3.5 w-3.5" /> {model} <ChevronRight className="h-3.5 w-3.5" />
               </button>
-              <AnimatePresence>
-                {modelAcik && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setModelAcik(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.14 }}
-                      className="menu-surface absolute bottom-full left-0 z-40 mb-2 max-h-[420px] w-80 overflow-hidden rounded-[16px]"
-                    >
-                      <div className="flex items-center gap-2 border-b border-kenar px-3 py-2.5">
-                        <Search className="h-4 w-4 text-metin-3" />
-                        <input value={modelAra} onChange={(e) => setModelAra(e.target.value)} placeholder="Ara…" className="w-full bg-transparent text-sm outline-none placeholder:text-metin-3" />
-                      </div>
-                      <div className="max-h-[360px] overflow-y-auto p-1.5">
-                        {(() => {
-                          // Higgsfield birebir: iki bölüm — "Öne çıkan modeller" + "Tüm modeller".
-                          // Arama varken bölüm başlıkları gizlenir, düz liste gösterilir.
-                          const one = modelListe.filter((m) => m.grup !== "tum");
-                          const tum = modelListe.filter((m) => m.grup === "tum");
-                          const KartSatir = (m: GorselModel) => (
-                            <button key={m.ad} onClick={() => { modelSec(m.ad); setModelAcik(false); }}
-                              className={cn("flex w-full items-center gap-3 rounded-[10px] p-2 text-left transition-colors hover:bg-white/6", model === m.ad && "bg-white/[0.06]")}>
-                              <span className="glass-ikon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-                                <BarChart3 className={cn("h-4 w-4", model === m.ad ? "text-aksan" : "text-metin-2")} />
-                              </span>
-                              <span className="min-w-0 flex-1">
-                                <span className="flex items-center gap-1.5">
-                                  <span className="truncate text-sm font-medium">{m.ad}</span>
-                                  {m.rozet === "Yeni" && <span className="rounded bg-aksan px-1 py-0.5 text-[9px] font-bold text-zemin">YENİ</span>}
-                                  {m.rozet === "Sınırsız" && <span className="rounded bg-sky-500/25 px-1 py-0.5 text-[9px] font-bold text-sky-300">SINIRSIZ</span>}
-                                </span>
-                                <span className="block truncate text-[12px] text-metin-2">{m.ozet}</span>
-                              </span>
-                              {model === m.ad && <Check className="h-4 w-4 shrink-0 text-aksan" />}
-                            </button>
-                          );
-                          if (modelAra.trim()) return modelListe.map(KartSatir);
-                          return (
-                            <>
-                              {one.length > 0 && <p className="flex items-center gap-1.5 px-2 py-1.5 text-[12px] text-metin-2"><Sparkles className="h-3.5 w-3.5" /> Öne çıkan modeller</p>}
-                              {one.map(KartSatir)}
-                              {tum.length > 0 && <p className="mt-1 flex items-center gap-1.5 border-t border-kenar px-2 py-2 text-[12px] text-metin-2"><BarChart3 className="h-3.5 w-3.5" /> Tüm modeller</p>}
-                              {tum.map(KartSatir)}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Çözünürlük — SADECE cozunurluk bayraklı modellerde (Higgsfield birebir) */}
-            {aktifModelTanim.cozunurluk && (
-            <div className="relative">
-              <button
-                onClick={() => setCozunurlukAcik((v) => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors",
-                  cozunurlukAcik ? "bg-transparent text-aksan ring-1 ring-aksan" : "glass-cip text-metin",
-                )}
-              >
-                <Gem className="h-3.5 w-3.5" /> {cozunurluk} <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", cozunurlukAcik && "rotate-180")} />
-              </button>
-              <AnimatePresence>
-                {cozunurlukAcik && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setCozunurlukAcik(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.14 }}
-                      className="menu-surface absolute bottom-full left-0 z-40 mb-2 w-36 overflow-hidden rounded-[14px] p-1"
-                    >
-                      {COZUNURLUKLER.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => { setCozunurluk(c); setCozunurlukAcik(false); }}
-                          className={cn("flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-[13px] transition-colors hover:bg-white/8", cozunurluk === c && "bg-white/[0.06]")}
-                        >
-                          <span className="flex items-center gap-2"><Gem className="h-3.5 w-3.5 text-metin-2" /> {c}</span>
-                          {cozunurluk === c && <Check className="h-4 w-4 text-aksan" />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-            )}
-
-            {/* Kalite seviyesi — çözünürlük YERİNE (GPT/Grok/Seedream 4.0/Recraft): Düşük/Orta/Yüksek */}
-            {kaliteSecenek && kaliteSecenek.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setKaliteSeviyeAcik((v) => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors",
-                  kaliteSeviyeAcik ? "bg-transparent text-aksan ring-1 ring-aksan" : "glass-cip text-metin",
-                )}
-              >
-                <Gem className="h-3.5 w-3.5" /> {aktifKalite} <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", kaliteSeviyeAcik && "rotate-180")} />
-              </button>
-              <AnimatePresence>
-                {kaliteSeviyeAcik && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setKaliteSeviyeAcik(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.14 }}
-                      className="menu-surface absolute bottom-full left-0 z-40 mb-2 w-40 overflow-hidden rounded-[14px] p-1"
-                    >
-                      {kaliteSecenek.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => { setKaliteSeviye(c); setKaliteSeviyeAcik(false); }}
-                          className={cn("flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-[13px] transition-colors hover:bg-white/8", aktifKalite === c && "bg-white/[0.06]")}
-                        >
-                          <span className="flex items-center gap-2"><Gem className="h-3.5 w-3.5 text-metin-2" /> {c}</span>
-                          {aktifKalite === c && <Check className="h-4 w-4 text-aksan" />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-            )}
-
-            {/* Oran — Higgsfield birebir: tek çip + dropdown (Sinematik rozetli) */}
-            <div className="relative">
-              <button
-                onClick={() => setOranAcik((v) => !v)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors",
-                  oranAcik ? "bg-transparent text-aksan ring-1 ring-aksan" : "glass-cip text-metin",
-                )}
-              >
-                {(() => { const o = ORANLAR.find((x) => x.deger === oran) ?? ORANLAR[3]; return <OranIkon w={o.w} h={o.h} />; })()} {oran} <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", oranAcik && "rotate-180")} />
-              </button>
-              <AnimatePresence>
-                {oranAcik && (
-                  <>
-                    <div className="fixed inset-0 z-30" onClick={() => setOranAcik(false)} />
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.14 }}
-                      className="menu-surface absolute bottom-full left-0 z-40 mb-2 w-44 overflow-hidden rounded-[14px] p-1"
-                    >
-                      {ORANLAR.map((o) => (
-                        <button
-                          key={o.deger}
-                          onClick={() => { setOran(o.deger); setOranAcik(false); }}
-                          className={cn("flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-[13px] transition-colors hover:bg-white/8", oran === o.deger && "bg-white/[0.06]")}
-                        >
-                          <span className="flex items-center gap-2.5">
-                            <OranIkon w={o.w} h={o.h} /> {o.deger}
-                            {o.sinematik && <span className="rounded bg-aksan/15 px-1.5 py-0.5 text-[9px] font-semibold text-aksan">Sinematik</span>}
-                          </span>
-                          {oran === o.deger && <Check className="h-4 w-4 text-aksan" />}
-                        </button>
-                      ))}
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Adet stepper — Swap/WAN gibi modellerde gizli (Higgsfield birebir) */}
-            {!aktifModelTanim.adetGizli && (
-            <div className="glass-cip flex items-center gap-2 rounded-full px-2 py-1">
-              <button onClick={() => setAdet((a) => Math.max(1, a - 1))} className="text-metin-2 hover:text-metin" aria-label="Azalt"><Minus className="h-3.5 w-3.5" /></button>
-              <span className="text-[13px] tabular-nums">{adet}/4</span>
-              <button onClick={() => setAdet((a) => Math.min(4, a + 1))} className="text-metin-2 hover:text-metin" aria-label="Artır"><Plus className="h-3.5 w-3.5" /></button>
-            </div>
-            )}
-
-            {/* Sınırsız (Unlimited) toggle — SADECE sinirsizToggle bayraklı modellerde */}
-            {aktifModelTanim.sinirsizToggle && (
-            <button onClick={() => setSinirsiz((v) => !v)} className="glass-cip flex items-center gap-2 rounded-full px-3 py-2 text-[13px] text-metin">
-              Sınırsız
-              <span className={cn("relative h-4 w-7 rounded-full transition-colors", sinirsiz ? "bg-aksan" : "bg-white/20")}>
-                <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all", sinirsiz ? "left-3.5" : "left-0.5")} />
-              </span>
-            </button>
-            )}
-
-            {/* ═══ Element (@ referans) — Higgsfield "Elements" popup ═══ */}
-            <button onClick={() => setElementSeciciModal(true)}
-              className="glass-cip flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-metin hover:text-aksan">
-              <AtSign className="h-3.5 w-3.5" /> Element
-            </button>
-
-            {/* ═══ RUH (Soul) + Recraft: Renk Transferi chip'i — seçiliyse palet renkleriyle ═══ */}
-            {(soulMu || modelTip === "recraft") && (() => {
-              const palet = renkPaleti(seciliRenk);
-              return (
-                <button onClick={() => setRenkModal(true)}
-                  className="relative flex items-center gap-1.5 overflow-hidden rounded-full px-3 py-2 text-[13px] text-white transition-colors"
-                  style={palet ? { background: `linear-gradient(90deg, ${palet.join(", ")})` } : undefined}>
-                  {palet && <span aria-hidden className="absolute inset-0 bg-black/25" />}
-                  {!palet && <span aria-hidden className="glass-cip absolute inset-0 rounded-full" />}
-                  <span className="relative flex items-center gap-1.5">
-                    <Palette className="h-3.5 w-3.5 drop-shadow" />
-                    {palet ? (
-                      <span className="flex gap-1">
-                        {palet.map((c) => <span key={c} className="h-3 w-3 rounded-full ring-1 ring-white/40" style={{ background: c }} />)}
-                      </span>
-                    ) : "Renk Transferi"}
+              <button onClick={() => setMoodboardModal(true)}
+                className="group/mb relative h-[60px] min-w-0 flex-1 overflow-hidden rounded-[14px] text-left ring-1 ring-inset ring-white/[0.1] transition hover:ring-white/30">
+                {seciliPano ? (
+                  <span className="absolute inset-0 flex">
+                    {seciliPano.gorseller.slice(0, 3).map((g) => <span key={g} className="h-full flex-1 bg-cover bg-center" style={{ backgroundImage: `url("${g}")` }} />)}
                   </span>
-                </button>
-              );
-            })()}
+                ) : <span className="absolute inset-0 bg-white/[0.03]" />}
+                <span className="absolute inset-0 bg-gradient-to-r from-black/80 to-black/20" />
+                <span className="absolute inset-y-0 left-3 flex flex-col justify-center leading-tight">
+                  <span className="text-[11px] text-white/65">Ruh panosu</span>
+                  <span className="text-[13.5px] font-semibold text-white">{seciliPano?.ad ?? "Pano yok, istem belirler"}</span>
+                </span>
+                <span className="absolute right-3 top-1/2 flex h-7 -translate-y-1/2 items-center gap-1 rounded-full bg-black/50 px-2.5 text-[11.5px] font-medium text-white backdrop-blur"><Pencil className="h-3 w-3" /> {seciliPano ? "Değiştir" : "Seç"}</span>
+              </button>
+            </div>
+          )}
 
-            {/* ═══ RECRAFT: Vektör modu + Kalite (Standart/HD) ═══ */}
-            {modelTip === "recraft" && (
-              <>
-                <Tooltip side="top" label="Fotoğraf yerine düzenlenebilir vektör (SVG) üretir. Her boyutta net kalır — logo, ikon ve illüstrasyon için ideal.">
-                  <button onClick={() => setVektorMod((v) => !v)} className="glass-cip flex items-center gap-2 rounded-full px-3 py-2 text-[13px] text-metin">
-                    <Info className="h-3.5 w-3.5 text-metin-3" /> Vektör modu
-                    <span className={cn("relative h-4 w-7 rounded-full transition-colors", vektorMod ? "bg-aksan" : "bg-white/20")}>
-                      <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all", vektorMod ? "left-3.5" : "left-0.5")} />
+          {/* Ayar çipleri + Üret */}
+          <div className="mt-2.5 flex items-center gap-2 border-t border-white/[0.08] pt-2.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+              {/* Model */}
+              <div className="relative shrink-0">
+                <BCip acik={modelAcik} onClick={() => setModelAcik((v) => !v)} etiket={karsilastir ? "Karşılaştır" : "Model"}
+                  ikon={karsilastir
+                    ? <span className="flex -space-x-1.5">{cokluModel.slice(0, 3).map((ad) => <span key={ad} className="flex h-5 w-5 items-center justify-center rounded-full bg-[#2a2c2f] ring-2 ring-[#1c1e20]"><ModelLogo ad={ad} boyut={12} /></span>)}</span>
+                    : <ModelLogo ad={model} boyut={20} />}
+                  deger={karsilastir ? `${cokluModel.length} model` : model} />
+                <Yuzen acik={modelAcik} onKapat={() => { setModelAcik(false); if (cokluModel.length < 2) setCokluModel([]); }} yerlesim="ust-sol" bosluk={10} etiket="Model seç"
+                  className="flex max-h-[min(72vh,580px)] w-[400px] flex-col overflow-hidden rounded-[20px] border border-white/[0.09] bg-[#1b1c1f]">
+                  <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] p-2">
+                    <label className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full bg-white/[0.04] px-3 ring-1 ring-inset ring-white/[0.07] focus-within:ring-white/25">
+                      <Search className="h-4 w-4 shrink-0 text-metin-3" />
+                      <input value={modelAra} onChange={(e) => setModelAra(e.target.value)} placeholder="Model ara" aria-label="Model ara" autoFocus className="min-w-0 flex-1 bg-transparent text-[13px] outline-none placeholder:text-metin-2" />
+                    </label>
+                    <Tooltip side="top" label="Aynı istemi en fazla 4 modelde aynı anda üret, sonuçları yan yana gör.">
+                      <button role="switch" aria-checked={karsilastir} onClick={() => setCokluModel(karsilastir ? [] : karsilastirAday(aktifModelTanim) ? [model] : [])}
+                        disabled={!karsilastir && !karsilastirAday(aktifModelTanim)}
+                        className={cn("flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-[12.5px] font-medium ring-1 ring-inset transition active:scale-[0.97] disabled:opacity-40", karsilastir ? "bg-white text-black ring-white" : "text-metin-2 ring-white/[0.08] hover:text-metin")}>
+                        <Columns3 className="h-4 w-4" />Karşılaştır
+                      </button>
+                    </Tooltip>
+                  </div>
+                  {karsilastir && (
+                    <p className="mx-2 mt-2 shrink-0 rounded-[12px] bg-white/[0.04] px-3 py-2 text-[12px] leading-snug text-metin-2 ring-1 ring-inset ring-white/[0.06]">
+                      En fazla 4 model seç. Her biri kendi desteklediği en yakın oran ve kaliteyle üretir.
+                    </p>
+                  )}
+                  <div className="min-h-0 flex-1 overflow-y-auto p-1.5 [scrollbar-width:thin]">
+                    {(() => {
+                      const liste = karsilastir ? modelListe.filter(karsilastirAday) : modelListe;
+                      const hepsiDemo = liste.length > 0 && liste.every((m) => !modelBagli(m));
+                      const KartSatir = (m: GorselModel, k: string) => {
+                        const secili = karsilastir ? cokluModel.includes(m.ad) : model === m.ad;
+                        const dolu = karsilastir && !secili && cokluModel.length >= 4;
+                        return (
+                          <button key={k + m.ad} disabled={dolu}
+                            onClick={() => {
+                              if (!karsilastir) { modelSec(m.ad); setModelAcik(false); return; }
+                              setCokluModel((v) => {
+                                if (v.includes(m.ad)) { const y = v.filter((x) => x !== m.ad); if (!y.length) return v; if (m.ad === model) modelSec(y[0]); return y; }
+                                return v.length >= 4 ? v : [...v, m.ad];
+                              });
+                            }}
+                            className={cn("flex w-full items-center gap-3 rounded-[14px] px-2.5 py-2 text-left transition-colors hover:bg-white/[0.045] disabled:cursor-not-allowed disabled:opacity-40", secili && "bg-white/[0.07]")}>
+                            <span className="relative shrink-0">
+                              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-inset ring-white/[0.08]">
+                                <ModelLogo ad={m.ad} boyut={20} />
+                              </span>
+                              {m.rozet === "Yeni" && <Rozet sinif="absolute -left-1.5 -top-1.5">Yeni</Rozet>}
+                              {m.rozet === "Sınırsız" && <Rozet sinif="absolute -left-1.5 -top-1.5 !bg-white !text-black">Sınırsız</Rozet>}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[14px] font-medium leading-5 text-metin">{m.ad}</span>
+                              <span className="line-clamp-2 text-[12px] leading-[17px] text-metin-2">{m.ozet}</span>
+                            </span>
+                            {hepsiDemo || modelBagli(m) ? (
+                              <KrediHap deger={krediYaz(m.kredi ?? 2)} secili={secili} baslik={`Görsel başına ${krediYaz(m.kredi ?? 2)} kredi`} />
+                            ) : (
+                              <span
+                                className="flex h-7 shrink-0 items-center rounded-full bg-white/[0.06] px-2.5 text-[12px] font-medium text-metin-2">Ücretsiz</span>
+                            )}
+                            <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center transition", karsilastir ? "rounded-[6px] border-2" : "rounded-full", secili ? "border-white bg-white text-black" : karsilastir ? "border-white/30" : "opacity-0")}>
+                              {secili && <Check className="h-3 w-3" strokeWidth={3} />}
+                            </span>
+                          </button>
+                        );
+                      };
+                      if (modelAra.trim()) return liste.length ? liste.map((m) => KartSatir(m, "a")) : <p className="px-3 py-6 text-center text-[13px] text-metin-2">&ldquo;{modelAra}&rdquo; ile eşleşen model yok</p>;
+                      const son = sonModeller.map((ad) => liste.find((m) => m.ad === ad)).filter(Boolean) as GorselModel[];
+                      const one = liste.filter((m) => m.grup !== "tum");
+                      const tum = liste.filter((m) => m.grup === "tum");
+                      const Baslik = ({ ikon: I, children }: { ikon: typeof Sparkles; children: React.ReactNode }) => <p className="flex items-center gap-1.5 px-2.5 pb-1 pt-2 text-[12.5px] font-semibold text-metin"><I className="h-3.5 w-3.5 text-metin-2" />{children}</p>;
+                      return (
+                        <>
+                          {hepsiDemo && (
+                            <p className="mx-1 mb-1 flex items-center gap-2 rounded-[12px] bg-amber-300/[0.06] px-2.5 py-2 text-[12px] leading-snug text-amber-100/90 ring-1 ring-inset ring-amber-300/15">
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" />
+                              Sağlayıcılar bağlanana kadar örnek görsel üretilir; kredi düşmez.
+                            </p>
+                          )}
+                          {son.length > 0 && <><Baslik ikon={History}>Son kullanılanlar</Baslik>{son.map((m) => KartSatir(m, "s"))}<div className="mx-2 my-1 h-px bg-white/[0.07]" /></>}
+                          {one.length > 0 && <Baslik ikon={Sparkles}>Öne çıkan modeller</Baslik>}
+                          {one.map((m) => KartSatir(m, "o"))}
+                          {tum.length > 0 && <><div className="mx-2 my-1 h-px bg-white/[0.07]" /><Baslik ikon={LayoutGrid}>Tüm modeller</Baslik></>}
+                          {tum.map((m) => KartSatir(m, "t"))}
+                        </>
+                      );
+                    })()}
+                  </div>
+                  {karsilastir && (
+                    <div className="flex shrink-0 items-center gap-2 border-t border-white/[0.07] px-3 py-2.5">
+                      <span className="flex -space-x-1.5">{cokluModel.map((ad) => <span key={ad} className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2a2c2f] ring-2 ring-[#1b1c1f]"><ModelLogo ad={ad} boyut={13} /></span>)}</span>
+                      <span className="text-[12.5px] text-metin-2"><span className="tabular-nums text-metin">{cokluModel.length}</span>/4 model</span>
+                      <button onClick={() => { setModelAcik(false); if (cokluModel.length < 2) setCokluModel([]); }} className="ml-auto flex h-8 items-center rounded-full bg-white px-3.5 text-[12.5px] font-semibold text-black transition active:scale-95">Tamam</button>
+                    </div>
+                  )}
+                </Yuzen>
+              </div>
+
+              {/* Stil ön ayarı */}
+              {!swapMu && (
+                <div className="relative shrink-0">
+                  <BCip acik={stilAcik} onClick={() => setStilAcik((v) => !v)} etiket="Stil" vurgu={!!seciliStil}
+                    ikon={seciliStil ? <img src={seciliStil.kapak} alt="" className="h-full w-full object-cover" /> : <Palette className="h-4 w-4" />}
+                    deger={seciliStil?.ad ?? "Yok"} />
+                  <Yuzen acik={stilAcik} onKapat={() => setStilAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Stil"
+                    className="flex max-h-[min(72vh,600px)] w-[min(480px,calc(100vw-24px))] flex-col overflow-hidden rounded-[20px] border border-white/[0.09] bg-[#1b1c1f]">
+                    <div className="flex shrink-0 items-center gap-2 border-b border-white/[0.07] px-3.5 py-2.5">
+                      <span className="text-[13.5px] font-semibold text-metin">Stil</span>
+                      <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-metin-2">İstemine görünüm katar</span>
+                      {seciliStil && <button onClick={() => { setStilId(null); setStilAcik(false); }} className="ml-auto flex h-7 items-center gap-1 rounded-full px-2.5 text-[12px] text-metin-2 transition hover:bg-white/[0.06] hover:text-metin"><X className="h-3.5 w-3.5" />Kaldır</button>}
+                    </div>
+                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 [scrollbar-width:thin]">
+                      {(["Fotoğraf", "Sanat", "Dönem"] as const).map((grup) => (
+                        <div key={grup}>
+                          <p className="mb-1.5 text-[12.5px] font-medium text-metin-2">{grup}</p>
+                          <div className="grid grid-cols-4 gap-2 max-sm:grid-cols-3">
+                            {GORSEL_STILLER.filter((x) => x.grup === grup).map((x) => (
+                              <IzgaraSec key={x.id} sec={stilId === x.id} ad={x.ad} kapak={x.kapak} oran="aspect-[4/5]"
+                                onClick={() => { setStilId(stilId === x.id ? null : x.id); setStilAcik(false); }} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </Yuzen>
+                </div>
+              )}
+
+              {/* Çözünürlük — yalnız birden çok kademesi olan modellerde */}
+              {aktifModelTanim.cozunurluk && COZUNURLUKLER.length > 1 && (
+                <div className="relative shrink-0">
+                  <BCip acik={cozunurlukAcik} onClick={() => setCozunurlukAcik((v) => !v)} etiket="Çözünürlük" ikon={<Gem className="h-4 w-4" />} deger={cozunurluk} />
+                  <Yuzen acik={cozunurlukAcik} onKapat={() => setCozunurlukAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Çözünürlük"
+                    className="w-[220px] rounded-[18px] border border-white/[0.09] bg-[#1b1c1f] p-1.5">
+                    <p className="px-2.5 pb-1 pt-1.5 text-[12.5px] font-semibold text-metin">Çözünürlük</p>
+                    {COZUNURLUKLER.map((c) => {
+                      const carpan = cozunurlukCarpani(c);
+                      return (
+                        <button key={c} onClick={() => { setCozunurluk(c); setCozunurlukAcik(false); }}
+                          className={cn("flex w-full items-center gap-2.5 rounded-[12px] px-2.5 py-2 text-left text-[13px] transition-colors hover:bg-white/[0.05]", cozunurluk === c && "bg-white/[0.07]")}>
+                          <Gem className="h-4 w-4 text-metin-2" /><span className="flex-1 font-medium text-metin">{c}</span>
+                          {carpan !== 1 && <span className="rounded-full bg-white/[0.06] px-1.5 text-[11px] tabular-nums text-metin-2">{krediYaz(carpan)} kat kredi</span>}
+                          {cozunurluk === c && <Check className="h-4 w-4 text-metin" />}
+                        </button>
+                      );
+                    })}
+                  </Yuzen>
+                </div>
+              )}
+
+              {/* Kalite seviyesi (GPT/Grok/Seedream 4.0/Recraft) */}
+              {kaliteSecenek && kaliteSecenek.length > 0 && (
+                <div className="relative shrink-0">
+                  <BCip acik={kaliteSeviyeAcik} onClick={() => setKaliteSeviyeAcik((v) => !v)} etiket="Kalite" ikon={<Sparkles className="h-4 w-4" />} deger={aktifKalite} />
+                  <Yuzen acik={kaliteSeviyeAcik} onKapat={() => setKaliteSeviyeAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Kalite"
+                    className="w-[200px] rounded-[18px] border border-white/[0.09] bg-[#1b1c1f] p-1.5">
+                    <p className="px-2.5 pb-1 pt-1.5 text-[12.5px] font-semibold text-metin">Kalite</p>
+                    {kaliteSecenek.map((c) => (
+                      <button key={c} onClick={() => { setKaliteSeviye(c); setKaliteSeviyeAcik(false); }}
+                        className={cn("flex w-full items-center justify-between rounded-[12px] px-2.5 py-2 text-[13px] font-medium text-metin transition-colors hover:bg-white/[0.05]", aktifKalite === c && "bg-white/[0.07]")}>
+                        {c}{aktifKalite === c && <Check className="h-4 w-4" />}
+                      </button>
+                    ))}
+                  </Yuzen>
+                </div>
+              )}
+
+              {/* Oran — görsel şekilli ızgara */}
+              {modelOranlari.length > 0 && (
+                <div className="relative shrink-0">
+                  <BCip acik={oranAcik} onClick={() => setOranAcik((v) => !v)} etiket="Oran"
+                    ikon={(() => { const o = ORANLAR.find((x) => x.deger === oran) ?? ORANLAR[4]; return <OranIkon w={o.w} h={o.h} />; })()} deger={oran} />
+                  <Yuzen acik={oranAcik} onKapat={() => setOranAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Oran"
+                    className="w-[min(320px,calc(100vw-24px))] rounded-[18px] border border-white/[0.09] bg-[#1b1c1f] p-2">
+                    <p className="px-1.5 pb-2 pt-1 text-[12.5px] font-semibold text-metin">Oran</p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {modelOranlari.map((o) => {
+                        const sec = oran === o.deger;
+                        const k = 22 / Math.max(o.w, o.h);
+                        return (
+                          <button key={o.deger} onClick={() => { setOran(o.deger); setOranAcik(false); }} aria-pressed={sec}
+                            className={cn("flex h-[68px] flex-col items-center justify-center gap-1.5 rounded-[12px] text-[12px] font-medium transition active:scale-95", sec ? "bg-white text-black" : "bg-white/[0.04] text-metin-2 hover:bg-white/[0.08] hover:text-metin")}>
+                            <span className="flex h-6 items-center justify-center"><span className="block rounded-[3px]" style={{ width: Math.max(8, o.w * k), height: Math.max(8, o.h * k), border: "2px solid currentColor" }} /></span>
+                            {o.deger}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Yuzen>
+                </div>
+              )}
+
+              {/* Adet */}
+              {!aktifModelTanim.adetGizli && (
+                <div className="flex h-12 shrink-0 items-center gap-1 rounded-full bg-white/[0.08] pl-1.5 pr-1.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.08] text-metin-2"><Images className="h-4 w-4" /></span>
+                  <span className="flex flex-col items-start pl-1 pr-1 leading-tight"><span className="text-[11px] text-metin-3">Adet</span><span className="whitespace-nowrap text-[13.5px] font-medium tabular-nums text-metin">{adet} görsel</span></span>
+                  <button onClick={() => setAdet((a) => Math.max(1, a - 1))} disabled={adet <= 1} className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition hover:bg-white/[0.08] hover:text-metin active:scale-90 disabled:opacity-35" aria-label="Azalt"><Minus className="h-3.5 w-3.5" /></button>
+                  <button onClick={() => setAdet((a) => Math.min(8, a + 1))} disabled={adet >= 8} className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition hover:bg-white/[0.08] hover:text-metin active:scale-90 disabled:opacity-35" aria-label="Artır"><Plus className="h-3.5 w-3.5" /></button>
+                </div>
+              )}
+
+              {/* Sınırsız — yalnız bu model için paket satılıyorsa */}
+              {sinirsizSatiliyor && !karsilastir && (
+                <Tooltip side="top" label={sinirsizAktif ? "Açıkken bu modelde kredi harcamadan üretirsin." : "Bu model için sınırsız erişimin yok, almak için tıkla."}>
+                  <button onClick={sinirsizDegistir} role="switch" aria-checked={sinirsizGecerli}
+                    className="flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white/[0.08] pl-4 pr-3 text-[13.5px] font-medium text-metin transition hover:bg-white/[0.13] active:scale-[0.97]">
+                    Sınırsız
+                    <span className={cn("relative h-[22px] w-[38px] rounded-full transition-colors", sinirsizGecerli ? "bg-white" : "bg-white/15")}>
+                      <span className={cn("absolute top-[3px] h-4 w-4 rounded-full transition-[left,background-color]", sinirsizGecerli ? "left-[19px] bg-black" : "left-[3px] bg-white")} />
                     </span>
                   </button>
                 </Tooltip>
-                <button onClick={() => setKaliteMod((k) => (k === "Standart" ? "HD" : "Standart"))}
-                  className="hf-btn glass-cip flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-metin">
-                  <Sparkles className="h-3.5 w-3.5 text-metin-2" /> {kaliteMod}
-                </button>
-              </>
-            )}
+              )}
 
-            {/* ═══ KONTEXT: Prompt Geliştir (aç/kapa) ═══ */}
-            {modelTip === "kontext" && (
-              <Tooltip side="top" label="İstemini otomatik zenginleştirir — daha detaylı ve tutarlı sonuç.">
-                <button onClick={() => setPromptGelistir((v) => !v)}
-                  className="hf-btn glass-cip flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-metin">
-                  <Wand2 className={cn("h-3.5 w-3.5", promptGelistir ? "text-aksan" : "text-metin-2")} /> {promptGelistir ? "Açık" : "Kapalı"}
+              {/* RUH + Recraft: Renk paleti — seçiliyse paletin renkleriyle */}
+              {(soulMu || modelTip === "recraft") && !karsilastir && (
+                <button onClick={() => setRenkModal(true)}
+                  className="flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white/[0.08] pl-1.5 pr-3.5 text-[13.5px] transition hover:bg-white/[0.13] active:scale-[0.97]">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.08] text-metin-2" style={seciliPalet ? { background: `conic-gradient(${seciliPalet.renkler.join(", ")}, ${seciliPalet.renkler[0]})` } : undefined}>
+                    {!seciliPalet && <Palette className="h-4 w-4" />}
+                  </span>
+                  <span className="flex flex-col items-start leading-tight"><span className="text-[11px] text-metin-3">Renk paleti</span><span className="whitespace-nowrap font-medium text-metin">{seciliPalet?.ad ?? "Yok"}</span></span>
                 </button>
-              </Tooltip>
-            )}
+              )}
 
-            {/* ═══ FLUX: gelişmiş ayar (CFG + Kalite Adımları) popover ═══ */}
-            {modelTip === "flux" && (
-              <div className="relative">
-                <button onClick={() => setFluxAyarAcik((v) => !v)}
-                  className={cn("flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] transition-colors", fluxAyarAcik ? "bg-transparent text-aksan ring-1 ring-aksan" : "glass-cip text-metin")}>
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                </button>
-                <AnimatePresence>
-                  {fluxAyarAcik && (
-                    <>
-                      <div className="fixed inset-0 z-30" onClick={() => setFluxAyarAcik(false)} />
-                      <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8, scale: 0.98 }} transition={{ duration: 0.14 }}
-                        className="menu-surface absolute bottom-full left-0 z-40 mb-2 w-72 rounded-[14px] p-3.5"
-                      >
-                        <div className="mb-3.5">
-                          <div className="mb-1.5 flex items-center gap-1.5">
-                            <span className="text-[13px] font-medium text-metin">Prompt Gücü (CFG)</span>
-                            <Tooltip side="top" label="Yüksek değer istemini daha yakından izler ama yaratıcı çeşitliliği kısıtlar."><Info className="h-3.5 w-3.5 text-metin-3" /></Tooltip>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="glass-cip w-10 rounded-lg py-1 text-center text-[13px] tabular-nums">{cfg}</span>
-                            <input type="range" min={1} max={15} value={cfg} onChange={(e) => setCfg(Number(e.target.value))} className="flex-1 accent-aksan" />
-                          </div>
+              {/* RECRAFT: Vektör modu + Standart/Pro */}
+              {modelTip === "recraft" && !karsilastir && (
+                <>
+                  <Tooltip side="top" label="Fotoğraf yerine düzenlenebilir vektör (SVG) üretir. Her boyutta net kalır; logo, ikon ve illüstrasyon için.">
+                    <button onClick={() => setVektorMod((v) => !v)} role="switch" aria-checked={vektorMod}
+                      className="flex h-12 shrink-0 items-center gap-2.5 rounded-full bg-white/[0.08] pl-4 pr-3 text-[13.5px] font-medium text-metin transition hover:bg-white/[0.13]">
+                      Vektör
+                      <span className={cn("relative h-[22px] w-[38px] rounded-full transition-colors", vektorMod ? "bg-white" : "bg-white/15")}>
+                        <span className={cn("absolute top-[3px] h-4 w-4 rounded-full transition-[left,background-color]", vektorMod ? "left-[19px] bg-black" : "left-[3px] bg-white")} />
+                      </span>
+                    </button>
+                  </Tooltip>
+                  <BCip acik={false} ok={false} onClick={() => setKaliteMod((k) => (k === "Standart" ? "Pro" : "Standart"))} etiket="Uç nokta" ikon={<Layers className="h-4 w-4" />} deger={kaliteMod} />
+                </>
+              )}
+
+              {/* FLUX: yönlendirme + adım */}
+              {modelTip === "flux" && !karsilastir && (
+                <div className="relative shrink-0">
+                  <BCip acik={fluxAyarAcik} onClick={() => setFluxAyarAcik((v) => !v)} etiket="FLUX ayarı" ikon={<SlidersHorizontal className="h-4 w-4" />} deger={`${cfg} · ${kaliteAdim} adım`} />
+                  <Yuzen acik={fluxAyarAcik} onKapat={() => setFluxAyarAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="FLUX ayarı"
+                    className="w-72 rounded-[18px] border border-white/[0.09] bg-[#1b1c1f] p-3.5">
+                    {([["İstem sadakati", "Yüksek değer istemi daha yakından izler ama çeşitliliği kısıtlar.", cfg, setCfg, 1.5, 10, 0.5], ["Adım sayısı", "Daha çok adım daha ayrıntılı ama daha yavaş üretir.", kaliteAdim, setKaliteAdim, 2, 50, 1]] as const).map(([ad, not, d, set, mn, mx, st]) => (
+                      <div key={ad} className="mb-3 last:mb-0">
+                        <div className="mb-1 flex items-center justify-between text-[13px]"><span className="font-medium text-metin">{ad}</span><span className="rounded-full bg-white/[0.06] px-2 tabular-nums text-metin">{d}</span></div>
+                        <input type="range" min={mn} max={mx} step={st} value={d} onChange={(e) => set(Number(e.target.value))} className="w-full accent-white" aria-label={ad} />
+                        <p className="mt-0.5 text-[11.5px] text-metin-2">{not}</p>
+                      </div>
+                    ))}
+                  </Yuzen>
+                </div>
+              )}
+
+              {/* Gelişmiş: tohum · kaçınılacaklar · şeffaf arka plan */}
+              {!swapMu && (
+                <div className="relative shrink-0">
+                  <Tooltip side="top" label="Gelişmiş: tohum, kaçınılacaklar, şeffaf arka plan">
+                    <button onClick={() => setGelismisAcik((v) => !v)} aria-expanded={gelismisAcik} aria-label="Gelişmiş ayarlar"
+                      className={cn("relative flex h-12 w-12 items-center justify-center rounded-full ring-1 ring-inset transition active:scale-95", gelismisAcik ? "bg-white/[0.12] text-metin ring-white/20" : "bg-white/[0.08] text-metin-2 ring-transparent hover:bg-white/[0.13] hover:text-metin")}>
+                      <SlidersHorizontal className="h-4 w-4" />
+                      {(tohum || negatif.trim() || (seffaf && aktifModelTanim.api.seffaf)) && <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-white ring-2 ring-[#2a2b30]" />}
+                    </button>
+                  </Tooltip>
+                  <Yuzen acik={gelismisAcik} onKapat={() => setGelismisAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Gelişmiş ayarlar"
+                    className="w-[min(356px,calc(100vw-24px))] rounded-[20px] border border-white/[0.09] bg-[#1b1c1f] p-2">
+                    <div className="flex items-center justify-between px-2 pb-2 pt-1">
+                      <p className="text-[13.5px] font-semibold text-metin">Gelişmiş ayarlar</p>
+                      {(tohum || negatif.trim() || seffaf) && (
+                        <button type="button" onClick={() => { setTohum(""); setNegatif(""); setSeffaf(false); }} className="rounded-full px-2.5 py-1 text-[12px] text-metin-2 transition-colors hover:bg-white/[0.05] hover:text-metin">Sıfırla</button>
+                      )}
+                    </div>
+                    <div className={cn("rounded-[14px] bg-white/[0.03] p-3 ring-1 ring-inset ring-white/[0.06]", !aktifModelTanim.api.tohum && "opacity-60")}>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-metin-2"><Dices className="h-4 w-4" /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-medium text-metin">Tohum</span>
+                          <span className="block text-[11.5px] leading-snug text-metin-2">{aktifModelTanim.api.tohum ? "Aynı tohum ve aynı istem aynı görseli verir" : `${model} tohum desteklemiyor`}</span>
+                        </span>
+                        {!aktifModelTanim.api.tohum && <Lock className="h-3.5 w-3.5 shrink-0 text-metin-3" />}
+                      </div>
+                      {aktifModelTanim.api.tohum && (
+                        <div className="mt-2.5 flex items-center gap-1.5">
+                          <input value={tohum} onChange={(e) => setTohum(e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" placeholder="Rastgele" aria-label="Tohum"
+                            className="h-9 min-w-0 flex-1 rounded-[10px] bg-black/30 px-3 text-[13px] tabular-nums text-metin outline-none ring-1 ring-inset ring-white/[0.08] placeholder:text-metin-2 focus:ring-white/30" />
+                          <button type="button" onClick={() => setTohum(String(Math.floor(Math.random() * 2 ** 31)))} aria-label="Rastgele tohum" title="Rastgele tohum"
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.06] text-metin-2 ring-1 ring-inset ring-white/[0.08] transition hover:bg-white/[0.1] hover:text-metin active:scale-90"><Dices className="h-4 w-4" /></button>
+                          {tohum && <button type="button" onClick={() => setTohum("")} aria-label="Tohumu temizle" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-metin-3 hover:bg-white/[0.06] hover:text-metin"><X className="h-4 w-4" /></button>}
                         </div>
-                        <div>
-                          <div className="mb-1.5 flex items-center gap-1.5">
-                            <span className="text-[13px] font-medium text-metin">Kalite Adımları</span>
-                            <Tooltip side="top" label="Daha çok adım = daha detaylı ama daha yavaş üretim."><Info className="h-3.5 w-3.5 text-metin-3" /></Tooltip>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="glass-cip w-10 rounded-lg py-1 text-center text-[13px] tabular-nums">{kaliteAdim}</span>
-                            <input type="range" min={10} max={60} value={kaliteAdim} onChange={(e) => setKaliteAdim(Number(e.target.value))} className="flex-1 accent-aksan" />
-                          </div>
-                        </div>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-
-            {/* ═══ VARY (Nano Banana): Draw çipi ═══ */}
-            {aktifModelTanim.cizim && (
-              <button onClick={() => { setCizimSekme("edit"); setCizimModal(true); }}
-                className="hf-btn glass-cip flex items-center gap-1.5 rounded-full px-3 py-2 text-[13px] text-metin">
-                <Pencil className="h-3.5 w-3.5 text-metin-2" /> Çiz
-              </button>
-            )}
-          </div>
-
-          {/* ═══ RUH modeli: Karakter + Moodboard kartları (composer sağ bloğu) ═══ */}
-          {soulMu && (
-            <div className="mt-2.5 flex items-stretch gap-2.5">
-              {/* Karakter kutusu */}
-              <button onClick={() => setKarakterModal(true)}
-                className="flex h-[68px] w-[68px] shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl border border-dashed border-kenar-2 text-metin-3 transition-colors hover:border-aksan/50 hover:text-metin">
-                {seciliKarakter ? (
-                  <span className="h-full w-full" style={{ background: gorselArkaG("gorsel-karakter-" + seciliKarakter, "portre") }} />
-                ) : (
-                  <><Plus className="h-4 w-4" /><span className="text-[9px] font-medium uppercase tracking-wide">Karakter</span></>
-                )}
-              </button>
-              {/* Moodboard kartı */}
-              <button onClick={() => setMoodboardModal(true)}
-                className="group/mb relative h-[68px] flex-1 overflow-hidden rounded-xl border border-kenar text-left transition-colors hover:border-aksan/50">
-                <span className="absolute inset-0" style={{ background: gorselArkaG("gorsel-mood-" + seciliMoodboard, "sinematik") }} />
-                <span className="absolute inset-0 bg-gradient-to-t from-black/80 to-black/20" />
-                <span className="glass-cip absolute left-2 top-2 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium text-white"><Pencil className="h-2.5 w-2.5" /> Değiştir</span>
-                <span className="hf-baslik absolute bottom-2 left-2 text-[13px] text-aksan">{seciliMoodboard.toUpperCase()}</span>
-              </button>
-            </div>
-          )}
+                      )}
+                      {aktifModelTanim.api.tohum && tohum && <p className="mt-1.5 text-[11px] text-metin-2">Birden çok görselde her birinde 1 artar.</p>}
+                    </div>
+                    <div className="mt-1.5 rounded-[14px] bg-white/[0.03] p-3 ring-1 ring-inset ring-white/[0.06]">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-metin-2"><Ban className="h-4 w-4" /></span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-medium text-metin">Kaçınılacaklar</span>
+                          <span className="block text-[11.5px] leading-snug text-metin-2">{aktifModelTanim.api.negatif ? "Modele negatif istem olarak gider" : "İsteme “şunlar olmasın” diye eklenir"}</span>
+                        </span>
+                      </div>
+                      <input value={negatif} onChange={(e) => setNegatif(e.target.value.slice(0, 400))} placeholder="Kendin yaz ya da aşağıdan seç" aria-label="Kaçınılacaklar"
+                        className="mt-2.5 h-9 w-full rounded-[10px] bg-black/30 px-3 text-[13px] text-metin outline-none ring-1 ring-inset ring-white/[0.08] placeholder:text-metin-2 focus:ring-white/30" />
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {["yazı", "filigran", "bulanıklık", "fazla parmak", "düşük kalite", "logo"].map((k) => {
+                          const parcalar = negatif.split(",").map((x) => x.trim()).filter(Boolean);
+                          const var_ = parcalar.includes(k);
+                          return (
+                            <button key={k} type="button" aria-pressed={var_}
+                              onClick={() => setNegatif((var_ ? parcalar.filter((x) => x !== k) : [...parcalar, k]).join(", ").slice(0, 400))}
+                              className={cn("flex h-7 items-center gap-1 rounded-full px-2.5 text-[11.5px] ring-1 ring-inset transition active:scale-95",
+                                var_ ? "bg-white text-black ring-white" : "bg-white/[0.04] text-metin-2 ring-white/[0.07] hover:bg-white/[0.08] hover:text-metin")}>
+                              {var_ ? <Check className="h-3 w-3" strokeWidth={3} /> : <Plus className="h-3 w-3" />}{k}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <button type="button" role="switch" aria-checked={seffaf && !!aktifModelTanim.api.seffaf} disabled={!aktifModelTanim.api.seffaf} onClick={() => setSeffaf((v) => !v)}
+                      className="mt-1.5 flex w-full items-center gap-3 rounded-[14px] bg-white/[0.03] p-3 text-left ring-1 ring-inset ring-white/[0.06] transition-colors hover:bg-white/[0.05] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-white/[0.03]">
+                      <span className="h-8 w-8 shrink-0 rounded-full ring-1 ring-inset ring-white/[0.1]"
+                        style={{ backgroundImage: "conic-gradient(#3a3a40 25%, #232327 0 50%, #3a3a40 0 75%, #232327 0)", backgroundSize: "10px 10px" }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-medium text-metin">Şeffaf arka plan</span>
+                        <span className="block text-[11.5px] leading-snug text-metin-2">{aktifModelTanim.api.seffaf ? "Arka plansız PNG, logo ve ürün için" : "Yalnız GPT Image modellerinde"}</span>
+                      </span>
+                      {aktifModelTanim.api.seffaf ? (
+                        <span className={cn("relative h-[22px] w-[38px] shrink-0 rounded-full transition-colors", seffaf ? "bg-white" : "bg-white/15")}>
+                          <span className={cn("absolute top-[3px] h-4 w-4 rounded-full transition-[left,background-color]", seffaf ? "left-[19px] bg-black" : "left-[3px] bg-white")} />
+                        </span>
+                      ) : <Lock className="h-3.5 w-3.5 shrink-0 text-metin-3" />}
+                    </button>
+                  </Yuzen>
+                </div>
+              )}
             </div>
 
-            {/* Sağda SABİT yükseklikli Üret butonu (apple glass, parlama YOK).
-                h-[88px] sabit → prompt kutusu büyüyüp küçülse de buton oynamaz. */}
-            <button onClick={uret} className="hf-cta-glass flex h-[88px] w-[160px] shrink-0 items-center justify-center gap-2 text-[17px] font-bold tracking-wide">
-              Üret <Sparkles className="h-[18px] w-[18px]" strokeWidth={2.5} /> {(() => { const k = sinirsiz ? modelKredi(model) : modelKredi(model) * adet; return Number.isInteger(k) ? k : k.toFixed(2).replace(/\.?0+$/, ""); })()}
-            </button>
+            {/* Üret — beyaz, çiplerle aynı satırda; bedel düğmenin içinde */}
+            {(() => {
+              const hazir = swapMu ? !!(swapKaynak && swapHedef) : prompt.trim().length >= 2;
+              const kac = karsilastir ? cokluModel.reduce((t, ad) => t + (modelBul(ad).adetGizli ? 1 : adet), 0) : aktifModelTanim.adetGizli ? 1 : adet;
+              const demoHepsi = karsilastir ? cokluModel.every((ad) => !modelBagli(modelBul(ad))) : demoModu;
+              return (
+                <div className="flex shrink-0 items-center gap-2">
+                  <button onClick={uret} disabled={gonderiliyor} aria-busy={gonderiliyor}
+                    title={hazir ? `${kac} görsel üret (Ctrl+Enter)` : swapMu ? "İki görseli de yükle" : "Önce bir istem yaz"}
+                    className={cn("flex h-12 items-center gap-2 rounded-full bg-white px-6 text-[15px] font-semibold text-black transition active:scale-95", !hazir && "opacity-55")}>
+                    {gonderiliyor ? <><Loader2 className="h-4 w-4 animate-spin" /> Gönderiliyor</> : (
+                      <>
+                        {karsilastir ? "Karşılaştır" : "Üret"}
+                        {!demoHepsi && toplamKredi > 0 && <><KrediYildiz className="h-4 w-4" /><motion.span key={toplamKredi} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="tabular-nums">{krediYaz(toplamKredi)}</motion.span></>}
+                        {sinirsizGecerli && !karsilastir && <span className="rounded-full bg-black/10 px-2 py-0.5 text-[11.5px]">Sınırsız</span>}
+                      </>
+                    )}
+                  </button>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
 
-      {/* Soul hero'ları için gizli dosya seçici (Karakter/Moodboard/Renk ortak) */}
-      <input ref={soulRef} type="file" accept="image/*" multiple className="hidden"
-        onChange={(e) => { soulYukle(e.target.files); e.target.value = ""; }} />
-
-      {/* ═══ RUH: KARAKTER seçici modalı (Higgsfield "MAKE YOUR OWN CHARACTER") ═══ */}
+      {/* ═══ RUH: Karakter · Ruh panosu · Renk paleti (gerçek veriyle) ═══ */}
       <AnimatePresence>
-        {karakterModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-md" onClick={() => setKarakterModal(false)}>
-            <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }} onClick={(e) => e.stopPropagation()}
-              className="hf-kart flex max-h-[86vh] w-full max-w-[720px] flex-col overflow-hidden bg-[#131517] shadow-2xl">
-              {/* Hero banner (Higgsfield "MAKE YOUR OWN CHARACTER" birebir) */}
-              <div className="relative flex shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-kenar px-6 py-5">
-                <div className="relative z-10 max-w-[62%]">
-                  <h2 className="hf-baslik text-[20px] leading-tight sm:text-[24px]">KENDİ KARAKTERİNİ YAP</h2>
-                  <p className="mt-2 hidden text-[13px] leading-relaxed text-metin-2 sm:block">Farklı açılardan fotoğraf yükleyip karakterini eğit. Ardından aynı tutarlı karakteri yeni görsel ve videolarda kullan.</p>
-                  <button onClick={() => soulAc("karakter")}
-                    className="hf-cta hf-cta-parlak mt-3 flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-bold sm:mt-4">
-                    Karakter oluştur <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="relative z-10 hidden shrink-0 gap-2 sm:flex">
-                  {["kar-a", "kar-b"].map((s, i) => (
-                    <span key={s} className={cn("h-24 w-16 overflow-hidden rounded-lg", i === 1 && "translate-y-2")} style={{ background: gorselArkaG(s, "portre") }} />
-                  ))}
-                </div>
-                <button onClick={() => setKarakterModal(false)} className="hf-btn glass-cip absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-metin-2 hover:text-metin" aria-label="Kapat"><X className="h-4 w-4" /></button>
-              </div>
-              <div className="shrink-0 border-b border-kenar px-4 py-2.5">
-                <div className="flex items-center gap-1.5">
-                  {([["tumu", "Tümü"], ["soul", "Ruh"], ["soul2", "Ruh 2.0"], ["sinema", "Ruh Sinema"]] as const).map(([id, ad]) => (
-                    <button key={id} onClick={() => setKarakterSekme(id)} className={cn("rounded-full px-3 py-1.5 text-[12.5px] font-medium transition-colors", karakterSekme === id ? "bg-white text-zemin" : "text-metin-2 hover:text-metin")}>{ad}</button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 overflow-y-auto p-6 sm:grid-cols-4">
-                <button onClick={() => soulAc("karakter")}
-                  className="flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-kenar-2 text-metin-3 transition-colors hover:border-aksan/60 hover:text-metin">
-                  <Plus className="h-6 w-6" /><span className="text-[12px] font-semibold">Karakter oluştur</span>
-                </button>
-                {["Talha", "Emma", "Kai", "Sofia", "Leo", "Aria"].map((k) => (
-                  <button key={k} onClick={() => { setSeciliKarakter(k); setKarakterModal(false); toast.success(`Karakter: ${k}`); }}
-                    className={cn("group overflow-hidden rounded-xl border text-left transition-all", seciliKarakter === k ? "border-aksan ring-2 ring-aksan/40" : "border-kenar hover:border-kenar-2")}>
-                    <span className="block aspect-square" style={{ background: gorselArkaG("gorsel-karakter-" + k, "portre") }} />
-                    <span className="block truncate px-2 py-1.5 text-[11px] text-metin-2">{k}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ RUH: MOODBOARD modalı (Higgsfield "CREATE YOUR MOODBOARD") ═══ */}
-      <AnimatePresence>
-        {moodboardModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-md" onClick={() => setMoodboardModal(false)}>
-            <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }} onClick={(e) => e.stopPropagation()}
-              className="hf-kart flex max-h-[86vh] w-full max-w-[760px] flex-col overflow-hidden bg-[#131517] shadow-2xl">
-              {/* Hero banner (Higgsfield "CREATE YOUR MOODBOARD" birebir) */}
-              <div className="relative flex shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-kenar px-6 py-5">
-                <div className="relative z-10 max-w-[62%]">
-                  <h2 className="hf-baslik text-[22px] leading-tight sm:text-[26px]">RUH PANONU OLUŞTUR</h2>
-                  <p className="mt-2 hidden text-[13px] leading-relaxed text-metin-2 sm:block">Referanslarını; stil, ton ve yaratıcı yönü tanımlayan net bir ruh panosuna dönüştür.</p>
-                  <button onClick={() => soulAc("moodboard")}
-                    className="hf-cta hf-cta-parlak mt-3 flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-bold sm:mt-4">
-                    Panonu oluştur <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="relative z-10 hidden shrink-0 gap-2 sm:flex">
-                  {["gorsel-mood-a", "gorsel-mood-b", "gorsel-mood-c"].map((s, i) => (
-                    <span key={s} className={cn("h-24 w-16 overflow-hidden rounded-lg", i === 1 && "translate-y-2")} style={{ background: gorselArkaG(s, "sinematik") }} />
-                  ))}
-                </div>
-                <button onClick={() => setMoodboardModal(false)} className="hf-btn glass-cip absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-metin-2 hover:text-metin" aria-label="Kapat"><X className="h-4 w-4" /></button>
-              </div>
-              {/* Curated / My Moodboards + arama */}
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-kenar px-6 py-3">
-                <div className="flex items-center gap-1">
-                  <span className="glass-cip-aktif rounded-full px-3 py-1.5 text-[13px] font-medium text-metin">Seçilmiş</span>
-                  <span className="hf-btn glass-cip rounded-full px-3 py-1.5 text-[13px] text-metin-2 hover:text-metin">Panolarım</span>
-                </div>
-                <div className="glass-cip flex items-center gap-2 rounded-full px-3 py-1.5">
-                  <Search className="h-3.5 w-3.5 text-metin-3" />
-                  <input value={moodAra} onChange={(e) => setMoodAra(e.target.value)} placeholder="Preset ara…" className="w-32 bg-transparent text-[13px] outline-none placeholder:text-metin-3" />
-                </div>
-              </div>
-              <div className="grid min-h-0 flex-1 grid-cols-2 gap-3.5 overflow-y-auto p-6 sm:grid-cols-3">
-                {MOODBOARD_PRESETLERI.filter((m) => m.toLocaleLowerCase("tr").includes(moodAra.toLocaleLowerCase("tr"))).map((m) => (
-                  <button key={m} onClick={() => { setSeciliMoodboard(m); setMoodboardModal(false); toast.success(`Ruh panosu: ${m}`); }}
-                    className={cn("hf-kart group relative aspect-[3/4] overflow-hidden", seciliMoodboard === m && "hf-kart-secili")}>
-                    {/* Tek görsel katmanı — gerçek mood görseli (çift katman/titreme kaldırıldı) */}
-                    {(() => {
-                      const u = gorselGercek("gorsel-mood-" + m);
-                      return u
-                        ? <img src={u} alt={m} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" />
-                        : <span className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.05]" style={{ background: gorselArkaG("gorsel-mood-" + m, "sinematik") }} />;
-                    })()}
-                    {/* Güçlü alt gradient — isim her zaman net okunur */}
-                    <span className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-                    {seciliMoodboard === m && (
-                      <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-aksan text-zemin"><Check className="h-3.5 w-3.5" strokeWidth={3} /></span>
-                    )}
-                    <span className="absolute inset-x-2.5 bottom-2.5 text-left text-[13px] font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">{m}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ RUH: RENK TRANSFERİ / SOUL HEX modalı ═══ */}
-      <AnimatePresence>
-        {renkModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/65 p-4 backdrop-blur-md" onClick={() => setRenkModal(false)}>
-            <motion.div initial={{ opacity: 0, scale: 0.96, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96, y: 12 }} onClick={(e) => e.stopPropagation()}
-              className="hf-kart flex max-h-[86vh] w-full max-w-[720px] flex-col overflow-hidden bg-[#131517] shadow-2xl">
-              {/* Hero banner (Higgsfield "CONTROL YOUR COLORS WITH SOUL HEX" birebir) */}
-              <div className="relative flex shrink-0 items-center justify-between gap-4 overflow-hidden border-b border-kenar px-6 py-5">
-                <div className="relative z-10 max-w-[62%]">
-                  <h2 className="hf-baslik text-[20px] leading-tight sm:text-[24px]">RENKLERİNİ VAYRA HEX İLE YÖNET</h2>
-                  <p className="mt-2 hidden text-[13px] leading-relaxed text-metin-2 sm:block">Bir referans görseli yükle; Vayra Hex renklerini kendi stiline taşısın.</p>
-                  <button onClick={() => soulAc("renk")}
-                    className="hf-cta hf-cta-parlak mt-3 flex items-center gap-2 rounded-full px-5 py-2.5 text-[14px] font-bold sm:mt-4">
-                    Yükle & Oluştur <Sparkles className="h-4 w-4" />
-                  </button>
-                </div>
-                <span className="relative z-10 hidden h-28 w-40 shrink-0 overflow-hidden rounded-xl sm:block" style={{ background: gorselArkaG("renk-hero", "sinematik") }} />
-                <button onClick={() => setRenkModal(false)} className="hf-btn glass-cip absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full text-metin-2 hover:text-metin" aria-label="Kapat"><X className="h-4 w-4" /></button>
-              </div>
-              <div className="grid min-h-0 flex-1 grid-cols-2 gap-3 overflow-y-auto p-6 sm:grid-cols-3">
-                {seciliRenk && (
-                  <button onClick={() => { setSeciliRenk(null); setRenkModal(false); toast("Renk transferi kaldırıldı"); }}
-                    className="hf-btn glass-cip col-span-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-[12px] text-metin-2 hover:text-metin">
-                    <X className="h-3.5 w-3.5" /> Renk transferini kaldır
-                  </button>
-                )}
-                {RENK_TRANSFER_PRESETLERI.map((p) => (
-                  <button key={p.ad} onClick={() => { setSeciliRenk(p.ad); setRenkModal(false); toast.success(`Renk paleti: ${p.ad}`); }}
-                    className={cn("hf-kart overflow-hidden", seciliRenk === p.ad && "hf-kart-secili")}>
-                    {/* Örnek görsel */}
-                    <span className="block aspect-[4/3]" style={{ background: gorselArkaG("renk-ornek-" + p.ad, "sinematik") }} />
-                    {/* Palet şeridi (Higgsfield birebir) */}
-                    <span className="flex h-2.5">
-                      {p.renkler.map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}
-                    </span>
-                    <span className="block px-2.5 py-1.5 text-left text-[12px] font-medium text-metin">{p.ad}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
+        {karakterModal && <KarakterModal key="ruh-karakter" secili={seciliKarakter} onSec={setSeciliKarakter} onKapat={() => setKarakterModal(false)}
+          onYeni={() => { setKarakterModal(false); setElementTohum({ tur: "karakter" }); }} />}
+        {moodboardModal && <PanoModal key="ruh-pano" secili={seciliPano} onSec={setSeciliPano} onKapat={() => setMoodboardModal(false)} />}
+        {renkModal && <PaletModal key="ruh-palet" secili={seciliPalet} onSec={setSeciliPalet} onKapat={() => setRenkModal(false)} />}
       </AnimatePresence>
 
       {/* ═══ ÇİZİM (DRAW) modalı — Higgsfield "Draw to Edit / Sketch to Video" birebir ═══ */}
       <AnimatePresence>
         {cizimModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-4 backdrop-blur-md" onClick={() => setCizimModal(false)}>
-            <motion.div initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 12 }} onClick={(e) => e.stopPropagation()}
-              className="hf-kart relative flex max-h-[90vh] w-full max-w-[1080px] flex-col overflow-hidden bg-[#0f1113] shadow-2xl">
+            className="fixed inset-0 z-[85] flex justify-end bg-black/55" onClick={() => setCizimModal(false)}>
+            <motion.div initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 60, opacity: 0 }} transition={{ type: "spring", stiffness: 380, damping: 38 }} onClick={(e) => e.stopPropagation()}
+              className="relative flex h-full w-full max-w-[1080px] flex-col overflow-hidden border-l border-white/[0.08] bg-[#121315]">
               {/* Üst sekmeler */}
               <div className="relative flex items-center justify-center gap-1 px-6 py-4">
                 {([
-                  { id: "sketch", ad: "Eskizden Videoya", yeni: true },
-                  { id: "draw", ad: "Çizerek Videoya", yeni: false },
-                  { id: "edit", ad: "Çizerek Düzenle", yeni: false },
+                  { id: "edit", ad: "Çizerek düzenle", yeni: false },
+                  { id: "sketch", ad: "Eskizden görsel", yeni: false },
                 ] as const).map((s) => (
                   <button key={s.id} onClick={() => setCizimSekme(s.id)}
                     className={cn("flex items-center gap-1.5 rounded-full px-4 py-2 text-[14px] font-medium transition-colors",
-                      cizimSekme === s.id ? "glass-cip-aktif text-metin" : "text-metin-2 hover:text-metin")}>
+                      cizimSekme === s.id ? "bg-white text-black" : "text-metin-2 hover:text-metin")}>
                     <Pencil className="h-4 w-4" /> {s.ad}
-                    {s.yeni && <span className="rounded bg-aksan px-1.5 py-0.5 text-[9px] font-bold text-zemin">YENİ</span>}
+                    {s.yeni && <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-semibold text-black">Yeni</span>}
                   </button>
                 ))}
                 <button onClick={() => setCizimModal(false)} className="hf-btn glass-ikon absolute right-4 top-3 flex h-9 w-9 items-center justify-center rounded-full text-metin-2 hover:text-metin" aria-label="Kapat"><X className="h-4 w-4" /></button>
@@ -2025,7 +2478,17 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
 
               {/* GERÇEK çizim tuvali — fare/dokunma ile çiz, kalem/silgi/renk/kalınlık/undo/redo taşır */}
               <div className="mx-6 flex-1 overflow-y-auto">
-                <CizimCanvas ref={cizimCanvasRef} arka={cizimSekme === "edit" ? gorselArkaG("cizim-tuval", "sinematik") : undefined} />
+                {cizimSekme === "edit" && !cizimArka ? (
+                  <div className="flex min-h-[360px] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-white/15 text-center">
+                    <p className="text-[14px] font-medium text-metin">Üstüne çizeceğin görseli seç</p>
+                    <p className="max-w-[360px] text-[12.5px] text-metin-3">Değişmesini istediğin yeri çiz, ok ya da not ekle; model çizimini talimat olarak okur.</p>
+                    <button onClick={() => cizimArkaRef.current?.click()} className="rounded-xl bg-white px-4 py-2 text-[13px] font-semibold text-zemin hover:opacity-90">Görsel yükle</button>
+                  </div>
+                ) : (
+                  <CizimCanvas ref={cizimCanvasRef} arka={cizimSekme === "edit" && cizimArka ? `url("${cizimArka}") center/cover no-repeat` : undefined} />
+                )}
+                <input ref={cizimArkaRef} type="file" accept="image/png,image/jpeg,image/webp" hidden
+                  onChange={(e) => { const d = e.target.files?.[0]; e.target.value = ""; if (d) void dosyaOku(d).then(setCizimArka); }} />
               </div>
 
               {/* Alt çubuk: model seçici (sol) + Üret (sağ) — çizim araçları artık tuvalde */}
@@ -2036,37 +2499,41 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                     <BarChart3 className="h-3.5 w-3.5" /> {model} <ChevronRight className={cn("h-3.5 w-3.5 transition-transform", cizimModelAcik && "rotate-90")} />
                   </button>
                   <AnimatePresence>
-                    {cizimModelAcik && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setCizimModelAcik(false)} />
-                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                          className="menu-surface absolute bottom-full left-0 z-50 mb-2 max-h-64 w-56 overflow-y-auto rounded-xl p-1.5">
-                          {modelListe.slice(0, 14).map((m) => (
+                    <Yuzen acik={!!(cizimModelAcik)} onKapat={() => setCizimModelAcik(false)} alt={"tam"} sol={0} bosluk={8}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                          className="menu-surface max-h-64 w-56 overflow-y-auto rounded-xl p-1.5">
+                          {GORSEL_MODELLER.filter((m) => m.api.refMax > 0 && m.tip !== "swap").map((m) => (
                             <button key={m.ad} onClick={() => { setModel(m.ad); setCizimModelAcik(false); }}
                               className={cn("flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] transition-colors", model === m.ad ? "bg-white/8 text-metin" : "text-metin-2 hover:bg-white/6 hover:text-metin")}>
                               <BarChart3 className="h-3.5 w-3.5 shrink-0" /> <span className="min-w-0 flex-1 truncate">{m.ad}</span>
-                              {model === m.ad && <Check className="h-3.5 w-3.5 text-aksan" />}
+                              {model === m.ad && <Check className="h-3.5 w-3.5 text-metin" />}
                             </button>
                           ))}
-                        </motion.div>
-                      </>
-                    )}
+                        </motion.div></Yuzen>
                   </AnimatePresence>
                 </div>
 
                 {/* Üret — GERÇEK çizimi (canvas dataUrl) referans olarak geçir */}
-                <button onClick={() => {
-                  if (cizimCanvasRef.current?.bosMu()) return toast.error("Önce tuvale bir şeyler çiz");
-                  const cizimData = cizimCanvasRef.current?.dataUrl();
-                  const cizimVideo = cizimSekme !== "edit";
-                  const sonuc = uretimBaslat({ baslik: cizimVideo ? "Çizimden video" : "Çizimden görsel", tur: cizimVideo ? "video" : "gorsel", model, prompt: (prompt || "çizim") + " · tuvalden", kredi: 2, arac: "Çizim", projeId: aktifProjeId ?? undefined, meta: { oran, cozunurluk, gorselUrl: cizimData } });
+                <button onClick={async () => {
+                  const tuval = cizimCanvasRef.current;
+                  if (!tuval || tuval.bosMu()) return toast.error("Tuval boş", { description: "Üretmeden önce tuvale bir şeyler çiz." });
+                  const duzenle = cizimSekme === "edit";
+                  if (!cizimModelTanim.api.refMax) return toast.error(`${model} görsel girdisi almıyor`, { description: "Çizimden üretmek için Nano Banana ya da GPT Image seç." });
+                  let birlesik: string;
+                  try { birlesik = await gorselDepola(await cizimBirlestir(tuval.dataUrl(), duzenle ? cizimArka : null)); }
+                  catch (e) { return toast.error("Çizim hazırlanamadı", { description: `${neden(e, "Tuval görsele çevrilemedi.")} Yeniden dene.` }); }
+                  const talimat = duzenle
+                    ? `${prompt.trim() || "Apply the drawn changes"}. The image contains hand-drawn marks and notes: apply them as edit instructions and remove the marks from the final image.`
+                    : `${prompt.trim() || "Turn this sketch into a finished image"}. Follow the composition of the sketch.`;
+                  const birim = cizimKredi;
+                  const sonuc = uretimBaslat({ baslik: duzenle ? "Çizerek düzenleme" : "Eskizden görsel", tur: "gorsel", model, prompt: talimat, kredi: birim, arac: "Çizim", projeId: aktifProjeId ?? undefined,
+                    meta: { islem: "uret", oran, ...(cizimModelTanim.api.cozunurluklar.length ? { cozunurluk } : {}), referanslar: [birlesik], gorselUrl: birlesik, hamIstem: prompt } });
                   if (!sonuc.ok) return uretimHataToast(sonuc, "Üretilemedi");
-                  toast.success(cizimVideo ? "Video üretiliyor ✦" : "Görsel üretiliyor ✦", { description: `${model} · çizimden · 2 kredi` });
-                  cizimCanvasRef.current?.temizle();
+                  toast.success("Görsel üretiliyor", { description: `${model} · çizimden · ${krediYaz(birim)} kredi.` });
+                  tuval.temizle();
                   setCizimModal(false);
                 }}
-                  className="hf-cta hf-cta-parlak ml-auto flex items-center gap-2 rounded-[14px] px-5 py-2.5 text-[15px] font-bold">
-                  {cizimSekme === "edit" ? "Görsel Üret" : "Video Üret"} <Sparkles className="h-4 w-4" /> 2
+                  className="ml-auto flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[15px] font-semibold text-black transition active:scale-95">
+                  Görsel üret <KrediYildiz className="h-4 w-4" /> {krediYaz(cizimKredi)}
                 </button>
               </div>
             </motion.div>
@@ -2074,236 +2541,54 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
         )}
       </AnimatePresence>
 
-      {/* ═══════════════════════ VARLIK GÖRÜNTÜLEYİCİ (LIGHTBOX) ═══════════════════════ */}
+      {/* ═══════════════════════ GÖRSEL GÖRÜNTÜLEYİCİ ═══════════════════════ */}
       <AnimatePresence>
         {seciliKart && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            className="fixed inset-0 z-[60] flex bg-black/85 backdrop-blur-sm"
-            onClick={lightboxKapat}
-          >
-            {/* Kapat (sol üst) */}
-            <button
-              onClick={lightboxKapat}
-              className="absolute left-5 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full glass-ikon text-white backdrop-blur transition-colors"
-              aria-label="Kapat"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Büyük görsel alanı */}
-            <div
-              className="relative flex flex-1 items-center justify-center overflow-hidden p-8"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Görselin renklerinden türeyen blurlu arka plan (Higgsfield birebir — madde 15) */}
-              <div
-                key={"blur-" + seciliKart}
-                className="pointer-events-none absolute inset-0 scale-125"
-                style={{
-                  backgroundImage: `url("${saltUrl(seciliKart) ?? seciliKart}")`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  filter: "blur(60px) saturate(1.5) brightness(0.55)",
+          <GorselGoruntuleyici
+            uretimId={acikUretim?.id}
+            url={seciliKart}
+            ad={gorselAdi}
+            altBaslik={acikUretim
+              ? `${acikUretim.model} · ${new Date(acikUretim.olusturma).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+              : "Örnek görsel · İlham galerisi"}
+            onAdKaydet={adDegistir}
+            sira={lbIndex >= 0 ? { i: lbIndex, n: gezListe.length } : null}
+            onGez={lightboxGez}
+            onKapat={lightboxKapat}
+            ustKatmanAcik={elementModal || medyaOnizle !== null || elementSeciciModal}
+            krediler={kullanici?.krediler ?? 0}
+            onIndir={(src, ad) => gorseliIndir(src, ad)}
+            onAracCalistir={aracCalistir}
+            onYerelKaydet={yerelKaydet}
+            yorumSayisi={tumYorumlar.filter((y) => y.konuId === seciliKart).length}
+            yorumlar={<YorumSekmesi yorum={yorum} setYorum={setYorum} konuId={seciliKart} isaretDestek />}
+            bilgi={
+              <InfoSekmesi url={seciliKart} uretim={acikUretim} prompt={acikUretim ? ((acikUretim.meta?.hamIstem as string | undefined) ?? istemTemizle(acikPrompt)) : ""}
+                onIndir={() => gorseliIndir(seciliKart ?? undefined, gorselAdi)}
+                onYenidenUret={acikUretim ? () => { yenidenUret((acikUretim.meta?.hamIstem as string | undefined) ?? acikPrompt); } : undefined}
+                onElement={() => elementModalAc(seciliKart, acikPrompt)}
+                onAnimate={() => { if (seciliKart) { lightboxKapat(); animasyonaGec(seciliKart); } }}
+                onReferans={() => { if (seciliKart) { referansEkle(seciliKart); lightboxKapat(); } }}
+                begenili={!!acikUretim?.favori}
+                onBegen={acikUretim ? () => { favoriToggle(acikUretim.id); toast.success(acikUretim.favori ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); } : undefined}
+                onSil={acikUretim ? () => { const eski = acikUretim; silUretim(eski.id); lightboxKapat(); mesaj.silindi("Üretim", () => uretimGeriYukle(eski)); } : undefined}
+                onAyarlariYukle={acikUretim ? () => ayarlariComposeraYukle() : undefined}
+                onRemix={() => {
+                  if (!seciliKart) return;
+                  const url = saltUrl(seciliKart) ?? seciliKart;
+                  const ist = acikUretim ? ((acikUretim.meta?.hamIstem as string | undefined) ?? istemTemizle(acikPrompt)) : "";
+                  setReferanslar((v) => [{ ad: "Remix kaynağı", url }, ...v.filter((x) => x.url !== url)].slice(0, REF_UST));
+                  if (ist) setPrompt(ist);
+                  lightboxKapat();
+                  setTimeout(() => promptRef.current?.focus(), 50);
+                  toast.success("Remix için referans eklendi", { description: "İstemi değiştirip üret. Kompozisyon görselden gelir." });
                 }}
-              />
-              <div className="pointer-events-none absolute inset-0 bg-black/30" />
-              {/* Önceki (Higgsfield: sol ok ile önceki üretime geç) */}
-              {lbIndex > 0 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); lightboxGez(-1); }}
-                  className="hf-btn glass-ikon absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white"
-                  aria-label="Önceki görsel"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-              )}
-
-              <motion.img
-                ref={lbImgRef}
-                key={seciliKart}
-                initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
-                src={saltUrl(seciliKart) ?? seciliKart}
-                alt=""
-                className="relative z-[5] max-h-full max-w-full rounded-xl object-contain shadow-2xl shadow-black/60"
-              />
-
-              {/* Sonraki (Higgsfield: sağ ok ile sonraki üretime geç) */}
-              {lbIndex >= 0 && lbIndex < TUM_GORSELLER.length - 1 && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); lightboxGez(1); }}
-                  className="hf-btn glass-ikon absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white"
-                  aria-label="Sonraki görsel"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-              )}
-
-              {/* Tam ekran — görselin KENDİSİNİ tarayıcı fullscreen'ine al (Higgsfield birebir) */}
-              <button
-                onClick={(e) => { e.stopPropagation(); tamEkranAc(); }}
-                className="absolute bottom-4 left-4 z-10 flex h-10 w-10 items-center justify-center rounded-full glass-ikon text-white backdrop-blur transition-colors"
-                aria-label="Tam ekran"
-              >
-                <Maximize2 className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Sağ araç paneli — slide-in. KUTU DIŞI kademesi (#131517): içindeki
-                İSTEM/DETAYLAR kutuları (#1c1e20) ondan bir ton açık kalsın diye
-                glass-strong (#1c1e20) yerine bg-yuzey kullanılır — merdiven korunur. */}
-            <motion.aside
-              initial={{ x: 340, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 340, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 380, damping: 38 }}
-              onClick={(e) => e.stopPropagation()}
-              className="flex w-[340px] shrink-0 flex-col border-l border-white/10 bg-yuzey shadow-[0_12px_36px_-12px_rgba(0,0,0,0.7)]"
-            >
-              <AnimatePresence mode="wait">
-                {aktifArac === "renk" ? (
-                  <RenkPaneli
-                    key="renk"
-                    preset={preset} setPreset={setPreset}
-                    efektAcik={efektAcik} setEfektAcik={setEfektAcik}
-                    efektGenis={efektGenis} setEfektGenis={setEfektGenis}
-                    onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={efektUygula}
-                    onIndir={() => gorseliIndir(seciliKart ?? undefined, gorselAdi)}
-                  />
-                ) : aktifArac === "upscale" ? (
-                  <UpscalePaneli
-                    key="upscale"
-                    model={upModel} setModel={setUpModel}
-                    modelAcik={upModelAcik} setModelAcik={setUpModelAcik}
-                    olcek={upOlcek} setOlcek={setUpOlcek}
-                    gelismis={upGelismis} setGelismis={setUpGelismis}
-                    keskinlik={upKeskinlik} setKeskinlik={setUpKeskinlik}
-                    denoise={upDenoise} setDenoise={setUpDenoise}
-                    yuz={upYuz} setYuz={setUpYuz}
-                    onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={upscaleUygula}
-                  />
-                ) : aktifArac === "iyilestirici" ? (
-                  <IyilestiriciPaneli key="iyilestirici" onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={() => aracUygula("İyileştirici", 2, "cilt ve doku iyileştirme")} />
-                ) : aktifArac === "isik" ? (
-                  <IsikPaneli key="isik" onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={() => aracUygula("Yeniden Işıklandır", 2, "ışık yönü ve tonu yeniden")} />
-                ) : aktifArac === "inpaint" ? (
-                  <InpaintPaneli key="inpaint" onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={() => aracUygula("İç Boyama", 3, "seçili alanı yeniden çiz")} />
-                ) : aktifArac === "acilar" ? (
-                  <AcilarPaneli key="acilar" onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={() => aracUygula("Açılar", 1, "kamera açısı yeniden")} />
-                ) : aktifArac === "reframe" ? (
-                  <ReframePaneli key="reframe" onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={(oran) => aracUygula("Yeniden Çerçevele", 2, `${oran} orana genişletildi (outpaint)`)} />
-                ) : aktifArac === "arkaplan" ? (
-                  <ArkaplanPaneli key="arkaplan" onGeri={() => setAktifArac(null)} onKapat={lightboxKapat}
-                    onUygula={() => aracUygula("Arka Planı Kaldır", 2, "arka plan şeffaflaştırıldı (cutout)")} />
-                ) : (
-                  <motion.div
-                    key="drawer"
-                    initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }}
-                    transition={{ duration: 0.16 }}
-                    className="flex h-full flex-col"
-                  >
-                    {/* GÖRSEL ADI — düzenlenebilir (madde 3, 2026-07-31).
-                        Eskiden burada "Vayra Kullanıcısı / Üretici" yazıyordu;
-                        kullanıcıya hiçbir şey söylemiyordu. Artık görselin ADI
-                        durur, kalemle değiştirilir ve İNDİRME DOSYA ADI da bu
-                        olur (ahmet.png gibi). */}
-                    <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3">
-                      {adDuzenleniyor ? (
-                        <input
-                          autoFocus
-                          value={adTaslak}
-                          onChange={(e) => setAdTaslak(e.target.value)}
-                          onBlur={adKaydet}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); adKaydet(); }
-                            if (e.key === "Escape") { e.preventDefault(); setAdDuzenleniyor(false); }
-                          }}
-                          aria-label="Görsel adı"
-                          className="min-w-0 flex-1 rounded-lg bg-white/8 px-2.5 py-1.5 text-sm font-semibold text-white outline-none ring-1 ring-aksan/50"
-                        />
-                      ) : (
-                        <button
-                          onClick={() => { setAdTaslak(gorselAdi); setAdDuzenleniyor(true); }}
-                          className="group/ad flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-white/6"
-                          title="Adı düzenle"
-                        >
-                          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-white">{gorselAdi}</span>
-                          <Pencil className="h-3.5 w-3.5 shrink-0 text-metin-3 transition-colors group-hover/ad:text-aksan" />
-                        </button>
-                      )}
-                      <button onClick={lightboxKapat} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/8 hover:text-metin" aria-label="Kapat">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    {/* Segment: Bilgi / Araçlar / Yorumlar — Higgsfield birebir buzlu-cam sekmeler */}
-                    <div className="flex gap-1.5 border-b border-white/8 px-2.5 py-2.5">
-                      {([["info", "Bilgi", Info], ["araclar", "Araçlar", Wand2], ["yorumlar", "Yorumlar", MessageCircle]] as const).map(([id, ad, Ikon]) => (
-                        <button
-                          key={id}
-                          onClick={() => setLbSekme(id)}
-                          className={cn(
-                            "flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-medium",
-                            lbSekme === id ? "glass-cip-aktif text-white" : "glass-cip text-metin-2 hover:text-metin",
-                          )}
-                        >
-                          <Ikon className={cn("h-3.5 w-3.5", lbSekme === id && "text-aksan")} /> {ad}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* İçerik */}
-                    <div className="flex-1 overflow-y-auto">
-                      {lbSekme === "info" && (
-                        /* prompt: composer'ın canlı metni DEĞİL, bu üretimin
-                           kendi kayıtlı metni (bkz. acikPrompt notu). Dosya
-                           adı ve element açıklaması da ondan türetilir. */
-                        <InfoSekmesi url={seciliKart} model={acikUretim?.model ?? model} oran={oran} prompt={acikPrompt} onKapat={lightboxKapat}
-                          onIndir={() => gorseliIndir(seciliKart ?? undefined, gorselAdi)}
-                          onYenidenUret={() => { yenidenUret(); lightboxKapat(); }}
-                          onElement={() => elementModalAc(seciliKart, acikPrompt)}
-                          onAyarlariYukle={() => ayarlariComposeraYukle()} />
-                      )}
-                      {lbSekme === "araclar" && (
-                        <div className="p-2">
-                          {/* Higgsfield "EDIT IMAGE" başlığı */}
-                          <p className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-metin-3">
-                            <Wand2 className="h-3.5 w-3.5" /> Görseli Düzenle
-                          </p>
-                          {ARACLAR.map((a) => {
-                            const Ikon = a.ikon;
-                            return (
-                              <button
-                                key={a.id}
-                                onClick={() => aracTikla(a.id)}
-                                className="flex w-full items-center gap-3 rounded-[11px] px-3 py-2.5 text-left text-sm transition-colors hover:bg-white/6"
-                              >
-                                {/* Higgsfield birebir: ikon kutusuz, sade */}
-                                <Ikon className="h-[18px] w-[18px] shrink-0 text-metin-2" />
-                                <span className="flex-1 font-medium">{a.ad}</span>
-                                {a.rozet && <span className="rounded bg-aksan px-1.5 py-0.5 text-[9px] font-bold text-zemin">{a.rozet}</span>}
-                                <ChevronRight className="h-4 w-4 text-metin-3" />
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {lbSekme === "yorumlar" && seciliKart && (
-                        <YorumSekmesi yorum={yorum} setYorum={setYorum} konuId={seciliKart} />
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.aside>
-          </motion.div>
+                kaynak={(() => {
+                  const k = acikUretim?.meta?.kaynakId ? tumUretimler.find((u) => u.id === acikUretim.meta?.kaynakId) : undefined;
+                  return k?.gorselUrl ? { url: saltUrl(k.gorselUrl) ?? k.gorselUrl, ad: k.baslik || "Kaynak", ac: () => setSeciliKart(k.gorselUrl!) } : undefined;
+                })()} />
+            }
+          />
         )}
       </AnimatePresence>
 
@@ -2321,7 +2606,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
               initial={{ scale: 0.94 }} animate={{ scale: 1 }} exit={{ scale: 0.94 }}
               src={medyaOnizle} alt="Referans önizleme"
               onClick={(e) => e.stopPropagation()}
-              className="max-h-[88vh] max-w-[88vw] rounded-2xl object-contain shadow-2xl"
+              className="max-h-[88vh] max-w-[88vw] rounded-2xl object-contain"
             />
           </motion.div>
         )}
@@ -2334,147 +2619,16 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
         )}
       </AnimatePresence>
 
-      {/* ═══════════════════════ YENİ ELEMENT MODALI ═══════════════════════ */}
+      {/* Yeni element — ortak düzenleyici; oluşturulan element istemine eklenir */}
       <AnimatePresence>
-        {elementModal && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
-            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md"
-            onClick={() => setElementModal(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 10 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-              className="hf-kart w-full max-w-[880px] overflow-hidden bg-[#232527] shadow-2xl shadow-black/60"
-            >
-              {/* Başlık */}
-              <div className="flex items-center justify-between border-b border-kenar px-6 py-4">
-                <h2 className="text-[18px] font-semibold">Yeni Element</h2>
-                <button
-                  onClick={() => setElementModal(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-aksan ring-1 ring-aksan transition-colors hover:bg-aksan/10"
-                  aria-label="Kapat"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* 2 sütun gövde */}
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr]">
-                {/* Sol: meta */}
-                <div className="space-y-4 p-6">
-                  <input
-                    value={elementAd}
-                    onChange={(e) => setElementAd(e.target.value)}
-                    placeholder="Element adı"
-                    className="glass-cip w-full rounded-lg px-3.5 py-2.5 text-[15px] outline-none"
-                  />
-                  <textarea
-                    value={elementAciklama}
-                    onChange={(e) => setElementAciklama(e.target.value)}
-                    placeholder="Açıklama ekle"
-                    rows={3}
-                    className="glass-cip w-full resize-none rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder:text-metin-3"
-                  />
-                  {/* Kategori dropdown */}
-                  <div>
-                    <label className="mb-1.5 block text-[12px] text-metin-2">Kategori</label>
-                    <div className="relative">
-                      <button
-                        onClick={() => setElementKategoriAcik((v) => !v)}
-                        className="hf-btn glass-cip flex w-full items-center justify-between rounded-lg px-3.5 py-2.5 text-sm"
-                      >
-                        {elementKategori}
-                        <ChevronDown className={cn("h-4 w-4 text-metin-2 transition-transform", elementKategoriAcik && "rotate-180")} />
-                      </button>
-                      <AnimatePresence>
-                        {elementKategoriAcik && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setElementKategoriAcik(false)} />
-                            {/* m6: YANA açılır (alta değil) — modal içinde scroll gerektirmesin */}
-                            <motion.div
-                              initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.12 }}
-                              className="menu-surface absolute left-full top-0 z-20 ml-2 w-44 overflow-hidden rounded-xl p-1"
-                            >
-                              {["Oto", "Karakter", "Nesne", "Stil", "Sahne"].map((k) => (
-                                <button
-                                  key={k}
-                                  onClick={() => { setElementKategori(k); setElementKategoriAcik(false); }}
-                                  className={cn("flex w-full items-center justify-between rounded-[9px] px-2.5 py-2 text-sm transition-colors hover:bg-white/8", elementKategori === k && "bg-white/[0.06]")}
-                                >
-                                  {k}
-                                  {elementKategori === k && <Check className="h-4 w-4 text-aksan" />}
-                                </button>
-                              ))}
-                            </motion.div>
-                          </>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                  {/* Workspace */}
-                  <div>
-                    <label className="mb-1.5 block text-[12px] text-metin-2">Çalışma alanı</label>
-                    <div className="glass-cip flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 text-sm">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-full glass-ikon glass-ikon-lime text-[11px] font-bold text-aksan">
-                        {(kullanici?.ad ?? "V").slice(0, 1).toLocaleUpperCase("tr")}
-                      </span>
-                      {kullanici?.ad ?? "Vayra Kullanıcısı"}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Dikey hairline */}
-                <div className="hidden w-px bg-kenar md:block" />
-
-                {/* Sağ: medya yükleme (gerçek dosya seçici) */}
-                <div className="p-6">
-                  <label className="mb-1.5 block text-[12px] text-metin-2">Medya yükle</label>
-                  <input ref={elementMedyaRef} type="file" accept="image/*" className="hidden"
-                    onChange={(e) => {
-                      const d = e.target.files?.[0]; e.target.value = "";
-                      if (!d) return;
-                      const ok = new FileReader();
-                      ok.onload = () => { setElementMedya(String(ok.result)); toast.success("Medya eklendi 🖼"); };
-                      ok.readAsDataURL(d);
-                    }} />
-                  <button
-                    onClick={() => elementMedyaRef.current?.click()}
-                    className="hf-btn glass-cip relative flex aspect-[4/3] w-full flex-col items-center justify-center gap-3 overflow-hidden rounded-xl text-metin-2"
-                  >
-                    {elementMedya ? (
-                      <>
-                        <img src={elementMedya} alt="Element medyası" className="absolute inset-0 h-full w-full object-cover" />
-                        <span className="glass-cip absolute bottom-2 right-2 rounded-full px-2.5 py-1 text-[11px] text-white">Değiştir</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex h-12 w-12 items-center justify-center rounded-full glass-ikon">
-                          <Plus className="h-6 w-6" />
-                        </span>
-                        <span className="text-sm">Sürükle bırak veya yüklemek için tıkla</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Alt aksiyon çubuğu */}
-              <div className="flex items-center justify-end gap-2 border-t border-kenar px-6 py-4">
-                <button
-                  onClick={() => setElementModal(false)}
-                  className="rounded-[11px] px-4 py-2.5 text-sm font-medium text-metin-2 transition-colors hover:bg-white/6 hover:text-metin"
-                >
-                  İptal
-                </button>
-                <button onClick={elementOlustur} className="hf-cta px-5 py-2.5 text-sm">
-                  Oluştur
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
+        {elementTohum && (
+          <ElementDuzenleModal key="gorsel-yeni-element" element={null} tohumDeger={elementTohum} onKapat={() => setElementTohum(null)}
+            onOlustu={(id) => {
+              const e = useElements.getState().elementler.find((x) => x.id === id);
+              if (!e) return;
+              if (elementTohum.tur === "karakter" && soulMu) setSeciliKarakter(e.ad);
+              else setPrompt((p) => `${p}${p && !p.endsWith(" ") ? " " : ""}@${e.ad} `);
+            }} />
         )}
       </AnimatePresence>
 
@@ -2494,1092 +2648,8 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   );
 }
 
-/* ═══════════════════════ SLIDER (range) ═══════════════════════ */
-function Slider({
-  ad, min, max, deger, setDeger, disabled, degeriSolda,
-}: {
-  ad: string; min: number; max: number; deger: number;
-  setDeger: (n: number) => void; disabled?: boolean; degeriSolda?: boolean;
-}) {
-  return (
-    <div className={cn("space-y-1.5", disabled && "opacity-40")}>
-      <div className="flex items-center justify-between text-[12px]">
-        <span className="flex items-center gap-1 text-metin-2">
-          {ad}
-          <Info className="h-3 w-3 text-metin-3" />
-        </span>
-        {!degeriSolda && <span className="tabular-nums text-metin">{deger}</span>}
-      </div>
-      <div className="flex items-center gap-2">
-        {degeriSolda && <span className="w-8 shrink-0 text-[12px] tabular-nums text-metin">{deger}</span>}
-        <input
-          type="range" min={min} max={max} value={deger} disabled={disabled}
-          onChange={(e) => setDeger(Number(e.target.value))}
-          className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/12 accent-aksan disabled:cursor-not-allowed"
-          aria-label={ad}
-        />
-      </div>
-    </div>
-  );
-}
+/* ═══════════════════════ BİLGİ SEKMESİ ═══════════════════════
+   Yalnız GERÇEK bilgi: kendi üretiminde kaydın kendisi (istem, model, oran, kalite,
+   kredi, tarih, piksel boyutu); ilham galerisindeki örnek görselde istem/model yoktur
+   ve uydurulmaz — yerine "benzerini üret" yolları gösterilir. */
 
-/* ═══════════════════════ ALT PANEL BAŞLIĞI ═══════════════════════ */
-function AltBaslik({ ikon: Ikon, ad, onGeri, onKapat }: { ikon: typeof Palette; ad: string; onGeri: () => void; onKapat: () => void }) {
-  return (
-    <div className="flex items-center gap-2.5 border-b border-white/8 px-3 py-3.5">
-      <button onClick={onGeri} className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/8 hover:text-metin" aria-label="Geri">
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <span className="flex h-8 w-8 items-center justify-center rounded-full glass-ikon">
-        <Ikon className="h-4 w-4 text-metin" />
-      </span>
-      <span className="flex-1 text-[15px] font-semibold">{ad}</span>
-      <button onClick={onKapat} className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/8 hover:text-metin" aria-label="Kapat">
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
-/* ═══════════════════════ RENK DERECELENDİRME PANELİ ═══════════════════════ */
-function RenkPaneli({
-  preset, setPreset, efektAcik, setEfektAcik, efektGenis, setEfektGenis, onGeri, onKapat, onUygula, onIndir,
-}: {
-  preset: string; setPreset: (s: string) => void;
-  efektAcik: Record<string, boolean>; setEfektAcik: (f: (p: Record<string, boolean>) => Record<string, boolean>) => void;
-  efektGenis: string | null; setEfektGenis: (s: string | null) => void;
-  onGeri: () => void; onKapat: () => void; onUygula: () => void; onIndir: () => void;
-}) {
-  // Slider'lar için yerel değerler
-  const [degerler, setDegerler] = useState<Record<string, number>>({});
-  const sd = (k: string, on: number) => degerler[k] ?? on;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
-      transition={{ duration: 0.18 }}
-      className="flex h-full flex-col"
-    >
-      <AltBaslik ikon={Palette} ad="Renk Derecelendirme" onGeri={onGeri} onKapat={onKapat} />
-
-      <div className="flex-1 space-y-3 overflow-y-auto p-3">
-        {/* PRESETLER 3×3 */}
-        <div className="glass-cip rounded-xl p-3">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-metin-2">Presetler</p>
-          <div className="grid grid-cols-3 gap-2.5">
-            {RENK_PRESETLERI.map((p) => {
-              const secili = preset === p;
-              return (
-                <button
-                  key={p}
-                  onClick={() => setPreset(p)}
-                  className={cn(
-                    "group/preset relative overflow-hidden rounded-lg text-center",
-                    secili && "ring-2 ring-aksan ring-offset-2 ring-offset-[#252527]",
-                  )}
-                >
-                  <span className="flex aspect-[86/62] items-center justify-center bg-gradient-to-br from-white/12 to-white/4">
-                    {p === "None" && <span className="text-[10px] text-metin-3">Yok</span>}
-                    {secili && (
-                      <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-aksan text-zemin">
-                        <Check className="h-3 w-3" />
-                      </span>
-                    )}
-                  </span>
-                  <span className="block truncate px-0.5 py-1 text-[11px] text-metin">{p}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Akordiyon efekt bölümleri */}
-        {EFEKT_BOLUMLERI.map((b) => {
-          const acik = efektAcik[b.id] ?? false;
-          const genis = efektGenis === b.id;
-          return (
-            <div key={b.id} className="glass-cip overflow-hidden rounded-xl">
-              <div className="flex items-center gap-2 px-3 py-2.5">
-                <button
-                  onClick={() => setEfektGenis(genis ? null : b.id)}
-                  className="flex flex-1 items-center gap-2 text-left"
-                >
-                  <ChevronDown className={cn("h-4 w-4 text-metin-2 transition-transform", !genis && "-rotate-90")} />
-                  <span className="text-sm font-medium">{b.ad}</span>
-                  <Info className="h-3.5 w-3.5 text-metin-3" />
-                </button>
-                {/* Bölüm toggle */}
-                <button
-                  onClick={() => setEfektAcik((p) => ({ ...p, [b.id]: !acik }))}
-                  className={cn("relative h-4 w-7 shrink-0 rounded-full transition-colors", acik ? "bg-aksan" : "bg-white/20")}
-                  aria-label={`${b.ad} aç/kapat`}
-                >
-                  <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all", acik ? "left-3.5" : "left-0.5")} />
-                </button>
-              </div>
-              <AnimatePresence initial={false}>
-                {genis && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.18 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="space-y-3 px-3 pb-3">
-                      {b.sliderlar.map((s) => {
-                        const key = `${b.id}.${s.ad}`;
-                        return (
-                          <Slider
-                            key={key} ad={s.ad} min={s.min} max={s.max}
-                            deger={sd(key, s.on)} setDeger={(n) => setDegerler((d) => ({ ...d, [key]: n }))}
-                            disabled={!acik}
-                          />
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Alt sabit çubuk */}
-      <div className="flex items-center gap-2 border-t border-white/8 p-3">
-        <button
-          onClick={() => { setPreset("None"); setEfektAcik(() => ({})); setDegerler({}); toast("Sıfırlandı"); }}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full glass-ikon text-metin-2 transition-colors hover:text-metin"
-          aria-label="Sıfırla"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </button>
-        <button
-          onClick={onIndir}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full glass-ikon text-metin-2 transition-colors hover:text-metin"
-          aria-label="İndir"
-        >
-          <Download className="h-4 w-4" />
-        </button>
-        <button onClick={onUygula} className="hf-cta flex-1 py-2.5 text-sm">
-          Efekti Uygula
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ═══════════════════════ UPSCALE PANELİ ═══════════════════════ */
-/* ═══ İyileştirici — cilt/doku iyileştirme (Higgsfield Enhancer birebir) ═══ */
-function IyilestiriciPaneli({ onGeri, onKapat, onUygula }: { onGeri: () => void; onKapat: () => void; onUygula: () => void }) {
-  const [tip, setTip] = useState("Gerçekçi ten");
-  const tipler = ["Yumuşak ten", "Gerçekçi ten", "Kusurlu ten"];
-  return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }} className="flex h-full flex-col">
-      <AltBaslik ikon={Wand2} ad="İyileştirici" onGeri={onGeri} onKapat={onKapat} />
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <p className="text-[13px] text-metin-2">İyileştirme türünü seç:</p>
-        <div className="grid grid-cols-2 gap-2">
-          {tipler.map((t) => (
-            <button key={t} onClick={() => setTip(t)}
-              className={cn("relative overflow-hidden rounded-xl border text-left transition-colors", tip === t ? "border-aksan ring-1 ring-aksan/50" : "border-kenar hover:border-kenar-2")}>
-              <span className="block aspect-[4/3]" style={{ background: gorselArkaG("iyilestir-" + t, "portre") }} />
-              {tip === t && <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-aksan text-zemin"><Check className="h-3 w-3" /></span>}
-              <span className="absolute bottom-1.5 left-2 text-[11px] font-medium text-white drop-shadow">{t}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-white/8 p-3">
-        <button onClick={onUygula} className="hf-cta flex w-full items-center justify-center gap-1.5 py-2.5 text-[14px]">İyileştir <Sparkles className="h-4 w-4" /> 4</button>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ═══ Yeniden Işıklandır (Higgsfield Relight birebir) ═══ */
-function IsikPaneli({ onGeri, onKapat, onUygula }: { onGeri: () => void; onKapat: () => void; onUygula: () => void }) {
-  const [yon, setYon] = useState("Ön");
-  const [sertlik, setSertlik] = useState("Yumuşak");
-  const [parlaklik, setParlaklik] = useState(50);
-  const yonler = ["Üst", "Ön", "Sağ", "Sol", "Arka", "Alt"];
-  return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }} className="flex h-full flex-col">
-      <AltBaslik ikon={Sun} ad="Yeniden Işıklandır" onGeri={onGeri} onKapat={onKapat} />
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-metin-2">Hızlı seçim</p>
-          <div className="grid grid-cols-3 gap-1.5">
-            {yonler.map((y) => (
-              <button key={y} onClick={() => setYon(y)}
-                className={cn("rounded-lg border py-2 text-[12px] transition-colors", yon === y ? "border-aksan bg-aksan/10 text-aksan" : "border-kenar text-metin-2 hover:text-metin")}>{y}</button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-metin-2">Işık ayarları</p>
-          <div className="glass-cip mb-3 flex gap-1 rounded-full p-1">
-            {["Yumuşak", "Sert"].map((s) => (
-              <button key={s} onClick={() => setSertlik(s)}
-                className={cn("flex-1 rounded-full py-1.5 text-[12px] transition-colors", sertlik === s ? "glass-cip-aktif text-metin" : "text-metin-2")}>{s}</button>
-            ))}
-          </div>
-          <Slider ad="Parlaklık" min={0} max={100} deger={parlaklik} setDeger={setParlaklik} degeriSolda />
-        </div>
-      </div>
-      <div className="border-t border-white/8 p-3">
-        <button onClick={onUygula} className="hf-cta flex w-full items-center justify-center gap-1.5 py-2.5 text-[14px]">Üret <Sparkles className="h-4 w-4" /> 2</button>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ═══ İç Boyama — Inpaint (Higgsfield birebir) ═══ */
-function InpaintPaneli({ onGeri, onKapat, onUygula }: { onGeri: () => void; onKapat: () => void; onUygula: () => void }) {
-  const [arac, setArac] = useState<"fircayla" | "silgi">("fircayla");
-  const [firca, setFirca] = useState(43);
-  const [aciklama, setAciklama] = useState("");
-  return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }} className="flex h-full flex-col">
-      <AltBaslik ikon={Scissors} ad="İç Boyama" onGeri={onGeri} onKapat={onKapat} />
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <div className="glass-cip flex items-center gap-1 rounded-full p-1">
-          <button onClick={() => setArac("fircayla")} className={cn("flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-[12px] transition-colors", arac === "fircayla" ? "glass-cip-aktif text-metin" : "text-metin-2")}><Pencil className="h-3.5 w-3.5" /> Fırça</button>
-          <button onClick={() => setArac("silgi")} className={cn("flex flex-1 items-center justify-center gap-1 rounded-full py-1.5 text-[12px] transition-colors", arac === "silgi" ? "glass-cip-aktif text-metin" : "text-metin-2")}><Eraser className="h-3.5 w-3.5" /> Silgi</button>
-        </div>
-        <Slider ad="Fırça boyutu" min={5} max={100} deger={firca} setDeger={setFirca} degeriSolda />
-        <textarea value={aciklama} onChange={(e) => setAciklama(e.target.value)} rows={3}
-          placeholder="Düzenlenecek alanı boya ve değişikliği yaz…"
-          className="glass-cip w-full resize-none rounded-xl p-2.5 text-[13px] outline-none placeholder:text-metin-3" />
-      </div>
-      <div className="border-t border-white/8 p-3">
-        <button onClick={onUygula} className="hf-cta flex w-full items-center justify-center gap-1.5 py-2.5 text-[14px]">Üret <Sparkles className="h-4 w-4" /> 3</button>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ═══ Açılar — kamera açısı (Higgsfield Angles birebir) ═══ */
-function AcilarPaneli({ onGeri, onKapat, onUygula }: { onGeri: () => void; onKapat: () => void; onUygula: () => void }) {
-  const [donme, setDonme] = useState(0);
-  const [egim, setEgim] = useState(0);
-  const [yakin, setYakin] = useState(0);
-  const [oto, setOto] = useState(false);
-  return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }} className="flex h-full flex-col">
-      <AltBaslik ikon={RotateCcw} ad="Açılar" onGeri={onGeri} onKapat={onKapat} />
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        {/* Küre pad */}
-        <div className="glass-cip relative flex aspect-square w-full items-center justify-center rounded-xl">
-          <span className="absolute inset-4 rounded-full border border-dashed border-kenar-2" />
-          <span className="h-12 w-12 rounded-lg" style={{ background: gorselArkaG("acilar-pad", "sinematik") }} />
-          <span className="pointer-events-none absolute bottom-2 text-[10px] text-metin-3">Kamera açısını sürükleyerek değiştir</span>
-        </div>
-        <label className="flex items-center gap-2 text-[13px] text-metin-2">
-          <input type="checkbox" checked={oto} onChange={(e) => setOto(e.target.checked)} className="h-4 w-4 accent-aksan" />
-          En iyi 12 açıdan üret
-        </label>
-        <Slider ad="Döndürme" min={-180} max={180} deger={donme} setDeger={setDonme} degeriSolda />
-        <Slider ad="Eğim" min={-90} max={90} deger={egim} setDeger={setEgim} degeriSolda />
-        <Slider ad="Yakınlaştır" min={0} max={100} deger={yakin} setDeger={setYakin} degeriSolda />
-      </div>
-      <div className="border-t border-white/8 p-3">
-        <button onClick={onUygula} className="hf-cta flex w-full items-center justify-center gap-1.5 py-2.5 text-[14px]">Üret <Sparkles className="h-4 w-4" /> 1</button>
-      </div>
-    </motion.div>
-  );
-}
-
-// Yeniden Çerçevele (Reframe / outpaint) — görseli farklı orana genişletir.
-function ReframePaneli({ onGeri, onKapat, onUygula }: { onGeri: () => void; onKapat: () => void; onUygula: (oran: string) => void }) {
-  const oranlar = ["16:9", "9:16", "1:1", "4:5", "3:2", "21:9"];
-  const [oran, setOran] = useState("16:9");
-  return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }} className="flex h-full flex-col">
-      <AltBaslik ikon={Crop} ad="Yeniden Çerçevele" onGeri={onGeri} onKapat={onKapat} />
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <p className="text-[12px] text-metin-3">Görseli yeni en-boy oranına outpaint ile genişlet — kenarlar doğal doldurulur.</p>
-        <div className="grid grid-cols-3 gap-2">
-          {oranlar.map((o) => (
-            <button key={o} onClick={() => setOran(o)}
-              className={cn("flex flex-col items-center gap-1.5 rounded-xl border py-3 text-[12px] font-medium transition-colors",
-                oran === o ? "border-aksan bg-aksan/10 text-aksan" : "border-kenar text-metin-2 hover:border-kenar-2")}>
-              <span className="rounded-[3px] border-2 border-current" style={{ width: 26, height: 26 / (Number(o.split(":")[0]) / Number(o.split(":")[1])) }} />
-              {o}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-white/8 p-3">
-        <button onClick={() => onUygula(oran)} className="hf-cta flex w-full items-center justify-center gap-1.5 py-2.5 text-[14px]">Genişlet <Sparkles className="h-4 w-4" /> 2</button>
-      </div>
-    </motion.div>
-  );
-}
-
-// Arka Planı Kaldır — özneyi kesip şeffaf zemin bırakır (cutout).
-function ArkaplanPaneli({ onGeri, onKapat, onUygula }: { onGeri: () => void; onKapat: () => void; onUygula: () => void }) {
-  const [mod, setMod] = useState<"seffaf" | "beyaz" | "renk">("seffaf");
-  return (
-    <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }} transition={{ duration: 0.18 }} className="flex h-full flex-col">
-      <AltBaslik ikon={Eraser} ad="Arka Planı Kaldır" onGeri={onGeri} onKapat={onKapat} />
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        <p className="text-[12px] text-metin-3">Özneyi otomatik seç, arka planı kaldır. Yeni zemini seç.</p>
-        <div className="hf-dama flex aspect-video w-full items-center justify-center rounded-xl">
-          <span className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-ink-950" style={{ background: "rgba(255,255,255,0.8)" }}>Önizleme (şeffaf)</span>
-        </div>
-        <div className="space-y-1.5">
-          {([["seffaf", "Şeffaf (PNG)"], ["beyaz", "Beyaz zemin"], ["renk", "Düz renk zemin"]] as const).map(([id, ad]) => (
-            <button key={id} onClick={() => setMod(id)}
-              className={cn("flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-[13px] transition-colors",
-                mod === id ? "border-aksan bg-aksan/10 text-aksan" : "border-kenar text-metin-2 hover:border-kenar-2")}>
-              {ad} {mod === id && <Check className="h-4 w-4" />}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="border-t border-white/8 p-3">
-        <button onClick={onUygula} className="hf-cta flex w-full items-center justify-center gap-1.5 py-2.5 text-[14px]">Uygula <Sparkles className="h-4 w-4" /> 2</button>
-      </div>
-    </motion.div>
-  );
-}
-
-function UpscalePaneli({
-  model, setModel, modelAcik, setModelAcik, olcek, setOlcek, gelismis, setGelismis,
-  keskinlik, setKeskinlik, denoise, setDenoise, yuz, setYuz, onGeri, onKapat, onUygula,
-}: {
-  model: string; setModel: (s: string) => void;
-  modelAcik: boolean; setModelAcik: (b: boolean) => void;
-  olcek: string; setOlcek: (s: string) => void;
-  gelismis: boolean; setGelismis: (b: boolean) => void;
-  keskinlik: number; setKeskinlik: (n: number) => void;
-  denoise: number; setDenoise: (n: number) => void;
-  yuz: boolean; setYuz: (b: boolean) => void;
-  onGeri: () => void; onKapat: () => void; onUygula: () => void;
-}) {
-  const aktifModel = UPSCALE_MODELLERI.find((m) => m.ad === model) ?? UPSCALE_MODELLERI[0];
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
-      transition={{ duration: 0.18 }}
-      className="flex h-full flex-col"
-    >
-      <AltBaslik ikon={Maximize2} ad="Upscale" onGeri={onGeri} onKapat={onKapat} />
-
-      <div className="flex-1 space-y-4 overflow-y-auto p-3">
-        {/* MODEL satırı + Reset */}
-        <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-metin-2">Model</span>
-          <button
-            onClick={() => { setModel("Topaz"); setOlcek("x2"); toast("Sıfırlandı"); }}
-            className="flex items-center gap-1 text-[12px] text-metin-2 transition-colors hover:text-metin"
-          >
-            <RotateCcw className="h-3 w-3" /> Reset
-          </button>
-        </div>
-
-        {/* Model select kartı */}
-        <div className="relative">
-          <button
-            onClick={() => setModelAcik(!modelAcik)}
-            className="hf-btn glass-cip flex w-full items-center gap-3 rounded-[10px] p-2.5 text-left"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg glass-ikon glass-ikon-lime">
-              <Maximize2 className="h-4 w-4 text-aksan" />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-semibold">{aktifModel.ad}</span>
-              <span className="block truncate text-[12px] text-metin-2">{aktifModel.ozet}</span>
-            </span>
-            <ChevronDown className={cn("h-4 w-4 shrink-0 text-metin-2 transition-transform", modelAcik && "rotate-180")} />
-          </button>
-          <AnimatePresence>
-            {modelAcik && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setModelAcik(false)} />
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.12 }}
-                  className="menu-surface absolute left-0 top-full z-20 mt-1.5 w-full overflow-hidden rounded-xl p-1"
-                >
-                  {UPSCALE_MODELLERI.map((m) => (
-                    <button
-                      key={m.ad}
-                      onClick={() => { setModel(m.ad); setModelAcik(false); }}
-                      className={cn("flex w-full items-start gap-2.5 rounded-[9px] p-2 text-left transition-colors hover:bg-white/8", model === m.ad && "bg-white/[0.06]")}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium">{m.ad}</span>
-                        <span className="block truncate text-[12px] text-metin-2">{m.ozet}</span>
-                      </span>
-                      {model === m.ad && <Check className="mt-0.5 h-4 w-4 shrink-0 text-aksan" />}
-                    </button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Ölçek çarpanı segmenti */}
-        <div>
-          <span className="mb-1.5 block text-[12px] text-metin-2">Ölçek çarpanı</span>
-          <div className="glass-cip flex items-center gap-1 rounded-full p-1">
-            {UPSCALE_OLCEK.map((o) => {
-              const kapali = o === "x8" || o === "x16";
-              return (
-                <button
-                  key={o}
-                  disabled={kapali}
-                  onClick={() => setOlcek(o)}
-                  className={cn(
-                    "flex-1 rounded-full py-1.5 text-[12px] transition-colors",
-                    kapali ? "cursor-not-allowed text-metin-3 opacity-40" : olcek === o ? "bg-white text-zemin" : "text-metin-2 hover:text-metin",
-                  )}
-                >
-                  {o}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Gelişmiş ayarlar akordiyon */}
-        <div className="glass-cip overflow-hidden rounded-xl">
-          <button
-            onClick={() => setGelismis(!gelismis)}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-          >
-            <ChevronDown className={cn("h-4 w-4 text-metin-2 transition-transform", !gelismis && "-rotate-90")} />
-            <span className="text-sm font-medium">Gelişmiş ayarlar</span>
-          </button>
-          <AnimatePresence initial={false}>
-            {gelismis && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-4 px-3 pb-3">
-                  {/* Preset satırı */}
-                  <div className="flex items-center justify-between text-[12px]">
-                    <span className="text-metin-2">Preset</span>
-                    <span className="text-metin">Standard</span>
-                  </div>
-                  <Slider ad="Keskinlik" min={0} max={100} deger={keskinlik} setDeger={setKeskinlik} degeriSolda />
-                  <Slider ad="Denoise" min={0} max={100} deger={denoise} setDeger={setDenoise} degeriSolda />
-                  {/* Yüz iyileştirme toggle */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Yüz iyileştirme</span>
-                    <button
-                      onClick={() => setYuz(!yuz)}
-                      className={cn("relative h-4 w-7 shrink-0 rounded-full transition-colors", yuz ? "bg-aksan" : "bg-white/20")}
-                      aria-label="Yüz iyileştirme"
-                    >
-                      <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all", yuz ? "left-3.5" : "left-0.5")} />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Alt CTA */}
-      <div className="border-t border-white/8 p-3">
-        <button onClick={onUygula} className="hf-cta flex w-full items-center justify-center gap-2 py-2.5 text-sm">
-          <Sparkles className="h-4 w-4" /> Upscale <span className="opacity-70">2.0</span>
-        </button>
-      </div>
-    </motion.div>
-  );
-}
-
-/* ═══════════════════════ BİLGİ SEKMESİ (Higgsfield Info) ═══════════════════════ */
-function InfoSekmesi({
-  url, model, oran, prompt, onKapat, onIndir, onYenidenUret, onElement, onAyarlariYukle,
-}: {
-  url: string | null; model: string; oran: string; prompt: string; onKapat: () => void;
-  onIndir: () => void; onYenidenUret: () => void; onElement: () => void;
-  /** "Bu ayarlarla üret" — üretimin model/oran/istem/referansını composer'a yükler. */
-  onAyarlariYukle?: () => void;
-}) {
-  const [genis, setGenis] = useState(false);
-  const [begenili, setBegenili] = useState(false);
-  const [referansli, setReferansli] = useState(false);
-  const [dahaAcik, setDahaAcik] = useState(false);
-  // Deterministik meta (görsel URL'sinden) — Higgsfield "Details" birebir.
-  const kod = (url ?? "").split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-  const boyutlar = ["1152x2048", "2048x2048", "1024x1536", "1536x1024", "2048x1152"];
-  const boyut = boyutlar[kod % boyutlar.length];
-  const tarih = ["12 Temmuz 2026", "13 Temmuz 2026", "5 Temmuz 2026", "2 Temmuz 2026"][kod % 4];
-  const tamPrompt = prompt || "iMac, Apple klavye, Magic Mouse — temiz ürün fotoğrafı, yumuşak stüdyo ışığı, beyaz zemin";
-
-  /* GERÇEK paylaşım (madde 5). Sıra:
-     1) Web Share API + dosya → görselin KENDİSİ paylaşılır (mobil/Safari)
-     2) Web Share API (yalnız url) → bağlantı paylaşılır
-     3) Pano → görselin doğrudan adresi kopyalanır
-     Eskisi her durumda yalnız sayfa URL'ini kopyalıyordu; alıcı görseli
-     göremiyordu. */
-  const gorseliPaylas = async () => {
-    if (!url) return;
-    const nav = typeof navigator !== "undefined" ? navigator : undefined;
-    const mutlak = url.startsWith("http") || url.startsWith("data:")
-      ? url
-      : typeof location !== "undefined" ? new URL(url, location.origin).href : url;
-    try {
-      if (nav?.canShare && nav.share) {
-        const yanit = await fetch(mutlak);
-        const blob = await yanit.blob();
-        const dosya = new File([blob], "vayra-gorsel.png", { type: blob.type || "image/png" });
-        if (nav.canShare({ files: [dosya] })) {
-          await nav.share({ files: [dosya], title: "Vayra görseli", text: tamPrompt.slice(0, 120) });
-          return;
-        }
-      }
-      if (nav?.share) { await nav.share({ title: "Vayra görseli", url: mutlak }); return; }
-      throw new Error("paylaşım yok");
-    } catch (e) {
-      // Kullanıcı paylaşım sayfasını kapattıysa sessiz geç (hata değil).
-      if (e instanceof DOMException && e.name === "AbortError") return;
-      await navigator.clipboard?.writeText(mutlak).catch(() => {});
-      toast.success("Görsel bağlantısı kopyalandı 🔗", { description: "Paylaşmak için yapıştırman yeterli." });
-    }
-  };
-  const kisa = tamPrompt.length > 120 ? tamPrompt.slice(0, 120) + "…" : tamPrompt;
-
-  const [detayAcik, setDetayAcik] = useState(true);
-  const bas = "T"; // yazar baş harfi (Higgsfield avatar)
-  return (
-    <div className="flex h-full flex-col">
-      {/* Kaydırılabilir içerik */}
-      <div className="flex-1 space-y-5 overflow-y-auto p-4 [scrollbar-width:thin]">
-        {/* PROMPT — Higgsfield birebir: başlık + Kopyala, metin KUTU İÇİNDE (panel-ic).
-            Derinlik merdiveni: panel #131517 üstünde İSTEM kutusu #1c1e20. */}
-        <div>
-          <div className="mb-2 flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-metin-3">
-              <Wand2 className="h-3.5 w-3.5" /> İstem
-            </span>
-            {/* ANA EYLEM: "Bu ayarlarla üret" — üretimin GERÇEKTEN kullandığı
-                model/oran/çözünürlük/istem/element/referans composer'a dolar ve
-                panel kapanır (kullanıcı kararı 2026-07-31). Salt kopyalama
-                ikincil bir ikon butona indi. */}
-            <div className="flex items-center gap-1">
-              {onAyarlariYukle && (
-                <button onClick={onAyarlariYukle}
-                  className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] font-semibold text-aksan transition-colors hover:bg-aksan/10">
-                  <Wand2 className="h-3 w-3" /> Bu ayarlarla üret
-                </button>
-              )}
-              <button
-                onClick={() => { navigator.clipboard?.writeText(tamPrompt); toast.success("İstem kopyalandı"); }}
-                aria-label="İstemi kopyala"
-                className="flex h-6 w-6 items-center justify-center rounded-md text-metin-3 transition-colors hover:bg-white/8 hover:text-metin"
-              >
-                <Copy className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-          <div className="panel-ic rounded-[14px] p-3.5">
-            <p className="text-[13.5px] leading-relaxed text-metin">{genis ? tamPrompt : kisa}</p>
-            {tamPrompt.length > 120 && (
-              <button onClick={() => setGenis((v) => !v)}
-                className="hf-btn mt-2.5 flex w-full items-center justify-center gap-1 rounded-[10px] border border-kenar py-2 text-[12px] text-metin-2 hover:text-metin">
-                {genis ? "Gizle" : "Tümünü gör"} <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", genis && "rotate-180")} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* DETAYLAR — Higgsfield birebir: toggle başlık + satırlar KUTU İÇİNDE (panel-ic). */}
-        <div>
-          <button onClick={() => setDetayAcik((v) => !v)} className="mb-2 flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-metin-3">
-            <Info className="h-3.5 w-3.5" /> Detaylar
-            <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", detayAcik && "rotate-180")} />
-          </button>
-          {detayAcik && (
-            <div className="panel-ic space-y-2.5 rounded-[14px] p-3.5 text-[13.5px]">
-              <DetaySatir k="Model" v={model} />
-              <DetaySatir k="Moodboard" v="Genel" avatar />
-              <DetaySatir k="Karakter" v="Talha" avatar />
-              <DetaySatir k="Kalite" v="2K" />
-              <DetaySatir k="Boyut" v={boyut} />
-              <DetaySatir k="Oluşturma" v={tarih} />
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Alt SABİT CTA bloğu — Higgsfield birebir (scroll'dan bağımsız) */}
-      <div className="glass-cip shrink-0 space-y-2.5 border-t border-white/8 p-3">
-        {/* Videoya çevir (Higgsfield "Turn to video" — lime CTA) */}
-        <button
-          onClick={() => { toast.success("Videoya dönüştürülüyor 🎬", { description: "Video Stüdyosu'na taşındı" }); onKapat(); }}
-          className="hf-cta flex w-full items-center justify-center gap-2 py-2.5 text-sm"
-        >
-          <VideoIcon className="h-4 w-4" /> Videoya çevir
-        </button>
-
-        {/* Recreate + Reference */}
-        <div className="flex items-center gap-2">
-          <button onClick={onYenidenUret} className="hf-btn glass-cip flex flex-1 items-center justify-center gap-1.5 rounded-[10px] py-2 text-[13px]">
-            <RefreshCw className="h-3.5 w-3.5" /> Yeniden üret
-          </button>
-          <button
-            onClick={() => { setReferansli((v) => !v); toast.success(referansli ? "Referans kaldırıldı" : "Referans olarak eklendi 👤", { description: referansli ? undefined : "Yeni üretimde bu görsel referans alınacak" }); }}
-            className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-[10px] border py-2 text-[13px] transition-colors",
-              referansli ? "border-aksan/50 bg-aksan/10 text-aksan" : "glass-cip border-transparent")}>
-            <UserSquare className="h-3.5 w-3.5" /> {referansli ? "Referans ✓" : "Referans"}
-          </button>
-        </div>
-
-        {/* İndir · ♡ · ↗ · ⋯ */}
-        <div className="flex items-center gap-2">
-          <button onClick={onIndir} className="hf-btn glass-cip flex flex-1 items-center justify-center gap-1.5 rounded-[10px] py-2 text-[13px]">
-            <Download className="h-3.5 w-3.5" /> İndir
-          </button>
-          <button onClick={() => { setBegenili((v) => !v); if (!begenili) toast.success("Beğenildi 💗"); }} aria-label="Beğen"
-            className={cn("flex h-9 w-10 items-center justify-center rounded-[10px] bg-white/6 transition-colors hover:bg-white/10",
-              begenili ? "text-rose-400" : "text-metin-2 hover:text-rose-400")}>
-            <Heart className={cn("h-4 w-4", begenili && "fill-rose-400")} />
-          </button>
-          {/* PAYLAŞ (madde 5) — eskiden yalnız SAYFA url'ini kopyalıyordu, yani
-              alıcı görseli göremiyordu ("fake"). Artık önce cihazın yerel
-              paylaşım sayfası (Web Share) denenir ve GÖRSEL DOSYASI paylaşılır;
-              desteklenmiyorsa görselin doğrudan bağlantısı panoya kopyalanır. */}
-          <IkonAksiyon ikon={Share2} etiket="Paylaş" onClick={() => void gorseliPaylas()} />
-          <div className="relative">
-            <IkonAksiyon ikon={MoreHorizontal} etiket="Daha fazla" onClick={() => setDahaAcik((v) => !v)} />
-            <AnimatePresence>
-              {dahaAcik && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setDahaAcik(false)} />
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                    className="menu-surface absolute bottom-11 right-0 z-50 w-44 overflow-hidden rounded-xl p-1 shadow-2xl">
-                    {[
-                      // m54: stok görsel — gerçek eylemler (yakında yok):
-                      // yayınla→görseli üret+yayınla akışı, element oluştur→modal, sil→gizle.
-                      { ad: "Görselden üret", ik: Upload, fn: () => { onYenidenUret(); } },
-                      { ad: "Element oluştur", ik: UserSquare, fn: onElement },
-                      { ad: "İndir", ik: Download, fn: onIndir, tehlike: false },
-                    ].map((o) => (
-                      <button key={o.ad} onClick={() => { o.fn(); setDahaAcik(false); }}
-                        className={cn("flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] transition-colors hover:bg-white/8", o.tehlike ? "text-rose-400" : "text-metin")}>
-                        <o.ik className="h-3.5 w-3.5" /> {o.ad}
-                      </button>
-                    ))}
-                  </motion.div>
-                </>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-      <span className="hidden">{bas}</span>
-    </div>
-  );
-}
-
-/** Higgsfield Details satırı — sağa hizalı değer, opsiyonel avatar (Moodboard/Karakter). */
-function DetaySatir({ k, v, avatar }: { k: string; v: string; avatar?: boolean }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-metin-3">{k}</span>
-      <span className="flex items-center gap-1.5 font-medium text-metin">
-        {v}
-        {avatar && <span className="h-5 w-5 rounded-full ring-1 ring-white/15" style={{ background: onizlemeArka("detay-" + k + v, "portre") }} />}
-      </span>
-    </div>
-  );
-}
-
-/** Lightbox alt satırdaki kare ikon aksiyonu (Higgsfield birebir). */
-function IkonAksiyon({ ikon: Ikon, etiket, onClick, aktifSinif = "hover:text-metin" }: { ikon: typeof Heart; etiket: string; onClick: () => void; aktifSinif?: string }) {
-  return (
-    <button onClick={onClick} aria-label={etiket}
-      className={cn("hf-btn glass-cip flex h-9 w-10 items-center justify-center rounded-[10px] text-metin-2", aktifSinif)}>
-      <Ikon className="h-4 w-4" />
-    </button>
-  );
-}
-
-/* ═══ KART ARAÇLARI — hover'da çıkan araç ray'ı. Kartın GERÇEK boyutuna göre
-   ölçeklenir (Y2), üç-nokta menüsü Higgsfield birebir (Y4), paylaş alt-menüsü
-   kartın ekrandaki konumuna göre sağa/sola açılır (Y3). ═══ */
-function KartAraclari({
-  begenili, onBegen, onIndir, onKopyala, onAc, onYenidenUret,
-  onReferans, onAnimate, on3d, onElement, onYayinla, onKlasor, onSil,
-  klasorler, onKlasoreEkle, onYeniKlasor, indirmeFormatlari, onFormatIndir,
-}: {
-  begenili: boolean;
-  onBegen: () => void; onIndir: () => void; onKopyala: () => void; onAc: () => void; onYenidenUret: () => void;
-  onReferans?: () => void; onAnimate?: () => void; on3d?: () => void;
-  onElement?: () => void; onYayinla?: () => void; onKlasor?: () => void; onSil?: () => void;
-  /** GERÇEK klasör listesi — "Klasöre ekle" hover'ında yandan açılır (madde 1). */
-  klasorler?: { id: string; ad: string; adet: number }[];
-  onKlasoreEkle?: (id: string) => void;
-  onYeniKlasor?: () => void;
-  /** İndirme formatları — "İndir" hover'ında yandan açılır (madde 2). */
-  indirmeFormatlari?: string[];
-  onFormatIndir?: (format: string) => void;
-}) {
-  const [menuAcik, setMenuAcik] = useState(false);
-  const [paylasAcik, setPaylasAcik] = useState(false);
-  const [klasorAcik, setKlasorAcik] = useState(false);
-  const [indirAcik, setIndirAcik] = useState(false);
-  const menuBtnRef = useRef<HTMLButtonElement>(null);
-  const kokRef = useRef<HTMLDivElement>(null);
-  const [menuKonum, setMenuKonum] = useState<{ top: number; left: number; paylasSaga: boolean } | null>(null);
-  // Kartın gerçek genişliğini ölç → araç boyutunu ORANTILI seç (Y2: her zaman sığar).
-  const [kartGen, setKartGen] = useState(240);
-  const [kartYuk, setKartYuk] = useState(300);
-  useEffect(() => {
-    const el = kokRef.current?.parentElement; // .group kart div'i
-    if (!el) return;
-    const olc = () => { setKartGen(el.clientWidth); setKartYuk(el.clientHeight); };
-    olc();
-    const ro = new ResizeObserver(olc);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  const boyutSinif: "kucuk" | "orta" | "buyuk" = kartGen < 150 ? "kucuk" : kartGen < 230 ? "orta" : "buyuk";
-  // Kart KISA/yatay ise (4 dikey ikon sığmıyor) → ray'ı yatay yap. Buton yüksekliği ~28-40px;
-  // 4 ikon + alt-orta 3 ikon dikeyde ~ kartYuk gerektirir. Eşik: 4 buton + boşluk < kartYuk.
-  const btnPx = boyutSinif === "kucuk" ? 24 : boyutSinif === "orta" ? 32 : 36;
-  const yatayRay = kartYuk < btnPx * 4 + 40; // dikey 4 ikon + üst/alt pay sığmıyorsa yatay diz
-
-  // Menüyü aç: fixed koordinat + paylaş alt-menüsünün yönünü kartın konumuna göre belirle (Y3).
-  const menuAc = () => {
-    const r = menuBtnRef.current?.getBoundingClientRect();
-    if (r) {
-      const menuGen = 200;
-      const sagaSigar = r.right + 8 + menuGen < window.innerWidth;
-      const left = sagaSigar ? r.right + 8 : r.left - 8 - menuGen;
-      // Paylaş alt-menüsü: ana menü ekranın sol yarısındaysa sağa, sağ yarısındaysa sola aç.
-      const paylasSaga = left + menuGen / 2 < window.innerWidth / 2;
-      setMenuKonum({ top: r.top, left, paylasSaga });
-    }
-    setMenuAcik((v) => !v);
-  };
-  // Paylaşım hedefleri (Higgsfield Share alt-menüsü birebir) — her biri ikonlu
-  const paylasHedefleri: { ad: string; ikon: typeof Link2; fn: () => void }[] = [
-    { ad: "Bağlantıyı kopyala", ikon: Link2, fn: () => { navigator.clipboard?.writeText(typeof location !== "undefined" ? location.href : "").catch(() => {}); toast.success("Bağlantı kopyalandı 🔗"); } },
-    { ad: "X'te paylaş", ikon: AtSign, fn: () => { if (typeof window !== "undefined") window.open("https://twitter.com/intent/tweet?url=" + encodeURIComponent(location.href), "_blank"); } },
-    { ad: "WhatsApp'ta paylaş", ikon: MessageCircle, fn: () => { if (typeof window !== "undefined") window.open("https://wa.me/?text=" + encodeURIComponent(location.href), "_blank"); } },
-    { ad: "Pinterest'te paylaş", ikon: Pin, fn: () => { if (typeof window !== "undefined") window.open("https://pinterest.com/pin/create/button/?url=" + encodeURIComponent(location.href), "_blank"); } },
-    { ad: "LinkedIn'de paylaş", ikon: Briefcase, fn: () => { if (typeof window !== "undefined") window.open("https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(location.href), "_blank"); } },
-  ];
-  // Kutu boyutuna göre buton + ikon ölçekleri (Y2)
-  const btn = boyutSinif === "kucuk" ? "h-6 w-6" : boyutSinif === "orta" ? "h-8 w-8" : "h-9 w-9";
-  const ik = boyutSinif === "kucuk" ? "h-3 w-3" : boyutSinif === "orta" ? "h-4 w-4" : "h-[18px] w-[18px]";
-  const yerlesim = boyutSinif === "kucuk" ? "gap-1 right-1.5 top-1.5" : "gap-1.5 right-2 top-2";
-  const rayYon = yatayRay ? "flex-row" : "flex-col"; // kısa kartta yatay diz (üç-nokta hep görünür)
-  const IK = (Ikon: typeof Heart, etiket: string, fn: () => void, ekstra = "") => (
-    <Tooltip label={etiket} side="left">
-      <button onClick={(e) => { e.stopPropagation(); fn(); }} aria-label={etiket}
-        className={cn("hf-btn glass-ikon flex items-center justify-center rounded-full text-white", btn, ekstra)}>
-        <Ikon className={ik} />
-      </button>
-    </Tooltip>
-  );
-  const altBtn = boyutSinif === "kucuk" ? "h-6 w-6" : boyutSinif === "orta" ? "h-8 w-8" : "h-9 w-9";
-  const altIk = boyutSinif === "kucuk" ? "h-3 w-3" : "h-4 w-4";
-  const AltIK = (Ikon: typeof Heart, etiket: string, fn?: () => void, gizli = false) => (
-    !gizli && fn ? (
-      <Tooltip label={etiket} side="left">
-        <button onClick={(e) => { e.stopPropagation(); fn(); }} aria-label={etiket}
-          className={cn("hf-btn glass-ikon flex items-center justify-center rounded-full text-white hover:bg-aksan hover:text-zemin", altBtn)}>
-          <Ikon className={altIk} />
-        </button>
-      </Tooltip>
-    ) : null
-  );
-
-  // Higgsfield birebir menü sırası (Y4): Aç · Yeniden üret · Yeniden kullan · Element oluştur ·
-  // Beğen · Paylaş> · Klasöre ekle> · Yayınla · İndir · —— · Sil
-  const menuSatir = (Ikon: typeof Maximize2, ad: string, fn: () => void, tehlike = false) => (
-    <button onClick={() => { fn(); setMenuAcik(false); }}
-      className={cn("flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium transition-colors",
-        tehlike ? "text-tehlike hover:bg-tehlike/10" : "text-white hover:bg-white/8")}>
-      <Ikon className={cn("h-[18px] w-[18px]", tehlike ? "" : "text-white/70")} /> {ad}
-    </button>
-  );
-
-  return (
-    <div ref={kokRef}>
-    {/* Alt-orta hızlı eylemler (Referans · Animate · 3D). Kısa/yatay kartta gizlenir —
-        dikey ray yatayken çakışmasın; bu eylemler zaten ⋯ menüsünden erişilebilir. */}
-    {(onReferans || onAnimate || on3d) && !yatayRay && (
-      <div className="pointer-events-none absolute inset-x-0 bottom-2 z-20 flex items-center justify-center gap-1.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-        {AltIK(ImagePlus, "Referans olarak ekle", onReferans)}
-        {AltIK(VideoIcon, "Animate (videoya çevir)", onAnimate)}
-        {AltIK(Box, "3D sahne oluştur", on3d)}
-      </div>
-    )}
-    {/* KALICI BEĞENİ ROZETİ (kullanıcı kararı 2026-07-31): beğenilmiş kartta
-        kalp hover OLMADAN da görünür — /panel'deki galeri kartlarıyla aynı
-        davranış. Araç rayının tamamı hover'a bağlı olduğu için beğeni durumu
-        kartta hiç görünmüyordu; bu rozet yalnız beğeniliyken çıkar ve
-        hover'da rayın kendi kalbine yerini bırakır (çift kalp olmasın). */}
-    {begenili && (
-      <span aria-hidden
-        className={cn(
-          "kart-begeni pointer-events-none absolute z-20 flex items-center justify-center rounded-full transition-opacity group-hover:opacity-0",
-          // Rayın ilk butonuyla AYNI konum: hover'da rozet solup yerine ray
-          // kalbi gelir, kayma hissi olmaz.
-          boyutSinif === "kucuk" ? "right-1.5 top-1.5 h-6 w-6" : "right-2 top-2 h-8 w-8",
-        )}>
-        <Heart className={cn("fill-rose-400 text-rose-400", boyutSinif === "kucuk" ? "h-3 w-3" : "h-4 w-4")} />
-      </span>
-    )}
-    <div className={cn("pointer-events-none absolute z-20 flex opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100", rayYon, yerlesim)}>
-      {IK(Heart, "Beğen", onBegen, begenili ? "text-rose-400" : "")}
-      {IK(Download, "İndir", onIndir)}
-      {IK(Copy, "Yeniden kullan", onKopyala)}
-      <div className="relative">
-        <button ref={menuBtnRef} onClick={(e) => { e.stopPropagation(); menuAc(); }} aria-label="Daha fazla"
-          className={cn("hf-btn glass-ikon flex items-center justify-center rounded-full text-white", btn)}>
-          <MoreHorizontal className={ik} />
-        </button>
-        <AnimatePresence>
-          {menuAcik && menuKonum && (
-            <>
-              <div className="fixed inset-0 z-[60]" onClick={(e) => { e.stopPropagation(); setMenuAcik(false); }} />
-              <motion.div initial={{ opacity: 0, scale: 0.97, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.13 }}
-                onClick={(e) => e.stopPropagation()}
-                style={{ position: "fixed", top: menuKonum.top, left: menuKonum.left }}
-                className="menu-surface z-[61] w-56 rounded-2xl p-1.5">
-                {menuSatir(ArrowUpRight, "Aç", onAc)}
-                {menuSatir(RefreshCw, "Yeniden üret", onYenidenUret)}
-                {menuSatir(Copy, "Yeniden kullan", onKopyala)}
-                {/* Varsayılanlar: bu kart bir ÜRETİM kaydı değilse (stok galeri) ilgili
-                    prop gelmez. O durumda yalan söylemek yerine dürüst "yakında" deriz. */}
-                {menuSatir(AtSign, "Element oluştur", onElement ?? (() => {}))}
-                {menuSatir(Heart, "Beğen", onBegen)}
-                {/* Paylaş → alt-menü (Higgsfield Share birebir) — Y3: konuma göre sağa/sola */}
-                <div className="relative"
-                  onMouseEnter={() => setPaylasAcik(true)} onMouseLeave={() => setPaylasAcik(false)}>
-                  <button className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-white transition-colors hover:bg-white/8">
-                    <Share2 className="h-[18px] w-[18px] text-white/70" /> Paylaş
-                    <ChevronRight className="ml-auto h-4 w-4 text-white/40" />
-                  </button>
-                  <AnimatePresence>
-                    {paylasAcik && (
-                      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
-                        className={cn("menu-surface absolute top-0 w-56 rounded-2xl p-1.5", menuKonum.paylasSaga ? "left-full ml-1.5" : "right-full mr-1.5")}>
-                        {paylasHedefleri.map((h) => (
-                          <button key={h.ad} onClick={() => { h.fn(); setPaylasAcik(false); setMenuAcik(false); }}
-                            className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-white transition-colors hover:bg-white/8">
-                            <h.ikon className="h-[18px] w-[18px] text-white/70" /> {h.ad}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-                {/* KLASÖRE EKLE → alt-menü (madde 1, 2026-07-31).
-                    Eskiden tek tıkla sabit "Görseller" klasörüne atıyordu — kullanıcı
-                    haklı olarak "tamamen fake" dedi. Artık Paylaş ile aynı desende
-                    GERÇEK klasör listesi açılır; yoksa yeni klasör kurulur. */}
-                {klasorler && onKlasoreEkle ? (
-                  <div className="relative"
-                    onMouseEnter={() => setKlasorAcik(true)} onMouseLeave={() => setKlasorAcik(false)}>
-                    <button className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-white transition-colors hover:bg-white/8">
-                      <FolderPlus className="h-[18px] w-[18px] text-white/70" /> Klasöre ekle
-                      <ChevronRight className="ml-auto h-4 w-4 text-white/40" />
-                    </button>
-                    <AnimatePresence>
-                      {klasorAcik && (
-                        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
-                          className={cn("menu-surface absolute top-0 max-h-64 w-60 overflow-y-auto rounded-2xl p-1.5", menuKonum.paylasSaga ? "left-full ml-1.5" : "right-full mr-1.5")}>
-                          {klasorler.length === 0 && (
-                            <p className="px-3 py-2 text-[13px] text-metin-3">Henüz klasör yok</p>
-                          )}
-                          {klasorler.map((k) => (
-                            <button key={k.id} onClick={() => { onKlasoreEkle(k.id); setKlasorAcik(false); setMenuAcik(false); }}
-                              className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left text-[15px] font-medium text-white transition-colors hover:bg-white/8">
-                              <FolderPlus className="h-[18px] w-[18px] shrink-0 text-white/70" />
-                              <span className="min-w-0 flex-1 truncate">{k.ad}</span>
-                              <span className="shrink-0 text-[12px] tabular-nums text-white/40">{k.adet}</span>
-                            </button>
-                          ))}
-                          {onYeniKlasor && (
-                            <>
-                              <div className="my-1 h-px bg-white/8" />
-                              <button onClick={() => { onYeniKlasor(); setKlasorAcik(false); setMenuAcik(false); }}
-                                className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-aksan transition-colors hover:bg-aksan/10">
-                                <Plus className="h-[18px] w-[18px]" /> Yeni klasör
-                              </button>
-                            </>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ) : (
-                  menuSatir(FolderPlus, "Klasöre ekle", onKlasor ?? (() => {}))
-                )}
-                {menuSatir(Upload, "Yayınla", onYayinla ?? (() => {}))}
-                {/* İNDİR → alt-menü (madde 2). Hover'da format seçenekleri açılır;
-                    doğrudan tıklanırsa varsayılan formatta iner. */}
-                {indirmeFormatlari && onFormatIndir ? (
-                  <div className="relative"
-                    onMouseEnter={() => setIndirAcik(true)} onMouseLeave={() => setIndirAcik(false)}>
-                    <button onClick={() => { onIndir(); setMenuAcik(false); }}
-                      className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-white transition-colors hover:bg-white/8">
-                      <Download className="h-[18px] w-[18px] text-white/70" /> İndir
-                      <ChevronRight className="ml-auto h-4 w-4 text-white/40" />
-                    </button>
-                    <AnimatePresence>
-                      {indirAcik && (
-                        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
-                          className={cn("menu-surface absolute top-0 w-56 rounded-2xl p-1.5", menuKonum.paylasSaga ? "left-full ml-1.5" : "right-full mr-1.5")}>
-                          {indirmeFormatlari.map((f, i) => {
-                            // Her formatın kendi ikonu + ne işe yaradığı (kullanıcı isteği).
-                            const bilgi: Record<string, { ikon: typeof FileImage; not: string }> = {
-                              png: { ikon: FileImage, not: "kayıpsız · saydam" },
-                              jpg: { ikon: FileType2, not: "küçük dosya" },
-                              webp: { ikon: FileArchive, not: "web için ideal" },
-                            };
-                            const { ikon: FIkon, not } = bilgi[f] ?? { ikon: FileImage, not: "" };
-                            return (
-                              <button key={f} onClick={() => { onFormatIndir(f); setIndirAcik(false); setMenuAcik(false); }}
-                                className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left transition-colors hover:bg-white/8">
-                                <FIkon className="h-[18px] w-[18px] shrink-0 text-white/70" />
-                                <span className="min-w-0 flex-1">
-                                  <span className="block text-[15px] font-medium text-white">{f.toUpperCase()}</span>
-                                  <span className="block text-[11px] text-white/40">{not}</span>
-                                </span>
-                                {i === 0 && <Check className="h-3.5 w-3.5 shrink-0 text-aksan" />}
-                              </button>
-                            );
-                          })}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                ) : (
-                  menuSatir(Download, "İndir", onIndir)
-                )}
-                <div className="my-1 h-px bg-white/8" />
-                {menuSatir(Trash2, "Sil", onSil ?? (() => {}), true)}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-    </div>
-  );
-}
-
-/* ═══════════════════════ YORUMLAR SEKMESİ (Higgsfield Comments) ═══════════════════════ */
-const YORUM_RENKLERI = ["#ffffff", "#ff453a", "#ff9f0a", "#ffd60a", "#30d158", "#0a84ff", "#bf5af2"];
-const HIZLI_EMOJI = ["👍", "❤️", "🔥", "✨", "😍", "👏", "🎉", "💯"];
-
-function YorumSekmesi({ yorum, setYorum, konuId }: { yorum: string; setYorum: (s: string) => void; konuId: string }) {
-  const [renk, setRenk] = useState("#ffffff");
-  const [emojiAcik, setEmojiAcik] = useState(false);
-  // m9/m23: GERÇEK kalıcı yorumlar (useYorumlar) — lightbox kapanıp açılınca korunur.
-  const yorumEkle = useYorumlar((s) => s.ekle);
-  const yorumBegeni = useYorumlar((s) => s.begeniToggle);
-  const yorumSil = useYorumlar((s) => s.sil);
-  // KRİTİK: selector'da .filter/.sort her render'da yeni referans üretip sonsuz
-  // döngü yaratıyordu ("getSnapshot should be cached"). Ham diziyi al, useMemo ile türet.
-  const tumYorumlar = useYorumlar((s) => s.yorumlar);
-  const yorumlar = useMemo(
-    () => tumYorumlar.filter((y) => y.konuId === konuId).sort((a, b) => b.zaman - a.zaman),
-    [tumYorumlar, konuId],
-  );
-  const kullanici = useAuth((s) => s.kullanici);
-  const gonder = () => {
-    if (!yorum.trim()) return;
-    yorumEkle(konuId, yorum.trim(), kullanici?.ad ?? "Sen");
-    setYorum("");
-  };
-  const bas = (kullanici?.ad ?? "S").charAt(0).toLocaleUpperCase("tr");
-  return (
-    <div className="flex h-full flex-col">
-      {yorumlar.length === 0 ? (
-        /* Boş durum */
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
-          <span className="flex h-12 w-12 items-center justify-center rounded-full glass-ikon">
-            <MessageCircle className="h-5 w-5 text-metin-3" />
-          </span>
-          <p className="text-sm font-medium">Henüz yorum yok</p>
-          <p className="text-[12px] text-metin-3">İlk yorumu sen ekle.</p>
-        </div>
-      ) : (
-        /* Yorum akışı */
-        <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
-          {yorumlar.map((y) => {
-            // m10: salt-emoji yorumlar büyük render
-            const saltEmoji = /^(\p{Extended_Pictographic}|️|‍|\s){1,8}$/u.test(y.metin);
-            return (
-              <motion.div key={y.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="group/y flex gap-2.5">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-aksan to-blue-500 text-[11px] font-bold text-zemin">{(y.yazar ?? bas).charAt(0).toLocaleUpperCase("tr")}</span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-medium">{y.yazar}</span>
-                    <span className="text-[11px] text-metin-3">{goreliZaman(y.zaman)}</span>
-                  </div>
-                  <p className={cn("mt-0.5 break-words", saltEmoji ? "text-3xl leading-tight" : "text-[13px]")}>{y.metin}</p>
-                  <div className="mt-1 flex items-center gap-3">
-                    <button onClick={() => yorumBegeni(y.id)} className={cn("flex items-center gap-1 text-[11px] transition-colors", y.begendim ? "text-rose-400" : "text-metin-3 hover:text-metin")}>
-                      <Heart className={cn("h-3 w-3", y.begendim && "fill-current")} /> {y.begeniler > 0 && y.begeniler}
-                    </button>
-                    {y.yazar === (kullanici?.ad ?? "Sen") && (
-                      <button onClick={() => yorumSil(y.id)} className="text-[11px] text-metin-3 opacity-0 transition-all hover:text-rose-400 group-hover/y:opacity-100">Sil</button>
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Yorum girişi + renk paleti + emoji (Higgsfield birebir) */}
-      <div className="border-t border-white/8 p-3">
-        <div className="mb-2 flex items-center gap-1.5">
-          {YORUM_RENKLERI.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRenk(r)}
-              className={cn("h-4 w-4 rounded-full ring-offset-2 ring-offset-yuzey transition-all", renk === r && "ring-2 ring-white/60")}
-              style={{ background: r }}
-              aria-label={`Renk ${r}`}
-            />
-          ))}
-          <button onClick={() => setEmojiAcik((v) => !v)} className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-metin-2 hover:bg-white/8 hover:text-metin" aria-label="Emoji">
-            <Smile className="h-4 w-4" />
-          </button>
-        </div>
-        {emojiAcik && (
-          <div className="glass-cip mb-2 flex flex-wrap gap-1 rounded-lg p-2">
-            {HIZLI_EMOJI.map((e) => (
-              // m10: emoji'ye tıkla → DOĞRUDAN büyük emoji yorumu gönder (higgs/TikTok mantığı)
-              <button key={e} onClick={() => { yorumEkle(konuId, e, kullanici?.ad ?? "Sen"); setEmojiAcik(false); }} className="flex h-9 w-9 items-center justify-center rounded text-xl hover:bg-white/10">
-                {e}
-              </button>
-            ))}
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <input
-            value={yorum}
-            onChange={(e) => setYorum(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && gonder()}
-            placeholder="Yorum ekle"
-            className="glass-cip flex-1 rounded-full px-3 py-2 text-[13px] outline-none placeholder:text-metin-3"
-            style={{ color: renk }}
-          />
-          <button onClick={gonder} className="flex h-8 w-8 items-center justify-center rounded-full bg-aksan text-zemin transition-transform hover:scale-105" aria-label="Gönder">
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}

@@ -121,7 +121,7 @@ ${renkler.map((c, i) => `    <basematerials id="${i + 1}"><base name="Filament $
             </div>
             <div className="grid grid-cols-2 gap-2">
               {aktifTaban.tabanlar.map((t) => (
-                <button key={t} onClick={() => { setSecilenTaban(t); toast.success(`${t} tabanı eklendi`); }}
+                <button key={t} onClick={() => { setSecilenTaban(t); toast.success(`${t} tabanı seçildi`); }}
                   className={cn("group flex aspect-square flex-col items-center justify-center gap-2 rounded-xl border bg-gradient-to-br from-yuzey-2 to-zemin transition-colors",
                     secilenTaban === t ? "border-aksan ring-1 ring-aksan/40" : "border-white/[0.06] hover:border-white/20")}>
                   <Circle className="h-7 w-7 text-metin-3" />
@@ -139,7 +139,7 @@ ${renkler.map((c, i) => `    <basematerials id="${i + 1}"><base name="Filament $
             <label className="mb-2 block text-xs font-semibold text-metin-2">Dilimleyiciye gönder</label>
             <div className="grid grid-cols-2 gap-2">
               {DILIMLEYICILER.map((d) => (
-                <button key={d} onClick={() => { if (!modelVar) return toast.error("Önce sağdan bir model seç."); indir(ucMfUret(), "3mf"); toast.success(`${d} için .3mf hazırlandı`); }}
+                <button key={d} onClick={() => { if (!modelVar) return toast.error("Model seçilmedi", { description: "Önce sağdaki listeden bir model seç." }); indir(ucMfUret(), "3mf"); toast.success(`${d} için .3mf indirildi`, { description: "Dosyayı dilimleyicide aç." }); }}
                   className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-2.5 text-left text-xs transition-colors hover:border-aksan/40 hover:bg-aksan/8">
                   <Layers className="h-4 w-4 text-aksan" /> {d}
                 </button>
@@ -150,7 +150,7 @@ ${renkler.map((c, i) => `    <basematerials id="${i + 1}"><base name="Filament $
       </div>
 
       <div className="shrink-0 space-y-2 border-t border-white/[0.06] p-3">
-        <button onClick={() => { if (!modelVar) return toast.error("Önce sağdan bir model seç."); indir(ucMfUret(), "3mf"); toast.success("Baskı dosyası (.3mf) indirildi 🧊"); }}
+        <button onClick={() => { if (!modelVar) return toast.error("Model seçilmedi", { description: "Önce sağdaki listeden bir model seç." }); indir(ucMfUret(), "3mf"); toast.success("Baskı dosyası indirildi", { description: ".3mf dosyasını dilimleyicide aç." }); }}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-aksan py-3 text-sm font-semibold text-zemin transition-transform hover:scale-[1.02]">
           <Download className="h-4 w-4" /> Baskıya hazırla
         </button>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
+import { KrediYildiz } from "@/components/ui/KrediHap";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -22,13 +24,10 @@ export function SCUstMenu({
 }: { acik: boolean; onKapat: () => void; onKredi: () => void; onZamanli: () => void; onSil: () => void }) {
   return (
     <AnimatePresence>
-      {acik && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onKapat} />
-          <motion.div
+      <Yuzen acik={!!(acik)} onKapat={onKapat} sag={0} ust={"tam"} bosluk={8}><motion.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.14 }}
-            className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] shadow-[0_20px_50px_-16px_rgba(0,0,0,0.6)] absolute right-0 top-full z-50 mt-2 w-[210px] rounded-[14px] p-1.5">
+            className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] w-[210px] rounded-[14px] p-1.5">
             <button onClick={() => { onKapat(); onKredi(); }}
               className="flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-left text-[14px] text-[var(--sc-metin)] transition-colors hover:bg-[var(--sc-cip)]">
               <Coins className="h-4 w-4 text-[var(--sc-metin-2)]" /> Kredi al
@@ -41,9 +40,7 @@ export function SCUstMenu({
               className="flex w-full items-center gap-2.5 rounded-[9px] px-2.5 py-2 text-left text-[14px] text-[var(--sc-promo)] transition-colors hover:bg-[var(--sc-promo)]/10">
               <Trash2 className="h-4 w-4" /> Sohbeti sil
             </button>
-          </motion.div>
-        </>
-      )}
+          </motion.div></Yuzen>
     </AnimatePresence>
   );
 }
@@ -60,13 +57,10 @@ export function SCKullanimPopover({
   ];
   return (
     <AnimatePresence>
-      {acik && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onKapat} />
-          <motion.div
+      <Yuzen acik={!!(acik)} onKapat={onKapat} sag={0} ust={"tam"} bosluk={8}><motion.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.14 }}
-            className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] shadow-[0_20px_50px_-16px_rgba(0,0,0,0.6)] absolute right-0 top-full z-50 mt-2 w-[320px] rounded-[16px] p-4">
+            className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] w-[320px] rounded-[16px] p-4">
             <p className="flex items-center justify-center gap-2 text-[15px] text-[var(--sc-metin)]">
               <Coins className="h-[17px] w-[17px] text-[var(--sc-metin-2)]" /> Kredilerin
             </p>
@@ -102,9 +96,7 @@ export function SCKullanimPopover({
               <Zap className="h-4 w-4" /> Hızı artır
               <span className="rounded-md bg-black/40 px-1.5 py-[1px] text-[11px] font-semibold">%48 İNDİRİM</span>
             </button>
-          </motion.div>
-        </>
-      )}
+          </motion.div></Yuzen>
     </AnimatePresence>
   );
 }
@@ -120,13 +112,10 @@ export function SCPaylasPopover({
   ];
   return (
     <AnimatePresence>
-      {acik && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onKapat} />
-          <motion.div
+      <Yuzen acik={!!(acik)} onKapat={onKapat} sag={0} ust={"tam"} bosluk={8}><motion.div
             initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.14 }}
-            className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] shadow-[0_20px_50px_-16px_rgba(0,0,0,0.6)] absolute right-0 top-full z-50 mt-2 w-[330px] rounded-[16px] p-2">
+            className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] w-[330px] rounded-[16px] p-2">
             {SECENEKLER.map((s) => (
               <button key={s.id} onClick={() => setKip(s.id)}
                 className={cn("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
@@ -145,9 +134,7 @@ export function SCPaylasPopover({
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-white py-2.5 text-[14.5px] font-semibold text-black transition-all hover:brightness-95">
               <Link2 className="h-[16px] w-[16px]" /> Şimdi paylaş
             </button>
-          </motion.div>
-        </>
-      )}
+          </motion.div></Yuzen>
     </AnimatePresence>
   );
 }
@@ -189,7 +176,7 @@ export function SCOnayKarti({
         <button onClick={onOnayla}
           className="flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-[14px] font-semibold transition-all hover:brightness-110"
           style={{ background: "var(--sc-aksan)", color: "var(--sc-aksan-metin)" }}>
-          Onayla <Sparkles className="h-[14px] w-[14px]" /> {kredi}
+          Onayla <KrediYildiz className="h-[14px] w-[14px]" /> {kredi}
           <span className="rounded bg-black/20 px-1.5 text-[11px]">↵</span>
         </button>
       </div>
@@ -259,13 +246,10 @@ export function SCSagPanel({
             <SlidersHorizontal className="h-[14px] w-[14px]" /> Süzgeç
           </button>
           <AnimatePresence>
-            {suzgecAcik && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setSuzgecAcik(false)} />
-                <motion.div
+            <Yuzen acik={!!(suzgecAcik)} onKapat={() => setSuzgecAcik(false)} sag={0} ust={"tam"} bosluk={8}><motion.div
                   initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.14 }}
-                  className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] shadow-[0_20px_50px_-16px_rgba(0,0,0,0.6)] absolute right-0 top-full z-50 mt-2 w-[230px] rounded-[14px] p-1.5">
+                  className="border border-[var(--sc-kenar)] bg-[var(--sc-kart)] w-[230px] rounded-[14px] p-1.5">
                   <p className="px-2.5 py-1.5 text-[12.5px] text-[var(--sc-metin-3)]">Sırala</p>
                   {[["son", "Son oluşturulan", Timer], ["kullanim", "Son kullanılan", Clock], ["ilk", "İlk oluşturulan", ArrowDownUp]].map(
                     ([id, ad, I]) => {
@@ -293,9 +277,7 @@ export function SCSagPanel({
                         </button>
                       );
                     })}
-                </motion.div>
-              </>
-            )}
+                </motion.div></Yuzen>
           </AnimatePresence>
         </div>
       </div>

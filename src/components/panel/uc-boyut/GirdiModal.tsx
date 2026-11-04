@@ -34,9 +34,9 @@ export function GirdiModal({
       {acik && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[95] bg-black/60 backdrop-blur-sm" onClick={onKapat} />
+            className="perde fixed inset-0 z-[95] bg-black/60 backdrop-blur-sm" onClick={onKapat} />
           <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-            className="menu-surface fixed left-1/2 top-1/2 z-[96] w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl p-5 shadow-2xl">
+            className="menu-surface fixed left-1/2 top-1/2 z-[96] w-80 -translate-x-1/2 -translate-y-1/2 rounded-2xl p-5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-semibold">{baslik}</h3>
               <button onClick={onKapat} className="text-metin-3 hover:text-white"><X className="h-4 w-4" /></button>

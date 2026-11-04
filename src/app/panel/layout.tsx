@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AracMasaustu, aracRotasi } from "@/components/panel/AracMasaustu";
 import { usePathname } from "next/navigation";
 import { UstNav } from "@/components/kabuk/UstNav";
 import { MobilBaslik } from "@/components/kabuk/MobilBaslik";
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
  * Panel kabuğu — Higgsfield'ın ÜÇ kabuğunu yönlendirir (HIGGSFIELD-SPEC.md §1):
  *
  *  A) Üst nav (sidebar YOK)          → /panel/gorsel, /video, /ses, /eklentiler, /mcp …
- *  B) Supercomputer sol sidebar      → /panel/supercomputer/*
+ *  B) Usta sol sidebar      → /panel/supercomputer/*
  *  C) Cinema/Marketing: üst nav + kendi dar sidebar → ilgili sayfa kendi sidebar'ını basar
  *
  * Kabuk seçimi rotaya göre yapılır; her kabuk kendi kaydırma/çerçeve mantığını taşır.
@@ -43,24 +44,23 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
   }, []);
 
   const scKabugu = path.startsWith("/panel/supercomputer");
-  // Pazarlama Stüdyosu kendi sol kenar çubuğunu (layout.tsx) basar — üst nav YOK.
-  const pazKabugu = path.startsWith("/panel/pazarlama");
-  // m45: Vayra Cloud (/panel/api) geliştirici platformu — kendi CloudKabuk'ünü
-  // basar; panel üst navigasyonu GÖSTERİLMEZ (higgs Cloud birebir).
-  const apiKabugu = path.startsWith("/panel/api");
   /* Canvas TUVALİ (/panel/canvas/<id>) referansta TAM EKRAN: üst nav yok,
      kendi yüzen barlarını basar. Canvas ANASAYFASI (/panel/canvas) üst nav'lı kalır. */
   const tuvalKabugu = /^\/panel\/canvas\/[^/]+/.test(path);
   /* Composer (üretim akışı) rotaları — mobilde tam ekran, kendi başlığını basar. */
+  /* Mobil öncelikli araçlar — masaüstünde solda akış, sağda araç geçmişi. */
+  const aracRota = aracRotasi(path);
   const composerKabugu = [
     "/panel/gorsel", "/panel/gorsel", "/panel/video", "/panel/ses", "/panel/muzik", "/panel/3d",
     "/panel/shorts", "/panel/explainer", "/panel/sinema",
     "/panel/upscale", "/panel/reframe", "/panel/inpaint", "/panel/draw", "/panel/speak",
     "/panel/photodump", "/panel/moodboard", "/panel/instadump", "/panel/fashion",
-    "/panel/ugc", "/panel/fans", "/panel/popcorn",
+    "/panel/ugc", "/panel/fans",
   ].some((r) => path === r || path.startsWith(r + "/"))
     /* Karakter LANDING'i (/panel/karakter) tab bar'lı; yalnız /yeni composer'ı tam ekran. */
-    || path.startsWith("/panel/karakter/");
+    || path.startsWith("/panel/karakter/")
+    /* Tek preset sayfası mobilde tam ekran: kendi başlığı ve sabit "Oluştur" çubuğu var. Galeri ve oluşturma stüdyosu hariç. */
+    || /^\/panel\/presetler\/(?!olustur(\/|$))[^/]+$/.test(path);
 
   if (!hazir) {
     return (
@@ -74,7 +74,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen bg-zemin text-metin">
       {scKabugu ? (
-        /* Kabuk B — Supercomputer: yalnız sol sidebar.
+        /* Kabuk B — Usta: yalnız sol sidebar.
            `sc-kapsam` burada: SC renk tokenları (--sc-*) tüm alt sayfalara
            tek noktadan iner; her sayfanın ayrıca kapsam açması gerekmez. */
         <div className="sc-kapsam flex min-h-screen bg-[var(--sc-zemin)]">
@@ -83,12 +83,12 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
               manuel sürükleme ile değiştiği için sabit değer değil, --sidebar-genislik. */}
           <main
             style={{ marginLeft: "var(--sidebar-genislik, 0px)" }}
-            className="min-h-screen flex-1 transition-[margin] duration-200">
+            className="min-h-screen min-w-0 flex-1 transition-[margin] duration-200">
             {children}
           </main>
         </div>
-      ) : pazKabugu || tuvalKabugu || apiKabugu ? (
-        /* Kabuk C — Pazarlama, Canvas tuvali ve Vayra Cloud (API): üst nav yok,
+      ) : tuvalKabugu ? (
+        /* Kabuk C — Canvas tuvali: üst nav yok,
            kendi kabuklarını basarlar. */
         children
       ) : (
@@ -105,7 +105,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
           {/* `mobil-lime-sayfa`: panel gövdesi mobilde lime aksana geçer
               (Higgsfield mobil birebir); masaüstünde cyan kalır. */}
           <div className={cn("mobil-lime-sayfa", !composerKabugu && "pb-[calc(60px+env(safe-area-inset-bottom))] sm:pb-0")}>
-            <SayfaGecis>{children}</SayfaGecis>
+            <SayfaGecis>{aracRota ? <AracMasaustu rota={aracRota}>{children}</AracMasaustu> : children}</SayfaGecis>
           </div>
           {!composerKabugu && <AltTabBar />}
         </>

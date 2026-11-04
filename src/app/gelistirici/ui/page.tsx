@@ -227,7 +227,7 @@ function KartSecmeKutusu() {
    ───────────────────────────────────────────────────────────────────────── */
 function SecimAltToolbar() {
   return (
-    <div className="glass-cip flex items-center gap-1.5 rounded-full py-2 pl-4 pr-2 shadow-2xl shadow-black/50">
+    <div className="glass-cip flex items-center gap-1.5 rounded-full py-2 pl-4 pr-2">
       <span className="mr-1 text-[13px] font-medium text-metin">3 seçili</span>
       <span className="mx-1 h-5 w-px bg-kenar" />
       <button className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] text-metin-2 transition-colors hover:bg-white/8 hover:text-metin"><Download className="h-4 w-4" /> İndir</button>
@@ -264,7 +264,7 @@ function LightboxSagPanel() {
   const [referansli, setReferansli] = useState(false);
 
   return (
-    <div className="flex h-[560px] w-[340px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-yuzey shadow-[0_12px_36px_-12px_rgba(0,0,0,0.7)]">
+    <div className="flex h-[560px] w-[340px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-yuzey">
       {/* Yazar başlığı */}
       <div className="flex items-center gap-2.5 border-b border-white/8 px-4 py-3">
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-aksan/15 text-[12px] font-bold text-aksan ring-1 ring-aksan/40">V</span>
@@ -417,7 +417,7 @@ function ElementEklenmisChip() {
       <AnimatePresence>
         {hover && (
           <motion.span initial={{ opacity: 0, y: 6, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.96 }} transition={{ duration: 0.14 }}
-            className="menu-surface pointer-events-none absolute bottom-full left-0 z-[70] mb-2 w-64 overflow-hidden rounded-2xl shadow-2xl shadow-black/60">
+            className="menu-surface pointer-events-none absolute bottom-full left-0 z-[70] mb-2 w-64 overflow-hidden rounded-2xl">
             <span className="relative block aspect-[4/5] w-full" style={{ background: arka }}>
               <span className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/85 to-transparent p-3 pt-8">
                 <User className="h-3.5 w-3.5 text-white/80" />
@@ -448,7 +448,7 @@ function ElementEklenmisChip() {
 function ElementSeciciTemsili() {
   const turler: [typeof User, string][] = [[User, "Karakter"], [MapPin, "Mekan"], [Package, "Obje"], [Palette, "Stil"]];
   return (
-    <div className="w-[420px] overflow-hidden rounded-[22px] border border-white/10 bg-[#151517] shadow-2xl">
+    <div className="w-[420px] overflow-hidden rounded-[22px] border border-white/10 bg-[#151517]">
       <div className="flex items-center justify-between px-5 pt-4">
         <span className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-black">Elementler</span>
         <button className="flex h-8 w-8 items-center justify-center rounded-full bg-white/8 text-metin-2 hover:bg-white/12 hover:text-white"><X className="h-4 w-4" /></button>
@@ -589,7 +589,7 @@ function StudyoSidebarDemo() {
           <button key={m.ad} onClick={() => setAktif(m.ad)}
             className={cn2("flex h-10 w-full items-center gap-2.5 rounded-lg px-2 text-sm transition-colors",
               aktif === m.ad ? "bg-[#1e1e1e] text-metin" : "text-metin-2 hover:bg-white/5 hover:text-metin")}>
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_1px_2px_rgba(0,0,0,0.35)]" style={{ background: m.grad }}>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]" style={{ background: m.grad }}>
               <m.ikon className="h-[15px] w-[15px]" strokeWidth={2.2} style={{ color: m.renk }} />
             </span>
             {m.ad}
@@ -743,7 +743,6 @@ const KATEGORILER: Kategori[] = [
   -webkit-backdrop-filter: blur(15px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: 24px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
 }
 
 /* Koyu tema uyarlaması — Vayra yüzeylerinde orijinali fazla parlak kalıyor */
@@ -753,7 +752,6 @@ const KATEGORILER: Kategori[] = [
   -webkit-backdrop-filter: blur(15px) saturate(1.2);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.35);
 }
 
 {/* Kullanım — panel */}
@@ -886,7 +884,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
   {secimVar && (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
       className="fixed inset-x-0 bottom-6 z-40 flex justify-center px-4">
-      <div className="glass-cip flex items-center gap-1.5 rounded-full py-2 pl-4 pr-2 shadow-2xl shadow-black/50">
+      <div className="glass-cip flex items-center gap-1.5 rounded-full py-2 pl-4 pr-2">
         <span className="mr-1 text-[13px] font-medium text-metin">{sayi} seçili</span>
         <span className="mx-1 h-5 w-px bg-kenar" />
         <button onClick={onIndir} className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] text-metin-2 hover:bg-white/8 hover:text-metin"><Download className="h-4 w-4" /> İndir</button>
@@ -1031,7 +1029,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
         onizleme: <ComposerCip ikon={Sparkles} acikMetin="İyileştir açık" kapaliMetin="İyileştir kapalı" baslangic />,
         kod: `const [iyilestir, setIyilestir] = useState(true);
 
-<button onClick={() => { setIyilestir(v => !v); toast(iyilestir ? "İstem iyileştirme kapalı" : "İstem iyileştirme açık ✨"); }}
+<button onClick={() => { setIyilestir(v => !v); toast(iyilestir ? "İstem iyileştirme kapatıldı" : "İstem iyileştirme açıldı"); }}
   className={cn("flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px]",
     iyilestir ? "glass-cip-aktif text-aksan" : "glass-cip text-metin-2 hover:text-metin")}>
   <Sparkles className="h-3 w-3" /> İyileştir {iyilestir ? "açık" : "kapalı"}
@@ -1044,7 +1042,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
         onizleme: <ComposerCip ikon={VolumeX} acikMetin="Ses açık" kapaliMetin="Ses kapalı" baslangic={false} />,
         kod: `const [sesli, setSesli] = useState(false);
 
-<button onClick={() => { setSesli(v => !v); toast(sesli ? "Ses kapalı" : "Ortam sesi açık 🔊"); }}
+<button onClick={() => { setSesli(v => !v); toast(sesli ? "Ortam sesi kapatıldı" : "Ortam sesi açıldı"); }}
   className={cn("flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[11px]",
     sesli ? "glass-cip-aktif text-aksan" : "glass-cip text-metin-2 hover:text-metin")}>
   <VolumeX className="h-3 w-3" /> Ses {sesli ? "açık" : "kapalı"}

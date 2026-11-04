@@ -21,6 +21,7 @@ import { X, Mic, Upload, Square, Wand2, Waves } from "lucide-react";
 import { useMuzik, TURLER } from "@/store/useMuzik";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { cn } from "@/lib/utils";
 
 const LIME = "var(--sn-lime)";
@@ -35,7 +36,7 @@ function Kabuk({ baslik, ozet, onKapat, children, genislik = 620 }: {
   return createPortal(
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onKapat} className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-md" />
+        onClick={onKapat} className="perde fixed inset-0 z-[100] bg-black/75 backdrop-blur-md" />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 360, damping: 30 }}
@@ -75,13 +76,13 @@ export function StilOlusturModal({ onKapat, onOlustu }: {
 
   const olustur = () => {
     const temizAd = ad.trim();
-    if (temizAd.length < 2) { toast.error("Stile bir ad ver."); return; }
+    if (temizAd.length < 2) { toast.error("Stil adı eksik", { description: "En az 2 karakterlik bir ad yaz." }); return; }
     if (yontem === "istem" && istem.trim().length < 6) {
-      toast.error("Stili tarif et", { description: "Örn: sıcak analog synth, yavaş tempo, nostaljik." });
+      toast.error("Stil tarifi çok kısa", { description: "Birkaç kelimeyle tarif et. Örneğin: sıcak analog synth, yavaş tempo, nostaljik." });
       return;
     }
     if (yontem === "dosya" && !dosya) {
-      toast.error("Referans ses gerekli", { description: "Stilin öğrenileceği bir parça yükle." });
+      toast.error("Referans parça eksik", { description: "Stilin öğrenileceği bir ses dosyası yükle." });
       return;
     }
     const id = stilKaydet({
@@ -90,8 +91,8 @@ export function StilOlusturModal({ onKapat, onOlustu }: {
       tohum: "stil-" + temizAd.toLocaleLowerCase("tr").replace(/\s+/g, "-"),
       kaydedilmis: true,
     });
-    toast.success(`${temizAd} stili oluşturuldu 🎛`, {
-      description: yontem === "istem" ? "İsteminden öğrenildi" : `${dosya} referansından öğrenildi`,
+    toast.success(`${temizAd} stili oluşturuldu`, {
+      description: yontem === "istem" ? "Tarifinden oluşturuldu ve stillerine eklendi." : `${dosya} referansından oluşturuldu ve stillerine eklendi.`,
     });
     onOlustu?.(id);
     onKapat();
@@ -103,9 +104,9 @@ export function StilOlusturModal({ onKapat, onOlustu }: {
         onChange={(e) => {
           const d = e.target.files?.[0]; e.target.value = "";
           if (!d) return;
-          if (d.size > 25 * 1024 * 1024) { toast.error("Dosya çok büyük", { description: "En fazla 25MB." }); return; }
+          if (d.size > 25 * 1024 * 1024) { mesaj.dosyaCokBuyuk(25); return; }
           setDosya(d.name);
-          toast.success("Referans parça yüklendi 🎵", { description: d.name });
+          toast.success("Referans parça yüklendi", { description: d.name });
         }} />
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
@@ -206,17 +207,17 @@ export function MuzikSesOlusturModal({ onKapat, onOlustu }: {
 
   const olustur = () => {
     const temiz = ad.trim();
-    if (temiz.length < 2) { toast.error("Sese bir ad ver."); return; }
+    if (temiz.length < 2) { toast.error("Ses adı eksik", { description: "En az 2 karakterlik bir ad yaz." }); return; }
     if (!dosya && kayitSn < 3) {
-      toast.error("Örnek ses gerekli", { description: "Bir ses dosyası yükle ya da en az 3 sn kaydet." });
+      toast.error("Örnek ses eksik", { description: "Bir ses dosyası yükle ya da en az 3 saniye kaydet." });
       return;
     }
     if (sesler.some((s) => s.ad.toLocaleLowerCase("tr") === temiz.toLocaleLowerCase("tr"))) {
-      toast.error("Bu adda bir ses zaten var"); return;
+      toast.error("Bu ad kullanımda", { description: `${temiz} adında bir ses zaten var. Başka bir ad seç.` }); return;
     }
     kayitDurdur();
     const id = sesKaydet({ ad: temiz, cinsiyet, tohum: "ses-" + temiz.toLocaleLowerCase("tr"), kaydedilmis: true });
-    toast.success(`${temiz} sesi eklendi 🎙`, { description: "Artık kütüphanende görünüyor." });
+    toast.success(`${temiz} sesi eklendi`, { description: "Artık kitaplığında görünüyor." });
     onOlustu?.(id);
     onKapat();
   };
@@ -227,9 +228,9 @@ export function MuzikSesOlusturModal({ onKapat, onOlustu }: {
         onChange={(e) => {
           const d = e.target.files?.[0]; e.target.value = "";
           if (!d) return;
-          if (d.size > 11 * 1024 * 1024) { toast.error("Dosya çok büyük", { description: "En fazla 11MB (MP3/WAV)." }); return; }
+          if (d.size > 11 * 1024 * 1024) { mesaj.dosyaCokBuyuk(11); return; }
           kayitDurdur(); setKayitSn(0); setDosya(d.name);
-          toast.success("Örnek ses yüklendi 🎧", { description: d.name });
+          toast.success("Örnek ses yüklendi", { description: d.name });
         }} />
 
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">

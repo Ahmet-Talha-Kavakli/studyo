@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sliders, Check, ChevronRight } from "lucide-react";
@@ -40,14 +41,11 @@ export function AyarPopover({
       </button>
 
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => { setAcik(false); setAltMenu(null); }} />
-            <motion.div
+        <Yuzen acik={!!(acik)} onKapat={() => { setAcik(false); setAltMenu(null); }} alt={"tam"} sol={0} bosluk={8}><motion.div
               initial={{ opacity: 0, y: 8, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.97 }}
-              className="menu-surface absolute bottom-full left-0 z-50 mb-2 w-60 rounded-2xl p-1.5"
+              className="menu-surface w-60 rounded-2xl p-1.5"
             >
               {ayarlar.map((a) => (
                 <div key={a.ad} className="relative">
@@ -92,9 +90,7 @@ export function AyarPopover({
                   </AnimatePresence>
                 </div>
               ))}
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );

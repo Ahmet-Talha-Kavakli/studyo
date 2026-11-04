@@ -65,6 +65,7 @@ export interface MontajKlip {
   sesCikis?: number;    // ses fade-out süresi (sn)
   opaklik: number;      // 0–100
   sesUrl?: string;      // gerçek ses/video kaynağı (çalınabilir data/http URL)
+  videoUrl?: string;    // video klibinin oynatılabilir kaynağı (kare kare çizilir)
   olcek?: number;       // % 100 = normal (dönüşüm)
   konumX?: number;      // % -100..100 (pan)
   konumY?: number;
@@ -80,6 +81,68 @@ export interface MontajKlip {
   metinBoyut?: number;
   metinRenk?: string;
   metinKonum?: "ust" | "orta" | "alt";
+  metinStil?: MetinStil;      // hazır yazı stili
+  metinArka?: boolean;        // yazının arkasında kutu
+  metinAnim?: MetinAnim;      // giriş animasyonu
+  metinHiza?: "sol" | "orta" | "sag";
+  metinCikis?: MetinCikis;    // çıkış animasyonu
+  /** Karaoke: sözcüklerin klip içi zamanları (yoksa klip süresine eşit dağıtılır). */
+  kelimeler?: { k: string; b: number; s: number }[];
+  vurguRenk?: string;         // karaoke/vurgulu sözcük rengi
+  /* Görüntü */
+  sigdir?: "doldur" | "sigdir" | "bulanik";   // kareye yerleşim
+  aynaX?: boolean;
+  aynaY?: boolean;
+  cikisSure?: number;         // sona doğru kararma (sn)
+  /** Öğe (şekil, alt bant, ilerleme çubuğu, logo) — yazı katmanında çizilir. */
+  oge?: MontajOge;
+  etiketRenk?: string;        // zaman çizelgesinde klip rengi
+  /* Pro görüntü */
+  kirp?: { l: number; t: number; r: number; b: number };  // kaynaktan kırpma (% her kenar)
+  maske?: MontajMaske;
+  maskeYumusak?: number;      // maske kenar yumuşaklığı (px @1080)
+  karisim?: MontajKarisim;    // alt katmanla karışım modu
+  krom?: { renk: string; esik: number; yumusak: number };  // renk anahtarı (yeşil/mavi perde)
+  /* Pro ses */
+  sesIyilestir?: boolean;     // gürültü kesme + netlik + kompresör
+  sesEfekt?: SesEfekt;
+  /* Pro yazı */
+  metinFont?: string;         // yazı tipi kimliği (fontlar.ts)
+  metinKontur?: number;       // kontur kalınlığı (% boyut)
+  metinKonturRenk?: string;
+  metinGolge?: boolean;
+  metinAralik?: number;       // harf aralığı (% boyut, -10..60)
+  metinSatir?: number;        // satır yüksekliği çarpanı (0.9..2)
+  metinKutuRenk?: string;     // arka kutu rengi
+}
+
+export type MontajMaske = "yok" | "daire" | "yuvarlak" | "elmas" | "kalp" | "yildiz" | "serit";
+export type MontajKarisim = "normal" | "screen" | "multiply" | "overlay" | "lighten" | "darken" | "soft-light" | "difference";
+export type SesEfekt = "yok" | "radyo" | "telefon" | "yanki" | "bas" | "salon";
+
+export interface MontajOge {
+  tip: "sekil" | "altbant" | "ilerleme" | "logo";
+  sekil?: "dikdortgen" | "daire" | "cizgi" | "cerceve" | "kose";
+  renk: string;
+  renk2?: string;
+  baslik?: string;
+  alt?: string;
+  koseler?: number;           // köşe yuvarlaklığı (%)
+}
+export type MetinCikis = "yok" | "fade" | "asagi" | "kucul";
+
+export type MetinStil = "baslik" | "altbaslik" | "altyazi" | "etiket" | "alinti" | "sinematik" | "karaoke" | "tiktok" | "neon";
+export type MetinAnim = "yok" | "fade" | "yukari" | "pop" | "daktilo";
+
+/** Projeye yüklenen ya da eklenen medya (medya kutusu). */
+export interface MedyaOge {
+  id: string;
+  ad: string;
+  tur: "video" | "gorsel" | "ses";
+  url: string;            // oynatılabilir kaynak
+  poster?: string;        // video için kapak
+  sure?: number;          // sn (video/ses)
+  kaynakId?: string;      // üretimden geldiyse
 }
 
 export interface MontajKatman {
@@ -90,6 +153,9 @@ export interface MontajKatman {
   sessiz: boolean;
   kilitli: boolean;
   gizli: boolean;
+  duzey?: number;           // katman ses düzeyi (mikser, 0–150)
+  rol?: "muzik" | "konusma"; // otomatik kısma için
+  solo?: boolean;           // yalnız bu katmanı dinle
 }
 
 export interface MontajProje {
@@ -97,12 +163,23 @@ export interface MontajProje {
   ad: string;
   katmanlar: MontajKatman[];
   altyazi: boolean;
-  enBoy: "16:9" | "9:16" | "1:1";
+  enBoy: MontajOran;
   cozunurluk: "720p" | "1080p" | "4K";
   fps: 24 | 30 | 60;
   aiTalimat: string;
   guncelleme: number;
+  arkaRenk?: string;      // boş alan / letterbox rengi
+  isaretler?: { t: number; ad?: string }[];  // zaman çizelgesi işaretçileri
+  kisma?: boolean;        // konuşma/video sesi varken müziği otomatik kıs
+  medya?: MedyaOge[];     // medya kutusu
+  olusturma?: number;
+  /** Elle kaydedilen sürümler (en yenisi başta, en çok 12). */
+  surumler?: { id: string; ad: string; tarih: number; katmanlar: MontajKatman[]; sure: number }[];
 }
+
+export type MontajOran = "16:9" | "9:16" | "1:1" | "4:5";
+
+export interface MontajMarka { renkler: string[]; font?: string; logo?: string; ad?: string }
 
 /** Geri al/yinele için anlık görüntü (yalnız katmanlar — ayarlar hariç). */
 interface Anlik { katmanlar: MontajKatman[] }
@@ -114,7 +191,19 @@ interface MontajState {
   playhead: number;
   oynuyor: boolean;
   seciliKlipId: string | null;
+  /** Çoklu seçim (Shift+tık / Ctrl+A); birincil seçim seciliKlipId. */
+  secimler: string[];
+  secimAyarla: (ids: string[]) => void;
   zoom: number;              // px / saniye
+  /** Ripple modu: silme/kırpma sonrası aynı katmandaki sonraki klipler kayar (oturumluk). */
+  ripple: boolean;
+  rippleAyarla: (v: boolean) => void;
+  /** Zaman çizelgesinde incelenen aralıklar (ör. bulunan sessizlikler) — mor şeritle gösterilir. */
+  vurgular: { bas: number; son: number; etkin: boolean }[];
+  /** Marka seti (kalıcı, tüm projelerde): renkler, yazı tipi, logo. */
+  marka: MontajMarka;
+  markaAyarla: (patch: Partial<MontajMarka>) => void;
+  vurguAyarla: (v: { bas: number; son: number; etkin: boolean }[]) => void;
   pano: MontajKlip | null;   // kopyala/yapıştır panosu (oturumluk)
   gecmis: Record<string, { geri: Anlik[]; ileri: Anlik[] }>;
 
@@ -155,6 +244,8 @@ interface MontajState {
 
   geriAl: (projeId: string) => void;
   yinele: (projeId: string) => void;
+  /** Sürükleme/kırpma gibi çok adımlı işlemlerden ÖNCE bir kez çağrılır (tek geri al adımı). */
+  anlikKaydet: (projeId: string) => void;
   gecmisVar: (projeId: string) => { geri: boolean; ileri: boolean };
 
   aiUygula: (projeId: string, komut: AiKomutId) => string;  // sonuç açıklaması döner
@@ -236,7 +327,15 @@ export const useMontaj = create<MontajState>()(
         playhead: 0,
         oynuyor: false,
         seciliKlipId: null,
+        secimler: [],
+        secimAyarla: (ids) => set({ secimler: ids, seciliKlipId: ids[ids.length - 1] ?? null }),
         zoom: 40,
+        ripple: false,
+        rippleAyarla: (v) => set({ ripple: v }),
+        vurgular: [],
+        marka: { renkler: ["#22d3ee", "#ffffff", "#0b0d10"] },
+        markaAyarla: (patch) => set((s) => ({ marka: { ...s.marka, ...patch } })),
+        vurguAyarla: (v) => set({ vurgular: v }),
         pano: null,
         gecmis: {},
 
@@ -252,6 +351,9 @@ export const useMontaj = create<MontajState>()(
             fps: patch?.fps ?? 30,
             aiTalimat: patch?.aiTalimat ?? "",
             guncelleme: Date.now(),
+            olusturma: Date.now(),
+            arkaRenk: patch?.arkaRenk ?? "#000000",
+            medya: patch?.medya ?? [],
           };
           set((s) => ({ projeler: [proje, ...s.projeler], aktifId: id, playhead: 0, seciliKlipId: null }));
           return id;
@@ -288,10 +390,19 @@ export const useMontaj = create<MontajState>()(
               basKirp: 0, sonKirp: 0, hiz: 1,
               sesDuzey: klip.tur === "ses" ? 70 : 100,
               opaklik: 100,
-              gorselUrl: klip.gorselUrl,
+              gorselUrl: klip.gorselUrl, videoUrl: klip.videoUrl, sesUrl: klip.sesUrl,
               efektler: [], gecis: "yok", gecisSure: 0.5,
               metin: klip.metin, metinBoyut: klip.metinBoyut ?? 42,
               metinRenk: klip.metinRenk ?? "#ffffff", metinKonum: klip.metinKonum ?? "alt",
+              metinStil: klip.metinStil, metinArka: klip.metinArka, metinAnim: klip.metinAnim, metinHiza: klip.metinHiza,
+              metinCikis: klip.metinCikis, kelimeler: klip.kelimeler, vurguRenk: klip.vurguRenk, sigdir: klip.sigdir,
+              oge: klip.oge, etiketRenk: klip.etiketRenk, olcek: klip.olcek, konumX: klip.konumX, konumY: klip.konumY,
+              kirp: klip.kirp, maske: klip.maske, maskeYumusak: klip.maskeYumusak, karisim: klip.karisim, krom: klip.krom,
+              sesIyilestir: klip.sesIyilestir, sesEfekt: klip.sesEfekt, metinFont: klip.metinFont, metinKontur: klip.metinKontur,
+              metinKonturRenk: klip.metinKonturRenk, metinGolge: klip.metinGolge, metinAralik: klip.metinAralik, metinSatir: klip.metinSatir, metinKutuRenk: klip.metinKutuRenk,
+              ...(klip.sesDuzey !== undefined ? { sesDuzey: klip.sesDuzey } : {}), ...(klip.hiz ? { hiz: klip.hiz } : {}),
+              ...(klip.gecis ? { gecis: klip.gecis, gecisSure: klip.gecisSure ?? 0.5 } : {}), ...(klip.efektler ? { efektler: klip.efektler } : {}),
+              ...(klip.basKirp ? { basKirp: klip.basKirp } : {}), ...(klip.sonKirp ? { sonKirp: klip.sonKirp } : {}),
             };
             return { ...kat, klipler: [...kat.klipler, yeni] };
           }));
@@ -442,7 +553,7 @@ export const useMontaj = create<MontajState>()(
 
         playheadAyarla: (sn) => set({ playhead: Math.max(0, sn) }),
         oynatDurdur: (v) => set((s) => ({ oynuyor: v ?? !s.oynuyor })),
-        klipSec: (id) => set({ seciliKlipId: id }),
+        klipSec: (id) => set({ seciliKlipId: id, secimler: id ? [id] : [] }),
         zoomAyarla: (z) => set({ zoom: Math.max(10, Math.min(200, z)) }),
 
         geriAl: (projeId) => {
@@ -469,6 +580,7 @@ export const useMontaj = create<MontajState>()(
             gecmis: { ...s.gecmis, [projeId]: { geri: [...g.geri, { katmanlar: p.katmanlar }], ileri: sonrakiler } },
           });
         },
+        anlikKaydet: (projeId) => anlikAl(projeId),
         gecmisVar: (projeId) => {
           const g = get().gecmis[projeId];
           return { geri: !!g?.geri.length, ileri: !!g?.ileri.length };
@@ -524,7 +636,7 @@ export const useMontaj = create<MontajState>()(
               return { ...kat, klipler };
             }));
             set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, enBoy: "9:16", altyazi: true } : p)) }));
-            return `~30sn dikey reel hazırlandı · 9:16 + altyazı açık`;
+            return `yaklaşık 30sn dikey reel hazırlandı · 9:16 + altyazı açık`;
           }
 
           if (komut === "grade") {
@@ -613,7 +725,7 @@ export const useMontaj = create<MontajState>()(
       name: "vayra-montaj",
       version: 2,
       // oturumluk alanlar persist edilmez
-      partialize: (s) => ({ projeler: s.projeler, aktifId: s.aktifId }) as unknown as MontajState,
+      partialize: (s) => ({ projeler: s.projeler, aktifId: s.aktifId, marka: s.marka }) as unknown as MontajState,
       migrate: () => ({ projeler: [], aktifId: null }) as unknown as MontajState, // v1 şeması uyumsuz
     },
   ),
@@ -656,15 +768,15 @@ export function aiOnizle(p: MontajProje, komut: AiKomutId): { etkilenen: number;
   switch (komut) {
     case "kurgu":
       sonraki = 4 + Math.max(0, n - 1) * 2.6;
-      notlar.push("Kısa dinamik kesimlere sıkıştırır", "Sinematik grade uygular", "Geçiş ekler");
+      notlar.push("Kısa, dinamik kesimlere sıkıştırır", "Sinematik renk uygular", "Geçiş ekler");
       break;
     case "reel":
       sonraki = Math.min(30, n * Math.max(1.2, Math.min(3, 30 / Math.max(1, n))));
-      notlar.push("9:16 dikeye çevirir", "En iyi anları alır (~30sn)", "Altyazı açar");
+      notlar.push("Dikey 9:16 formata çevirir", "En iyi anlardan 30 saniyelik kurgu çıkarır", "Altyazı açar");
       break;
-    case "grade": notlar.push("Sadece renk: sinematik + vinyet", "Kesimlere dokunmaz"); break;
-    case "tempo": notlar.push("Dönüşümlü hız: 1.5× / 0.6×", "Ritmik his verir"); break;
-    case "gecis": notlar.push("Her kesime fade/kaydır/bulanık", "Süre değişmez"); break;
+    case "grade": notlar.push("Yalnız renk: sinematik ton ve vinyet", "Kesimlere dokunmaz"); break;
+    case "tempo": notlar.push("Kliplerin hızı sırayla 1,5 kat ve 0,6 kat olur", "Ritmik his verir"); break;
+    case "gecis": notlar.push("Her kesime sırayla fade, kaydır ve bulanık geçiş", "Süre değişmez"); break;
     case "sessizlik": {
       const kalan = videoKlipler.filter((k) => klipSure(k) >= 1);
       sonraki = kalan.reduce((a, k) => a + klipSure(k), 0);
@@ -677,12 +789,12 @@ export function aiOnizle(p: MontajProje, komut: AiKomutId): { etkilenen: number;
 }
 
 export const AI_KOMUT_META: Record<AiKomutId, { ad: string; ozet: string }> = {
-  kurgu: { ad: "Otomatik kurgula", ozet: "Kısa dinamik kesimler + sinematik grade + geçişler" },
-  reel: { ad: "30sn reel yap", ozet: "En iyi anlar, 9:16 dikey, altyazı açık" },
-  grade: { ad: "Sinematik grade", ozet: "Sadece renk — kesimlere dokunmaz" },
-  tempo: { ad: "Ritmik tempo", ozet: "Dönüşümlü hızlı kesim + ağır çekim vurgu" },
-  gecis: { ad: "Geçiş ekle", ozet: "Her kesime fade / kaydır / bulanık" },
-  sessizlik: { ad: "Boşlukları kes", ozet: "Kısa klipleri at, timeline'ı sıkıştır" },
+  kurgu: { ad: "Otomatik kurgula", ozet: "Kısa kesimler, sinematik renk ve geçişler" },
+  reel: { ad: "30 saniyelik reel yap", ozet: "En iyi anlar, dikey, altyazı açık" },
+  grade: { ad: "Sinematik renk", ozet: "Yalnız renk, kesimlere dokunmaz" },
+  tempo: { ad: "Ritmik tempo", ozet: "Hızlı kesimler arasında ağır çekim vurgu" },
+  gecis: { ad: "Geçiş ekle", ozet: "Her kesime yumuşak geçiş" },
+  sessizlik: { ad: "Boşlukları kes", ozet: "Kısa klipleri çıkar, çizelgeyi sıkıştır" },
   altyazi: { ad: "Altyazı üret", ozet: "Metin katmanına otomatik altyazı klipleri" },
 };
 

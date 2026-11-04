@@ -95,7 +95,7 @@ export function Cekmece({ acik, kapat, baslik, genislik = "max-w-lg", children }
       {acik && (
         <>
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={kapat} className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm" />
+            onClick={kapat} className="perde fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm" />
           <motion.div
             initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={SPRING}
             className={cn("fixed right-0 top-0 z-[81] h-full w-full overflow-y-auto ad-ince-scroll border-l border-[color:var(--ad-kenar)] bg-[color:var(--ad-yuzey)]", genislik)}>

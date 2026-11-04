@@ -2,18 +2,14 @@
 
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { AuthKart } from "@/components/auth/AuthKart";
+import { AuthEkran } from "@/components/auth/AuthEkran";
 
-function Kayit() {
-  const params = useSearchParams();
-  const geri = params.get("geri") ?? "/panel";
-  return <AuthKart baslangic="kayit" geri={geri} />;
+function Ekran() {
+  const geri = useSearchParams().get("geri");
+  // Yalnız site içi yollara dön (açık yönlendirmeye karşı)
+  return <AuthEkran niyet="kayit" geri={geri && geri.startsWith("/") && !geri.startsWith("//") ? geri : "/panel"} />;
 }
 
-export default function KayitSayfa() {
-  return (
-    <Suspense fallback={<div className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-cyan-glow" />}>
-      <Kayit />
-    </Suspense>
-  );
+export default function Sayfa() {
+  return <Suspense fallback={<div className="min-h-[100dvh] bg-[#08080a]" />}><Ekran /></Suspense>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useEffect } from "react";
 import {
   Info, Upload, Sparkles, ChevronDown, Type, ImageIcon, Layers, Check, X, Shuffle, Lightbulb, Minus, Plus,
@@ -66,15 +67,15 @@ export function CreatePanel({
   };
 
   const uret = () => {
-    if (!gorselMod && prompt.trim().length < 3) return toast.error("Modeli tanımlayan bir metin gir.");
-    if (gorselMod && gorseller.length === 0) return toast.error("Önce bir görsel yükle.");
+    if (!gorselMod && prompt.trim().length < 3) return toast.error("Model tarifi çok kısa", { description: "Üretmek istediğin modeli birkaç kelimeyle tarif et." });
+    if (gorselMod && gorseller.length === 0) return toast.error("Görsel eksik", { description: "Görselden model üretmek için önce bir görsel yükle." });
     onUret({ altMod, stil, modelTuru, aiModel, poz, lisans, poligon, nesil, otomatikBol, gorseller });
   };
 
   const gorselEkle = (ad: string) => {
     if (toplu) setGorseller((g) => (g.length >= 10 ? g : [...g, ad]));
     else setGorseller([ad]);
-    toast.success("Görsel yüklendi ✓");
+    toast.success("Görsel yüklendi");
   };
 
   // Görsel stüdyosundan gelen referansı otomatik yükle + görsel moduna geç (madde 10).
@@ -89,7 +90,7 @@ export function CreatePanel({
     onPrompt(istem);
     setAltMod("metin");
     setOrnekModal(false);
-    toast.success("Örnek yüklendi — istediğin gibi düzenle");
+    toast.success("Örnek istem yüklendi", { description: "İstediğin gibi düzenleyip üretebilirsin." });
   };
 
   return (
@@ -192,7 +193,7 @@ export function CreatePanel({
             {MODEL_TURLERI.map((m) => (
               <button key={m.id} onClick={() => modTuruSec(m.id)} title={m.ipucu}
                 className={cn("relative flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors",
-                  modelTuru === m.id ? "bg-yuzey-3 text-aksan shadow-sm" : "text-metin-2 hover:text-metin")}>
+                  modelTuru === m.id ? "bg-yuzey-3 text-aksan" : "text-metin-2 hover:text-metin")}>
                 {m.ad}
                 {m.id === "akilli" && <span className="absolute -right-1 -top-1.5 rounded-[4px] bg-aksan px-1 py-px text-[8px] font-extrabold text-zemin">YENİ</span>}
               </button>
@@ -210,10 +211,7 @@ export function CreatePanel({
               </span>
               <ChevronDown className={cn("h-4 w-4 text-metin-2 transition-transform", aiMenu && "rotate-180")} />
             </button>
-            {aiMenu && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setAiMenu(false)} />
-                <div className="menu-surface absolute left-0 right-0 top-12 z-50 rounded-2xl p-1.5 shadow-2xl">
+            <Yuzen acik={!!(aiMenu)} onKapat={() => setAiMenu(false)} sol={0} sag={0} ust={48} bosluk={0} className="menu-surface rounded-2xl p-1.5">
                   {UC_BOYUT_MODELLERI.map((m) => (
                     <button key={m.id} onClick={() => { setAiModel(m.id); setAiMenu(false); }}
                       className="flex w-full items-start gap-2 rounded-xl px-2.5 py-2 text-left transition-colors hover:bg-white/[0.06]">
@@ -226,9 +224,7 @@ export function CreatePanel({
                       {aiModel === m.id && <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-aksan" />}
                     </button>
                   ))}
-                </div>
-              </>
-            )}
+                </Yuzen>
           </div>
         </Alan>
 
@@ -277,7 +273,7 @@ export function CreatePanel({
             {LISANSLAR.map((l) => (
               <button key={l.id} onClick={() => setLisans(l.id)} title={l.ipucu}
                 className={cn("flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors",
-                  lisans === l.id ? "bg-yuzey-3 text-aksan shadow-sm" : "text-metin-2 hover:text-metin")}>{l.ad}</button>
+                  lisans === l.id ? "bg-yuzey-3 text-aksan" : "text-metin-2 hover:text-metin")}>{l.ad}</button>
             ))}
           </div>
         </Alan>
@@ -297,12 +293,12 @@ export function CreatePanel({
 
       {/* Örnekler modalı */}
       {ornekModal && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setOrnekModal(false)}>
-          <div className="menu-surface w-full max-w-lg rounded-2xl p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="perde fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setOrnekModal(false)}>
+          <div className="menu-surface w-full max-w-lg rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-1 flex items-center justify-between">
               <h3 className="text-lg font-semibold text-metin">Örnekler</h3>
               <div className="flex items-center gap-2">
-                <button onClick={() => { setOrnekTur((t) => t + 1); toast("Yeni örnekler ✨"); }} className="flex items-center gap-1 text-[11px] text-metin-2 hover:text-metin">
+                <button onClick={() => { setOrnekTur((t) => t + 1); toast("Yeni örnekler gösteriliyor"); }} className="flex items-center gap-1 text-[11px] text-metin-2 hover:text-metin">
                   <Shuffle className="h-3.5 w-3.5" /> Başkasını göster
                 </button>
                 <button onClick={() => setOrnekModal(false)} className="text-metin-2 hover:text-metin"><X className="h-4 w-4" /></button>
@@ -355,8 +351,8 @@ function ToggleAlan({ ad, bilgi, ipucu, acik, onToggle, yeni }: { ad: string; bi
         {yeni && <span className="rounded-[4px] bg-aksan px-1 py-px text-[8px] font-extrabold text-zemin">YENİ</span>}
       </div>
       <button onClick={onToggle}
-        className={cn("relative h-5 w-9 rounded-full transition-colors", acik ? "bg-aksan" : "bg-white/20")}>
-        <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform", acik ? "left-[18px]" : "left-0.5")} />
+        className={cn("relative h-5 w-9 rounded-full transition-colors", acik ? "bg-white" : "bg-white/20")}>
+        <span className={cn("absolute left-0 top-0.5 h-4 w-4 rounded-full transition-[left,background-color]", acik ? "left-[18px] bg-[#0a0a0b]" : "left-0.5 bg-white")} />
       </button>
     </div>
   );

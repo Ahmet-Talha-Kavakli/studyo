@@ -33,22 +33,22 @@ export default function Guvenlik() {
     setDogrulaniyor(true);
     const ok = await totpDogrula(kurulumSecret, dogrulaKod, Date.now());
     setDogrulaniyor(false);
-    if (!ok) { toast.error("Kod hatalı — authenticator saatini kontrol et."); return; }
+    if (!ok) { toast.error("Doğrulama kodu hatalı", { description: "Uygulamadaki güncel kodu gir; telefonunun saati doğru olmalı." }); return; }
     oturum.hesapGuncelle(aktifHesap.kullaniciAdi, { totpSecret: kurulumSecret, iki2faAktif: true });
     denetle("2FA (TOTP) etkinleştirildi", "kritik");
-    toast.success("2FA etkinleştirildi");
+    toast.success("İki adımlı doğrulama açıldı", { description: "Sonraki girişte uygulamadaki kod istenecek." });
     setKurulumSecret(null);
   };
   const kaldir2fa = () => {
     if (!aktifHesap) return;
     oturum.hesapGuncelle(aktifHesap.kullaniciAdi, { totpSecret: undefined, iki2faAktif: false });
     denetle("2FA kaldırıldı", "kritik");
-    toast.success("2FA kaldırıldı");
+    toast.success("İki adımlı doğrulama kapatıldı");
   };
   const ipEkle = () => {
     if (!yeniIp.trim()) return;
     denetle(`IP whitelist'e eklendi: ${yeniIp}`, "uyari");
-    toast.success("IP eklendi");
+    toast.success("IP izin listesine eklendi", { description: yeniIp });
     setYeniIp("");
   };
 

@@ -25,13 +25,28 @@ export const meshyAdapter: SaglayiciAdapter = {
   async uret(istek: SaglayiciIstek): Promise<SaglayiciSonuc> {
     const anahtar = process.env.MESHY_API_KEY!;
     const baslik = { Authorization: `Bearer ${anahtar}`, "Content-Type": "application/json" };
-    const gorsel = istek.meta?.gorselUrl;
+    // Görseller saklanmayan girdiden (data URL) gelir; eski kayıtlar meta.gorselUrl kullanır.
+    const gorseller = (istek.girdi?.gorseller ?? []).filter(Boolean);
+    const gorsel = gorseller[0] ?? istek.girdi?.kaynak ?? istek.meta?.gorselUrl;
+    // 3D Stüdyo kurulumu: topoloji, poligon, simetri, poz, stil, tohum.
+    const k = ((istek.meta as { kurulum?: unknown } | undefined)?.kurulum ?? {}) as { topoloji?: "quad" | "triangle"; poligon?: number; simetri?: boolean | "auto" | "on" | "off"; poz?: string; stil?: string; tohum?: number; pbr?: boolean };
+    const ortak = {
+      ...(k.topoloji ? { topology: k.topoloji } : {}),
+      ...(k.poligon ? { target_polycount: Math.max(100, Math.min(300000, Math.round(k.poligon))) } : {}),
+      ...(k.simetri !== undefined ? { symmetry_mode: typeof k.simetri === "string" ? k.simetri : k.simetri ? "on" : "off" } : {}),
+      ...(k.poz === "a" ? { pose_mode: "a-pose" } : k.poz === "t" ? { pose_mode: "t-pose" } : {}),
+      should_remesh: true,
+    };
 
-    // image-to-3d veya text-to-3d
-    const olusturYol = gorsel ? `${TEMEL}/v1/image-to-3d` : `${TEMEL}/v2/text-to-3d`;
-    const govde = gorsel
-      ? { image_url: gorsel, enable_pbr: true }
-      : { mode: "preview", prompt: istek.prompt.slice(0, 600), art_style: "realistic", should_remesh: true };
+    // çoklu görsel, tek görsel ya da metin
+    const coklu = gorseller.length > 1;
+    const yol = coklu ? `${TEMEL}/v1/multi-image-to-3d` : gorsel ? `${TEMEL}/v1/image-to-3d` : `${TEMEL}/v2/text-to-3d`;
+    const olusturYol = yol;
+    const govde = coklu
+      ? { image_urls: gorseller.slice(0, 4), enable_pbr: k.pbr ?? true, ...ortak }
+      : gorsel
+        ? { image_url: gorsel, enable_pbr: k.pbr ?? true, ...ortak }
+        : { mode: "preview", prompt: istek.prompt.slice(0, 600), art_style: k.stil === "kil" ? "sculpture" : "realistic", ...(Number.isInteger(k.tohum) ? { seed: k.tohum } : {}), ...ortak };
 
     const olustur = await fetch(olusturYol, {
       method: "POST",
@@ -45,8 +60,8 @@ export const meshyAdapter: SaglayiciAdapter = {
     const { result: taskId } = (await olustur.json()) as { result: string };
 
     // Poll — 3D üretimi uzun sürer; makul bir tavan koyuyoruz.
-    const durumYol = gorsel ? `${TEMEL}/v1/image-to-3d` : `${TEMEL}/v2/text-to-3d`;
-    for (let i = 0; i < 40; i++) {
+    const durumYol = yol;
+    for (let i = 0; i < 100; i++) {
       await bekle(3000);
       const durumYanit = await fetch(`${durumYol}/${taskId}`, { headers: baslik });
       if (!durumYanit.ok) continue;

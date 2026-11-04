@@ -24,20 +24,17 @@ export function AyarBolum({
   /** Panel çerçevesi olmadan (içerik kendi kartlarını çiziyorsa). */
   panelsiz?: boolean;
 }) {
+  /* Başlık ve özet her zaman kartın üst şeridinde durur (havada yazı yok). */
   return (
-    <section>
-      <div className="mb-3 flex items-start justify-between gap-3">
+    <section className="overflow-hidden rounded-[20px] bg-[var(--sc-kart)] ring-1 ring-inset ring-white/[0.07] [&+&]:mt-4">
+      <div className="flex items-center justify-between gap-3 border-b border-white/[0.06] px-4 py-3 sm:px-5">
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold text-[var(--sc-metin)]">{baslik}</h2>
-          {ozet && <p className="mt-0.5 text-[13.5px] leading-relaxed text-[var(--sc-metin-3)]">{ozet}</p>}
+          {ozet && <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--sc-metin-3)]">{ozet}</p>}
         </div>
         {sagUst && <div className="shrink-0">{sagUst}</div>}
       </div>
-      {panelsiz ? children : (
-        <div className="overflow-hidden rounded-xl border border-[var(--sc-kenar)] bg-[var(--sc-kart)]">
-          {children}
-        </div>
-      )}
+      {panelsiz ? <div className="p-3 sm:p-4">{children}</div> : children}
     </section>
   );
 }
@@ -52,7 +49,7 @@ export function AyarSatir({
 }) {
   return (
     <div className={cn(
-      "border-b border-[var(--sc-kenar)] px-4 py-3.5 last:border-b-0",
+      "border-b border-white/[0.06] px-4 py-3.5 last:border-b-0 sm:px-5",
       dikey ? "space-y-2.5" : "flex items-center justify-between gap-4",
     )}>
       <div className="min-w-0">
@@ -94,10 +91,11 @@ export function Anahtar({
       <span className={cn(
         "relative flex items-center rounded-full transition-colors duration-150",
         g.ray,
-        acik ? "bg-[var(--sc-aksan)]" : "bg-[var(--sc-cip-2)]",
+        acik ? "bg-white" : "bg-[var(--sc-cip-2)]",
       )}>
         <span className={cn(
-          "rounded-full bg-white shadow-sm transition-transform duration-150",
+          "rounded-full transition-transform duration-150",
+          acik ? "bg-[#101012]" : "bg-white",
           g.t, g.x,
         )} />
       </span>
@@ -111,7 +109,7 @@ export function BosDurum({
 }: { ikon: LucideIcon; baslik: string; ozet?: string; eylem?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-2.5 px-6 py-12 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--sc-cip)] text-[var(--sc-metin-3)]">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.085] text-[var(--sc-metin)]">
         <Ikon className="h-[21px] w-[21px]" strokeWidth={1.7} />
       </span>
       <div>
@@ -135,13 +133,13 @@ export function AyarButon({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex h-9 items-center justify-center gap-1.5 rounded-lg px-3.5 text-[13.5px] font-medium transition-colors disabled:opacity-40",
+        "flex h-9 items-center justify-center gap-1.5 rounded-full px-4 text-[13.5px] font-semibold transition active:scale-[0.97] disabled:opacity-40",
         tam && "w-full",
         tehlike
           ? "text-[var(--sc-promo)] hover:bg-[var(--sc-promo)]/10"
           : ikincil
-            ? "border border-[var(--sc-kenar)] bg-[var(--sc-kart)] text-[var(--sc-metin)] hover:bg-[var(--sc-cip)]"
-            : "bg-[var(--sc-aksan)] text-[var(--sc-aksan-metin)] hover:bg-[var(--sc-aksan-koyu)]",
+            ? "bg-white/[0.085] text-[var(--sc-metin)] ring-1 ring-inset ring-white/[0.08] hover:bg-white/[0.12]"
+            : "bg-white text-[#0b0b0c] hover:bg-white/90",
       )}>
       {children}
     </button>
