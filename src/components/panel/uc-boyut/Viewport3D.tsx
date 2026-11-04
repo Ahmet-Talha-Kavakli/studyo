@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -66,7 +67,7 @@ export function Viewport3D({
   const kameraSifirla = () => {
     const mv = modelViewer();
     if (mv) { mv.cameraOrbit = "0deg 75deg 105%"; mv.jumpCameraToGoal?.(); toast.success("Kamera sıfırlandı"); }
-    else toast("Kamera sıfırlandı");
+    else toast.info("Sıfırlanacak model yok", { description: "Önce bir model seç ya da üret." });
   };
   const kameraDondur = () => {
     const mv = modelViewer();
@@ -118,11 +119,8 @@ export function Viewport3D({
         <div className="relative">
           <ToolbarBtn ikon={Grid3x3} etiket="Ekran Ayarları" aktif={ekranAyar} onClick={() => { setEkranAyar((v) => !v); setCevreAyar(false); setBloomAyar(false); }} />
           <AnimatePresence>
-            {ekranAyar && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setEkranAyar(false)} />
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="menu-surface absolute left-0 top-11 z-40 w-56 rounded-xl p-2.5 text-sm shadow-2xl">
+            <Yuzen acik={!!(ekranAyar)} onKapat={() => setEkranAyar(false)} sol={0} ust={44} bosluk={0}><motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="menu-surface w-56 rounded-xl p-2.5 text-sm">
                   <div className="mb-1.5 px-1 text-xs font-semibold text-metin-2">Ekran Ayarları</div>
                   <AyarSatiri ad="Izgara" acik={izgara} onToggle={() => setIzgara((v) => !v)} />
                   <AyarSatiri ad="İstatistik" acik={istatistik} onToggle={() => setIstatistik((v) => !v)} />
@@ -131,9 +129,7 @@ export function Viewport3D({
                     <div className="mb-1 flex items-center justify-between text-xs text-metin-2"><span>Dikey FOV</span><RotateCw className="h-3 w-3 text-metin-3" /></div>
                     <input type="range" min={20} max={90} defaultValue={50} className="w-full accent-aksan" />
                   </div>
-                </motion.div>
-              </>
-            )}
+                </motion.div></Yuzen>
           </AnimatePresence>
         </div>
         <span className="mx-0.5 h-5 w-px bg-white/10" />
@@ -146,30 +142,22 @@ export function Viewport3D({
         <div className="relative">
           <ToolbarBtn ikon={Sparkle} etiket="Parlama" aktif={bloomAyar} onClick={() => { setBloomAyar((v) => !v); setCevreAyar(false); setEkranAyar(false); }} />
           <AnimatePresence>
-            {bloomAyar && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setBloomAyar(false)} />
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="menu-surface absolute left-0 top-11 z-40 w-52 rounded-xl p-3 text-sm shadow-2xl">
+            <Yuzen acik={!!(bloomAyar)} onKapat={() => setBloomAyar(false)} sol={0} ust={44} bosluk={0}><motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="menu-surface w-52 rounded-xl p-3 text-sm">
                   <div className="mb-2 flex items-center justify-between text-xs font-semibold text-metin-2">Bloom Ayarları
                     <span className="h-3.5 w-6 rounded-full bg-aksan"><span className="ml-3 block h-3 w-3 translate-y-px rounded-full bg-white" /></span>
                   </div>
                   <div className="mb-1 text-[11px] text-metin-2">Güç</div>
                   <input type="range" min={0} max={100} value={bloom} onChange={(e) => setBloom(+e.target.value)} className="w-full accent-aksan" />
-                </motion.div>
-              </>
-            )}
+                </motion.div></Yuzen>
           </AnimatePresence>
         </div>
         {/* Çevre / HDRI */}
         <div className="relative">
           <ToolbarBtn ikon={Sun} etiket="Çevre Ayarları" aktif={cevreAyar} onClick={() => { setCevreAyar((v) => !v); setBloomAyar(false); setEkranAyar(false); }} />
           <AnimatePresence>
-            {cevreAyar && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setCevreAyar(false)} />
-                <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                  className="menu-surface absolute left-0 top-11 z-40 w-60 rounded-xl p-3 text-sm shadow-2xl">
+            <Yuzen acik={!!(cevreAyar)} onKapat={() => setCevreAyar(false)} sol={0} ust={44} bosluk={0}><motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className="menu-surface w-60 rounded-xl p-3 text-sm">
                   <div className="mb-2 text-xs font-semibold text-metin-2">Çevre Ayarları</div>
                   <div className="mb-1 text-[11px] text-metin-2">HDRI</div>
                   <div className="mb-3 grid grid-cols-5 gap-1.5">
@@ -182,9 +170,7 @@ export function Viewport3D({
                   <div className="mb-1 text-[11px] text-metin-2">Güç</div>
                   <input type="range" min={0} max={100} value={hdriGuc} onChange={(e) => setHdriGuc(+e.target.value)} className="mb-2 w-full accent-aksan" />
                   <AyarSatiri ad="Otomatik döndürme" acik={otoDon} onToggle={() => setOtoDon((v) => !v)} />
-                </motion.div>
-              </>
-            )}
+                </motion.div></Yuzen>
           </AnimatePresence>
         </div>
         <span className="mx-0.5 h-5 w-px bg-white/10" />
@@ -269,11 +255,8 @@ export function Viewport3D({
           <div className="relative">
             <DockBtn ikon={Plug} etiket="DCC Köprüsü" onClick={() => { setDccMenu((v) => !v); setPaylasMenu(false); }} />
             <AnimatePresence>
-              {dccMenu && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setDccMenu(false)} />
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="menu-surface absolute bottom-12 left-0 z-40 w-52 rounded-xl p-1.5 text-sm shadow-2xl">
+              <Yuzen acik={!!(dccMenu)} onKapat={() => setDccMenu(false)} alt={48} sol={0} bosluk={0}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="menu-surface w-52 rounded-xl p-1.5 text-sm">
                     <div className="px-2 py-1 text-xs font-semibold text-metin-2">DCC Köprüsü</div>
                     {DCC_HEDEFLERI.map((d) => (
                       <button key={d.ad} disabled={!d.aktif} onClick={() => { onDCC(d.ad); setDccMenu(false); }}
@@ -281,9 +264,7 @@ export function Viewport3D({
                         <span className="h-3.5 w-3.5 rounded-sm" style={{ background: d.renk }} /> {d.ad}'a gönder{!d.aktif && " (yakında)"}
                       </button>
                     ))}
-                  </motion.div>
-                </>
-              )}
+                  </motion.div></Yuzen>
             </AnimatePresence>
           </div>
           {/* Paylaş */}
@@ -293,11 +274,8 @@ export function Viewport3D({
               <DockBtn ikon={Share2} etiket="Paylaş" onClick={() => { setPaylasMenu((v) => !v); setDccMenu(false); }} />
             </div>
             <AnimatePresence>
-              {paylasMenu && (
-                <>
-                  <div className="fixed inset-0 z-30" onClick={() => setPaylasMenu(false)} />
-                  <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                    className="menu-surface absolute bottom-12 left-0 z-40 w-56 rounded-xl p-1.5 text-sm shadow-2xl">
+              <Yuzen acik={!!(paylasMenu)} onKapat={() => setPaylasMenu(false)} alt={48} sol={0} bosluk={0}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="menu-surface w-56 rounded-xl p-1.5 text-sm">
                     <button onClick={() => { onBaglantiPaylas(); setPaylasMenu(false); }}
                       className="flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left hover:bg-white/[0.06]">
                       <span className="flex items-center gap-2"><Share2 className="h-3.5 w-3.5" /> Paylaş ve Kazan</span>
@@ -307,9 +285,7 @@ export function Viewport3D({
                       className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left hover:bg-white/[0.06]">
                       <Waypoints className="h-3.5 w-3.5" /> Topluluğa Yayınla
                     </button>
-                  </motion.div>
-                </>
-              )}
+                  </motion.div></Yuzen>
             </AnimatePresence>
           </div>
           <button onClick={onIndir} title="İndir"
@@ -417,8 +393,8 @@ function AyarSatiri({ ad, acik, onToggle }: { ad: string; acik: boolean; onToggl
   return (
     <button onClick={onToggle} className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 hover:bg-white/[0.05]">
       <span className="text-metin">{ad}</span>
-      <span className={cn("relative h-4 w-7 rounded-full transition-colors", acik ? "bg-aksan" : "bg-white/20")}>
-        <span className={cn("absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all", acik ? "left-3.5" : "left-0.5")} />
+      <span className={cn("relative h-4 w-7 rounded-full transition-colors", acik ? "bg-white" : "bg-white/20")}>
+        <span className={cn("absolute top-0.5 h-3 w-3 rounded-full transition-all", acik ? "left-3.5 bg-[#0a0a0b]" : "left-0.5 bg-white")} />
       </span>
     </button>
   );

@@ -1,952 +1,660 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "framer-motion";
 import {
-  Copy, Check, ChevronDown, ArrowUpRight, ArrowRight, Sparkles, Terminal,
-  Plug, Zap, ShieldCheck, Boxes, Radio, CornerDownLeft, Image as ImageIcon,
-  Film, Music, Layers, Wand2, CircleDot, Activity, Lock, Gauge, Server,
+  AlertTriangle, ArrowUpRight, Ban, Check, CheckCircle2, ChevronDown, CircleDashed, Code2, Copy, Download, ExternalLink, FileText, History,
+  Info, KeyRound, LayoutGrid, Loader2, Play, Search, ShieldCheck, Sparkles, Terminal, Wallet, XCircle,
 } from "lucide-react";
-import { toast } from "@/lib/toast";
-import { VayraIsaret } from "@/components/kabuk/VayraIsaret";
+import { useAuth } from "@/store/useAuth";
+import { anahtarMaske } from "@/store/useApiAnahtar";
+import { AnahtarSecici, KodEditor, KopyalaDugme, OrtamRozet, panoyaKopyala, useSeciliAnahtar, sureMetin } from "@/components/api/ui";
+import { kesfetFont } from "@/components/kesfet/font";
+import type { McpArac } from "@/lib/mcp/araclar";
+import { MODELLER } from "@/lib/catalog";
+import { ISTEMCILER, IstemciLogo, McpSahne, type IstemciId } from "@/components/mcp/McpSahne";
+import { KapanisCta, McpSss, Senaryolar } from "@/components/mcp/McpVitrin";
 import { cn } from "@/lib/utils";
-import { kopyala as panoyaKopyala } from "@/lib/gercekEylem";
 
-/* ============================================================
-   VAYRA MCP & CLI — "BAĞLANTI KONSOLU"
+const yay = { type: "spring" as const, stiffness: 420, damping: 34 };
 
-   Tasarım fikri: MCP bir PROTOKOL. Onu anlatmanın en dürüst yolu
-   pazarlama bloğu değil, protokolün KENDİSİNİ göstermek. Sayfa bu
-   yüzden bir konsol gibi kurgulandı:
+/* ── Yardımcılar ── */
 
-     1) Hero — canlı el sıkışma (handshake) animasyonu: ajan → Vayra
-        arasında paketler akar, altında gerçek zamanlı durum satırı.
-     2) Bağlan — mod (MCP/CLI/Beceri) × araç matrisi + 3 adım.
-        Bu bölümün MANTIĞI eski sayfadan aynen korundu.
-     3) Araç yüzeyi — MCP sunucusunun ajana açtığı 8 tool, tıklanınca
-        gerçek JSON-RPC çağrısı/yanıtı canlanır. Sayfanın kalbi.
-     4) Oturum — ajanla yazışmanın adım adım canlandığı terminal.
-     5) Yetenek ızgarası + güvenlik + SSS + CTA.
+type Rpc = { jsonrpc: "2.0"; id: number; result?: Record<string, unknown>; error?: { code: number; message: string } };
 
-   Renk: .sinema-kapsam lime. Tailwind lime-* KULLANILMAZ.
-   SSR güvenli: Date.now / Math.random render sırasında ASLA çağrılmaz
-   (animasyon değerleri index'ten deterministik türetilir).
-   ============================================================ */
-
-const LIME = "var(--sn-lime)";
-const MCP_URL = "https://mcp.vayra.ai/mcp";
-
-type Mod = "MCP" | "CLI" | "Beceri";
-type Arac = "Claude" | "ChatGPT" | "Cursor" | "OpenClaw" | "Hermes";
-
-const MODLAR: Mod[] = ["MCP", "CLI", "Beceri"];
-const ARACLAR: Arac[] = ["Claude", "ChatGPT", "Cursor", "OpenClaw", "Hermes"];
-
-/** Bir adımın aksiyonu: ya dolu lime buton (↗) ya da kopyalanabilir kod kutusu. */
-type Aksiyon =
-  | { tip: "buton"; etiket: string }
-  | { tip: "kod"; deger: string }
-  | { tip: "yok" };
-
-type Adim = { baslik: string; ikonlu?: boolean; aciklama: React.ReactNode; aksiyon: Aksiyon };
-
-/** Kombinasyona (mod + araç) göre 3 adım döndürür. */
-function adimlariGetir(mod: Mod, arac: Arac): Adim[] {
-  /* ---------- BECERİ (araçtan bağımsız) ---------- */
-  if (mod === "Beceri") {
-    return [
-      {
-        baslik: "Becerileri ekle",
-        aciklama: <>Tek komut üç beceriyi de — üret, ruh ve ürün çekimi — ajanına çeker.</>,
-        aksiyon: { tip: "kod", deger: "npx skills add vayra-ai/skills" },
-      },
-      {
-        baslik: "Giriş yap",
-        aciklama: <>Becerilerin <b>vayra</b> CLI üzerinden iş gönderebilmesi için hesabını bağlar.</>,
-        aksiyon: { tip: "kod", deger: "vayra auth login" },
-      },
-      {
-        baslik: "Beceriyi ajanına tak",
-        aciklama: <>Üret, Ürün Çekimi ve Ruh Kimliği — hub&apos;dan tara ve kur.</>,
-        aksiyon: { tip: "kod", deger: "/vayra:generate" },
-      },
-    ];
+async function rpc(url: string, anahtar: string | null, method: string, params?: Record<string, unknown>): Promise<{ ms: number; http: number; j: Rpc | null }> {
+  const t0 = performance.now();
+  try {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json, text/event-stream", "mcp-protocol-version": "2025-06-18", ...(anahtar ? { authorization: `Bearer ${anahtar}` } : {}) },
+      body: JSON.stringify({ jsonrpc: "2.0", id: Math.floor(Math.random() * 1e6), method, ...(params ? { params } : {}) }),
+    });
+    return { ms: Math.round(performance.now() - t0), http: r.status, j: await r.json().catch(() => null) };
+  } catch {
+    return { ms: Math.round(performance.now() - t0), http: 0, j: null };
   }
-
-  /* ---------- CLI ---------- */
-  if (mod === "CLI") {
-    const kurKomut =
-      arac === "OpenClaw" ? "openclaw skills install vayra-generate"
-      : arac === "Hermes" ? "hermes plugins add vayra"
-      : "npm install -g @vayra/cli";
-    const sonAksiyon: Aksiyon =
-      arac === "OpenClaw" ? { tip: "kod", deger: "https://clawhub.ai/user/vayra" }
-      : { tip: "kod", deger: "npx skills add vayra-ai/skills" };
-    return [
-      {
-        baslik: "Kur ve ajanına tak",
-        aciklama: <>Tüm ajanlarla çalışır. Sonra sadece de: <b>&ldquo;Vayra ile bir görsel üret.&rdquo;</b></>,
-        aksiyon: { tip: "kod", deger: kurKomut },
-      },
-      {
-        baslik: "Giriş yap",
-        aciklama: <>Tarayıcı açılır, 5 saniye sürer. <b>vayra auth login</b> çalıştır, kimliğin doğrulansın.</>,
-        aksiyon: { tip: "kod", deger: "vayra auth login" },
-      },
-      {
-        baslik: "Vayra becerileri tek yerde",
-        aciklama: <>Üret, Ürün Çekimi &amp; Ruh Kimliği — hub&apos;dan tara ve kur.</>,
-        aksiyon: sonAksiyon,
-      },
-    ];
-  }
-
-  /* ---------- MCP ---------- */
-  if (arac === "ChatGPT") {
-    return [
-      {
-        baslik: "Geliştirici Modunu aç",
-        aciklama: <>Ayarlar → Uygulamalar → Gelişmiş ayarlar → Geliştirici Modu&apos;nu etkinleştir, sonra <b>Uygulama oluştur</b>&apos;a bas.</>,
-        aksiyon: { tip: "buton", etiket: "ChatGPT Ayarları" },
-      },
-      {
-        baslik: "Vayra Uygulamasını oluştur",
-        ikonlu: true,
-        aciklama: <>Uygulamaya <b>Vayra</b> adını ver ve aşağıdaki URL&apos;yi <b>Bağlantı</b> olarak yapıştır.</>,
-        aksiyon: { tip: "kod", deger: MCP_URL },
-      },
-      {
-        baslik: "Bağlan ve giriş yap",
-        aciklama: <><b>Oluştur</b>&apos;a bas, Vayra hesabınla giriş yap — hazırsın, artık ChatGPT&apos;ye <b>@Vayra ile bir görsel üret</b> diyebilirsin.</>,
-        aksiyon: { tip: "yok" },
-      },
-    ];
-  }
-  if (arac === "Cursor") {
-    return [
-      {
-        baslik: "Cursor pazar yerini aç",
-        aciklama: <><b>Cursor</b>&apos;ı başlat ve dahili eklentileri <b>Ayarlar → Pazar Yeri</b>&apos;nden aç.</>,
-        aksiyon: { tip: "buton", etiket: "Pazar yerini aç" },
-      },
-      {
-        baslik: "Vayra eklentisini ekle",
-        aciklama: <><b>Vayra</b>&apos;yı bul ya da komutu doğrudan çalıştır:</>,
-        aksiyon: { tip: "kod", deger: "/add-plugin vayra" },
-      },
-      {
-        baslik: "Bağlan ve giriş yap",
-        aciklama: <><b>Ekle → Bağlan</b>&apos;a bas, Vayra hesabınla giriş yap — hazırsın, artık ajandan <b>bir görsel üret</b> diyebilirsin.</>,
-        aksiyon: { tip: "yok" },
-      },
-    ];
-  }
-  const ayarYolu =
-    arac === "OpenClaw" ? "Ayarlar → Uzantılar'ı aç"
-    : arac === "Hermes" ? "Ayarlar → Bağlayıcılar'ı aç"
-    : "Ayarlar → Bağlayıcılar'ı aç";
-  return [
-    {
-      baslik: "Vayra URL'sini kopyala",
-      ikonlu: true,
-      aciklama: <>Yandaki kopyala butonuna bas. Bir <b>sonraki adımda</b> gerekecek.</>,
-      aksiyon: { tip: "kod", deger: MCP_URL },
-    },
-    {
-      baslik: ayarYolu,
-      aciklama: <>Özel bir bağlayıcı ekle, adını <b>Vayra</b> koy ve <b>URL&apos;yi yapıştır</b>.</>,
-      aksiyon: { tip: "buton", etiket: "Vayra ile giriş yap" },
-    },
-    {
-      baslik: "Bağlan ve giriş yap",
-      aciklama: <><b>Ekle → Bağlan</b>&apos;a bas, Vayra hesabınla giriş yap — hazırsın, artık {arac}&apos;a <b>bir görsel üret</b> diyebilirsin.</>,
-      aksiyon: { tip: "yok" },
-    },
-  ];
 }
 
-/* ══════════════════════════════════════════════════════════════
-   MCP ARAÇ YÜZEYİ — sunucunun ajana açtığı gerçek tool seti.
-   Her tool'un adı, imzası, örnek çağrısı ve örnek yanıtı var.
-   ══════════════════════════════════════════════════════════════ */
+function useKok() {
+  const [kok, setKok] = useState("");
+  useEffect(() => setKok(window.location.origin), []);
+  return kok;
+}
 
-type Tool = {
-  ad: string;
-  ozet: string;
-  ikon: typeof ImageIcon;
-  kredi: string;
-  girdi: { ad: string; tip: string; zorunlu?: boolean; not?: string }[];
-  ornek: Record<string, unknown>;
-  yanit: Record<string, unknown>;
+const git = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+/* ── İstemci yapılandırmaları ── */
+
+function kurulum(id: IstemciId, url: string, anahtar: string) {
+  const json = (o: unknown) => JSON.stringify(o, null, 2);
+  switch (id) {
+    case "claude-code": return {
+      adimlar: ["Terminalde çalıştır; sunucu kullanıcı kapsamına eklenir.", "Claude Code'da /mcp yaz; vayra “connected” görünmeli.", "Dene: “nano-banana-pro ile sisli bir orman görseli üret”."],
+      dosya: "terminal", dil: "bash",
+      kod: `claude mcp add --transport http vayra ${url} \\\n  --header "Authorization: Bearer ${anahtar}" --scope user`,
+    };
+    case "claude-desktop": return {
+      adimlar: ["Ayarlar › Geliştirici › Yapılandırmayı düzenle ile claude_desktop_config.json dosyasını aç.", "Aşağıdakini ekle (Node 18+ gerekir; mcp-remote HTTP sunucusuna köprü kurar).", "Claude Desktop'ı yeniden başlat; araç simgesinde vayra görünür."],
+      dosya: "claude_desktop_config.json", dil: "json",
+      kod: json({ mcpServers: { vayra: { command: "npx", args: ["-y", "mcp-remote", url, "--header", "Authorization:${VAYRA_AUTH}"], env: { VAYRA_AUTH: `Bearer ${anahtar}` } } } }),
+    };
+    case "cursor": return {
+      adimlar: ["Tek tıkla kur ya da ~/.cursor/mcp.json dosyasına ekle.", "Cursor Ayarlar › MCP'de vayra yeşil görünmeli.", "Agent modunda üretim iste."],
+      dosya: "~/.cursor/mcp.json", dil: "json",
+      kod: json({ mcpServers: { vayra: { url, headers: { Authorization: `Bearer ${anahtar}` } } } }),
+      tekTik: `cursor://anysphere.cursor-deeplink/mcp/install?name=vayra&config=${typeof window !== "undefined" ? btoa(JSON.stringify({ url, headers: { Authorization: `Bearer ${anahtar}` } })) : ""}`,
+    };
+    case "vscode": return {
+      adimlar: ["Tek tıkla kur ya da çalışma alanında .vscode/mcp.json oluştur.", "Copilot Chat'i Agent moduna al; araçlarda vayra görünür.", "Sohbette üretim iste."],
+      dosya: ".vscode/mcp.json", dil: "json",
+      kod: json({ servers: { vayra: { type: "http", url, headers: { Authorization: `Bearer ${anahtar}` } } } }),
+      tekTik: `vscode:mcp/install?${encodeURIComponent(JSON.stringify({ name: "vayra", type: "http", url, headers: { Authorization: `Bearer ${anahtar}` } }))}`,
+    };
+    case "windsurf": return {
+      adimlar: ["Ayarlar › Cascade › MCP sunucuları › Ham yapılandırmayı görüntüle.", "~/.codeium/windsurf/mcp_config.json dosyasına ekle ve yenile.", "Cascade'de üretim iste."],
+      dosya: "~/.codeium/windsurf/mcp_config.json", dil: "json",
+      kod: json({ mcpServers: { vayra: { serverUrl: url, headers: { Authorization: `Bearer ${anahtar}` } } } }),
+    };
+    default: return {
+      adimlar: ["Streamable HTTP destekleyen her MCP istemcisi bağlanır.", "Adresi ve Authorization başlığını gir.", "initialize, tools/list ve tools/call desteklenir."],
+      dosya: "mcp.json", dil: "json",
+      kod: json({ mcpServers: { vayra: { type: "http", url, headers: { Authorization: `Bearer ${anahtar}` } } } }),
+    };
+  }
+}
+
+const ORNEK: Record<string, Record<string, unknown>> = {
+  list_models: { type: "image" },
+  get_model: { model: "nano-banana-pro" },
+  generate: { model: "nano-banana-pro", input: { prompt: "Sisli bir çam ormanında sabah ışığı, sinematik", aspect_ratio: "16:9" } },
+  get_generation: { id: "gen_…" },
+  list_generations: { limit: 5 },
+  cancel_generation: { id: "gen_…" },
+  get_account: {},
 };
 
-const TOOLLAR: Tool[] = [
-  {
-    ad: "vayra.gorsel_uret",
-    ozet: "İstemden tek kare görsel üretir. Ruh kimliği ve referans destekler.",
-    ikon: ImageIcon,
-    kredi: "✦ 4 – 12",
-    girdi: [
-      { ad: "istem", tip: "string", zorunlu: true },
-      { ad: "model", tip: "enum", not: "ruh-2 · seedream-4.5 · nano-banana-pro" },
-      { ad: "oran", tip: "enum", not: "1:1 · 16:9 · 9:16 · 4:5" },
-      { ad: "referans", tip: "string[]", not: "URL ya da element @kimliği" },
-    ],
-    ornek: { istem: "gece yağmurunda neon tabelalı ıslak sokak", model: "ruh-2", oran: "16:9" },
-    yanit: { durum: "tamam", id: "gen_8fa21c", url: "https://cdn.vayra.ai/…", kredi: 8, sure_ms: 4210 },
-  },
-  {
-    ad: "vayra.video_uret",
-    ozet: "İstemden veya bir başlangıç karesinden hareketli çekim üretir.",
-    ikon: Film,
-    kredi: "✦ 20 – 90",
-    girdi: [
-      { ad: "istem", tip: "string", zorunlu: true },
-      { ad: "baslangic_kare", tip: "string", not: "görsel URL — image-to-video" },
-      { ad: "sure_sn", tip: "number", not: "3 · 5 · 10" },
-      { ad: "kamera", tip: "enum", not: "bullet-time · dolly-in · orbit …" },
-    ],
-    ornek: { istem: "çöl otoyolunda süzülen araba", sure_sn: 5, kamera: "dolly-in" },
-    yanit: { durum: "kuyrukta", id: "vid_1d90ab", tahmini_sn: 38, kredi: 45 },
-  },
-  {
-    ad: "vayra.ruh_egit",
-    ozet: "Referans fotoğraflardan yeniden kullanılabilir karakter kimliği eğitir.",
-    ikon: Sparkles,
-    kredi: "✦ 120",
-    girdi: [
-      { ad: "ad", tip: "string", zorunlu: true },
-      { ad: "gorseller", tip: "string[]", zorunlu: true, not: "8–20 kare önerilir" },
-      { ad: "tur", tip: "enum", not: "karakter · ürün · stil" },
-    ],
-    ornek: { ad: "Deniz", gorseller: ["…12 kare"], tur: "karakter" },
-    yanit: { durum: "egitiliyor", element: "@deniz", tahmini_dk: 6 },
-  },
-  {
-    ad: "vayra.urun_cekimi",
-    ozet: "Ürün fotoğrafını stüdyo kalitesinde sahneye yerleştirir.",
-    ikon: Boxes,
-    kredi: "✦ 10",
-    girdi: [
-      { ad: "urun_gorsel", tip: "string", zorunlu: true },
-      { ad: "sahne", tip: "string", not: "mermer tezgah, yumuşak ışık…" },
-      { ad: "arka_plan_sil", tip: "boolean" },
-    ],
-    ornek: { urun_gorsel: "https://…/parfum.png", sahne: "ıslak mermer, sabah ışığı", arka_plan_sil: true },
-    yanit: { durum: "tamam", id: "shot_44b0", varyant: 4, kredi: 10 },
-  },
-  {
-    ad: "vayra.ses_uret",
-    ozet: "Seslendirme, müzik ya da ses efekti üretir.",
-    ikon: Music,
-    kredi: "✦ 6 – 30",
-    girdi: [
-      { ad: "tur", tip: "enum", zorunlu: true, not: "seslendirme · muzik · efekt" },
-      { ad: "metin", tip: "string", not: "seslendirme için" },
-      { ad: "ses_kimligi", tip: "string", not: "ROXIE · ARTHUR · CILLIAN…" },
-    ],
-    ornek: { tur: "seslendirme", metin: "Bu sonbahar, yeniden başla.", ses_kimligi: "ROXIE" },
-    yanit: { durum: "tamam", id: "ses_02fe", sure: "0:07", format: "mp3" },
-  },
-  {
-    ad: "vayra.kanvas_akis",
-    ozet: "Bir Canvas panosundaki düğüm zincirini uçtan uca çalıştırır.",
-    ikon: Layers,
-    kredi: "zincire bağlı",
-    girdi: [
-      { ad: "pano_id", tip: "string", zorunlu: true },
-      { ad: "hedef_node", tip: "string", not: "boşsa tüm pano" },
-    ],
-    ornek: { pano_id: "brd_kampanya", hedef_node: "nd_final" },
-    yanit: { durum: "calisiyor", adim: "3/7", kalan_kredi: 8420 },
-  },
-  {
-    ad: "vayra.kitaplik_ara",
-    ozet: "Geçmiş üretimlerinde anlamsal arama yapar.",
-    ikon: Wand2,
-    kredi: "ücretsiz",
-    girdi: [
-      { ad: "sorgu", tip: "string", zorunlu: true },
-      { ad: "tur", tip: "enum", not: "gorsel · video · ses" },
-      { ad: "limit", tip: "number", not: "varsayılan 20" },
-    ],
-    ornek: { sorgu: "mavi tonlu portre", tur: "gorsel", limit: 5 },
-    yanit: { sonuc: 5, ilk: { id: "gen_3aa1", benzerlik: 0.91 } },
-  },
-  {
-    ad: "vayra.kredi_durum",
-    ozet: "Kalan kredi, plan ve kuyruk doluluğunu döner.",
-    ikon: Gauge,
-    kredi: "ücretsiz",
-    girdi: [],
-    ornek: {},
-    yanit: { kredi: 8993, plan: "Pro", kuyruk: 2, yenileme: "1 Ağustos" },
-  },
-];
+/* ── Sayfa ── */
 
-/* ══════════════════════════════════════════════════════════════
-   OTURUM — ajanla yazışmanın canlandığı terminal senaryosu
-   ══════════════════════════════════════════════════════════════ */
+type Sunucu = { ok: boolean; ms: number; surum?: string } | null;
 
-type SatirTip = "kullanici" | "dusunce" | "cagri" | "yanit" | "ajan";
-type Satir = { tip: SatirTip; metin: string; gecikme: number };
+export default function McpSayfasi() {
+  const kok = useKok();
+  const url = kok ? `${kok}/api/mcp` : "/api/mcp";
+  const girisli = useAuth((s) => !!s.kullanici);
+  const [secili, sec] = useSeciliAnahtar();
+  const anahtar = secili?.tam ?? null;
+  const [araclar, setAraclar] = useState<McpArac[] | null>(null);
+  const [istemci, setIstemci] = useState<IstemciId>("claude-code");
+  const [sunucu, setSunucu] = useState<Sunucu>(null);
 
-const OTURUM: Satir[] = [
-  { tip: "kullanici", metin: "Yeni parfüm için 3 kare ve 5 saniyelik bir tanıtım hazırla.", gecikme: 0 },
-  { tip: "dusunce", metin: "Vayra MCP sunucusuna bağlanılıyor… 8 araç bulundu.", gecikme: 900 },
-  { tip: "cagri", metin: 'vayra.gorsel_uret { istem: "ıslak mermerde parfüm şişesi, sabah ışığı", oran: "4:5", adet: 3 }', gecikme: 1700 },
-  { tip: "yanit", metin: "✓ 3 kare · ✦12 · 5.1 sn", gecikme: 3400 },
-  { tip: "cagri", metin: 'vayra.video_uret { baslangic_kare: "gen_8fa21c", kamera: "orbit", sure_sn: 5 }', gecikme: 4200 },
-  { tip: "yanit", metin: "✓ vid_1d90ab · ✦45 · 38 sn", gecikme: 6100 },
-  { tip: "ajan", metin: "Hazır: 3 kare + 5 sn orbit çekim. Kitaplığa “Parfüm Lansman” olarak kaydettim.", gecikme: 6900 },
-];
+  useEffect(() => {
+    if (!kok) return;
+    (async () => {
+      const i = await rpc(url, null, "initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "vayra-panel", version: "1" } });
+      setSunucu({ ok: i.http === 200 && !!i.j?.result, ms: i.ms, surum: i.j?.result?.protocolVersion as string | undefined });
+      const t = await rpc(url, null, "tools/list");
+      setAraclar((t.j?.result?.tools as McpArac[]) ?? []);
+    })();
+  }, [kok, url]);
 
-/* ══════════════════════════════════════════════════════════════
-   Küçük parçalar
-   ══════════════════════════════════════════════════════════════ */
-
-/** Segment toggle — seçili beyaz dolgu + koyu metin. */
-function Segment<T extends string>({
-  secenekler, deger, onChange, etiket,
-}: { secenekler: readonly T[]; deger: T; onChange: (v: T) => void; etiket: string }) {
-  return (
-    <div role="tablist" aria-label={etiket} className="glass-cip inline-flex items-center gap-0.5 rounded-full p-1">
-      {secenekler.map((s) => {
-        const aktif = deger === s;
-        return (
-          <button
-            key={s}
-            role="tab"
-            aria-selected={aktif}
-            onClick={() => onChange(s)}
-            className={cn(
-              "hf-btn whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-colors",
-              aktif ? "bg-white text-[#111114]" : "text-[var(--sn-metin-2)] hover:text-white",
-            )}
-          >
-            {s}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/** Kopyalanabilir kod kutusu — lime mono metin + kopyala butonu + toast. */
-function KodKutusu({ deger }: { deger: string }) {
-  const [kopyalandi, setKopyalandi] = useState(false);
-  const kopyala = async () => {
-    // Toast'ı gercekEylem basar; kopyalanamazsa dürüst hata çıkar.
-    if (!(await panoyaKopyala(deger, "Panoya kopyalandı"))) return;
-    setKopyalandi(true);
-    setTimeout(() => setKopyalandi(false), 1400);
-  };
-  return (
-    <button
-      onClick={kopyala}
-      aria-label={`Kopyala: ${deger}`}
-      className="hf-btn glass-cip group flex w-full items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-left"
-    >
-      <code className="truncate font-mono text-[13px]" style={{ color: LIME }}>{deger}</code>
-      <span className="shrink-0 text-[var(--sn-metin-3)] transition-colors group-hover:text-white">
-        {kopyalandi ? <Check className="h-4 w-4" style={{ color: LIME }} /> : <Copy className="h-4 w-4" />}
-      </span>
-    </button>
-  );
-}
-
-/** Dolu lime buton (↗) — kurulum adımı aksiyonu. Etikete göre GERÇEK hedefe gider. */
-function LimeButon({ etiket }: { etiket: string }) {
-  const router = useRouter();
-  const acExternal = (url: string) => window.open(url, "_blank", "noopener");
-  const eylem = () => {
-    const e = etiket.toLowerCase();
-    if (e.includes("chatgpt")) { acExternal("https://chatgpt.com/#settings/Connectors"); return; }
-    if (e.includes("pazar")) { router.push("/panel/eklentiler"); return; }
-    if (e.includes("giriş") || e.includes("giris")) { router.push("/giris"); return; }
-    // Bilinmeyen etiket için varsayılan: eklentiler pazarı.
-    router.push("/panel/eklentiler");
-  };
-  return (
-    <button
-      onClick={eylem}
-      className="hf-uret inline-flex items-center gap-2 px-4 py-2.5 text-[13px] font-semibold"
-    >
-      {etiket} <ArrowUpRight className="h-4 w-4" />
-    </button>
-  );
-}
-
-/** Bölüm etiketi — lime nokta + ALL CAPS. */
-function BolumEtiket({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--sn-metin-3)]">
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: LIME }} />
-      {children}
-    </span>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   HERO — canlı el sıkışma (handshake)
-   Sol: ajan · Sağ: Vayra · Ortada akan paketler.
-   ══════════════════════════════════════════════════════════════ */
-
-function Handshake() {
-  /* 5 paket, her biri farklı gecikmeyle soldan sağa akar. Değerler
-     index'ten deterministik — Math.random yok (SSR güvenli). */
-  const paketler = [0, 1, 2, 3, 4];
-  return (
-    <div className="relative mx-auto flex h-[130px] w-full max-w-[520px] items-center justify-between">
-      {/* sol düğüm — ajan */}
-      <div className="relative z-10 flex flex-col items-center gap-2">
-        <div className="glass-ikon flex h-[62px] w-[62px] items-center justify-center rounded-[18px]">
-          <Terminal className="h-6 w-6 text-white" />
-        </div>
-        <span className="text-[11px] font-medium text-[var(--sn-metin-3)]">Ajanın</span>
-      </div>
-
-      {/* hat */}
-      <div className="absolute inset-x-[62px] top-[31px] h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,0.14) 18%,rgba(255,255,255,0.14) 82%,transparent)" }} />
-
-      {/* akan paketler */}
-      {paketler.map((i) => (
-        <motion.span
-          key={i}
-          aria-hidden
-          className="absolute top-[27px] h-[9px] w-[9px] rounded-full"
-          style={{ background: LIME, boxShadow: `0 0 12px ${LIME}` }}
-          initial={{ left: "16%", opacity: 0 }}
-          animate={{ left: ["16%", "84%"], opacity: [0, 1, 1, 0] }}
-          transition={{
-            duration: 2.2,
-            delay: i * 0.44,
-            repeat: Infinity,
-            repeatDelay: 0.3,
-            ease: "linear",
-            times: [0, 0.12, 0.88, 1],
-          }}
-        />
-      ))}
-
-      {/* sağ düğüm — Vayra */}
-      <div className="relative z-10 flex flex-col items-center gap-2">
-        <motion.div
-          className="flex h-[62px] w-[62px] items-center justify-center rounded-[18px]"
-          style={{ background: LIME }}
-          animate={{ boxShadow: [`0 0 0px ${LIME}00`, `0 0 26px ${LIME}66`, `0 0 0px ${LIME}00`] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <VayraIsaret size={26} />
-        </motion.div>
-        <span className="text-[11px] font-medium" style={{ color: LIME }}>Vayra</span>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   ARAÇ YÜZEYİ — sol liste + sağ JSON paneli
-   ══════════════════════════════════════════════════════════════ */
-
-function AracYuzeyi() {
-  const [aktif, setAktif] = useState(0);
-  const [calisti, setCalisti] = useState(false);
-  const tool = TOOLLAR[aktif];
-
-  /* Tool değişince "çalıştır" durumu sıfırlanır. */
-  useEffect(() => { setCalisti(false); }, [aktif]);
+  const yerel = kok.includes("localhost") || kok.includes("127.0.0.1");
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-      {/* sol — tool listesi */}
-      <div className="hf-kart overflow-hidden bg-[var(--sn-yuzey)] p-2">
-        <p className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--sn-metin-3)]">
-          8 araç · tools/list
-        </p>
-        <div className="max-h-[420px] space-y-0.5 overflow-y-auto">
-          {TOOLLAR.map((t, i) => {
-            const secili = i === aktif;
-            return (
-              <button
-                key={t.ad}
-                onClick={() => setAktif(i)}
-                aria-pressed={secili}
-                className={cn(
-                  "hf-btn flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors",
-                  secili ? "bg-[var(--sn-yuzey-3)]" : "hover:bg-white/[0.04]",
-                )}
-              >
-                <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]", secili ? "" : "glass-ikon")}
-                  style={secili ? { background: LIME } : undefined}>
-                  <t.ikon className={cn("h-4 w-4", secili ? "text-black" : "text-white")} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-[12.5px] text-white">{t.ad.replace("vayra.", "")}</span>
-                  <span className="block truncate text-[11px] text-[var(--sn-metin-3)]">{t.kredi}</span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+    <MotionConfig reducedMotion="user">
+      <div className={cn("kesfet-tema min-h-screen bg-zemin pb-28", kesfetFont.variable)}>
+        <div className="mx-auto w-full max-w-[1240px] px-4 pt-4 sm:px-8 sm:pt-6">
+          <McpSahne istemci={istemci} setIstemci={setIstemci} sunucu={sunucu} onBagla={() => git("kurulum")} />
 
-      {/* sağ — imza + çağrı + yanıt */}
-      <div className="hf-kart overflow-hidden bg-[var(--sn-yuzey)]">
-        {/* başlık şeridi */}
-        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--sn-kenar)] px-5 py-4">
-          <span className="glass-ikon flex h-9 w-9 items-center justify-center rounded-xl">
-            <tool.ikon className="h-4 w-4" style={{ color: LIME }} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <code className="block truncate font-mono text-[14px] font-semibold text-white">{tool.ad}</code>
-            <span className="block truncate text-[12px] text-[var(--sn-metin-2)]">{tool.ozet}</span>
-          </span>
-          <span className="glass-cip shrink-0 rounded-full px-2.5 py-1 font-mono text-[11px]" style={{ color: LIME }}>
-            {tool.kredi}
-          </span>
-        </div>
+          <Olgular sunucu={sunucu} araclar={araclar} url={url} />
 
-        {/* items-start: kısa girdi listesinde sütunlar gerilip altta boşluk
-            bırakmasın — ikisi de yukarıdan hizalanır. */}
-        <div className="grid items-start gap-5 p-5 md:grid-cols-2">
-          {/* girdi şeması */}
-          <div>
-            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--sn-metin-3)]">Girdi şeması</p>
-            {tool.girdi.length === 0 ? (
-              <p className="text-[13px] text-[var(--sn-metin-3)]">Parametre almaz.</p>
-            ) : (
-              <div className="space-y-1.5">
-                {tool.girdi.map((g) => (
-                  <div key={g.ad} className="glass-cip rounded-lg px-3 py-2">
-                    <div className="flex items-baseline gap-2">
-                      <code className="font-mono text-[12.5px] text-white">{g.ad}</code>
-                      <code className="font-mono text-[11px] text-[var(--sn-metin-3)]">{g.tip}</code>
-                      {g.zorunlu && (
-                        <span className="ml-auto shrink-0 rounded px-1.5 text-[9.5px] font-bold uppercase" style={{ background: LIME, color: "#0a0a0a" }}>
-                          zorunlu
-                        </span>
-                      )}
-                    </div>
-                    {g.not && <p className="mt-0.5 text-[11px] text-[var(--sn-metin-3)]">{g.not}</p>}
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="mt-20 space-y-24 sm:mt-24">
+            <Kurulum url={url} anahtar={anahtar} secili={secili} sec={sec} girisli={girisli} istemci={istemci} setIstemci={setIstemci} sunucu={sunucu} yerel={yerel} kok={kok} />
+            <Araclar araclar={araclar} url={url} anahtar={anahtar} canli={secili?.ortam === "canli"} />
+            <Senaryolar istemci={ISTEMCILER.find((i) => i.id === istemci)!.ad} />
+            <Cli kok={kok} anahtar={anahtar} />
+            <Guvenlik />
+            <McpSss />
+            <KapanisCta onBaslat={() => git("kurulum")} />
           </div>
+        </div>
+      </div>
+    </MotionConfig>
+  );
+}
 
-          {/* çağrı → yanıt */}
-          <div>
-            <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--sn-metin-3)]">Çağrı</p>
-            {/* whitespace-pre-wrap + break-all: uzun istem satırları kutudan
-                taşıp kesilmesin (dar sütunda yatay kaydırma da işe yaramıyordu). */}
-            <pre className="glass-cip overflow-x-auto whitespace-pre-wrap break-all rounded-lg p-3 font-mono text-[11.5px] leading-relaxed text-[var(--sn-metin-2)]">
-{JSON.stringify({ tool: tool.ad, girdi: tool.ornek }, null, 2)}
-            </pre>
+function BolumBaslik({ ust, baslik, aciklama, sag }: { ust?: string; baslik: string; aciklama?: React.ReactNode; sag?: React.ReactNode }) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+      <div className="max-w-[640px]">
+        {ust && <p className="text-[13px] font-medium text-[#55d6fd]">{ust}</p>}
+        <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.03em] text-white sm:text-[32px]">{baslik}</h2>
+        {aciklama && <p className="mt-2 text-[15px] leading-relaxed text-white/70">{aciklama}</p>}
+      </div>
+      {sag}
+    </div>
+  );
+}
 
-            <button
-              onClick={() => { setCalisti(true); toast.success("Araç çağrıldı", { description: tool.ad }); }}
-              className="hf-uret mt-3 inline-flex items-center gap-2 px-4 py-2 text-[13px] font-semibold"
-            >
-              <Zap className="h-4 w-4" /> Çalıştır
+/* ── Olgular şeridi: canlı ölçülen değerler ── */
+
+function Olgular({ sunucu, araclar, url }: { sunucu: Sunucu; araclar: McpArac[] | null; url: string }) {
+  const hucreler: [string, React.ReactNode, string][] = [
+    ["Model", MODELLER.length, "görsel, video, ses, müzik, 3D"],
+    ["Araç", araclar ? araclar.length : "…", araclar ? `${araclar.filter((a) => a.annotations?.readOnlyHint).length} tanesi salt okunur` : "okunuyor"],
+    ["Protokol", sunucu?.surum ?? "…", "Streamable HTTP"],
+    ["Yanıt süresi", sunucu ? (sunucu.ok ? `${sunucu.ms} ms` : "Ulaşılamıyor") : "…", "şimdi ölçüldü"],
+  ];
+  return (
+    <div className="mt-6 grid gap-px overflow-hidden rounded-[24px] bg-white/[0.07] ring-1 ring-white/[0.07] lg:grid-cols-[repeat(4,minmax(0,1fr))_minmax(0,1.5fr)]">
+      {hucreler.map(([e, d, a], i) => (
+        <motion.div key={e} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.05 }} className="bg-[#0d0d0f] px-5 py-4">
+          <p className="text-[12.5px] text-white/60">{e}</p>
+          <p className="mt-1 text-[22px] font-semibold tabular-nums tracking-tight text-white">{d}</p>
+          <p className="text-[12.5px] text-white/50">{a}</p>
+        </motion.div>
+      ))}
+      <div className="flex flex-col justify-center bg-[#0d0d0f] px-5 py-4">
+        <p className="text-[12.5px] text-white/60">Sunucu adresi</p>
+        <div className="mt-1.5 flex items-center gap-2 rounded-full bg-white/[0.05] py-1 pl-3.5 pr-1 ring-1 ring-white/[0.08]">
+          <code className="min-w-0 flex-1 truncate font-mono text-[12.5px] text-white">{url}</code>
+          <KopyalaDugme metin={url} etiket="" sessiz />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Kurulum: istemci + 3 adım ── */
+
+function Adim({ no, tamam, aktif, baslik, aciklama, son, children }: { no: number; tamam: boolean; aktif: boolean; baslik: React.ReactNode; aciklama?: React.ReactNode; son?: boolean; children: React.ReactNode }) {
+  return (
+    <li className="relative grid grid-cols-[34px_minmax(0,1fr)] gap-4">
+      {!son && (
+        <span className="absolute bottom-0 left-[16px] top-[38px] w-[2px] overflow-hidden rounded-full bg-white/[0.07]">
+          <motion.span initial={false} animate={{ scaleY: tamam ? 1 : 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 origin-top bg-[#55d6fd]/70" />
+        </span>
+      )}
+      <span className={cn("relative z-[1] flex h-[34px] w-[34px] items-center justify-center rounded-full text-[13.5px] font-semibold transition-colors duration-300",
+        tamam ? "bg-[#55d6fd] text-[#06222b]" : aktif ? "bg-white text-black" : "bg-white/[0.07] text-white/70 ring-1 ring-white/[0.1]")}>
+        <AnimatePresence mode="wait" initial={false}>
+          {tamam ? <motion.span key="t" initial={{ scale: 0.3, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} transition={yay}><Check className="h-4 w-4" strokeWidth={3} /></motion.span> : <motion.span key="n" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>{no}</motion.span>}
+        </AnimatePresence>
+      </span>
+      <div className={cn("min-w-0", !son && "pb-9")}>
+        <h3 className="pt-1 text-[17px] font-semibold tracking-[-0.01em] text-white">{baslik}</h3>
+        {aciklama && <p className="mt-1 text-[14px] leading-relaxed text-white/65">{aciklama}</p>}
+        <div className="mt-4">{children}</div>
+      </div>
+    </li>
+  );
+}
+
+function Kurulum({ url, anahtar, secili, sec, girisli, istemci, setIstemci, sunucu, yerel, kok }: {
+  url: string; anahtar: string | null; secili: ReturnType<typeof useSeciliAnahtar>[0]; sec: ReturnType<typeof useSeciliAnahtar>[1]; girisli: boolean;
+  istemci: IstemciId; setIstemci: (i: IstemciId) => void; sunucu: Sunucu; yerel: boolean; kok: string;
+}) {
+  const ist = ISTEMCILER.find((i) => i.id === istemci)!;
+  const k = kurulum(istemci, url, anahtar ?? "vy_live_ANAHTARIN");
+  const [kopyalandi, setKopyalandi] = useState(false);
+  const [dogru, setDogru] = useState(false);
+  const [ipucu, setIpucu] = useState(false);
+  useEffect(() => { setKopyalandi(false); }, [istemci]);
+
+  const kopyala = async () => {
+    if (!(await panoyaKopyala(k.kod))) return;
+    setKopyalandi(true); setIpucu(true); setTimeout(() => setIpucu(false), 1800);
+  };
+
+  return (
+    <section id="kurulum" className="scroll-mt-24">
+      <BolumBaslik ust="Kurulum" baslik="Üç adımda bağla" aciklama="İstemcini seç, anahtarını seç, yapılandırmayı ekle. Anahtar yapılandırmaya kendiliğinden yerleşir; sonunda bağlantıyı buradan doğrula." />
+
+      {yerel && (
+        <p className="mb-4 flex items-start gap-2.5 rounded-[16px] bg-amber-400/[0.06] px-4 py-3 text-[13.5px] leading-relaxed text-amber-100/90 ring-1 ring-amber-400/20">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+          Sunucu yerel adreste ({kok}). Aynı bilgisayardaki istemciler bağlanır; başka cihazlardan ya da bulut ajanlarından bağlanmak için uygulamayı yayındaki adresiyle aç.
+        </p>
+      )}
+
+      <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-[30px] bg-[#0e0e10] ring-1 ring-white/[0.08] lg:grid-cols-[290px_minmax(0,1fr)]">
+        {/* İstemci seçimi */}
+        <aside className="border-b border-white/[0.06] p-3 lg:border-b-0 lg:border-r">
+          <p className="px-2.5 pb-2 pt-1.5 text-[13px] font-medium text-white/60">İstemci</p>
+          <LayoutGroup id="mcp-kur-ist">
+            <div role="tablist" aria-label="İstemci" className="-mx-3 flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] lg:mx-0 lg:flex-col lg:px-0">
+              {ISTEMCILER.map((i) => (
+                <button key={i.id} role="tab" aria-selected={istemci === i.id} onClick={() => setIstemci(i.id)}
+                  className="group relative flex shrink-0 items-center gap-3 rounded-[16px] px-2.5 py-2.5 text-left transition active:scale-[0.98]">
+                  {istemci === i.id && <motion.span layoutId="mcp-kur-ist-z" className="absolute inset-0 rounded-[16px] bg-white/[0.08] ring-1 ring-white/[0.1]" transition={yay} />}
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.07] transition group-hover:scale-105"><IstemciLogo id={i.id} boyut={20} /></span>
+                  <span className="relative min-w-0 pr-1">
+                    <span className={cn("block text-[14.5px] font-semibold transition-colors", istemci === i.id ? "text-white" : "text-white/75 group-hover:text-white")}>{i.ad}</span>
+                    <span className="block whitespace-nowrap text-[12.5px] text-white/55">{i.alt}</span>
+                  </span>
+                  {i.tekTik && <span className="relative ml-auto hidden rounded-full bg-[#55d6fd]/12 px-2 py-0.5 text-[11px] font-medium text-[#8fe6ff] lg:block">Tek tıkla</span>}
+                </button>
+              ))}
+            </div>
+          </LayoutGroup>
+          <div className="mx-1 mt-4 hidden rounded-[16px] bg-white/[0.03] p-3.5 ring-1 ring-white/[0.06] lg:block">
+            <p className="text-[13px] font-medium text-white">Sunucu</p>
+            <p className={cn("mt-1 flex items-center gap-1.5 text-[12.5px]", sunucu === null ? "text-white/55" : sunucu.ok ? "text-emerald-300" : "text-rose-300")}>
+              <span className={cn("h-1.5 w-1.5 rounded-full", sunucu === null ? "bg-white/40" : sunucu.ok ? "bg-emerald-400" : "bg-rose-400")} />
+              {sunucu === null ? "Ölçülüyor" : sunucu.ok ? `Çalışıyor · ${sunucu.ms} ms` : "Ulaşılamıyor"}
+            </p>
+            <p className="mt-2 text-[12.5px] leading-relaxed text-white/55">Listede yok mu? Streamable HTTP destekleyen her istemci bağlanır.</p>
+          </div>
+        </aside>
+
+        {/* Adımlar */}
+        <ol className="min-w-0 p-5 sm:p-7">
+          <Adim no={1} tamam={!!secili} aktif={!secili} baslik="API anahtarını seç" aciklama="Ajana tam yetki gerekmez; yalnız üretim yetkili bir anahtar yeterli.">
+            <div className="max-w-[520px]">
+              {girisli ? <AnahtarSecici secili={secili} onSec={sec} /> : <Link href="/giris?geri=/panel/mcp" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition active:scale-[0.97]"><KeyRound className="h-4 w-4" />Anahtar için giriş yap</Link>}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+                {secili && <span className="flex items-center gap-2 text-white/65"><OrtamRozet ortam={secili.ortam} />{secili.ortam === "test" ? "Kredi harcamaz, örnek çıktı döner." : "Gerçek üretim; kredi harcar."}</span>}
+                <Link href="/panel/api/anahtarlar" className="inline-flex items-center gap-1 font-medium text-[#8fe6ff] hover:underline">Anahtarları yönet<ArrowUpRight className="h-3.5 w-3.5" /></Link>
+              </div>
+            </div>
+          </Adim>
+
+          <Adim no={2} tamam={kopyalandi} aktif={!!secili && !kopyalandi} baslik={<>{ist.ek[1]} ekle</>}>
+            <AnimatePresence mode="wait">
+              <motion.div key={istemci} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2 }}>
+                <ol className="mb-4 grid gap-2 sm:grid-cols-3">
+                  {k.adimlar.map((a, i) => (
+                    <li key={a} className="flex gap-2.5 rounded-[14px] bg-white/[0.035] px-3 py-2.5 text-[13px] leading-relaxed text-white/75 ring-1 ring-white/[0.06]">
+                      <span className="mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.09] text-[11px] font-semibold text-white">{i + 1}</span>{a}
+                    </li>
+                  ))}
+                </ol>
+                <KodEditor kod={k.kod} dil={k.dil} dosyaAdi={k.dosya} gizle={anahtar ?? undefined} satirNo={k.dil === "json"} maxH={320} />
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button onClick={() => void kopyala()} className="inline-flex h-11 items-center gap-2 rounded-full bg-[#55d6fd] px-5 text-[14px] font-semibold text-[#06222b] transition hover:brightness-110 active:scale-[0.97]">
+                    <AnimatePresence mode="wait" initial={false}>
+                      {ipucu ? <motion.span key="ok" initial={{ scale: 0.5 }} animate={{ scale: 1 }}><Check className="h-4 w-4" strokeWidth={3} /></motion.span> : <motion.span key="c" initial={{ scale: 0.5 }} animate={{ scale: 1 }}><Copy className="h-4 w-4" /></motion.span>}
+                    </AnimatePresence>
+                    {ipucu ? "Kopyalandı" : k.dil === "bash" ? "Komutu kopyala" : "Yapılandırmayı kopyala"}
+                  </button>
+                  {"tekTik" in k && k.tekTik && (
+                    <a href={anahtar ? k.tekTik : undefined} onClick={() => anahtar && setKopyalandi(true)} aria-disabled={!anahtar}
+                      className={cn("inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition active:scale-[0.97]", !anahtar && "pointer-events-none opacity-40")}>
+                      <IstemciLogo id={istemci} boyut={16} className={istemci === "cursor" ? "invert" : undefined} />{ist.ek[1]} tek tıkla kur
+                    </a>
+                  )}
+                  <span className="text-[13px] text-white/55">{!anahtar ? "Önce bir anahtar seç; komuta kendiliğinden yerleşir." : "tekTik" in k && k.tekTik ? "Uygulama açılır ve onay ister." : null}</span>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </Adim>
+
+          <Adim no={3} tamam={dogru} aktif={kopyalandi && !dogru} son baslik="Bağlantıyı doğrula" aciklama="İstemcinin yapacağı çağrıları seçili anahtarla şimdi buradan yap; sorun varsa hangi adımda olduğunu gör.">
+            <Dogrulama url={url} anahtar={anahtar} onSonuc={setDogru} istemciAd={ist.ek[0]} />
+          </Adim>
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/* ── Doğrulama ── */
+
+type Adm = { ad: string; yontem: string; durum: "bekliyor" | "calisiyor" | "ok" | "hata"; ms?: number; ozet?: string; ham?: unknown };
+
+function Dogrulama({ url, anahtar, onSonuc, istemciAd }: { url: string; anahtar: string | null; onSonuc: (ok: boolean) => void; istemciAd: string }) {
+  const [adimlar, setAdimlar] = useState<Adm[]>([]);
+  const [acik, setAcik] = useState<number | null>(null);
+  const calisiyor = adimlar.some((a) => a.durum === "calisiyor");
+
+  const baslat = useCallback(async () => {
+    const plan: Adm[] = [
+      { ad: "El sıkışma", yontem: "initialize", durum: "bekliyor" },
+      { ad: "Araçları listele", yontem: "tools/list", durum: "bekliyor" },
+      { ad: "Kimlik ve bakiye", yontem: "get_account", durum: "bekliyor" },
+    ];
+    setAdimlar(plan); setAcik(null); onSonuc(false);
+    const guncelle = (i: number, p: Partial<Adm>) => setAdimlar((l) => l.map((a, j) => (j === i ? { ...a, ...p } : a)));
+    const cagrilar: [string, Record<string, unknown> | undefined][] = [
+      ["initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "vayra-panel", version: "1" } }],
+      ["tools/list", undefined],
+      ["tools/call", { name: "get_account", arguments: {} }],
+    ];
+    let hepsi = true;
+    for (let i = 0; i < cagrilar.length; i++) {
+      guncelle(i, { durum: "calisiyor" });
+      const r = await rpc(url, anahtar, cagrilar[i][0], cagrilar[i][1]);
+      const res = r.j?.result;
+      const hata = !r.j || r.j.error || res?.isError;
+      let ozet = r.j?.error?.message ?? (r.http === 0 ? "Sunucuya ulaşılamadı" : "");
+      if (!hata) {
+        if (i === 0) ozet = `${(res!.serverInfo as { name: string }).name} ${(res!.serverInfo as { version: string }).version} · protokol ${res!.protocolVersion}`;
+        if (i === 1) ozet = `${(res!.tools as unknown[]).length} araç görünüyor`;
+        if (i === 2) ozet = String(((res!.content as { text: string }[])[0]?.text ?? "").split("\n")[0]);
+      } else if (res?.isError) ozet = String(((res.content as { text: string }[])[0]?.text ?? "").split("\n")[0]);
+      guncelle(i, { durum: hata ? "hata" : "ok", ms: r.ms, ozet, ham: r.j });
+      if (hata) { hepsi = false; for (let j = i + 1; j < cagrilar.length; j++) guncelle(j, { durum: "bekliyor" }); break; }
+    }
+    onSonuc(hepsi);
+  }, [url, anahtar, onSonuc]);
+
+  const bitti = adimlar.length > 0 && !calisiyor;
+  const basarili = bitti && adimlar.every((a) => a.durum === "ok");
+  const liste: Adm[] = adimlar.length ? adimlar : [
+    { ad: "El sıkışma", yontem: "initialize", durum: "bekliyor" },
+    { ad: "Araçları listele", yontem: "tools/list", durum: "bekliyor" },
+    { ad: "Kimlik ve bakiye", yontem: "get_account", durum: "bekliyor" },
+  ];
+
+  return (
+    <div className="max-w-[760px] overflow-hidden rounded-[20px] bg-white/[0.03] ring-1 ring-white/[0.08]">
+      <ol>
+        {liste.map((a, i) => (
+          <li key={a.yontem} className={cn(i > 0 && "border-t border-white/[0.06]")}>
+            <button onClick={() => a.ham && setAcik(acik === i ? null : i)} disabled={!a.ham} className="flex w-full items-center gap-3.5 px-4 py-3.5 text-left transition enabled:hover:bg-white/[0.025]">
+              <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span key={a.durum} initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.5, opacity: 0 }} transition={{ duration: 0.18 }}>
+                    {a.durum === "ok" ? <CheckCircle2 className="h-5 w-5 text-emerald-400" /> : a.durum === "hata" ? <XCircle className="h-5 w-5 text-rose-400" /> : a.durum === "calisiyor" ? <Loader2 className="h-5 w-5 animate-spin text-[#55d6fd]" /> : <CircleDashed className="h-5 w-5 text-white/25" />}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[14px] font-medium text-white">{a.ad} <span className="ml-1 font-mono text-[12px] font-normal text-white/50">{a.yontem}</span></p>
+                {a.ozet && <p className={cn("mt-0.5 truncate text-[13px]", a.durum === "hata" ? "text-rose-300" : "text-white/65")}>{a.ozet}</p>}
+              </div>
+              {a.ms !== undefined && <span className="shrink-0 rounded-full bg-white/[0.06] px-2 py-0.5 text-[12px] tabular-nums text-white/65">{sureMetin(a.ms)}</span>}
+              {a.ham !== undefined && <ChevronDown className={cn("h-4 w-4 shrink-0 text-white/50 transition-transform", acik === i && "rotate-180")} />}
             </button>
-
-            <AnimatePresence>
-              {calisti && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                  className="overflow-hidden"
-                >
-                  <p className="mb-2.5 mt-4 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color: LIME }}>
-                    <CornerDownLeft className="h-3.5 w-3.5" /> Yanıt
-                  </p>
-                  <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg p-3 font-mono text-[11.5px] leading-relaxed"
-                    style={{ background: "rgba(85, 214, 253,0.07)", border: `1px solid ${LIME}33`, color: "var(--sn-metin)" }}>
-{JSON.stringify(tool.yanit, null, 2)}
-                  </pre>
+            <AnimatePresence initial={false}>
+              {acik === i && a.ham !== undefined && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="px-4 pb-4"><KodEditor kod={JSON.stringify(a.ham, null, 2)} dil="json" dosyaAdi="yanıt" maxH={260} gizle={anahtar ?? undefined} /></div>
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
-        </div>
+          </li>
+        ))}
+      </ol>
+      <div className={cn("flex flex-wrap items-center gap-3 border-t px-4 py-3",
+        bitti ? (basarili ? "border-emerald-400/15 bg-emerald-400/[0.05]" : "border-rose-400/15 bg-rose-400/[0.05]") : "border-white/[0.06]")}>
+        <p className={cn("min-w-0 flex-1 text-[13.5px]", bitti ? (basarili ? "text-emerald-200" : "text-rose-200") : "text-white/60")}>
+          {!anahtar ? "Önce 1. adımda bir anahtar seç." : !adimlar.length ? "El sıkışma, araç listesi ve kimlik sırayla denenir." : calisiyor ? "Deneniyor…" : basarili ? `Her şey yolunda. ${istemciAd} aynı adres ve anahtarla bağlanacak.` : "Bir adım başarısız. Anahtarın iptal edilmemiş ve süresi dolmamış olmalı; ayrıntı için satıra tıkla."}
+        </p>
+        <button onClick={() => void baslat()} disabled={!anahtar || calisiyor}
+          className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[13.5px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.97] disabled:opacity-40">
+          {calisiyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-3.5 w-3.5 fill-current" />}{adimlar.length ? "Yeniden dene" : "Testi başlat"}
+        </button>
       </div>
     </div>
   );
 }
 
-/* ══════════════════════════════════════════════════════════════
-   OTURUM TERMİNALİ — görünür olunca satırlar sırayla düşer
-   ══════════════════════════════════════════════════════════════ */
+/* ── Araçlar: canlı okunan liste + deneme alanı ── */
 
-function OturumTerminali() {
-  const [gorunur, setGorunur] = useState(0);
-  const [basladi, setBasladi] = useState(false);
-  const kokRef = useRef<HTMLDivElement>(null);
+const ARAC_IKON: Record<string, React.ElementType> = {
+  list_models: LayoutGrid, get_model: Info, generate: Sparkles, get_generation: Search, list_generations: History, cancel_generation: Ban, get_account: Wallet,
+};
 
-  /* Ekrana girince başlat — IntersectionObserver. */
-  useEffect(() => {
-    const el = kokRef.current;
-    if (!el || basladi) return;
-    const io = new IntersectionObserver(
-      ([g]) => { if (g.isIntersecting) { setBasladi(true); io.disconnect(); } },
-      { threshold: 0.35 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [basladi]);
+function Araclar({ araclar, url, anahtar, canli }: { araclar: McpArac[] | null; url: string; anahtar: string | null; canli: boolean }) {
+  const [secili, setSecili] = useState("generate");
+  const arac = araclar?.find((a) => a.name === secili) ?? araclar?.[0];
+  const [arg, setArg] = useState("");
+  const [sonuc, setSonuc] = useState<{ ms: number; j: Rpc | null } | null>(null);
+  const [calisiyor, setCalisiyor] = useState(false);
+  useEffect(() => { if (arac) { setArg(JSON.stringify(ORNEK[arac.name] ?? {}, null, 2)); setSonuc(null); } }, [arac?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /* Satırları senaryodaki gecikmelere göre aç. */
-  useEffect(() => {
-    if (!basladi) return;
-    const zamanlar = OTURUM.map((s, i) =>
-      setTimeout(() => setGorunur(i + 1), s.gecikme),
-    );
-    return () => zamanlar.forEach(clearTimeout);
-  }, [basladi]);
+  let argHata = "";
+  let argNesne: Record<string, unknown> = {};
+  try { argNesne = JSON.parse(arg || "{}"); } catch (e) { argHata = (e as Error).message; }
 
-  const yeniden = () => { setGorunur(0); setBasladi(false); setTimeout(() => setBasladi(true), 60); };
+  const calistir = async () => {
+    if (!arac || argHata) return;
+    setCalisiyor(true); setSonuc(null);
+    const r = await rpc(url, anahtar, "tools/call", { name: arac.name, arguments: argNesne });
+    setSonuc(r); setCalisiyor(false);
+  };
+
+  const res = sonuc?.j?.result as { content?: { text: string }[]; isError?: boolean; structuredContent?: { output?: { urls?: string[]; content_type?: string } } } | undefined;
+  const ciktilar = res?.structuredContent?.output?.urls ?? [];
+  const ozellikler = useMemo(() => Object.entries((arac?.inputSchema.properties ?? {}) as Record<string, { type?: string; description?: string; enum?: string[]; default?: unknown }>), [arac]);
+  const Ikon = arac ? ARAC_IKON[arac.name] ?? Sparkles : Sparkles;
 
   return (
-    <div ref={kokRef} className="hf-kart overflow-hidden bg-[var(--sn-yuzey)]">
-      {/* terminal başlığı */}
-      <div className="flex items-center gap-2 border-b border-[var(--sn-kenar)] px-4 py-3">
-        <span className="flex gap-1.5">
-          <i className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-          <i className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-          <i className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-        </span>
-        <span className="ml-2 font-mono text-[11.5px] text-[var(--sn-metin-3)]">ajan — vayra-mcp — bağlı</span>
-        <span className="ml-auto flex items-center gap-1.5">
-          <motion.span className="h-1.5 w-1.5 rounded-full" style={{ background: LIME }}
-            animate={{ opacity: [1, 0.25, 1] }} transition={{ duration: 1.6, repeat: Infinity }} />
-          <button onClick={yeniden} className="hf-btn text-[11.5px] text-[var(--sn-metin-3)] transition-colors hover:text-white">
-            tekrar oynat
-          </button>
-        </span>
-      </div>
+    <section id="araclar" className="scroll-mt-24">
+      <BolumBaslik ust="Araçlar" baslik="Ajanın gördüğü araçlar" aciklama="Liste sunucudan canlı okunur. Birini seç, argümanlarla gerçekten çalıştır; ajanın alacağı yanıtın aynısını gör."
+        sag={araclar && <span className="inline-flex items-center gap-2 rounded-full bg-white/[0.05] px-3.5 py-2 text-[13px] text-white/75 ring-1 ring-white/[0.08]"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />{araclar.length} araç · sunucudan okundu</span>} />
+      {!araclar ? (
+        <div className="iskelet-parca h-[520px] rounded-[30px]" aria-hidden />
+      ) : (
+        <div className="grid grid-cols-[minmax(0,1fr)] overflow-hidden rounded-[30px] bg-[#0e0e10] ring-1 ring-white/[0.08] lg:grid-cols-[290px_minmax(0,1fr)]">
+          <LayoutGroup id="mcp-arac">
+            <div role="tablist" aria-label="Araçlar" className="flex gap-1 overflow-x-auto border-b border-white/[0.06] p-3 [scrollbar-width:none] lg:flex-col lg:overflow-visible lg:border-b-0 lg:border-r">
+              {araclar.map((a) => {
+                const I = ARAC_IKON[a.name] ?? Sparkles;
+                const s = a.name === arac?.name;
+                return (
+                  <button key={a.name} role="tab" aria-selected={s} onClick={() => setSecili(a.name)} className="group relative flex shrink-0 items-center gap-3 rounded-[14px] px-2.5 py-2 text-left transition active:scale-[0.98]">
+                    {s && <motion.span layoutId="mcp-arac-z" className="absolute inset-0 rounded-[14px] bg-white/[0.08] ring-1 ring-white/[0.1]" transition={yay} />}
+                    <span className={cn("relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] transition", s ? "bg-[#55d6fd]/15 text-[#55d6fd]" : "bg-white/[0.06] text-white/70 group-hover:text-white")}><I className="h-4 w-4" /></span>
+                    <span className="relative min-w-0">
+                      <span className={cn("block text-[14px] font-semibold", s ? "text-white" : "text-white/80")}>{a.title}</span>
+                      <span className="block font-mono text-[12px] text-white/50">{a.name}</span>
+                    </span>
+                    {!a.annotations?.readOnlyHint && <span className="relative ml-auto hidden h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300 lg:block" title="Kredi harcar ya da değişiklik yapar" />}
+                  </button>
+                );
+              })}
+            </div>
+          </LayoutGroup>
 
-      {/* satırlar */}
-      <div className="min-h-[300px] space-y-2.5 p-5 font-mono text-[12.5px] leading-relaxed">
-        {OTURUM.slice(0, gorunur).map((s, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.26 }}
-            className="flex gap-2.5"
-          >
-            <span className="mt-[3px] shrink-0">
-              {s.tip === "kullanici" && <span className="text-[var(--sn-metin-3)]">›</span>}
-              {s.tip === "dusunce" && <Radio className="h-3.5 w-3.5 text-[var(--sn-metin-3)]" />}
-              {s.tip === "cagri" && <Plug className="h-3.5 w-3.5" style={{ color: LIME }} />}
-              {s.tip === "yanit" && <Check className="h-3.5 w-3.5" style={{ color: LIME }} />}
-              {s.tip === "ajan" && <VayraIsaret size={14} />}
-            </span>
-            <span className={cn(
-              "min-w-0 flex-1 break-words",
-              s.tip === "kullanici" && "text-white",
-              s.tip === "dusunce" && "italic text-[var(--sn-metin-3)]",
-              s.tip === "cagri" && "text-[var(--sn-metin-2)]",
-              s.tip === "yanit" && "text-[var(--sn-metin-2)]",
-              s.tip === "ajan" && "text-white",
-            )}
-              style={s.tip === "cagri" ? { color: LIME } : undefined}
-            >
-              {s.metin}
-            </span>
+          {arac && (
+            <AnimatePresence mode="wait">
+              <motion.div key={arac.name} initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} className="min-w-0">
+                <div className="border-b border-white/[0.06] p-5 sm:p-6">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#55d6fd]/12 text-[#55d6fd]"><Ikon className="h-5 w-5" /></span>
+                    <div className="min-w-0">
+                      <h3 className="text-[19px] font-semibold tracking-[-0.015em] text-white">{arac.title}</h3>
+                      <p className="font-mono text-[12.5px] text-white/55">{arac.name}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 sm:ml-auto">
+                      {arac.annotations?.readOnlyHint ? <Rozet renk="yesil">Salt okunur</Rozet> : <Rozet renk="sari">Kredi harcar</Rozet>}
+                      {arac.annotations?.destructiveHint && <Rozet renk="kirmizi">Geri alınamaz</Rozet>}
+                      {arac.annotations?.idempotentHint && <Rozet>Tekrarlanabilir</Rozet>}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-[14px] leading-relaxed text-white/72">{arac.description}</p>
+                  {ozellikler.length > 0 && (
+                    <dl className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-[16px] ring-1 ring-white/[0.07]">
+                      {ozellikler.map(([ad, o]) => (
+                        <div key={ad} className="grid gap-1 px-4 py-2.5 text-[13px] sm:grid-cols-[170px_minmax(0,1fr)]">
+                          <dt className="font-mono text-white">{ad}{arac.inputSchema.required?.includes(ad) && <span className="text-rose-300">*</span>} <span className="text-white/45">{o.type}</span></dt>
+                          <dd className="min-w-0 text-white/70">{o.description ?? "Ek açıklama yok."}{o.enum && <span className="mt-0.5 block truncate font-mono text-[12px] text-white/45">{o.enum.slice(0, 8).join(" · ")}{o.enum.length > 8 ? ` · +${o.enum.length - 8}` : ""}</span>}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+                <div className="p-5 sm:p-6">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="arac-arg" className="text-[13.5px] font-medium text-white">Argümanlar</label>
+                    <button onClick={() => setArg(JSON.stringify(ORNEK[arac.name] ?? {}, null, 2))} className="text-[12.5px] font-medium text-white/55 transition hover:text-white">Örneğe dön</button>
+                  </div>
+                  <textarea id="arac-arg" value={arg} onChange={(e) => setArg(e.target.value)} spellCheck={false} rows={Math.min(10, Math.max(3, arg.split("\n").length))}
+                    className={cn("mt-2 w-full resize-y rounded-[16px] bg-[#111216] px-4 py-3 font-mono text-[12.5px] leading-relaxed text-[#c0caf5] outline-none ring-1 transition focus:ring-[#55d6fd]/60", argHata ? "ring-rose-500/50" : "ring-white/[0.08]")} />
+                  {argHata && <p className="mt-1.5 text-[12.5px] text-rose-300">JSON hatası: {argHata}</p>}
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <button onClick={() => void calistir()} disabled={!anahtar || !!argHata || calisiyor}
+                      className="inline-flex h-11 items-center gap-2 rounded-full bg-[#55d6fd] px-5 text-[14px] font-semibold text-[#06222b] transition hover:brightness-110 active:scale-[0.97] disabled:opacity-40">
+                      {calisiyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-3.5 w-3.5 fill-current" />}Çalıştır
+                    </button>
+                    <span className="text-[13px] text-white/55">
+                      {!anahtar ? "Çalıştırmak için kurulumda bir anahtar seç." : !arac.annotations?.readOnlyHint && canli ? "Canlı anahtar: gerçek kredi harcanır." : `tools/call · ${anahtarMaske(anahtar)}`}
+                    </span>
+                  </div>
+                  <AnimatePresence>
+                    {sonuc && (
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 space-y-3">
+                        <p className={cn("flex items-center gap-2 text-[13.5px] font-medium", res && !res.isError ? "text-emerald-300" : "text-rose-300")}>
+                          {res && !res.isError ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                          {res && !res.isError ? "Başarılı" : sonuc.j?.error?.message ?? "Araç hata döndürdü"}
+                          <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[12px] font-normal text-white/60">{sureMetin(sonuc.ms)}</span>
+                        </p>
+                        {ciktilar.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {ciktilar.map((u) => res?.structuredContent?.output?.content_type?.startsWith("image")
+                              ? <a key={u} href={u} target="_blank" rel="noreferrer" className="overflow-hidden rounded-[16px] ring-1 ring-white/[0.1]"><img src={u} alt="Üretim çıktısı" className="h-44 object-cover transition duration-500 hover:scale-105" /></a>
+                              : <a key={u} href={u} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13px] font-medium text-white ring-1 ring-white/[0.12] hover:bg-white/[0.06]"><ExternalLink className="h-3.5 w-3.5" />Çıktıyı aç</a>)}
+                          </div>
+                        )}
+                        <KodEditor kod={res?.content?.[0]?.text ?? JSON.stringify(sonuc.j, null, 2)} dil={res?.content ? "duz" : "json"} dosyaAdi="content[0].text" maxH={300} satirNo={false} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function Rozet({ children, renk }: { children: React.ReactNode; renk?: "yesil" | "sari" | "kirmizi" }) {
+  const r = renk === "yesil" ? "bg-emerald-400/10 text-emerald-300" : renk === "sari" ? "bg-amber-400/10 text-amber-200" : renk === "kirmizi" ? "bg-rose-400/10 text-rose-300" : "bg-white/[0.06] text-white/70";
+  return <span className={cn("rounded-full px-2.5 py-1 text-[12px] font-medium", r)}>{children}</span>;
+}
+
+/* ── CLI ve beceri ── */
+
+const KOMUTLAR: [string, string][] = [
+  ["login <anahtar>", "Anahtarı doğrular ve ~/.vayra/config.json'a kaydeder"],
+  ["account", "Bakiye, bu ay harcanan, hız sınırı"],
+  ["models --type video", "Modelleri tür ve kredi bedeliyle listeler"],
+  ["model <id>", "Modelin girdi şeması"],
+  ['generate <model> "<prompt>" -p aspect_ratio=16:9 --out ./ciktilar', "Üretir, bitmesini bekler, çıktıyı indirir"],
+  ["status <id> --out ./ciktilar", "Üretimin durumu; bittiyse indir"],
+  ["list --limit 20 --status succeeded", "Son 24 saatteki üretimler"],
+  ["cancel <id>", "Üretimi iptal eder, kredi iade edilir"],
+  ["mcp", "MCP istemci yapılandırmasını yazdırır"],
+];
+
+function Cli({ kok, anahtar }: { kok: string; anahtar: string | null }) {
+  const [sekme, setSekme] = useState<"cli" | "beceri">("cli");
+  const kur = `curl -fsSL ${kok}/cli/vayra.mjs -o vayra.mjs\nnode vayra.mjs login ${anahtar ?? "vy_live_ANAHTARIN"}\nnode vayra.mjs generate nano-banana-pro "sisli bir orman, sinematik" --out ./ciktilar`;
+  const beceri = `mkdir -p ~/.claude/skills/vayra\ncurl -fsSL ${kok}/cli/SKILL.md -o ~/.claude/skills/vayra/SKILL.md`;
+  const ikincil = "inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-medium text-white ring-1 ring-white/[0.12] transition hover:bg-white/[0.06] active:scale-[0.97]";
+  return (
+    <section id="cli" className="scroll-mt-24">
+      <BolumBaslik ust="MCP olmayan yerler için" baslik="CLI ve Claude becerisi" aciklama="Betikler ve CI için bağımlılıksız tek dosya (Node 18+). Beceri, Claude'a Vayra'yı ne zaman ve nasıl kullanacağını öğretir."
+        sag={
+          <LayoutGroup id="mcp-cli">
+            <div role="tablist" className="flex rounded-full bg-white/[0.05] p-1 ring-1 ring-white/[0.08]">
+              {([["cli", "CLI", Terminal], ["beceri", "Beceri", FileText]] as const).map(([id, ad, I]) => (
+                <button key={id} role="tab" aria-selected={sekme === id} onClick={() => setSekme(id)} className="relative flex h-9 items-center gap-1.5 rounded-full px-4 text-[13.5px] font-medium">
+                  {sekme === id && <motion.span layoutId="mcp-cli-z" className="absolute inset-0 rounded-full bg-white" transition={yay} />}
+                  <I className={cn("relative h-3.5 w-3.5", sekme === id ? "text-black" : "text-white/65")} /><span className={cn("relative", sekme === id ? "text-black" : "text-white/75")}>{ad}</span>
+                </button>
+              ))}
+            </div>
+          </LayoutGroup>
+        } />
+      <AnimatePresence mode="wait">
+        <motion.div key={sekme} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.22 }} className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-2">
+          {sekme === "cli" ? (
+            <>
+              <div className="space-y-3">
+                <KodEditor kod={kur} dil="bash" dosyaAdi="terminal" gizle={anahtar ?? undefined} satirNo={false} />
+                <div className="flex flex-wrap gap-2">
+                  <a href="/cli/vayra.mjs?indir" className={ikincil}><Download className="h-3.5 w-3.5" />vayra.mjs indir</a>
+                  <a href="/cli/vayra.mjs" target="_blank" rel="noreferrer" className={ikincil}><Code2 className="h-3.5 w-3.5" />Kaynağı gör</a>
+                </div>
+                <p className="text-[13px] leading-relaxed text-white/60">Anahtar ~/.vayra/config.json dosyasına yalnız senin okuyabileceğin izinle yazılır. Ortam değişkeni de olur: <code className="font-mono text-white/80">VAYRA_API_KEY</code>.</p>
+              </div>
+              <div className="overflow-hidden rounded-[22px] bg-[#0e0e10] ring-1 ring-white/[0.08]">
+                {KOMUTLAR.map(([k, a], i) => (
+                  <div key={k} className={cn("group flex items-start gap-3 px-4 py-2.5 transition hover:bg-white/[0.025]", i > 0 && "border-t border-white/[0.05]")}>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-mono text-[12.5px] text-white"><span className="text-white/45">vayra </span>{k}</p>
+                      <p className="text-[12.5px] text-white/55">{a}</p>
+                    </div>
+                    <KopyalaDugme metin={`node vayra.mjs ${k}`} etiket="" sessiz className="opacity-60 group-hover:opacity-100" />
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <KodEditor kod={beceri} dil="bash" dosyaAdi="terminal" satirNo={false} />
+                <div className="flex flex-wrap gap-2">
+                  <a href="/cli/SKILL.md?indir" className={ikincil}><Download className="h-3.5 w-3.5" />SKILL.md indir</a>
+                  <a href="/cli/SKILL.md" target="_blank" rel="noreferrer" className={ikincil}><FileText className="h-3.5 w-3.5" />İçeriği gör</a>
+                </div>
+              </div>
+              <div className="rounded-[22px] bg-[#0e0e10] p-5 ring-1 ring-white/[0.08]">
+                <p className="flex items-center gap-2 text-[15px] font-semibold text-white"><img src="/marka/renkli/claude-color.svg" alt="" className="h-4 w-4" />Beceri ne yapar?</p>
+                <ul className="mt-3 space-y-2.5 text-[14px] leading-relaxed text-white/72">
+                  {["Görsel, video, ses ya da 3D istendiğinde devreye girer.", "Önce model seçer ve girdi şemasını okur; sonra üretir.", "Pahalı video modellerinden önce kredi bedelini söyler.", "Hata kodlarına göre davranır: bakiye, içerik politikası, hız sınırı.", "MCP bağlıysa araçları, değilse CLI'yi kullanır."].map((m) => (
+                    <li key={m} className="flex gap-2.5"><span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#55d6fd]/15"><Check className="h-2.5 w-2.5 text-[#55d6fd]" strokeWidth={3} /></span>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </section>
+  );
+}
+
+/* ── Bedel ve güvenlik ── */
+
+function Guvenlik() {
+  const maddeler = [
+    { b: "Önce bedel, sonra üretim", a: "Her araç sonucu kredi bedelini yazar; beceri pahalı modellerden önce onay ister. Test anahtarı kredi harcamaz.", ikon: Wallet, href: "/panel/kredi", l: "Kredi ve planlar" },
+    { b: "Kapsamlı anahtarlar", a: "Ajana yalnız üretim ya da salt okunur yetkili anahtar ver; aylık harcama tavanı koy, istediğin an iptal et.", ikon: KeyRound, href: "/panel/api/anahtarlar", l: "Anahtarlar" },
+    { b: "Aynı sınırlar", a: "Hız sınırı, harcama tavanı ve içerik denetimi REST API ile birebir aynı uygulanır.", ikon: ShieldCheck, href: "/panel/api/hiz-limitleri", l: "Hız ve harcama sınırları" },
+    { b: "Her çağrı kayıtlı", a: "Ajanın başlattığı her üretim İstekler ve Kullanım sayfalarında görünür; webhook'ların da tetiklenir.", ikon: History, href: "/panel/api/istekler", l: "İstek günlüğü" },
+  ];
+  return (
+    <section>
+      <BolumBaslik ust="Bedel ve güvenlik" baslik="Kontrol hep sende" aciklama="Ajan yalnız senin verdiğin anahtarla, senin sınırların içinde üretir." />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {maddeler.map((m, i) => (
+          <motion.div key={m.b} initial={{ opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.06 }}>
+            <Link href={m.href} className="group flex h-full flex-col rounded-[24px] bg-[#0e0e10] p-5 ring-1 ring-white/[0.08] transition hover:bg-white/[0.03] hover:ring-white/[0.14]">
+              <span className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#55d6fd]/12 text-[#55d6fd] transition group-hover:scale-105"><m.ikon className="h-5 w-5" /></span>
+              <p className="mt-4 text-[15.5px] font-semibold text-white">{m.b}</p>
+              <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-white/68">{m.a}</p>
+              <span className="mt-4 inline-flex items-center gap-1 text-[13px] font-medium text-white/80 transition group-hover:text-white">{m.l}<ArrowUpRight className="h-3.5 w-3.5 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
+            </Link>
           </motion.div>
         ))}
-        {/* imleç */}
-        {gorunur < OTURUM.length && basladi && (
-          <motion.span
-            className="inline-block h-[14px] w-[7px] align-middle"
-            style={{ background: LIME }}
-            animate={{ opacity: [1, 0, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-        )}
       </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   Yetenek ızgarası + güvenlik + SSS verisi
-   ══════════════════════════════════════════════════════════════ */
-
-const YETENEKLER = [
-  { ikon: Zap, baslik: "Tek istemle uçtan uca", metin: "Ajan görseli üretir, videoya çevirir, seslendirir ve kitaplığa kaydeder — sen tek cümle yazarsın." },
-  { ikon: Layers, baslik: "Zincirlenebilir çağrılar", metin: "Bir aracın çıktısı diğerinin girdisi olur. Canvas panolarını da uzaktan çalıştırabilirsin." },
-  { ikon: Sparkles, baslik: "Kimlik tutarlılığı", metin: "Ruh ID ile eğittiğin karakter tüm çağrılarda aynı kalır — @deniz yazman yeterli." },
-  { ikon: Activity, baslik: "Canlı ilerleme", metin: "Uzun işler kuyruğa girer; ajan durumu yoklar, bitince sana haber verir." },
-  { ikon: Server, baslik: "Kendi kuyruğun", metin: "Panelden başlattığın işlerle MCP işleri aynı kuyruğu paylaşır. Kredi tek cüzdandan düşer." },
-  { ikon: Lock, baslik: "Kapsam sınırlı erişim", metin: "Bağlantı sırasında hangi araçlara izin verdiğini seçersin; istediğinde tek tıkla keser." },
-];
-
-const GUVENLIK = [
-  { ikon: ShieldCheck, baslik: "OAuth ile bağlanır", metin: "MCP bağlantısında API anahtarı taşımazsın. Yetki tarayıcıda verilir, token cihazda kalır." },
-  { ikon: Lock, baslik: "Araç bazlı izin", metin: "Ajanın hangi aracı çağırabileceğini sen seçersin. Kredi harcayan araçlar için onay isteyebilirsin." },
-  { ikon: CircleDot, baslik: "Her çağrı iz bırakır", metin: "Hangi ajan, hangi aracı, ne zaman çağırdı — hepsi kitaplıkta “Canvas / MCP” etiketiyle görünür." },
-];
-
-const SSS = [
-  { s: "MCP tam olarak nedir?", c: "Model Context Protocol — bir AI ajanının dış araçlara bağlanma standardı. Vayra bir MCP sunucusu yayınlar; ajanın ona bağlanınca üretim araçlarımız ajanın kendi araç listesine eklenir." },
-  { s: "Hangi ajanlar destekleniyor?", c: "Claude, ChatGPT (Geliştirici Modu), Cursor, OpenClaw ve Hermes doğrudan desteklenir. MCP konuşan her istemci çalışır; CLI ve Beceri modları ise ajan bağımsızdır." },
-  { s: "API anahtarına ihtiyacım var mı?", c: "MCP bağlantısında hayır — bağlanırken Vayra hesabınla oturum açman yeterli. CLI ve Beceri kullanımında bir kez `vayra auth login` ile kimlik doğrularsın." },
-  { s: "Krediler nasıl işliyor?", c: "MCP üzerinden yapılan üretimler panelde kullandığın aynı kredi bakiyesinden düşer. Her araç çağrısının yanıtında harcanan kredi döner, sürpriz olmaz." },
-  { s: "Uzun süren işler ajanı bekletir mi?", c: "Hayır. Video gibi işler kuyruğa alınır ve iş kimliği döner; ajan `vayra.kredi_durum` ya da iş kimliğiyle durumu yoklar, bittiğinde sonucu alır." },
-  { s: "Ürettiklerim panelde de görünür mü?", c: "Evet. MCP'den gelen her üretim Kitaplık'a düşer, projeye bağlanabilir ve Canvas'ta düğüm olarak kullanılabilir." },
-  { s: "Bağlantıyı nasıl keserim?", c: "Ajanının bağlayıcı ayarlarından Vayra'yı kaldırman yeterli. Vayra tarafında da Ayarlar → Bağlı uygulamalar üzerinden oturumu sonlandırabilirsin." },
-  { s: "Kendi araçlarımı ekleyebilir miyim?", c: "Yakında. Özel araç kaydı (custom tools) yol haritamızda — Canvas akışlarını adlandırıp MCP aracı olarak yayınlayabileceksin." },
-];
-
-function SssSatiri({ s, c }: { s: string; c: string }) {
-  const [acik, setAcik] = useState(false);
-  return (
-    <div className="border-b border-[var(--sn-kenar)]">
-      <button
-        onClick={() => setAcik((v) => !v)}
-        aria-expanded={acik}
-        className="flex w-full items-center gap-4 py-4 text-left"
-      >
-        <span className="flex-1 text-[15px] font-medium text-white">{s}</span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[var(--sn-metin-3)] transition-transform", acik && "rotate-180")} />
-      </button>
-      <motion.div
-        initial={false}
-        animate={{ height: acik ? "auto" : 0, opacity: acik ? 1 : 0 }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-        className="overflow-hidden"
-      >
-        <p className="pb-4 pr-8 text-[14px] leading-relaxed text-[var(--sn-metin-2)]">{c}</p>
-      </motion.div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════════
-   SAYFA
-   ══════════════════════════════════════════════════════════════ */
-
-export default function McpPage() {
-  const [mod, setMod] = useState<Mod>("MCP");
-  const [arac, setArac] = useState<Arac>("Claude");
-  const adimlar = useMemo(() => adimlariGetir(mod, arac), [mod, arac]);
-
-  return (
-    <div className="sinema-kapsam bg-[var(--sn-zemin)] text-[var(--sn-metin)]">
-
-      {/* ═══════════ 1) HERO — canlı el sıkışma ═══════════ */}
-      <section className="hf-nokta-izgara relative overflow-hidden px-4 pb-10 pt-14">
-        {/* zeminde lime hâle */}
-        <div aria-hidden className="pointer-events-none absolute left-1/2 top-0 h-[320px] w-[620px] -translate-x-1/2 rounded-full opacity-[0.13] blur-[120px]" style={{ background: LIME }} />
-
-        <div className="relative mx-auto flex max-w-3xl flex-col items-center text-center">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <span className="glass-cip inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[12px] font-medium text-[var(--sn-metin-2)]">
-              <Plug className="h-3.5 w-3.5" style={{ color: LIME }} />
-              Model Context Protocol · v1
-            </span>
-          </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
-            className="hf-baslik mt-5 text-4xl text-white sm:text-6xl"
-          >
-            Ajanın Artık<br />
-            <span style={{ color: LIME }}>Üretebiliyor</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
-            className="mt-4 max-w-lg text-[15px] leading-relaxed text-[var(--sn-metin-2)]"
-          >
-            Vayra&apos;yı ajanına bağla; sohbetten çıkmadan görsel, video ve ses üretsin.
-            Sekme değiştirmek yok — sadece söyle.
-          </motion.p>
-
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.28 }} className="mt-9 w-full">
-            <Handshake />
-          </motion.div>
-
-          {/* durum satırı */}
-          <motion.div
-            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
-            className="glass-cip mt-1 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 rounded-full px-5 py-2.5 font-mono text-[11.5px] text-[var(--sn-metin-3)]"
-          >
-            <span className="flex items-center gap-1.5">
-              <motion.i className="h-1.5 w-1.5 rounded-full" style={{ background: LIME }}
-                animate={{ opacity: [1, 0.3, 1] }} transition={{ duration: 1.8, repeat: Infinity }} />
-              sunucu ayakta
-            </span>
-            <span>8 araç</span>
-            <span>~120 ms gecikme</span>
-            <span>5 istemci</span>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* ═══════════ 2) BAĞLAN — mod × araç + 3 adım ═══════════ */}
-      <section className="mx-auto max-w-5xl px-4 pt-6">
-        <div className="mb-5 flex flex-col items-center text-center">
-          <BolumEtiket>Bağlan</BolumEtiket>
-          <h2 className="hf-baslik mt-3 text-2xl text-white sm:text-[32px]">İki Dakikada Kurulur</h2>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }}
-          className="hf-kart rounded-[22px] bg-[var(--sn-yuzey)] p-5 sm:p-7"
-        >
-          {/* segment şeritleri */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Segment secenekler={MODLAR} deger={mod} onChange={setMod} etiket="Bağlantı modu" />
-            {mod !== "Beceri" && (
-              <div className="max-w-full overflow-x-auto">
-                <Segment secenekler={ARACLAR} deger={arac} onChange={setArac} etiket="Ajan" />
-              </div>
-            )}
-          </div>
-
-          {/* 3 adım */}
-          <div className="mt-8 grid gap-8 md:grid-cols-3 md:divide-x md:divide-[var(--sn-kenar)]">
-            {adimlar.map((a, i) => (
-              <motion.div
-                key={`${mod}-${arac}-${i}`}
-                initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-                className={cn("min-w-0", i > 0 && "md:pl-8")}
-              >
-                <span className="glass-ikon flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold text-white">
-                  {i + 1}
-                </span>
-                <h3 className="mt-4 flex items-center gap-1.5 text-[16px] font-semibold text-white">
-                  {a.ikonlu && <VayraIsaret size={18} />}
-                  {a.baslik}
-                </h3>
-                <p className="mb-4 mt-1.5 text-[13px] leading-relaxed text-[var(--sn-metin-2)]">{a.aciklama}</p>
-                {a.aksiyon.tip === "kod" && <KodKutusu deger={a.aksiyon.deger} />}
-                {a.aksiyon.tip === "buton" && <LimeButon etiket={a.aksiyon.etiket} />}
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-
-        <p className="mt-5 text-center text-[13px] text-[var(--sn-metin-2)]">
-          Claude Code, Codex, OpenClaw ya da Hermes kullanıyorsan{" "}
-          <button onClick={() => setMod("CLI")} className="inline-flex items-center gap-0.5 font-medium underline underline-offset-2" style={{ color: LIME }}>
-            CLI daha iyi <ArrowUpRight className="h-3.5 w-3.5" />
-          </button>
-        </p>
-      </section>
-
-      {/* ═══════════ 3) ARAÇ YÜZEYİ ═══════════ */}
-      <section className="mx-auto max-w-6xl px-4 pt-24">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <BolumEtiket>Araç yüzeyi</BolumEtiket>
-          <h2 className="hf-baslik mt-3 text-2xl text-white sm:text-[32px]">Ajanın Eline Geçen Şey</h2>
-          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-[var(--sn-metin-2)]">
-            Bağlandığın anda ajanın araç listesine sekiz Vayra aracı düşer.
-            Bir tanesine tıkla — imzasını, örnek çağrısını ve dönen yanıtı gör.
-          </p>
-        </div>
-        <AracYuzeyi />
-      </section>
-
-      {/* ═══════════ 4) OTURUM ═══════════ */}
-      <section className="mx-auto max-w-3xl px-4 pt-24">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <BolumEtiket>Gerçek bir oturum</BolumEtiket>
-          <h2 className="hf-baslik mt-3 text-2xl text-white sm:text-[32px]">Bir Cümle, Yedi Adım</h2>
-          <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-[var(--sn-metin-2)]">
-            Ajan hangi aracı ne zaman çağırıyor, ne kadar krediye mal oluyor — hepsi açık.
-          </p>
-        </div>
-        <OturumTerminali />
-      </section>
-
-      {/* ═══════════ 5) YETENEKLER ═══════════ */}
-      <section className="mx-auto max-w-6xl px-4 pt-24">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <BolumEtiket>Neler değişiyor</BolumEtiket>
-          <h2 className="hf-baslik mt-3 text-2xl text-white sm:text-[32px]">Panelde Ne Varsa, Sohbette De Var</h2>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {YETENEKLER.map((y, i) => (
-            <motion.div
-              key={y.baslik}
-              initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.3 }}
-              transition={{ duration: 0.4, delay: (i % 3) * 0.06 }}
-              className="hf-kart bg-[var(--sn-yuzey)] p-5"
-            >
-              <span className="glass-ikon flex h-10 w-10 items-center justify-center rounded-xl">
-                <y.ikon className="h-[18px] w-[18px]" style={{ color: LIME }} />
-              </span>
-              <h3 className="mt-4 text-[16px] font-semibold text-white">{y.baslik}</h3>
-              <p className="mt-1.5 text-[13.5px] leading-relaxed text-[var(--sn-metin-2)]">{y.metin}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══════════ 6) GÜVENLİK ═══════════ */}
-      <section className="mx-auto max-w-5xl px-4 pt-24">
-        <div className="hf-kart overflow-hidden bg-[var(--sn-yuzey)]">
-          <div className="border-b border-[var(--sn-kenar)] px-6 py-5">
-            <BolumEtiket>Güven</BolumEtiket>
-            <h2 className="hf-baslik mt-2.5 text-2xl text-white">Ajanına Ne Kadar İzin Verdiğini Sen Bilirsin</h2>
-          </div>
-          <div className="grid gap-px bg-[var(--sn-kenar)] sm:grid-cols-3">
-            {GUVENLIK.map((g) => (
-              <div key={g.baslik} className="bg-[var(--sn-yuzey)] p-6">
-                <g.ikon className="h-5 w-5" style={{ color: LIME }} />
-                <h3 className="mt-3.5 text-[15px] font-semibold text-white">{g.baslik}</h3>
-                <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--sn-metin-2)]">{g.metin}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════ 7) SSS ═══════════ */}
-      <section className="mx-auto max-w-3xl px-4 pt-24">
-        <div className="mb-4 flex flex-col items-center text-center">
-          <BolumEtiket>Sık sorulanlar</BolumEtiket>
-          <h2 className="hf-baslik mt-3 text-2xl text-white sm:text-[32px]">Merak Edilenler</h2>
-        </div>
-        <div className="border-t border-[var(--sn-kenar)]">
-          {SSS.map((f) => <SssSatiri key={f.s} s={f.s} c={f.c} />)}
-        </div>
-      </section>
-
-      {/* ═══════════ 8) ALT CTA ═══════════ */}
-      <section className="relative mx-auto max-w-5xl overflow-hidden px-4 py-24">
-        <div aria-hidden className="pointer-events-none absolute left-0 top-1/4 h-64 w-64 rounded-full opacity-[0.18] blur-[100px]" style={{ background: LIME }} />
-        <div aria-hidden className="pointer-events-none absolute bottom-1/4 right-0 h-64 w-64 rounded-full opacity-[0.18] blur-[100px]" style={{ background: LIME }} />
-        <div className="relative flex flex-col items-center text-center">
-          <h2 className="hf-baslik max-w-2xl text-3xl text-white sm:text-5xl">
-            Ajanını Stüdyoya Çevir
-          </h2>
-          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-[var(--sn-metin-2)]">
-            Kurulum iki dakika. Sonrası sadece konuşmak.
-          </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-            <button
-              onClick={() => { void panoyaKopyala(MCP_URL, "MCP adresi kopyalandı", MCP_URL); }}
-              className="hf-uret hf-btn inline-flex items-center gap-2 px-6 py-3 text-[15px] font-bold"
-            >
-              <Copy className="h-4 w-4" /> MCP adresini kopyala
-            </button>
-            <Link href="/panel/supercomputer" className="hf-btn glass-cip inline-flex items-center gap-2 rounded-[14px] px-6 py-3 text-[15px] font-medium text-white">
-              Supercomputer&apos;ı dene <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <p className="mt-8 font-mono text-[12px] text-[var(--sn-metin-3)]">{MCP_URL}</p>
-        </div>
-      </section>
-    </div>
+    </section>
   );
 }

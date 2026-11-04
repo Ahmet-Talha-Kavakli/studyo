@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,6 +11,7 @@ import {
   CheckCircle2, EyeOff, ArrowDownUp, MoreVertical,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 import type { Uretim } from "@/store/useProjeler";
 import { saltUrl, onizlemeArka, cn } from "@/lib/utils";
@@ -22,7 +24,7 @@ import { uretimIndir } from "@/lib/gercekEylem";
      · arka plan = varlığın BULANIK, karartılmış büyütülmüş kopyası
        (düz siyah perde DEĞİL — renk varlığa göre değişir)
      · ortada 9:16 video sahnesi
-     · SAĞDA yüzen yuvarlak bilgi paneli (~225px, flush değil)
+     · SAĞDA yüzen yuvarlak bilgi paneli (yaklaşık 225px, flush değil)
          başlık: avatar + kullanıcı adı / "Yazar" + ✕
          sekmeler: Bilgi | Yorumlar
          Bilgi → İSTEM (Kopyala) · DETAYLAR (Model/Tür/Mod/Kalite/Boyut/Oluşturulma)
@@ -209,11 +211,8 @@ export function PazIsikKutusu({
                       {hiz}×
                     </button>
                     <AnimatePresence>
-                      {hizAcik && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setHizAcik(false)} />
-                          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                            className="absolute bottom-full left-0 z-50 mb-3 w-[285px] rounded-[16px] bg-[#3A3A3A] p-4">
+                      <Yuzen acik={!!(hizAcik)} onKapat={() => setHizAcik(false)} alt={"tam"} sol={0} bosluk={12}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                            className="w-[285px] rounded-[16px] bg-[#3A3A3A] p-4">
                             <p className="text-[15px] font-semibold text-white">Oynatma hızı</p>
                             <div className="mt-3 flex justify-between text-[13px]">
                               {[0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75].map((h) => (
@@ -223,9 +222,7 @@ export function PazIsikKutusu({
                                 </button>
                               ))}
                             </div>
-                          </motion.div>
-                        </>
-                      )}
+                          </motion.div></Yuzen>
                     </AnimatePresence>
                   </div>
 
@@ -242,11 +239,8 @@ export function PazIsikKutusu({
                       <ChevronDown className="h-4 w-4 text-white/70" />
                     </button>
                     <AnimatePresence>
-                      {zamanAcik && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setZamanAcik(false)} />
-                          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                            className="absolute bottom-full left-1/2 z-50 mb-3 w-[200px] -translate-x-1/2 rounded-[14px] bg-[#4A4A4A] p-2.5">
+                      <Yuzen acik={!!(zamanAcik)} onKapat={() => setZamanAcik(false)} alt={"tam"} ortala bosluk={12}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                            className="w-[200px] rounded-[14px] bg-[#4A4A4A] p-2.5">
                             <p className="px-1 pb-1.5 text-[13px] text-[#9A9A9A]">Zaman biçimi</p>
                             {([["standart", "Standart", "1:23"], ["kod", "Zaman kodu", "00:01:23:456"]] as const).map(([k, ad, alt]) => (
                               <button key={k} onClick={() => { setZamanBicim(k); setZamanAcik(false); }}
@@ -259,9 +253,7 @@ export function PazIsikKutusu({
                                 {zamanBicim === k && <Check className="h-4 w-4 text-white" />}
                               </button>
                             ))}
-                          </motion.div>
-                        </>
-                      )}
+                          </motion.div></Yuzen>
                     </AnimatePresence>
                   </div>
 
@@ -314,7 +306,7 @@ export function PazIsikKutusu({
                     <div className="flex items-center gap-2">
                       <PenLine className="h-3.5 w-3.5 text-[#9A9A9A]" />
                       <span className="flex-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9A9A9A]">İstem</span>
-                      <button onClick={() => { navigator.clipboard?.writeText(uretim.prompt); toast.success("İstem kopyalandı"); }}
+                      <button onClick={() => { void mesaj.kopyala(uretim.prompt, "İstem"); }}
                         className="flex items-center gap-1 rounded-[7px] bg-[#2A2A2A] px-2 py-1 text-[13px] text-white transition-colors hover:bg-[#343434]">
                         <Copy className="h-3 w-3" /> Kopyala
                       </button>
@@ -367,13 +359,10 @@ export function PazIsikKutusu({
                             <SlidersHorizontal className="h-3.5 w-3.5" /> Filtrele
                           </button>
                           <AnimatePresence>
-                            {filtreAcik && (
-                              <>
-                                <div className="fixed inset-0 z-40" onClick={() => setFiltreAcik(false)} />
-                                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                            <Yuzen acik={!!(filtreAcik)} onKapat={() => setFiltreAcik(false)} sag={0} ust={"tam"} bosluk={6}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
                                   transition={{ duration: 0.13 }}
-                                  className="absolute right-0 top-full z-50 mt-1.5 w-[280px] rounded-[14px] bg-[#2E2E2E] p-2"
-                                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,.75)" }}>
+                                  className="w-[280px] rounded-[14px] bg-[#2E2E2E] p-2"
+                                  style={{ boxShadow: "none" }}>
                                   <button onClick={() => { setYalnizCozulen((v) => !v); setFiltreAcik(false); }}
                                     className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2.5 text-left text-[15px] text-white transition-colors hover:bg-[#3F3F3F]">
                                     <CheckCircle2 className="h-[18px] w-[18px] text-white/70" />
@@ -393,9 +382,7 @@ export function PazIsikKutusu({
                                     <span className="flex-1">Eklenme tarihine göre sırala</span>
                                     {siraTarih && <Check className="h-4 w-4" style={{ color: "var(--sn-lime,#dff641)" }} />}
                                   </button>
-                                </motion.div>
-                              </>
-                            )}
+                                </motion.div></Yuzen>
                           </AnimatePresence>
                         </div>
                       </div>
@@ -439,23 +426,18 @@ export function PazIsikKutusu({
                                   <MoreVertical className="h-[15px] w-[15px]" />
                                 </button>
                                 <AnimatePresence>
-                                  {yorumMenu === y.id && (
-                                    <>
-                                      <div className="fixed inset-0 z-40" onClick={() => setYorumMenu(null)} />
-                                      <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
-                                        className="absolute right-0 top-full z-50 mt-1 w-[150px] rounded-[12px] bg-[#2E2E2E] p-1.5"
-                                        style={{ boxShadow: "0 16px 40px rgba(0,0,0,.75)" }}>
+                                  <Yuzen acik={!!(yorumMenu === y.id)} onKapat={() => setYorumMenu(null)} sag={0} ust={"tam"} bosluk={4}><motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
+                                        className="w-[150px] rounded-[12px] bg-[#2E2E2E] p-1.5"
+                                        style={{ boxShadow: "none" }}>
                                         <button onClick={() => { setDuzenlenen(y.id); setDuzenMetin(y.metin); setYorumMenu(null); }}
                                           className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[14px] text-white transition-colors hover:bg-[#3F3F3F]">
                                           <PenLine className="h-4 w-4 text-white/70" /> Düzenle
                                         </button>
-                                        <button onClick={() => { yorumSil(y.id); setYorumMenu(null); }}
+                                        <button onClick={() => { const sira = yorumlar.findIndex((x) => x.id === y.id); yorumSil(y.id); setYorumMenu(null); mesaj.silindi("Yorum", () => setYorumlar((l) => (l.some((x) => x.id === y.id) ? l : [...l.slice(0, sira), y, ...l.slice(sira)]))); }}
                                           className="flex w-full items-center gap-2 rounded-[8px] px-2.5 py-2 text-left text-[14px] text-[#F04438] transition-colors hover:bg-[#F04438]/10">
                                           <Trash2 className="h-4 w-4" /> Sil
                                         </button>
-                                      </motion.div>
-                                    </>
-                                  )}
+                                      </motion.div></Yuzen>
                                 </AnimatePresence>
                               </div>
                             </div>
@@ -528,7 +510,7 @@ export function PazIsikKutusu({
                           <Clock3 className="h-[18px] w-[18px] transition-colors"
                             style={{ color: aralik ? "var(--sn-lime,#dff641)" : "#9A9A9A" }} />
                         </button>
-                        <button aria-label="Çizim ekle" onClick={() => toast("Çizim aracı")}>
+                        <button aria-label="Çizim ekle" onClick={() => toast.info("Çizim aracı yakında", { description: "Şimdilik yorumu metin olarak yazabilirsin." })}>
                           <PenLine className="h-[18px] w-[18px] text-[#9A9A9A] transition-colors hover:text-white" />
                         </button>
                         <button aria-label="Emoji" onClick={() => setYorumMetin((v) => v + " 🙂")}>
@@ -561,7 +543,7 @@ export function PazIsikKutusu({
                     className="flex h-8 w-10 items-center justify-center rounded-[10px] bg-[#2A2A2A] transition-colors hover:bg-[#343434]">
                     <Heart className={cn("h-4 w-4", uretim.favori ? "fill-rose-500 text-rose-500" : "text-white")} />
                   </button>
-                  <button onClick={() => { navigator.clipboard?.writeText(location.href); toast.success("Bağlantı kopyalandı"); }}
+                  <button onClick={() => { void mesaj.kopyala(location.href, "Bağlantı"); }}
                     aria-label="Paylaş"
                     className="flex h-8 w-10 items-center justify-center rounded-[10px] bg-[#2A2A2A] transition-colors hover:bg-[#343434]">
                     <Share2 className="h-4 w-4 text-white" />
@@ -573,11 +555,8 @@ export function PazIsikKutusu({
                       <MoreHorizontal className="h-4 w-4 text-white" />
                     </button>
                     <AnimatePresence>
-                      {ustAcik && (
-                        <>
-                          <div className="fixed inset-0 z-40" onClick={() => setUstAcik(false)} />
-                          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                            className="absolute bottom-full right-0 z-50 mb-2 w-[280px] rounded-[12px] bg-[#2E2E2E] p-2">
+                      <Yuzen acik={!!(ustAcik)} onKapat={() => setUstAcik(false)} alt={"tam"} sag={0} bosluk={8}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
+                            className="w-[280px] rounded-[12px] bg-[#2E2E2E] p-2">
                             {[
                               { ad: "Yayınla", ikon: Upload },
                               { ad: "Şuraya taşı", ikon: FolderInput, ok: true },
@@ -586,7 +565,7 @@ export function PazIsikKutusu({
                               { ad: "Viralite tahmincisi", ikon: TrendingUp },
                               { ad: "Video URL'sini kopyala", ikon: Link2 },
                             ].map((m) => (
-                              <button key={m.ad} onClick={() => { setUstAcik(false); toast(m.ad); }}
+                              <button key={m.ad} onClick={() => { setUstAcik(false); toast.info(`${m.ad} yakında`, { description: "Bu eylem henüz ışık kutusunda çalışmıyor." }); }}
                                 className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left text-[15px] text-white transition-colors hover:bg-[#3F3F3F]">
                                 <m.ikon className="h-[18px] w-[18px] text-white/70" />
                                 <span className="flex-1">{m.ad}</span>
@@ -598,9 +577,7 @@ export function PazIsikKutusu({
                               className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left text-[15px] text-[#F04438] transition-colors hover:bg-[#F04438]/10">
                               <Trash2 className="h-[18px] w-[18px]" /> Sil
                             </button>
-                          </motion.div>
-                        </>
-                      )}
+                          </motion.div></Yuzen>
                     </AnimatePresence>
                   </div>
                 </div>

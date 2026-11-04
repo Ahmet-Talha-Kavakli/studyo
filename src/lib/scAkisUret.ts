@@ -13,8 +13,9 @@ import { olay, type AjanOlay } from "@/lib/scAjanOlay";
    ve son olanı "çalışıyor" durumuna alır.
    ============================================================ */
 
-/** Arama sonuçları — plan sektörüne göre gerçekçi, deterministik referanslar. */
-function aramaSonuclari(plan: SitePlan): { baslik: string; url: string; alan: string }[] {
+/* Not: şablon motoru gerçek web araması ya da derleme yapmaz; akışta yalnız motorun gerçekten
+   yaptığı adımlar (plan, tasarım dili, bölümler, duyarlılık) gösterilir. */
+export function aramaSonuclari(plan: SitePlan): { baslik: string; url: string; alan: string }[] {
   const s = plan.sektor.toLocaleLowerCase("tr");
   const konu = encodeURIComponent(`${plan.sektor} web tasarım trendleri`);
   return [
@@ -27,7 +28,7 @@ function aramaSonuclari(plan: SitePlan): { baslik: string; url: string; alan: st
 /** Tip → insan okunur çıktı adı. */
 const TIP_AD: Record<SitePlan["tip"], string> = {
   landing: "Landing sayfası", portfolyo: "Portfolyo", blog: "Blog",
-  menu: "Menü sitesi", oyun: "Oyun", dashboard: "Panel",
+  menu: "Menü sitesi", oyun: "Oyun", dashboard: "Panel", uygulama: "Uygulama",
 };
 
 /**
@@ -37,23 +38,22 @@ const TIP_AD: Record<SitePlan["tip"], string> = {
 export function akisKur(plan: SitePlan, istem: string, gorselMod: boolean): AjanOlay[] {
   if (gorselMod) {
     return [
-      olay("dusunme", "Enine boyuna düşünülüyor", {
+      olay("dusunme", "İstek planlandı", {
         govde: `İstek: "${istem}". Bu bir görsel üretimi; önce sahne kurgusunu, ışık ve kompozisyonu belirliyorum, ardından uygun modeli seçip kareyi üretiyorum. Çıktıyı kontrol edip gerekirse rötuş yapıyorum.`,
       }),
-      olay("model", "Model seçildi", { arg: "fable_5", sureMs: 320 }),
+      olay("model", "Görsel modeli seçildi", { sureMs: 320 }),
       olay("gorev", "Sahne kurgusu hazırlandı", {
         govde: "Konu, kadraj, ışık yönü ve renk sıcaklığı belirlendi.",
         sureMs: 1400,
       }),
-      olay("artifact", "Görsel üretildi", { arg: "1024×1024", sureMs: 4200 }),
+      olay("artifact", "Görsel üretildi", { sureMs: 4200 }),
     ];
   }
 
-  const dosyalar = plan.dosyalar.length ? plan.dosyalar : ["index.html", "styles.css"];
   const bolumler = plan.bolumler.length ? plan.bolumler : ["Hero", "Özellikler", "İletişim"];
 
   return [
-    olay("dusunme", "Enine boyuna düşünülüyor", {
+    olay("dusunme", "İstek planlandı", {
       govde:
         `İstek: "${istem}".\n\n` +
         `Sektör olarak ${plan.sektor} çıkarımı yaptım; ${TIP_AD[plan.tip]} üretmek en uygunu. ` +
@@ -63,20 +63,14 @@ export function akisKur(plan: SitePlan, istem: string, gorselMod: boolean): Ajan
         `Önce tasarım dilini kurup sonra bölümleri sırayla yazıyorum, en sonda duyarlılığı kontrol ediyorum.`,
     }),
 
-    olay("arama", "Web'de arandı", {
-      arg: `${plan.sektor} tasarım referansları`,
-      sonuclar: aramaSonuclari(plan),
-      sureMs: 1650,
-    }),
-
-    olay("model", "Beceri yüklendi", { arg: plan.tip === "oyun" ? "oyun_uretici" : "site_uretici", sureMs: 240 }),
+    olay("model", "Şablon seçildi", { arg: TIP_AD[plan.tip], sureMs: 240 }),
 
     olay("gorev", "Tasarım dili kuruldu", {
       govde: `Tipografi ölçeği, boşluk ritmi ve bileşen stilleri belirlendi.\nAksan: ${plan.aksan}\nİkincil: ${plan.aksan2}\nZemin: ${plan.zemin}`,
       sureMs: 900,
       cocuklar: [
-        olay("kod", "Renk değişkenleri yazıldı", { arg: "tokens.css", diff: { ekle: 18 }, sureMs: 320 }),
-        olay("kod", "Tipografi ölçeği kuruldu", { arg: "type.css", diff: { ekle: 12 }, sureMs: 260 }),
+        olay("kod", "Renk paleti belirlendi", { sureMs: 320 }),
+        olay("kod", "Yazı ölçeği ve boşluklar kuruldu", { sureMs: 260 }),
       ],
     }),
 
@@ -84,27 +78,12 @@ export function akisKur(plan: SitePlan, istem: string, gorselMod: boolean): Ajan
     olay("gorev", `${bolumler.length} bölüm yazıldı`, {
       sureMs: 3200,
       cocuklar: bolumler.map((b, i) =>
-        olay("kod", `${b} bölümü`, {
-          arg: dosyalar[i % dosyalar.length],
-          diff: { ekle: 22 + ((b.length * 7) % 40) },
-          sureMs: 380 + ((b.length * 31) % 500),
-        }),
+        olay("kod", b, { sureMs: 380 + ((b.length * 31 + i) % 500) }),
       ),
     }),
 
-    olay("komut", "Derleme çalıştırıldı", {
-      arg: "npm run build",
-      govde:
-        `$ npm run build\n\n` +
-        `> ${plan.marka.toLocaleLowerCase("tr").replace(/\s+/g, "-")}@1.0.0 build\n` +
-        `> vayra-build\n\n` +
-        dosyalar.map((d) => `  ✓ ${d}`).join("\n") +
-        `\n\n✓ Derleme başarılı — ${dosyalar.length} dosya, 0 hata`,
-      sureMs: 2100,
-    }),
-
-    olay("gorev", "Duyarlılık kontrol edildi", {
-      govde: "360px, 768px ve 1440px kırılımlarında düzen doğrulandı; taşma yok.",
+    olay("gorev", "Mobil uyum eklendi", {
+      govde: "Dar ekranlarda düzen tek sütuna iner, menü sadeleşir.",
       sureMs: 700,
     }),
 

@@ -7,6 +7,9 @@
  * Tüm yollar public köküne göredir (örn "/stok/sinematik/cinema1.webp"),
  * dolayısıyla <img src>, next/image ve CSS background-image ile doğrudan çalışır.
  *
+ * 2026-11-04: her kategoriye Mixkit telifsiz havuzundan (medyaHavuzu.ts) temaya uygun kareler eklendi;
+ * böylece tohumla seçilen kartlar 72 görsel arasında dönmek yerine yüzlerce kare arasından seçilir.
+ *
  * ÖNEMLİ: SSR/hydration bozulmaması için burada Math.random KULLANILMAZ.
  * Seçimler ya index ya da string-seed hash'i ile deterministiktir.
  */
@@ -98,6 +101,18 @@ export const STOK_GORSELLER: Record<string, string[]> = {
     "/stok/3d/render12.webp",
   ],
 };
+
+import { havuzGorselleri, type HavuzTema } from "./medyaHavuzu";
+
+const HAVUZ_ESLEME: Record<string, HavuzTema[]> = {
+  sinematik: ["gece", "sehir", "isik", "yapay", "arac"],
+  manzara: ["doga", "deniz", "gokyuzu", "uzay"],
+  portre: ["portre", "moda"],
+  urun: ["urun", "yemek"],
+  soyut: ["soyut", "yapay"],
+  "3d": ["yapay", "soyut", "teknoloji"],
+};
+for (const [k, t] of Object.entries(HAVUZ_ESLEME)) if (STOK_GORSELLER[k]) STOK_GORSELLER[k] = [...STOK_GORSELLER[k], ...havuzGorselleri(t)];
 
 /** Tüm kategorilerin düz halde birleştirilmiş tam listesi. */
 export const TUM: string[] = Object.values(STOK_GORSELLER).flat();

@@ -60,7 +60,7 @@ export function Sidebar() {
 
   return (
     <aside className="fixed inset-y-0 left-0 z-40 flex w-[72px] flex-col items-center border-r border-white/10 bg-ink-900/80 py-4 backdrop-blur-xl">
-      <Link href="/panel" className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-vayra-400 to-vayra-600 shadow-lg shadow-vayra-500/40">
+      <Link href="/panel" className="mb-5 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-vayra-400 to-vayra-600 shadow-vayra-500/40">
         <Sparkles className="h-5 w-5 text-white" strokeWidth={2.5} />
       </Link>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { kopyala } from "@/lib/gercekEylem";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown, ChevronRight, MessageSquare, Settings2, Wrench, Search, Globe,
@@ -15,7 +16,7 @@ import { cn } from "@/lib/utils";
    Anatomi (referans ölçüleri):
      • sol dikey RAY: 1px var(--sc-kenar), adım ikonunun merkezinden geçer
      • adım satırı: [ikon 16px] Etiket(sans 14px var(--sc-metin-3)) [arg var(--sc-metin-3)] [⌄]
-     • satır yüksekliği ~30px, ikon–etiket boşluğu 12px
+     • satır yüksekliği yaklaşık 30px, ikon–etiket boşluğu 12px
      • alt içerik: raydan KAVİSLİ DİRSEK ile sağa açılır (girinti 34px)
      • "Thinking" metni SANS 15px var(--sc-metin-3) (asistan serifinden farklı!)
      • diff sayaçları: + yeşil #4ade80 · − kırmızı #f87171
@@ -127,7 +128,7 @@ export function SCTerminalKart({ baslik, icerik }: { baslik: "Girdi" | "Çıktı
     <div className="mb-2 overflow-hidden rounded-[12px] border border-[var(--sc-kenar)] bg-[var(--sc-kart)]">
       <div className="flex items-center justify-between px-4 pt-3">
         <span className="text-[13px] text-[var(--sc-metin-3)]">{baslik}</span>
-        <button onClick={() => navigator.clipboard?.writeText(icerik)}
+        <button onClick={() => void kopyala(icerik, `${baslik} kopyalandı`)}
           className="text-[var(--sc-metin-3)] transition-colors hover:text-[var(--sc-metin)]" aria-label="Kopyala">
           <Copy className="h-[14px] w-[14px]" />
         </button>

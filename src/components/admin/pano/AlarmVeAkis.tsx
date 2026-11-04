@@ -55,7 +55,7 @@ export function CanliAkis() {
         {olaylar.map((o) => {
           const Ikon = AKIS_IKON[o.tur];
           return (
-            <motion.div key={o.id} layout initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
+            <motion.div key={o.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }}
               className="flex items-center gap-3 rounded-lg px-2 py-2">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ background: `${AKIS_RENK[o.tur]}18`, color: AKIS_RENK[o.tur] }}>
                 <Ikon className="h-3.5 w-3.5" />

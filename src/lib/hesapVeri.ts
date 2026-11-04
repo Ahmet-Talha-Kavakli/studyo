@@ -24,11 +24,11 @@ export interface Plan {
 export const PLANLAR: Plan[] = [
   {
     ad: "PLUS", rozet: "%20 İNDİRİM", ozet: "Tutarlı ve kolay AI içerik üretimi için",
-    kredi: "1.000 kredi/ay", krediNot: "500 Nano Banana Pro üretimi, ~44 Seedance 2.0 video",
+    kredi: "1.000 kredi/ay", krediNot: "500 Nano Banana Pro üretimi, yaklaşık 44 Seedance 2.0 video",
     ayFiyat: 39, eskiFiyat: 49, fiyatSonek: "/ay, yıllık faturalı", cta: "Taahhüdü Değiştir", ctaRenk: "cyan", tema: "yesil",
     ozellikler: [
       { ad: "Paralel üretim: 6 Video, 8 Görsel", var: true },
-      { ad: "Supercomputer erişimi", var: true },
+      { ad: "Usta erişimi", var: true },
       { ad: "Tüm Seedance modelleri", var: true },
       { ad: "Tüm modeller & özellikler", var: true },
       { ad: "Gelişmiş AI özelliklerine erken erişim", var: true },
@@ -38,11 +38,11 @@ export const PLANLAR: Plan[] = [
   },
   {
     ad: "ULTRA", rozet: "%23 İNDİRİM", enIyiDeger: true, ozet: "AI projeleri kuran yaratıcılar için",
-    kredi: "3.000 kredi/ay", krediNot: "1500 Nano Banana Pro üretimi, ~133 Seedance 2.0 video",
+    kredi: "3.000 kredi/ay", krediNot: "1500 Nano Banana Pro üretimi, yaklaşık 133 Seedance 2.0 video",
     ayFiyat: 99, eskiFiyat: 129, fiyatSonek: "/ay, yıllık faturalı · Aylığa göre ₺360 tasarruf", cta: "Planı Yükselt", ctaRenk: "pembe", tema: "bordo",
     ozellikler: [
       { ad: "Paralel üretim: 8 Video, 8 Görsel", var: true },
-      { ad: "Supercomputer erişimi", var: true },
+      { ad: "Usta erişimi", var: true },
       { ad: "Tüm Seedance modelleri", var: true },
       { ad: "Tüm modeller & özellikler", var: true },
       { ad: "Gelişmiş AI özelliklerine erken erişim", var: true },
@@ -57,7 +57,7 @@ export const PLANLAR: Plan[] = [
     ozellikler: [
       { ad: "Tüm modeller & özellikler", var: true },
       { ad: "Seedance 2.0 erişimi", var: true },
-      { ad: "Supercomputer erişimi", var: true },
+      { ad: "Usta erişimi", var: true },
       { ad: "Gelişmiş özelliklere erken erişim", var: true },
       { ad: "En düşük kredi maliyeti", var: true, deger: "%70 DAHA UCUZ" },
       { ad: "Paylaşılabilir öğeler ve Ruh ID", var: true },
@@ -104,7 +104,7 @@ export interface UnlimitedModel {
 
 export const UNLIMITED_MODELLER: UnlimitedModel[] = [
   { ad: "GPT Image 2.0", tur: "gorsel", cozunurlukler: ["1K", "2K", "4K"], concurrent: "2 eşzamanlı", not: "4K planı 1K & 2K içerir. En fazla 2 paralel üretim.", tohum: "unl-gpt", fiyatlar: { "1K": [15, 75, 150], "2K": [20, 100, 200], "4K": [30, 150, 300] } },
-  { ad: "Seedance 2.0", tur: "video", cozunurlukler: ["720p", "1080p"], concurrent: "1 eşzamanlı", sure: "15sn'ye kadar", not: "Yalnızca standart üretim modları. MCP, Supercomputer, Canvas & CLI hariç.", tohum: "unl-seedance", fiyatlar: { "720p": [73, 294, 588], "1080p": [149, 630, 1270] } },
+  { ad: "Seedance 2.0", tur: "video", cozunurlukler: ["720p", "1080p"], concurrent: "1 eşzamanlı", sure: "15sn'ye kadar", not: "Yalnızca standart üretim modları. MCP, Usta, Canvas & CLI hariç.", tohum: "unl-seedance", fiyatlar: { "720p": [73, 294, 588], "1080p": [149, 630, 1270] } },
   { ad: "Kling 3.0", tur: "video", cozunurlukler: ["1080p", "4K"], concurrent: "1 eşzamanlı", sure: "15sn'ye kadar", not: "4K planı 1080p & 720p içerir. En fazla 1 paralel üretim.", tohum: "unl-kling", fiyatlar: { "1080p": [35, 175, 350], "4K": [60, 360, 720] } },
   { ad: "Nano Banana Pro", tur: "gorsel", cozunurlukler: ["2K", "4K"], concurrent: "2 eşzamanlı", not: "4K planı 2K içerir.", tohum: "unl-nbp", fiyatlar: { "2K": [5, 25, 50], "4K": [7, 35, 70] } },
 ];

@@ -37,7 +37,7 @@ export function PaylasimModal({ onKapat, varsayilan }: {
 
   const gonder = () => {
     if (!girisYapildi) { onKapat(); acKapi({ baslik: "Paylaşmak için giriş yap", altBaslik: "Toplulukla paylaş, görüntülenmeyle kazan." }); return; }
-    if (!ad.trim()) { toast.error("Bir ad gir"); return; }
+    if (!ad.trim()) { toast.error("Ad eksik", { description: "Toplulukta görünecek bir ad yaz." }); return; }
     const yazar = "@" + (kullaniciAd?.replace(/\s+/g, "").toLowerCase() || "ben");
     paylas({
       tur, ad: ad.trim(), aciklama: aciklama.trim(),
@@ -46,16 +46,16 @@ export function PaylasimModal({ onKapat, varsayilan }: {
       yazar, prompt: varsayilan?.prompt, model: varsayilan?.model,
       minFiyat, ekstraFiyat: ekstra, kazanc: 0,
     });
-    toast.success(`"${ad}" yayınlandı 🎉`, { description: `Kullanım başına ${senKazanirsin} kredi kazanırsın · ${toplamFiyat} kredi/kullanım` });
+    toast.success(`"${ad.trim()}" yayınlandı`, { description: `Kullanım başı fiyat ${toplamFiyat} kredi, her kullanımda ${senKazanirsin} kredi kazanırsın.` });
     onKapat();
   };
 
   return (
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onKapat} className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-md" />
+        onClick={onKapat} className="perde fixed inset-0 z-[200] bg-black/60 backdrop-blur-md" />
       <motion.div initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
-        className="fixed left-1/2 top-1/2 z-[201] w-[min(94vw,480px)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/10 bg-[#151517] p-6 shadow-2xl">
+        className="fixed left-1/2 top-1/2 z-[201] w-[min(94vw,480px)] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-3xl border border-white/10 bg-[#151517] p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-[18px] font-bold text-white"><Share2 className="h-5 w-5 text-aksan" /> Toplulukla paylaş</h2>
           <button onClick={onKapat} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/8 text-metin-2 hover:bg-white/12 hover:text-white"><X className="h-4 w-4" /></button>

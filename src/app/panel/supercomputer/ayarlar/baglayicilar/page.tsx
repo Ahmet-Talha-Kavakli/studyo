@@ -8,7 +8,8 @@ import { toast } from "@/lib/toast";
 import { BAGLAYICI_BOLUMLERI, type Baglayici, type BaglayiciBolum } from "@/lib/scBaglayici";
 import { baglanVeBildir, bagliHesaplar, baglantiKaldir } from "@/lib/pipedream/istemci";
 import { useAuth } from "@/store/useAuth";
-import { AyarBolum, BosDurum, AyarButon } from "@/components/kabuk/sc/SCAyarParcalari";
+import { AyarBolum, BosDurum, AyarButon, Anahtar } from "@/components/kabuk/sc/SCAyarParcalari";
+import { mcpUrlGecerli, useScMcp } from "@/lib/scMcp";
 import { cn } from "@/lib/utils";
 
 /* ============================================================
@@ -51,68 +52,34 @@ export default function BaglayicilarAyar() {
     return () => { iptal = true; };
   }, [kullaniciId]);
 
-  // Kullanıcının eklediği ÖZEL MCP bağlayıcıları (localStorage'da kalıcı).
-  const [ozeller, setOzeller] = useState<Baglayici[]>([]);
-  useEffect(() => {
-    try {
-      const ham = localStorage.getItem("vayra-ozel-mcp");
-      if (!ham) return;
-      const liste = JSON.parse(ham) as Baglayici[];
-      if (Array.isArray(liste) && liste.length) {
-        setOzeller(liste);
-        setBagli((v) => { const y = new Set(v); liste.forEach((x) => y.add(x.id)); return y; });
-      }
-    } catch { /* bozuk kayıt → yoksay */ }
-  }, []);
-  useEffect(() => {
-    try { localStorage.setItem("vayra-ozel-mcp", JSON.stringify(ozeller)); } catch { /* kota → yoksay */ }
-  }, [ozeller]);
+  // Özel MCP sunucuları (useScMcp): sohbette Claude'a gerçek MCP sunucusu olarak verilir.
+  const mcpler = useScMcp((x) => x.sunucular);
+  const { ekle: mcpEkle, guncelle: mcpGuncelle, sil: mcpSil } = useScMcp.getState();
 
   const q = ara.trim().toLocaleLowerCase("tr");
   const bolumler = useMemo(() => {
-    const ozelBolum: BaglayiciBolum[] = ozeller.length
-      ? [{
-          ad: "Özel MCP",
-          baglayicilar: ozeller.filter((x) => !q || `${x.ad} ${x.kisa}`.toLocaleLowerCase("tr").includes(q)),
-        }]
-      : [];
-    return [...ozelBolum, ...BAGLAYICI_BOLUMLERI]
+    return [...BAGLAYICI_BOLUMLERI]
       .map((b) => ({
         ...b,
         baglayicilar: b.baglayicilar.filter((x) =>
           !q || `${x.ad} ${x.kisa}`.toLocaleLowerCase("tr").includes(q)),
       }))
       .filter((b) => b.baglayicilar.length > 0);
-  }, [q, ozeller]);
+  }, [q]);
 
   const bagliSayi = bagli.size;
-  const toplam = BAGLAYICI_BOLUMLERI.reduce((a, b) => a + b.baglayicilar.length, 0) + ozeller.length;
+  const toplam = BAGLAYICI_BOLUMLERI.reduce((a, b) => a + b.baglayicilar.length, 0);
 
-  /**
-   * GERÇEK "Ekle": Özel MCP formundaki ad+URL'den bağlayıcı kaydı üretir,
-   * listeye yazar ve BAĞLI olarak işaretler. Kalıcılık: localStorage.
-   */
-  const ozelMcpEkle = (ad: string, url: string) => {
-    const temizAd = ad.trim();
-    const id = "ozel-" + temizAd.toLocaleLowerCase("tr").replace(/[^a-z0-9]+/g, "-");
-    if (ozeller.some((x) => x.id === id)) { toast.error("Bu adda bir özel bağlayıcı zaten var"); return; }
-    const yeni: Baglayici = {
-      id, ad: temizAd, renk: "#55d6fd",
-      kisa: url.trim(),
-      tam: `${temizAd} özel MCP sunucusu — ${url.trim()}`,
-      yetenekler: ["Uzak MCP araçlarını çağır", "Supercomputer çalışanlarına bağla"],
-      ozet: "Özel MCP sunucusu",
-    };
-    setOzeller((v) => [yeni, ...v]);
-    setBagli((v) => new Set(v).add(id));
+  const ozelMcpEkle = (ad: string, url: string, token: string) => {
+    if (!mcpUrlGecerli(url)) { toast.error("Sunucu adresi geçersiz", { description: "MCP sunucusu için https:// ile başlayan tam bir adres gir." }); return; }
+    if (mcpler.some((x) => x.url === url.trim())) { toast.error("Bu sunucu zaten ekli", { description: "Aynı adres ikinci kez eklenemez. Listedeki sunucuyu kullanabilirsin." }); return; }
+    mcpEkle({ ad: ad.trim(), url: url.trim(), ...(token.trim() ? { token: token.trim() } : {}) });
     setMcpAcik(false);
-    toast.success(`${temizAd} bağlayıcısı eklendi`);
+    toast.success(`${ad.trim()} eklendi`, { description: "Sohbette kullanım açık; model gerektiğinde araçlarını çağırır." });
   };
 
   /** "Bağlan" → GERÇEK Pipedream Connect OAuth penceresi açar. */
   const baglan = async (b: Baglayici) => {
-    // Özel MCP bağlayıcıları Pipedream'e gitmez, doğrudan bağlı say.
-    if (b.id.startsWith("ozel-")) { setBagli((v) => new Set(v).add(b.id)); return; }
     setBekleyen((v) => new Set(v).add(b.id));
     const sonuc = await baglanVeBildir(b.id, b.ad, kullaniciId);
     setBekleyen((v) => { const y = new Set(v); y.delete(b.id); return y; });
@@ -126,32 +93,46 @@ export default function BaglayicilarAyar() {
         if (eslesen) setHesapEsleme((v) => ({ ...v, [b.id]: eslesen.id }));
       }
     } else if (sonuc.yapilandirilmadi) {
-      // Pipedream henüz aktif değil → demo modda bağlanmış say.
-      setBagli((v) => new Set(v).add(b.id));
+      // Bağlantı servisi kurulmamış: bağlıymış gibi göstermek yanıltıcı olurdu.
+      toast.error("Uygulama bağlantıları henüz etkin değil", { description: "Sunucuya Pipedream Connect anahtarları eklenince bağlanabilirsin. Özel MCP sunucuları şimdiden çalışır." });
     }
   };
 
   /** Bir bağlantıyı kaldır (gerçek Pipedream hesabını siler). */
   const baglantiyiKaldir = async (b: Baglayici) => {
     const hid = hesapEsleme[b.id];
-    if (hid) { const ok = await baglantiKaldir(hid); if (!ok) { toast.error("Bağlantı kaldırılamadı"); return; } }
+    if (hid) { const ok = await baglantiKaldir(hid); if (!ok) { toast.error("Bağlantı kaldırılamadı", { description: `${b.ad} hesabına şu an ulaşılamıyor. Biraz sonra yeniden dene.` }); return; } }
     setBagli((v) => { const y = new Set(v); y.delete(b.id); return y; });
     setHesapEsleme((v) => { const y = { ...v }; delete y[b.id]; return y; });
-    // Özel bağlayıcı ise listeden de düşür (aksi halde "bağlan" ile geri gelmez).
-    if (b.id.startsWith("ozel-")) setOzeller((v) => v.filter((x) => x.id !== b.id));
     toast.success(`${b.ad} bağlantısı kaldırıldı`);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <AyarBolum
-        baslik="Bağlayıcılar"
-        ozet="Supercomputer'ı kullandığın uygulamalara bağla; bağlı uygulamaların araçlarını sohbette çağırabilir."
-        sagUst={
-          <AyarButon ikincil onClick={() => setMcpAcik(true)}>
-            <Plus className="h-4 w-4" strokeWidth={2.2} /> Özel MCP
-          </AyarButon>
-        }
+        baslik="Özel MCP sunucuları"
+        ozet="Uzak bir MCP sunucusu ekle; 'Sohbette kullan' açıkken Usta gerektiğinde onun araçlarını çağırır ve sohbette hangi aracı kullandığını gösterir."
+        sagUst={<AyarButon onClick={() => setMcpAcik(true)}><Plus className="h-4 w-4" strokeWidth={2.2} />Sunucu ekle</AyarButon>}
+      >
+        {mcpler.length === 0 ? (
+          <BosDurum ikon={Plug} baslik="Henüz MCP sunucusu yok" ozet="Notion, Linear, GitHub gibi servislerin ya da kendi sunucunun MCP adresini ve erişim anahtarını ekle." />
+        ) : mcpler.map((m) => (
+          <div key={m.id} className="flex items-center gap-3 border-b border-[var(--sc-kenar)] px-4 py-3.5 last:border-b-0">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--sc-aksan)]/12 text-[var(--sc-aksan)]"><Plug className="h-[18px] w-[18px]" /></span>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 text-[14px] font-medium text-[var(--sc-metin)]"><span className="truncate">{m.ad}</span>{m.token && <span className="shrink-0 rounded bg-white/[0.06] px-1.5 text-[11px] text-[var(--sc-metin-3)]">anahtarlı</span>}</p>
+              <p className="mt-0.5 truncate text-[12.5px] text-[var(--sc-metin-3)]">{m.url}</p>
+            </div>
+            <span className="hidden text-[12.5px] text-[var(--sc-metin-3)] sm:block">Sohbette kullan</span>
+            <Anahtar acik={m.acik} onDegis={(v) => mcpGuncelle(m.id, { acik: v })} etiket={`${m.ad} sohbette kullanılsın`} />
+            <button onClick={() => { mcpSil(m.id); toast.success(`${m.ad} kaldırıldı`); }} aria-label={`${m.ad} kaldır`} className="flex h-8 w-8 items-center justify-center rounded-lg text-[var(--sc-metin-3)] hover:bg-rose-500/10 hover:text-rose-300"><X className="h-4 w-4" /></button>
+          </div>
+        ))}
+      </AyarBolum>
+
+      <AyarBolum
+        baslik="Uygulama bağlantıları"
+        ozet="Hesaplarını bağla; bağlantılar Vayra hesabına kaydedilir. Sohbette araç olarak kullanım şimdilik özel MCP sunucularıyla çalışır."
       >
         <div className="flex items-center gap-2.5 border-b border-[var(--sc-kenar)] px-4 py-3">
           <Search className="h-4 w-4 shrink-0 text-[var(--sc-metin-3)]" strokeWidth={1.9} />
@@ -171,7 +152,7 @@ export default function BaglayicilarAyar() {
         ) : (
           bolumler.map((bol) => (
             <div key={bol.ad}>
-              <p className="border-b border-[var(--sc-kenar)] bg-[var(--sc-zemin)] px-4 py-2 text-[12px] font-semibold uppercase tracking-wider text-[var(--sc-metin-3)]">
+              <p className="border-b border-[var(--sc-kenar)] bg-[var(--sc-zemin)] px-4 py-2 text-[12.5px] font-medium text-[var(--sc-metin-3)]">
                 {bol.ad}
               </p>
               <ul>
@@ -248,14 +229,14 @@ function MarkaKare({ b }: { b: Baglayici }) {
   );
 }
 
-/* ── Özel MCP — ekranın ORTASINDA modal (önce satır içi formdu) ── */
-function OzelMcpForm({ onKapat, onEkle }: { onKapat: () => void; onEkle: (ad: string, url: string) => void }) {
+/* ── Özel MCP — sağdan açılan panel ── */
+function OzelMcpForm({ onKapat, onEkle }: { onKapat: () => void; onEkle: (ad: string, url: string, token: string) => void }) {
   const [ad, setAd] = useState("");
   const [url, setUrl] = useState("");
+  const [token, setToken] = useState("");
+  const [kimlik, setKimlik] = useState<"yok" | "anahtar">("yok");
   const [portalHazir, setPortalHazir] = useState(false);
   useEffect(() => setPortalHazir(true), []);
-
-  /* ESC ile kapat + arka sayfa kaydırmasını kilitle. */
   useEffect(() => {
     const eski = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -264,67 +245,102 @@ function OzelMcpForm({ onKapat, onEkle }: { onKapat: () => void; onEkle: (ad: st
     return () => { document.body.style.overflow = eski; window.removeEventListener("keydown", esc); };
   }, [onKapat]);
 
-  const gecerli = ad.trim().length > 0 && url.trim().length > 0;
-  const alan = "h-10 w-full rounded-lg border border-[var(--sc-kenar)] bg-[var(--sc-zemin)] px-3 text-[14px] text-[var(--sc-metin)] outline-none transition-colors placeholder:text-[var(--sc-metin-3)] focus:border-[var(--sc-aksan)]";
+  const urlDogru = mcpUrlGecerli(url);
+  const eksik = !ad.trim() ? "Bir ad yaz" : !url.trim() ? "Sunucu adresini yaz" : !urlDogru ? "Adres https:// ile başlamalı" : kimlik === "anahtar" && !token.trim() ? "Erişim anahtarını yaz" : null;
+  const ekle = () => { if (!eksik) onEkle(ad.trim(), url.trim(), kimlik === "anahtar" ? token.trim() : ""); };
+  const KART = "overflow-hidden rounded-[18px] bg-white/[0.035] ring-1 ring-inset ring-white/[0.07]";
+  const SERIT = "flex items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-2.5";
+  const GIRDI = "h-10 w-full rounded-[12px] bg-black/25 px-3.5 text-[14px] text-[var(--sc-metin)] outline-none ring-1 ring-inset ring-white/[0.08] transition placeholder:text-[var(--sc-metin-3)] focus:ring-white/30";
+  const ETIKET = "mb-1.5 block text-[12.5px] font-medium text-[var(--sc-metin-2)]";
+  let alanAdi = ""; try { alanAdi = urlDogru ? new URL(url.trim()).host : ""; } catch { /* yok */ }
 
   if (!portalHazir) return null;
-
   return createPortal(
-    <div className="fixed inset-0 z-[160] flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-        onClick={onKapat}
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 340, damping: 30 }}
+    <div className="sc-kapsam fixed inset-0 z-[160]">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onKapat} className="absolute inset-0 bg-black/55" />
+      <motion.aside initial={{ x: "100%" }} animate={{ x: 0 }} transition={{ type: "spring", stiffness: 380, damping: 40 }}
         role="dialog" aria-modal="true" aria-labelledby="mcp-modal-baslik"
-        className="sc-kapsam relative w-full max-w-[520px] overflow-hidden rounded-2xl border border-[var(--sc-kenar)] bg-[var(--sc-kart)] shadow-[0_28px_70px_-20px_rgba(0,0,0,0.7)]">
-        <div className="flex items-start justify-between gap-3 border-b border-[var(--sc-kenar)] px-5 py-4">
-          <div className="min-w-0">
-            <h2 id="mcp-modal-baslik" className="text-[15px] font-semibold text-[var(--sc-metin)]">
-              Özel MCP bağlayıcısı ekle
-            </h2>
-            <p className="mt-0.5 text-[13px] text-[var(--sc-metin-3)]">
-              Supercomputer&apos;ı kendi verine ve araçlarına bağla.
-            </p>
+        className="absolute inset-y-0 right-0 flex w-[min(520px,100vw)] flex-col border-l border-white/[0.08] bg-[var(--sc-kart)]">
+        <header className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] text-[var(--sc-metin-3)]">Bağlayıcılar</p>
+            <h2 id="mcp-modal-baslik" className="truncate text-[17px] font-semibold tracking-[-0.01em]">Özel MCP bağlayıcısı</h2>
           </div>
-          <button onClick={onKapat} aria-label="Kapat"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[var(--sc-metin-3)] transition-colors hover:bg-[var(--sc-cip)] hover:text-[var(--sc-metin)]">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+          <button onClick={onKapat} aria-label="Kapat" className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--sc-metin-2)] transition hover:bg-white/[0.085] hover:text-[var(--sc-metin)]"><X className="h-4 w-4" /></button>
+        </header>
 
-        <div className="space-y-4 px-5 py-4">
-          <div className="flex items-start gap-2.5 rounded-lg border border-[var(--sc-kenar)] bg-[var(--sc-zemin)] p-3">
-            <AlertTriangle className="mt-px h-4 w-4 shrink-0 text-[var(--sc-promo)]" strokeWidth={2} />
-            <p className="text-[13px] leading-relaxed text-[var(--sc-metin-3)]">
-              Özel MCP sunucusu eklerken yalnızca güvendiğin kaynakları kullan; sunucu
-              paylaştığın verilere erişebilir.
-            </p>
+        <form autoComplete="off" onSubmit={(e) => { e.preventDefault(); ekle(); }} className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5 [scrollbar-width:thin]">
+          {/* Önizleme: listede böyle görünür */}
+          <div className={cn(KART, "p-3.5")}>
+            <p className="mb-2.5 text-[12px] font-medium text-[var(--sc-metin-3)]">Bağlayıcılar listesinde böyle görünür</p>
+            <div className="flex items-center gap-3 rounded-[14px] bg-black/25 p-2.5 ring-1 ring-inset ring-white/[0.06]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[15px] font-bold text-[#0b0b0c]">{ad.trim() ? ad.trim()[0].toLocaleUpperCase("tr") : <Plug className="h-[18px] w-[18px]" />}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-semibold">{ad.trim() || "Bağlayıcı adı"}</span>
+                <span className="block truncate text-[12.5px] text-[var(--sc-metin-3)]">{alanAdi || "Özel MCP sunucusu"}</span>
+              </span>
+              <span className="rounded-full bg-white/[0.085] px-2.5 py-0.5 text-[11.5px] font-medium text-[var(--sc-metin-2)]">{kimlik === "anahtar" ? "Anahtarlı" : "Açık"}</span>
+            </div>
           </div>
-          <div>
-            <label htmlFor="mcp-ad" className="mb-1.5 block text-[13.5px] text-[var(--sc-metin-2)]">
-              Ad <span className="text-[var(--sc-promo)]">*</span>
-            </label>
-            <input id="mcp-ad" autoFocus value={ad} onChange={(e) => setAd(e.target.value)}
-              placeholder="Vayra" className={alan} />
-          </div>
-          <div>
-            <label htmlFor="mcp-url" className="mb-1.5 block text-[13.5px] text-[var(--sc-metin-2)]">
-              Uzak MCP sunucu URL&apos;si <span className="text-[var(--sc-promo)]">*</span>
-            </label>
-            <input id="mcp-url" value={url} onChange={(e) => setUrl(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && gecerli) onEkle(ad, url); }}
-              placeholder="https://mcp.vayra.ai/mcp" className={alan} />
-          </div>
-        </div>
 
-        <div className="flex justify-end gap-2 border-t border-[var(--sc-kenar)] px-5 py-3.5">
-          <AyarButon ikincil onClick={onKapat}>İptal</AyarButon>
-          <AyarButon disabled={!gecerli} onClick={() => onEkle(ad, url)}>Ekle</AyarButon>
-        </div>
-      </motion.div>
+          <section className={KART}>
+            <div className={SERIT}><span className="text-[13.5px] font-semibold">Sunucu</span><span className="text-[12px] text-[var(--sc-metin-3)]">Uzak MCP, HTTP üzerinden</span></div>
+            <div className="space-y-3.5 p-4">
+              <label className="block"><span className={ETIKET}>Ad</span>
+                <input name="mcp-baglayici-adi" autoComplete="off" autoFocus value={ad} onChange={(e) => setAd(e.target.value.slice(0, 40))} placeholder="Ör. Notion" className={GIRDI} />
+              </label>
+              <label className="block"><span className={ETIKET}>Sunucu adresi</span>
+                <span className="relative block">
+                  <input name="mcp-sunucu-adresi" type="url" inputMode="url" autoComplete="off" spellCheck={false} value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://mcp.ornek.com/mcp" className={cn(GIRDI, "pr-10")} />
+                  {url.trim() && <span className={cn("absolute right-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full", urlDogru ? "bg-white text-[#0b0b0c]" : "bg-amber-300/15 text-amber-200")}>{urlDogru ? <Check className="h-3 w-3" strokeWidth={3} /> : <AlertTriangle className="h-3 w-3" />}</span>}
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section className={KART}>
+            <div className={SERIT}><span className="text-[13.5px] font-semibold">Kimlik doğrulama</span></div>
+            <div className="space-y-3 p-4">
+              <div className="grid grid-cols-2 gap-1 rounded-full bg-black/25 p-1 ring-1 ring-inset ring-white/[0.07]">
+                {([["yok", "Gerekmiyor"], ["anahtar", "Erişim anahtarı"]] as const).map(([k, a]) => (
+                  <button type="button" key={k} onClick={() => setKimlik(k)} aria-pressed={kimlik === k} className={cn("relative h-8 rounded-full text-[13px] font-semibold transition-colors", kimlik === k ? "text-[#0b0b0c]" : "text-[var(--sc-metin-2)] hover:text-[var(--sc-metin)]")}>
+                    {kimlik === k && <motion.span layoutId="mcp-kimlik" transition={{ type: "spring", stiffness: 480, damping: 38 }} className="absolute inset-0 rounded-full bg-white" />}
+                    <span className="relative">{a}</span>
+                  </button>
+                ))}
+              </div>
+              {kimlik === "anahtar" && (
+                <motion.label initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="block"><span className={ETIKET}>Bearer anahtarı</span>
+                  <input name="mcp-erisim-anahtari" type="password" autoComplete="new-password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="sk_..." className={GIRDI} />
+                </motion.label>
+              )}
+              <p className="text-[12.5px] leading-snug text-[var(--sc-metin-3)]">{kimlik === "anahtar" ? "Anahtar bu tarayıcıda saklanır; yalnız sohbet isteğinde sunucuya iletilir." : "Herkese açık ya da kendi ağındaki sunucular için."}</p>
+            </div>
+          </section>
+
+          <section className={KART}>
+            <div className={SERIT}><span className="text-[13.5px] font-semibold">Nasıl çalışır</span></div>
+            <ol className="divide-y divide-white/[0.06]">
+              {["Bağlayıcı eklenince açık olarak listelenir; istersen anahtarıyla kapatırsın.", "Açıkken her sohbet isteğinde sunucunun araçları Usta'ya verilir.", "Usta gerektiğinde bu araçları çağırır, sonucu yanıtında kullanır."].map((t, i) => (
+                <li key={i} className="flex items-start gap-3 px-4 py-3 text-[13px] leading-snug text-[var(--sc-metin-2)]"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-[11.5px] font-bold text-[var(--sc-metin)]">{i + 1}</span>{t}</li>
+              ))}
+            </ol>
+          </section>
+
+          <div className="flex items-start gap-2.5 rounded-[16px] bg-amber-300/[0.07] p-3.5 ring-1 ring-inset ring-amber-300/15">
+            <AlertTriangle className="mt-px h-4 w-4 shrink-0 text-amber-200" />
+            <p className="text-[12.5px] leading-snug text-amber-100/85">Yalnız güvendiğin sunucuları ekle; sunucu sohbette paylaştığın verilere erişebilir.</p>
+          </div>
+          <button type="submit" hidden />
+        </form>
+
+        <footer className="flex items-center gap-2 border-t border-white/[0.06] px-5 py-3.5 pb-[calc(14px+env(safe-area-inset-bottom))]">
+          {eksik && (url.trim() || ad.trim()) && <span className="rounded-full bg-white/[0.065] px-2.5 py-1 text-[12px] text-[var(--sc-metin-3)]">{eksik}</span>}
+          <span className="flex-1" />
+          <button onClick={onKapat} className="h-10 rounded-full px-4 text-[14px] font-medium text-[var(--sc-metin-2)] transition hover:bg-white/[0.065] hover:text-[var(--sc-metin)]">Vazgeç</button>
+          <motion.button whileTap={{ scale: 0.97 }} disabled={!!eksik} onClick={ekle} className="flex h-10 items-center gap-1.5 rounded-full bg-white px-5 text-[14px] font-semibold text-[#0b0b0c] transition hover:bg-white/90 disabled:opacity-40"><Plus className="h-4 w-4" />Bağlayıcıyı ekle</motion.button>
+        </footer>
+      </motion.aside>
     </div>,
     document.body,
   );

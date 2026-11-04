@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { mesaj } from "@/lib/mesaj";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Info, Trash2, Heart } from "lucide-react";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
@@ -79,8 +80,11 @@ export function PazMedyaSecici({
   };
 
   const sil = (id: string) => {
+    const hedef = yaz, liste = sekme === "yukleme" ? yuklemeler : uretimler;
+    const sira = liste.findIndex((o) => o.id === id), oge = liste[sira];
     yaz((l) => l.filter((o) => o.id !== id));
     if (secili === id) setSecili(null);
+    mesaj.kaldirildi("Medya", oge ? () => hedef((l) => (l.some((o) => o.id === id) ? l : [...l.slice(0, sira), oge, ...l.slice(sira)])) : undefined);
   };
 
   const dosyaSec = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,7 +98,9 @@ export function PazMedyaSecici({
         ...l,
       ]);
       setSekme("yukleme");
+      mesaj.yuklendi("Medya");
     };
+    o.onerror = () => mesaj.dosyaOkunamadi();
     o.readAsDataURL(f);
   };
 
@@ -111,7 +117,7 @@ export function PazMedyaSecici({
       {acik && (
         <div className="fixed inset-0 z-[260] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onKapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+            onClick={onKapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -225,7 +231,7 @@ function MedyaKare({
             Uygunluğu denetle
           </button>
         ) : (
-          <span className="px-1 text-[12px] font-medium text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+          <span className="px-1 text-[12px] font-medium text-white">
             {o.uygunluk === "uygun" ? "Uygun" : "Uygun değil"}
           </span>
         )}

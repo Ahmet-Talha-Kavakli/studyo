@@ -32,7 +32,7 @@ const adimlar: Adim[] = [
     tip: "bilgi",
     ikon: Clapperboard,
     baslik: "9 üretim stüdyosu",
-    metin: "Sinema, Pazarlama, Kimlik, Shorts, Explainer ve Supercomputer — her biri derinlemesine dolu araçlarla.",
+    metin: "Sinema, Pazarlama, Kimlik, Shorts, Explainer ve Usta — her biri derinlemesine dolu araçlarla.",
     renk: "from-iris-400 to-purple-600",
   },
   {

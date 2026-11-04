@@ -55,7 +55,7 @@ export function CvEklemePaleti({
           width: 214,
           background: CV.bar,
           border: `1px solid ${CV.barKenar}`,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.6)",
+          boxShadow: "none",
           ...stil,
         }}>
         <div className="p-2 pb-1">

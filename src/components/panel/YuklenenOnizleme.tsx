@@ -70,7 +70,7 @@ export function YuklenenOnizleme({
       {hazir && acik && yer && createPortal(
         <span className="pointer-events-none fixed z-[200]"
           style={{ top: yer.top, left: yer.left, translate: "0 -50%" }}>
-          <span className="glass-kenar block overflow-hidden rounded-xl p-1 shadow-2xl shadow-black/60">
+          <span className="glass-kenar block overflow-hidden rounded-xl p-1">
             {video ? (
               <video src={url} autoPlay loop muted playsInline
                 className="block rounded-lg object-contain"

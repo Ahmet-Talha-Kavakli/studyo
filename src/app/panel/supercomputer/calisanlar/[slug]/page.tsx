@@ -26,7 +26,7 @@ import { kopyala } from "@/lib/gercekEylem";
                SAĞ: macOS pencereli büyük önizleme
      2. "{Ad} ile neler yapabilirsin" — 3 sütun galeri
      3. "{AD}'İ SUPERCOMPUTER'DA DENE" — ortada composer
-     4. "Supercomputer'da diğer çalışanları dene" + "Tümünü gör ›"
+     4. "Usta'da diğer çalışanları dene" + "Tümünü gör ›"
    ============================================================ */
 
 export default function CalisanDetay() {
@@ -134,12 +134,12 @@ export default function CalisanDetay() {
                   {/* Kurulu rozeti artık TIKLANABİLİR: eskiden <span>'di ve
                       çalışan bir kez kurulunca kaldırma yolu yoktu. */}
                   <button
-                    onClick={() => { calisanDegistir(c.slug); toast(`${c.ad} kaldırıldı`); }}
+                    onClick={() => { calisanDegistir(c.slug); toast(`${c.ad} kaldırıldı`, { action: { label: "Geri al", onClick: () => calisanDegistir(c.slug) } }); }}
                     title="Kaldırmak için tıkla"
                     className="sc-hap flex items-center gap-2 rounded-full px-4 py-3 text-[15px] text-[var(--sc-metin-2)] transition-colors hover:text-[var(--sc-metin)]">
                     <Check className="h-[17px] w-[17px]" /> Kurulu
                   </button>
-                  <button onClick={() => toast.success("Çalışan ayarları kaydedildi", { description: "Yetenekler ve bağlayıcılar bu çalışana uygulandı." })}
+                  <button onClick={() => toast.info("Çalışan ayarları henüz hazır değil", { description: "Yetenek ve bağlayıcı seçimi yakında burada yönetilecek." })}
                     className="sc-hap flex items-center gap-2 rounded-full px-4 py-3 text-[15px] text-[var(--sc-metin)]">
                     <Settings className="h-[17px] w-[17px]" /> Yönet
                   </button>
@@ -199,7 +199,7 @@ export default function CalisanDetay() {
         {/* ═══════ 3. SUPERCOMPUTER'DA DENE ═══════ */}
         <section className="mt-20">
           <h2 className="sc-baslik mx-auto max-w-[760px] text-center text-[26px] leading-tight sm:text-[34px]">
-            {c.ad}&apos;ı Supercomputer&apos;da dene
+            {c.ad}&apos;ı Usta&apos;da dene
           </h2>
           <div className="mx-auto mt-7 max-w-[880px]">
             <SCComposer deger={metin} onDegis={setMetin} onGonder={baslat}
@@ -214,7 +214,7 @@ export default function CalisanDetay() {
         <section className="mt-20">
           <div className="flex items-center">
             <h2 className="text-[20px] font-semibold text-[var(--sc-metin)]">
-              Supercomputer&apos;da diğer çalışanları dene
+              Usta&apos;da diğer çalışanları dene
             </h2>
             <Link href="/panel/supercomputer/ayarlar/calisanlar"
               className="ml-auto flex min-h-[24px] items-center gap-1 py-0.5 text-[14px] text-[var(--sc-metin-3)] transition-colors hover:text-[var(--sc-metin)]">
@@ -243,7 +243,7 @@ function MiniKart({ c }: { c: Calisan }) {
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover/mk:scale-[1.04]" />}
       {!fotoMu && (
         <span className="absolute inset-0 flex items-center justify-center px-8 text-center">
-          <span className="text-[22px] font-semibold leading-tight text-[var(--sc-metin)] drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+          <span className="text-[22px] font-semibold leading-tight text-[var(--sc-metin)]">
             {c.ad}
           </span>
         </span>

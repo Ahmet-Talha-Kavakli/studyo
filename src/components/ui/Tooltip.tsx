@@ -18,11 +18,14 @@ export function Tooltip({
   children,
   side = "bottom",
   delay = 120,
+  className,
 }: {
   label: string;
   children: ReactNode;
   side?: Side;
   delay?: number;
+  /** Sarmalayıcı sınıfı (varsayılan: satır içi). Tam genişlik düğmeler için ör. "flex flex-1". */
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -70,7 +73,10 @@ export function Tooltip({
     }
   };
 
+  // Tıklanınca ipucu kapanır ve fare çıkana dek yeniden açılmaz (açılan menünün üstünde asılı kalmasın).
+  const basildiRef = useRef(false);
   const show = () => {
+    if (basildiRef.current) return;
     timerRef.current = setTimeout(() => { setYer(konumHesapla()); setOpen(true); }, delay);
   };
   const hide = () => {
@@ -116,10 +122,11 @@ export function Tooltip({
   return (
     <span
       ref={sarmalRef}
-      className="relative inline-flex"
+      className={cn("relative", className ?? "inline-flex")}
       onMouseEnter={show}
-      onMouseLeave={hide}
-      onFocus={show}
+      onMouseLeave={() => { basildiRef.current = false; hide(); }}
+      onPointerDown={() => { basildiRef.current = true; hide(); }}
+      onFocus={(e) => { if (e.target.matches(":focus-visible")) show(); }}
       onBlur={hide}
     >
       {erisilebilirCocuk}
@@ -143,8 +150,10 @@ export function Tooltip({
                  `translate` ayrı bir CSS özelliği; scale ile çakışmaz. */
               style={{ position: "fixed", top: yer.top, left: yer.left, translate: yatayCevir(yer.side, yer.hiz), maxWidth: "min(320px, calc(100vw - 24px))" }}
               className={cn(
-                "pointer-events-none z-[100] rounded-lg px-2.5 py-1.5 text-xs font-medium leading-snug",
-                "menu-surface text-white shadow-xl shadow-black/40",
+                /* w-max: fixed kutu sağ kenara yakınken kalan dar alana göre daralıp
+                   her kelimeyi alt satıra atıyordu; genişlik metinden gelir. */
+                "pointer-events-none z-[100] w-max rounded-lg px-2.5 py-1.5 text-xs font-medium leading-snug",
+                "menu-surface text-white",
                 origin[yer.side],
               )}
             >

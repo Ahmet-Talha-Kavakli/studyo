@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 import { CALISANLAR, BECERILER } from "@/lib/scMarket";
 
 /**
- * Supercomputer Ayarlar — AI Çalışan / Beceri açma-kapama durumu. KALICI.
+ * Usta Ayarlar — AI Çalışan / Beceri açma-kapama durumu. KALICI.
  *
  * Önce bu durum ekranların içinde `useState` ile tutuluyordu; sayfa
  * yenilenince açtığın beceri/çalışan kapanıyordu (ayar hiç kaydedilmiyordu).

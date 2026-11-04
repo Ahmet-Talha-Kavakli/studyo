@@ -1,115 +1,125 @@
 import type { Metadata } from "next";
-import { Download, Newspaper, Mail, ArrowRight } from "lucide-react";
-import { Hero, BolumBaslik, Kart, IstatistikBandi } from "@/components/kurumsal/UI";
-import { MARKA_VARLIKLAR, MARKA_RENKLER, BASIN_BULTENLERI, KUNYE } from "@/lib/kurumsal/basin";
-import { ISTATISTIKLER } from "@/lib/kurumsal/icerik";
+import Link from "next/link";
+import { ArrowRight, Download, Mail } from "lucide-react";
+import { Bolum, Kap, SirketHero, butonSinif } from "@/components/sirket/ortak";
+import { KopyalaButonu } from "@/components/sirket/KopyalaButonu";
+import { BASIN_BULTENLERI, BOILERPLATE, KUNYE, MARKA_RENKLER, MARKA_VARLIKLAR, URUN_GORSELLERI } from "@/lib/kurumsal/basin";
+import { LIDERLIK } from "@/lib/kurumsal/icerik";
 import { ILETISIM } from "@/lib/kurumsal/site";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Basın & Medya Kiti — Vayra",
-  description: "Vayra basın merkezi: marka varlıkları, logo paketi, marka rehberi, şirket künyesi ve basın bültenleri. Medya iletişimi için press@vayra.ai.",
+  title: "Basın",
+  description: "Vayra basın odası: basın bültenleri, medya kiti, logo ve ürün görselleri, marka renkleri, şirket künyesi ve basın iletişimi.",
 };
 
 export default function Basin() {
+  const [son, ...digerleri] = BASIN_BULTENLERI;
   return (
     <>
-      <Hero
-        ustBaslik="Basın"
-        baslik="Basın & medya merkezi"
-        aciklama="Vayra hakkında yazan gazeteciler ve içerik üreticiler için marka varlıkları, künye ve basın bültenleri."
-        cta={
-          <a href={`mailto:${ILETISIM.basin}`} className="kr-cta inline-flex h-12 items-center gap-2 rounded-xl px-6 text-[15px] font-semibold">
-            <Mail className="h-4 w-4" /> {ILETISIM.basin}
-          </a>
-        }
-      />
+      <SirketHero ust="Basın odası" baslik="Vayra hakkında yazıyorsan, ihtiyacın olan her şey burada."
+        alt="Güncel duyurular, indirilebilir medya kiti ve şirket bilgileri. Röportaj ve görüş talepleri için basın ekibimiz bir iş günü içinde dönüyor.">
+        <a href={`mailto:${ILETISIM.basin}`} className={butonSinif("beyaz")}><Mail className="h-4 w-4" />{ILETISIM.basin}</a>
+        <a href="#medya-kiti" className={butonSinif("ikincil")}>Medya kiti</a>
+      </SirketHero>
 
-      {/* Sayılar */}
-      <section className="mx-auto max-w-5xl px-4 py-6">
-        <IstatistikBandi ogeler={ISTATISTIKLER} />
-      </section>
-
-      {/* Künye */}
-      <section className="mx-auto max-w-5xl px-4 py-10">
-        <BolumBaslik baslik="Şirket künyesi" ozet="Hızlı gerçekler." />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {KUNYE.map((k) => (
-            <Kart key={k.etiket} className="text-center">
-              <div className="text-xs uppercase tracking-wider text-[color:var(--color-metin-3)]">{k.etiket}</div>
-              <div className="mt-1.5 font-semibold text-[color:var(--color-metin)]">{k.deger}</div>
-            </Kart>
+      <Bolum ust="Duyurular" baslik="Basın bültenleri">
+        <Link href={`/basin/${son.slug}`} className="group block rounded-[24px] border border-white/[0.07] bg-yuzey p-7 transition-colors hover:border-white/[0.16] sm:p-9">
+          <p className="text-[12.5px] font-medium text-vurgu">{son.kategori} · {son.tarih}</p>
+          <h3 className="mt-3 max-w-[820px] text-[26px] font-semibold leading-[1.15] tracking-[-0.025em] text-white sm:text-[34px]">{son.baslik}</h3>
+          <p className="mt-3 max-w-[680px] text-[15.5px] leading-relaxed text-metin-2">{son.ozet}</p>
+          <span className="mt-6 inline-flex items-center gap-1 text-[14px] font-medium text-white">Bülteni oku <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+        </Link>
+        <div className="mt-3 divide-y divide-white/[0.07] border-y border-white/[0.07]">
+          {digerleri.map((b) => (
+            <Link key={b.slug} href={`/basin/${b.slug}`} className="group grid gap-2 py-5 sm:grid-cols-[150px_100px_minmax(0,1fr)_20px] sm:items-center sm:gap-6">
+              <span className="text-[13px] tabular-nums text-metin-3">{b.tarih}</span>
+              <span className="text-[12.5px] font-medium text-vurgu">{b.kategori}</span>
+              <span className="text-[16px] font-medium text-white group-hover:underline group-hover:underline-offset-4">{b.baslik}</span>
+              <ArrowRight className="hidden h-4 w-4 text-metin-3 group-hover:text-white sm:block" />
+            </Link>
           ))}
         </div>
-      </section>
+      </Bolum>
 
-      {/* Marka varlıkları */}
-      <section className="mx-auto max-w-5xl px-4 py-10">
-        <BolumBaslik baslik="Marka varlıkları" ozet="Logo, marka rehberi ve ürün görselleri." />
-        <div className="grid gap-4 md:grid-cols-3">
+      <Bolum id="medya-kiti" ust="Medya kiti" baslik="Logolar ve ürün görselleri" alt="Haberlerinde serbestçe kullanabilirsin. Logoyu yeniden renklendirme, gerdirme ya da efekt ekleme.">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {MARKA_VARLIKLAR.map((v) => (
-            // Basın kiti dosyaları henüz yayında değil → talep e-postasına yönlendir
-            // (ölü indirme linki / 404 yerine dürüst çalışan akış).
-            <a key={v.ad} href={`mailto:${ILETISIM.basin}?subject=${encodeURIComponent(`Basın kiti talebi — ${v.ad}`)}`} className="group">
-              <Kart hover className="flex h-full flex-col">
-                <div className="flex items-start justify-between">
-                  <span className="kr-ikon flex h-11 w-11 items-center justify-center rounded-xl"><Download className="h-5 w-5" /></span>
-                  <span className="text-xs text-[color:var(--color-metin-3)]">{v.format} · {v.boyut}</span>
-                </div>
-                <h3 className="mt-4 font-semibold text-[color:var(--color-metin)]">{v.ad}</h3>
-                <p className="mt-1.5 flex-1 text-sm text-[color:var(--color-metin-2)]">{v.aciklama}</p>
-                <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-[color:var(--kr-lime-metin)]">Talep et <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
-              </Kart>
+            <div key={v.ad} className="overflow-hidden rounded-[20px] border border-white/[0.07] bg-yuzey">
+              <div className="flex aspect-[4/3] items-center justify-center bg-[#0d0d10] p-8">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={v.onizleme} alt={v.ad} className="max-h-full max-w-full object-contain" />
+              </div>
+              <div className="flex items-center gap-3 p-4">
+                <span className="min-w-0 flex-1"><span className="block text-[14px] font-semibold text-white">{v.ad}</span><span className="block text-[12px] text-metin-3">{v.format}</span></span>
+                <a href={v.yol} download aria-label={`${v.ad} indir`} className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/[0.1] text-metin-2 hover:text-white"><Download className="h-4 w-4" /></a>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          {URUN_GORSELLERI.map((u) => (
+            <a key={u.yol} href={u.yol} download className="group overflow-hidden rounded-[20px] border border-white/[0.07] bg-yuzey">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={u.yol} alt={u.ad} loading="lazy" className="aspect-[16/10] w-full object-cover object-top transition-transform duration-700 group-hover:scale-[1.02]" />
+              <span className="flex items-center justify-between p-4 text-[14px] font-semibold text-white">{u.ad}<Download className="h-4 w-4 text-metin-3 group-hover:text-white" /></span>
             </a>
           ))}
         </div>
-      </section>
+      </Bolum>
 
-      {/* Marka renkleri */}
-      <section className="mx-auto max-w-5xl px-4 py-10">
-        <BolumBaslik baslik="Marka renkleri" />
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <Bolum ust="Renkler" baslik="Marka renkleri">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {MARKA_RENKLER.map((r) => (
-            <Kart key={r.hex}>
-              <div className="h-16 w-full rounded-lg border border-[color:var(--color-kenar)]" style={{ background: r.hex }} />
-              <div className="mt-3 font-semibold text-[color:var(--color-metin)]">{r.ad}</div>
-              <div className="text-xs text-[color:var(--color-metin-3)]">{r.hex} · {r.not}</div>
-            </Kart>
-          ))}
-        </div>
-      </section>
-
-      {/* Basın bültenleri */}
-      <section className="mx-auto max-w-4xl px-4 py-10">
-        <BolumBaslik baslik="Basın bültenleri" />
-        <div className="space-y-3">
-          {BASIN_BULTENLERI.map((b) => (
-            <Kart key={b.slug} hover className="flex items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <span className="kr-ikon flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"><Newspaper className="h-5 w-5" /></span>
-                <div>
-                  <div className="text-xs text-[color:var(--color-metin-3)]">{b.tarih}</div>
-                  <h3 className="font-semibold text-[color:var(--color-metin)]">{b.baslik}</h3>
-                  <p className="mt-0.5 text-sm text-[color:var(--color-metin-2)]">{b.ozet}</p>
-                </div>
+            <div key={r.hex} className="overflow-hidden rounded-[18px] border border-white/[0.07] bg-yuzey">
+              <div className="h-24" style={{ background: r.hex }} />
+              <div className="flex items-center justify-between gap-2 p-3.5">
+                <span><span className="block text-[13.5px] font-semibold text-white">{r.ad}</span><span className="block font-mono text-[12px] text-metin-3">{r.hex}</span></span>
+                <KopyalaButonu metin={r.hex} etiket="" className="px-2" />
               </div>
-            </Kart>
+            </div>
           ))}
         </div>
-      </section>
+      </Bolum>
 
-      {/* Medya iletişim */}
-      <section className="mx-auto max-w-4xl px-4 py-10 pb-16">
-        <div className="kr-kart p-8 text-center md:p-10">
-          <span className="kr-ikon mx-auto flex h-12 w-12 items-center justify-center rounded-2xl"><Mail className="h-6 w-6" /></span>
-          <h2 className="mt-4 text-xl font-bold text-[color:var(--color-metin)]">Medya sorularınız için</h2>
-          <p className="mx-auto mt-2 max-w-md text-[color:var(--color-metin-2)]">
-            Röportaj, demeç veya ek görsel talebi için basın ekibimize ulaşın. Genellikle 1 iş günü içinde dönüş yapıyoruz.
-          </p>
-          <a href={`mailto:${ILETISIM.basin}`} className="kr-cta mt-6 inline-flex h-12 items-center gap-2 rounded-xl px-6 text-[15px] font-semibold">
-            <Mail className="h-4 w-4" /> {ILETISIM.basin}
-          </a>
+      <Bolum ust="Şirket" baslik="Künye ve şirket tanımı">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+          <div className="rounded-[22px] border border-white/[0.07] bg-yuzey p-7">
+            <div className="flex items-center justify-between">
+              <p className="text-[14px] font-semibold text-white">Vayra hakkında</p>
+              <KopyalaButonu metin={BOILERPLATE} />
+            </div>
+            <p className="mt-4 text-[15.5px] leading-[1.75] text-metin-2">{BOILERPLATE}</p>
+          </div>
+          <dl className="divide-y divide-white/[0.06] rounded-[22px] border border-white/[0.07] bg-yuzey px-6">
+            {KUNYE.map((k) => (
+              <div key={k.etiket} className="grid grid-cols-[110px_minmax(0,1fr)] gap-3 py-3.5 text-[14px]"><dt className="text-metin-3">{k.etiket}</dt><dd className="text-white">{k.deger}</dd></div>
+            ))}
+          </dl>
         </div>
-      </section>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {LIDERLIK.slice(0, 4).map((l) => (
+            <div key={l.ad} className="rounded-[20px] border border-white/[0.07] p-5">
+              <p className="text-[15px] font-semibold text-white">{l.ad}</p>
+              <p className="text-[13px] text-metin-2">{l.unvan}</p>
+              <p className="mt-3 text-[12.5px] text-metin-3">Röportaj için uygun · {l.konum}</p>
+            </div>
+          ))}
+        </div>
+      </Bolum>
+
+      <Kap className="pb-20">
+        <div className={cn("flex flex-col gap-5 rounded-[26px] border border-white/[0.07] bg-[color-mix(in_oklab,var(--vurgu-renk)_9%,#111113)] p-8 sm:flex-row sm:items-center sm:justify-between sm:p-10")}>
+          <div>
+            <h2 className="text-[26px] font-semibold tracking-[-0.025em] text-white">Basın iletişimi</h2>
+            <p className="mt-2 max-w-[520px] text-[15px] text-metin-2">Röportaj, yorum ve görsel talepleri için yaz; bir iş günü içinde dönüyoruz. Destek talepleri için lütfen iletişim sayfasını kullan.</p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <a href={`mailto:${ILETISIM.basin}`} className={butonSinif("beyaz")}><Mail className="h-4 w-4" />{ILETISIM.basin}</a>
+            <Link href="/iletisim" className={butonSinif("ikincil")}>İletişim</Link>
+          </div>
+        </div>
+      </Kap>
     </>
   );
 }

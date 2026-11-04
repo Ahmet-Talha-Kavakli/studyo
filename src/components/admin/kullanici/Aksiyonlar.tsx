@@ -40,7 +40,7 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
 
   // ── Kredi ekle/çıkar ──
   const krediUygula = async (isaret: 1 | -1) => {
-    if (!krediSebep.trim()) { toast.error("Sebep zorunlu."); return; }
+    if (!krediSebep.trim()) { toast.error("Sebep yazılmadı", { description: "Kredi düzeltmesi kayda geçtiği için bir sebep yaz." }); return; }
     const miktar = krediMiktar * isaret;
     const aksAd = isaret > 0 ? "kredi_ekle" : "kredi_cikar";
     const risk = aksiyonRisk(aksAd);
@@ -53,13 +53,13 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
     aks.krediDuzelt(kullanici.id, miktar);
     aks.ledgerEkle({ kullaniciId: kullanici.id, miktar, sebep: krediSebep, yapan: admin });
     denetle(`Kredi ${isaret > 0 ? "eklendi" : "çıkarıldı"}: ${miktar}`, "kritik", krediSebep);
-    toast.success(`${miktar > 0 ? "+" : ""}${miktar} kredi uygulandı`);
+    toast.success(miktar > 0 ? `${miktar} kredi eklendi` : `${-miktar} kredi çıkarıldı`, { description: `${kullanici.ad} hesabına işlendi.` });
     setModal(null); setKrediSebep("");
   };
 
   // ── Plan değiştir ──
   const planUygula = async () => {
-    if (yeniPlan === kullanici.plan) { toast.error("Aynı plan seçili."); return; }
+    if (yeniPlan === kullanici.plan) { toast.error("Plan zaten bu", { description: "Kullanıcı bu planda. Değiştirmek için başka bir plan seç." }); return; }
     const risk = aksiyonRisk("plan_degistir");
     const ok = await onayIste({
       baslik: "Plan değiştir",
@@ -69,7 +69,7 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
     if (!ok) return;
     aks.planDegistir(kullanici.id, yeniPlan);
     denetle(`Plan değiştirildi → ${PLAN_ADI[yeniPlan as keyof typeof PLAN_ADI]}`, "uyari");
-    toast.success("Plan değiştirildi");
+    toast.success("Plan değiştirildi", { description: `${kullanici.ad} artık ${PLAN_ADI[yeniPlan as keyof typeof PLAN_ADI]} planında.` });
     setModal(null);
   };
 
@@ -96,7 +96,7 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
     if (!ok) return;
     aks.durumDegistir(kullanici.id, "banli");
     denetle("Kullanıcı banlandı", "kritik");
-    toast.success("Kullanıcı banlandı");
+    toast.success("Kullanıcı banlandı", { description: `${kullanici.ad} artık üretim yapamaz.` });
   };
 
   // ── Anonimleştir (KVKK, ekstra-riskli) ──
@@ -123,7 +123,7 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
     });
     if (!ok) return;
     denetle("Impersonate oturumu açıldı (15dk)", "kritik");
-    toast.success("15dk geçici oturum açıldı");
+    toast.success("Geçici oturum açıldı", { description: "Oturum 15 dakika sonra kendiliğinden kapanır." });
   };
 
   // ── Basit aksiyonlar ──
@@ -131,13 +131,13 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
     const ok = await onayIste({ baslik: "Şifre sıfırlama maili gönder", aciklama: `${kullanici.email} adresine şifre sıfırlama bağlantısı gönderilir.`, risk: 0, eylemEtiket: "Gönder" });
     if (!ok) return;
     denetle("Şifre sıfırlama maili gönderildi", "bilgi");
-    toast.success("Mail gönderildi");
+    toast.success("Şifre sıfırlama e-postası gönderildi", { description: `${kullanici.email} adresine gitti.` });
   };
   const oturumlariKapat = async () => {
     const ok = await onayIste({ baslik: "Tüm oturumları kapat", aciklama: `${kullanici.ad} tüm cihazlardaki oturumları sonlandırılır.`, risk: 1, eylemEtiket: "Kapat" });
     if (!ok) return;
     denetle("Tüm oturumlar kapatıldı", "uyari");
-    toast.success("Oturumlar kapatıldı");
+    toast.success("Oturumlar kapatıldı", { description: `${kullanici.ad} tüm cihazlarda çıkış yaptı.` });
   };
   const etiketUygula = () => {
     if (!etiket.trim()) return;
@@ -175,7 +175,7 @@ export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }
       <AnimatePresence>
         {modal && (
           <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModal(null)} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModal(null)} className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
             <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
               className="ad-panel relative w-full max-w-sm p-5">
               <div className="mb-4 flex items-center justify-between">

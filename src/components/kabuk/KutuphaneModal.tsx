@@ -54,11 +54,11 @@ export function KutuphaneModal({
       {acik && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
-            onClick={onKapat} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            onClick={onKapat} className="perde absolute inset-0 bg-black/60 backdrop-blur-sm" />
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97, y: 14 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="relative flex max-h-[85vh] w-full max-w-[900px] flex-col overflow-hidden rounded-[16px] border border-kenar bg-[#131313] shadow-2xl shadow-black/60"
+            className="relative flex max-h-[85vh] w-full max-w-[900px] flex-col overflow-hidden rounded-[16px] border border-kenar bg-[#131313]"
           >
             {/* Başlık */}
             <div className="flex items-center justify-between px-6 pt-4">
@@ -117,7 +117,7 @@ export function KutuphaneModal({
                       {sec && <span className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-aksan text-zemin"><Check className="h-3.5 w-3.5" /></span>}
                       {o.rozet && <span className="absolute left-1.5 top-1.5 rounded bg-aksan px-1.5 py-0.5 text-[9px] font-bold text-zemin">{o.rozet}</span>}
                       <div className="absolute inset-x-0 bottom-0 p-2">
-                        <div className="text-[13px] font-semibold text-white drop-shadow">{o.ad}</div>
+                        <div className="text-[13px] font-semibold text-white">{o.ad}</div>
                         {o.ozet && <div className="mt-0.5 line-clamp-2 text-[10px] text-white/70">{o.ozet}</div>}
                       </div>
                     </div>

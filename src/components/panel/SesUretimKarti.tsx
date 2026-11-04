@@ -57,7 +57,7 @@ export function SesUretimKarti({ u, onAc }: { u: Uretim; onAc: () => void }) {
     e.stopPropagation();
     if (gercekSes && sesRef.current) {
       if (oynat) sesRef.current.pause();
-      else sesRef.current.play().catch(() => toast.error("Ses oynatılamadı."));
+      else sesRef.current.play().catch(() => toast.error("Ses oynatılamadı", { description: "Tarayıcı oynatmayı engelledi ya da dosyaya ulaşılamadı. Yeniden dene." }));
     }
     setOynat((v) => !v);
   };
@@ -71,15 +71,15 @@ export function SesUretimKarti({ u, onAc }: { u: Uretim; onAc: () => void }) {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast.success("Ses indiriliyor 🎧");
+      toast.success("Ses indiriliyor", { description: a.download });
     } else {
-      toast.info("Demo çıktı — gerçek üretim için anahtar ekle.");
+      toast.info("Örnek ses indirilemez", { description: "Bu bir önizleme. Gerçek üretim için sağlayıcı anahtarı gerekli." });
     }
   };
 
   const promptuKopyala = (e: React.MouseEvent) => {
     e.stopPropagation();
-    void kopyala(u.prompt, "Prompt kopyalandı");
+    void kopyala(u.prompt, "İstem kopyalandı");
   };
 
   return (

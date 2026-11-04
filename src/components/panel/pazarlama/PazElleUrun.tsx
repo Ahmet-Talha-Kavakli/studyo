@@ -42,10 +42,10 @@ export function PazElleUrun({ kip, onKapat, onOlustu }: {
 
   const olustur = () => {
     const temizAd = ad.trim();
-    if (temizAd.length < 2) { toast.error("Bir ad gir"); return; }
+    if (temizAd.length < 2) { toast.error("Ad eksik", { description: "En az 2 karakterlik bir ad yaz." }); return; }
     if (aciklama.trim().length < 8) {
-      toast.error(`${uygulamaMi ? "Uygulamanı" : "Ürününü"} tarif et`, {
-        description: "Üretimlerde bu açıklama kullanılacak — birkaç cümle yaz.",
+      toast.error("Açıklama çok kısa", {
+        description: `Üretimlerde bu açıklama kullanılır. ${uygulamaMi ? "Uygulamanı" : "Ürününü"} birkaç cümleyle tarif et.`,
       });
       return;
     }
@@ -60,8 +60,8 @@ export function PazElleUrun({ kip, onKapat, onOlustu }: {
       // ve kart deterministik tohum desenine düşer.
       gorseller: gorseller,
     });
-    toast.success(`${temizAd} oluşturuldu ✦`, {
-      description: gorseller.length ? `${gorseller.length} görsel eklendi` : "Görsel sonradan eklenebilir",
+    toast.success(`${temizAd} oluşturuldu`, {
+      description: gorseller.length ? `${gorseller.length} görsel eklendi.` : "Görselleri sonradan ekleyebilirsin.",
     });
     onKapat();
   };
@@ -71,7 +71,7 @@ export function PazElleUrun({ kip, onKapat, onOlustu }: {
   return createPortal(
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onKapat} className="fixed inset-0 z-[260] bg-black/70 backdrop-blur-md" />
+        onClick={onKapat} className="perde fixed inset-0 z-[260] bg-black/70 backdrop-blur-md" />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 360, damping: 30 }}

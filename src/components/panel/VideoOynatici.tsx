@@ -65,7 +65,7 @@ export function VideoOynatici({
     if (!gercek) { setOynat((v) => !v); return; }
     const v = ref.current; if (!v) return;
     if (oynat) { v.pause(); setOynat(false); }
-    else { v.play().catch(() => toast.error("Video oynatılamadı.")); setOynat(true); }
+    else { v.play().catch(() => toast.error("Video oynatılamadı", { description: "Tarayıcı oynatmayı engelledi ya da dosyaya ulaşılamadı. Yeniden dene." })); setOynat(true); }
   };
 
   const sar = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -93,7 +93,7 @@ export function VideoOynatici({
     const el = kapRef.current;
     if (!el) return;
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else el.requestFullscreen?.().catch(() => toast.error("Tam ekran açılamadı."));
+    else el.requestFullscreen?.().catch(() => toast.error("Tam ekran açılamadı", { description: "Tarayıcın tam ekrana izin vermedi. Esc ile çıkıp yeniden dene." }));
   };
 
   // Zaman biçimi — Higgsfield birebir: Standart "1:23" veya Zaman-kodu "00:01:23:456"
@@ -134,7 +134,6 @@ export function VideoOynatici({
             >
               {oynat ? <Pause className="h-7 w-7 fill-white text-white" /> : <Play className="h-7 w-7 translate-x-0.5 fill-white text-white" />}
             </motion.span>
-            <span className="absolute right-3 top-3 rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-semibold text-white/60 backdrop-blur-sm">demo</span>
           </button>
         )}
 
@@ -153,11 +152,11 @@ export function VideoOynatici({
             onMouseLeave={() => setOnizle(null)}
             className="group/bar relative h-1.5 cursor-pointer rounded-full bg-white/25">
             <div className="absolute inset-y-0 left-0 rounded-full bg-aksan" style={{ width: `${ilerleme}%` }} />
-            <div className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 shadow transition-opacity group-hover/bar:opacity-100" style={{ left: `calc(${ilerleme}% - 6px)` }} />
+            <div className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-white opacity-0 transition-opacity group-hover/bar:opacity-100" style={{ left: `calc(${ilerleme}% - 6px)` }} />
             {/* mini önizleme kartı — imlecin olduğu an */}
             {onizle && (
               <div className="pointer-events-none absolute bottom-5 -translate-x-1/2" style={{ left: onizle.x }}>
-                <div className="overflow-hidden rounded-lg border-2 border-white/70 bg-black shadow-xl" style={{ width: 74, height: 116 }}>
+                <div className="overflow-hidden rounded-lg border-2 border-white/70 bg-black" style={{ width: 74, height: 116 }}>
                   {poster
                     ? <div className="h-full w-full" style={{ background: `center/cover url(${poster})` }} />
                     : <div className="h-full w-full bg-gradient-to-br from-ink-800 to-ink-950" />}
@@ -179,7 +178,7 @@ export function VideoOynatici({
                 {hiz}×
               </button>
               {hizAcik && (
-                <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-white/12 bg-ink-900 p-3 shadow-2xl">
+                <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl border border-white/12 bg-ink-900 p-3">
                   <p className="mb-2 text-[13px] font-semibold text-white">Oynatma hızı</p>
                   <div className="flex items-center justify-between text-[11px] text-white/50">
                     {HIZLAR.map((h) => (
@@ -208,7 +207,7 @@ export function VideoOynatici({
                 {zamanYaz(gosterAn)} / {zamanYaz(gosterSure)} <ChevronDown className="h-3 w-3" />
               </button>
               {zamanBicimAcik && (
-                <div className="absolute bottom-full left-0 mb-2 w-52 rounded-xl border border-white/12 bg-ink-900 p-1.5 shadow-2xl">
+                <div className="absolute bottom-full left-0 mb-2 w-52 rounded-xl border border-white/12 bg-ink-900 p-1.5">
                   <p className="px-2 py-1 text-[13px] font-semibold text-white">Zaman biçimi</p>
                   {([["standart", "Standart", "1:23"], ["kod", "Zaman-kodu", "00:01:23:456"]] as const).map(([id, ad, ornek]) => (
                     <button key={id} onClick={() => { setZamanBicim(id); setZamanBicimAcik(false); }}
@@ -233,12 +232,12 @@ export function VideoOynatici({
   );
 
   function indirVideo() {
-    if (!videoUrl) return toast.info("Demo çıktı — gerçek video için anahtar ekle.");
+    if (!videoUrl) return toast.info("Örnek video indirilemez", { description: "Bu bir önizleme. Gerçek video için sağlayıcı anahtarı gerekli." });
     const a = document.createElement("a");
     a.href = videoUrl;
     a.download = `${baslik.replace(/[^\wğüşiöçİĞÜŞÖÇ -]/gi, "").slice(0, 40) || "vayra-video"}.mp4`;
     a.target = "_blank";
     document.body.appendChild(a); a.click(); a.remove();
-    toast.success("Video indiriliyor 🎬");
+    toast.success("Video indiriliyor", { description: a.download });
   }
 }

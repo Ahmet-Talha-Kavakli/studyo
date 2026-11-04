@@ -2,7 +2,6 @@
 
 import { motion } from "framer-motion";
 import { X, Info, Lock, Gift, Sparkles } from "lucide-react";
-import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 
@@ -71,7 +70,7 @@ export function GorevlerModal({ onKapat }: { onKapat: () => void }) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onKapat}
-        className="absolute inset-0 bg-black/55 backdrop-blur-2xl backdrop-saturate-150"
+        className="perde absolute inset-0 bg-black/55 backdrop-blur-2xl backdrop-saturate-150"
       />
 
       <motion.div
@@ -79,7 +78,7 @@ export function GorevlerModal({ onKapat }: { onKapat: () => void }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 12 }}
         transition={{ type: "spring", stiffness: 320, damping: 30 }}
-        className="hf-kart relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden bg-[#0f1113] shadow-2xl"
+        className="hf-kart relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden bg-[#0f1113]"
       >
         {/* Kapat */}
         <button

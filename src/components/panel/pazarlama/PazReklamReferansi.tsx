@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -102,13 +103,13 @@ export function PazReklamReferansi({
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
             {/* Ekranın TAM ortası + blur'lu overlay (madde 52) */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={onKapat} className="absolute inset-0 bg-black/70 backdrop-blur-md" />
+              onClick={onKapat} className="perde absolute inset-0 bg-black/70 backdrop-blur-md" />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: 14 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative flex max-h-[85vh] w-full max-w-[980px] flex-col overflow-hidden rounded-[18px] bg-[#1A1A1A] shadow-2xl">
+              className="relative flex max-h-[85vh] w-full max-w-[980px] flex-col overflow-hidden rounded-[18px] bg-[#1A1A1A]">
 
               <div className="relative shrink-0 px-6 pt-5">
                 <p className="text-[15px] font-semibold text-white">Reklam Referansı</p>
@@ -393,7 +394,7 @@ function GomuluCip({ tohum, etiket }: { tohum: string; etiket: string }) {
         {uzerinde && (
           <motion.span initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
             className="absolute bottom-full left-1/2 z-20 mb-2 block h-[125px] w-[140px] -translate-x-1/2 overflow-hidden rounded-[12px]"
-            style={{ background: pazArka(tohum, "portre"), boxShadow: "0 16px 40px rgba(0,0,0,.7)" }} />
+            style={{ background: pazArka(tohum, "portre"), boxShadow: "none" }} />
         )}
       </AnimatePresence>
     </span>
@@ -464,13 +465,10 @@ function AltCip({
         <Ikon className="h-[18px] w-[18px]" /> {deger}
       </button>
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={onTikla} />
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+        <Yuzen acik={!!(acik)} onKapat={onTikla} alt={"tam"} sol={0} bosluk={12}><motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
               transition={{ duration: 0.14 }}
-              className="absolute bottom-full left-0 z-50 mb-3 w-[262px] rounded-[14px] bg-[#1E1E1E] p-2"
-              style={{ boxShadow: "0 20px 50px rgba(0,0,0,.7)" }}>
+              className="w-[262px] rounded-[14px] bg-[#1E1E1E] p-2"
+              style={{ boxShadow: "none" }}>
               {secenekler.map((s) => (
                 <button key={s} onClick={() => onSec(s)}
                   className={cn(
@@ -481,9 +479,7 @@ function AltCip({
                   {deger === s && <Check className="h-4 w-4" style={{ color: "var(--sn-lime,#c9f531)" }} />}
                 </button>
               ))}
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );
@@ -503,7 +499,7 @@ function ReferansSecici({
       {acik && (
         <div className="fixed inset-0 z-[220] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onKapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+            onClick={onKapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
           <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -539,7 +535,7 @@ function ReferansSecici({
               <div className="mt-4 min-h-0 flex-1 overflow-y-auto rounded-[16px] bg-[#1E1E1E] p-4 [scrollbar-width:thin]">
                 <div className="flex flex-wrap gap-3">
                   {ray === "yukleme" && (
-                    <button onClick={() => toast("Dosya seç")}
+                    <button onClick={() => toast.info("Dosya yükleme yakında", { description: "Şimdilik Video Üretimleri sekmesinden bir video seç." })}
                       className="flex h-[135px] w-[275px] flex-col items-center justify-center gap-2.5 rounded-[12px] bg-[#2C2C2C] transition-colors hover:bg-[#343434]">
                       <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#3A3A3A]">
                         <Plus className="h-5 w-5 text-white" />

@@ -6,5 +6,5 @@
 import { SesStudyo } from "@/components/studyo/SesStudyo";
 
 export default function SesStudyoSayfa() {
-  return <SesStudyo />;
+  return <div className="ses-kapsam contents"><SesStudyo /></div>;
 }

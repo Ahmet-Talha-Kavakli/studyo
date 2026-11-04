@@ -1,1379 +1,2207 @@
 "use client";
 
-import type { StudyoGomuluProps } from "@/components/studyo/tipler";
-
-import { useState, useRef, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence, MotionConfig } from "framer-motion";
 import {
-  Plus, PanelLeftClose, PanelLeft, LayoutGrid, List, Users, X, Play, Pause,
-  Heart, Copy, Download, Check, ChevronDown, RefreshCw, Share2, Trash2,
-  Info as InfoIcon, MessageCircle, Sparkles, AudioLines, Upload, Mic, Repeat, Languages,
-  RotateCcw, RotateCw, Rewind, FastForward, Volume2, VolumeX, Gauge, Pencil,
-  Link2, Briefcase, AtSign as XIkon,
+  AudioLines, Check, ChevronDown, ChevronLeft, Dices, Film, History, Languages, Lightbulb, Loader2, Mic,
+  Play, Plus, Repeat, SlidersHorizontal, Sparkles, Upload, X, Pause, MessagesSquare, Waves, Tags,
+  Trash2, Square, Lock, Megaphone, Newspaper, Moon, Globe2, RotateCcw, ArrowUp, ArrowDown, Infinity as InfinityIcon, Clock, Target, Search,
+  CloudRain, Coffee, Zap, DoorOpen, Rocket, Flame, Car, Trees, BellRing, PartyPopper, Copy, Users, Wind, Heart, Fingerprint, Smile, Laugh, Frown, Angry, Activity, HelpCircle, Annoyed, Leaf, Ear, Feather, Drama, Snail, CircleAlert, MessageCircle, Droplets, DoorClosed, Footprints, Bomb, Timer, Eraser, Captions, Link2, Scissors, ArrowRight, Keyboard, Undo2, Code2, ListChecks, ClipboardPaste, BookOpen, Library, Wand2, Download, Settings2, type LucideIcon,
 } from "lucide-react";
+import { KrediYildiz } from "@/components/ui/KrediHap";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { Bayrak } from "@/components/ui/Bayrak";
+import { Rozet, MarkaKare, AltSayfa } from "./hf";
+import { KCip } from "./Cip";
+import { Segment, Kaydirici, AnahtarSatir } from "@/components/montaj/ui";
 import { toast } from "@/lib/toast";
-import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
-import { useProjeler, type Uretim } from "@/store/useProjeler";
-import { useProje } from "@/store/useSinema";
-import { useSecim } from "@/store/useSecim";
-import { useMuzik } from "@/store/useMuzik";
-import { useYorumlar, goreliZaman } from "@/store/useYorumlar";
-import { SecimToolbar } from "@/components/panel/SecimToolbar";
-import { useRouter } from "next/navigation";
-import { useAktifProje } from "@/lib/useAktifProje";
-import { uretimBaslat as uretimBaslatHam, uretimHataToast } from "@/lib/uretimMotoru";
+import { mesaj } from "@/lib/mesaj";
+import { begeniBildir, neden, uretimGeriYukle } from "@/components/studyo/bildirim";
+import { yerelDepo } from "@/lib/yerelDepo";
 import { cn } from "@/lib/utils";
 import { uretimIndir } from "@/lib/gercekEylem";
-import { kopyala, baglantiyiKopyala } from "@/lib/gercekEylem";
-import { SESLER, DILLER, SES_MODLARI, SES_URETIM_MODELLERI, sesGorsel, type SesMod, type SesModel } from "@/lib/sesVeri";
-import { useSesOynat, sureBicim, sureCoz } from "@/components/panel/SesOynatMotoru";
-import { Tooltip } from "@/components/ui/Tooltip";
+import { useIstemParametresi } from "@/lib/useIstemParametresi";
+import { useAktifProje } from "@/lib/useAktifProje";
+import { useScrollKilit } from "@/hooks/useScrollKilit";
+import { useOdakTuzagi } from "@/hooks/useOdakTuzagi";
+import { useMasaustu } from "@/hooks/useMasaustu";
+import { uretimBaslat as uretimBaslatHam, uretimHataToast, uretimIptal } from "@/lib/uretimMotoru";
+import { icerikDenetle, kategoriEtiket } from "@/lib/moderasyon";
+import { useProjeler, type Uretim } from "@/store/useProjeler";
+import { useSecim } from "@/store/useSecim";
+import { useYorumlar } from "@/store/useYorumlar";
+import { useOzelSesler } from "@/store/useOzelSesler";
+import { useSesSaglayici } from "@/lib/useSesSaglayici";
+import { sesCalici, useCalici, sureYaz } from "@/lib/sesCalici";
 import {
-  MobilComposerKabuk, MobilIstemKutusu, MobilCip, MobilAltCip, MobilUretButonu,
-  MobilSecici, MobilAyarCekmecesi, type SeciciOge,
-} from "@/components/panel/MobilComposer";
+  DILLER, SESLER, SES_ETIKET_GRUPLARI, SES_MODLARI, SES_URETIM_MODELLERI, KAYNAK_MB, CIKTI_BICIMLERI,
+  DIYALOG_KARAKTER, DIYALOG_SES, DIYALOG_ORNEKLERI, EFEKT_ORNEKLERI, ETIKET_GRUP_RENK, DILLER_SIRALI, etiketRengi, aksanBayrak, type SesMod,
+} from "@/lib/sesVeri";
+import { Yuzen } from "@/components/ui/Yuzen";
+import { YorumSekmesi } from "@/components/studyo/YorumSekmesi";
+import type { StudyoGomuluProps } from "@/components/studyo/tipler";
+import { SesKutuphanesi, hazirdanSes, ozeldenSes, type SecilenSes } from "./ses/SesKutuphanesi";
+import { KlonModal } from "./ses/KlonModal";
+import { TasarimModal } from "./ses/TasarimModal";
+import { SesGoruntuleyici, uretimKaynagi, bicimUzantisi } from "./ses/SesGoruntuleyici";
+import { SonSerit } from "./ses/SonSerit";
+import { GecmisSatiri } from "./ses/GecmisSatiri";
+import { OynaticiCubugu } from "./ses/OynaticiCubugu";
+import { Dalga, SesAvatar } from "./ses/ortak";
+import { Dalga as SDalga } from "@/components/speak/SesSecici";
 
 /**
- * Ses Stüdyosu — Higgsfield Audio'nun birebir Türkçe klonu (KOMPLE SIFIRDAN).
- * 3-bölge: sol Projeler + orta galeri + alt yüzen composer.
- * Composer: döner kadran mod seçici (Seslendirme/Ses Değiştir/Çeviri) + moda göre giriş
- * + ayar çipi (dot-matrix, Ses Ön-ayarı/Dil) + Üret butonu (gerçek uretimBaslat).
- * Ses seçici modal + Dil modal + çıktı detay drawer'ı. İmza: .hf-led dot-matrix font.
+ * Ses Stüdyosu — Seslendirme · Diyalog · Efekt · Ses Değiştir · Çeviri · Temizle · Transkript.
+ * Ortada belge gibi metin sayfası, altta yüzen komut kutusu (ses, model, okuma çipleri + Üret),
+ * sağda açılır Sonuçlar çekmecesi.
+ * Ses sağlayıcısı bağlıyken (ElevenLabs) çıktılar gerçek dosyadır. Bağlı değilken
+ * seslendirme tarayıcının konuşma motoruyla demo olarak çalınır; ses değiştirme,
+ * çeviri ve klonlama taklit edilemeyeceği için kredi düşmeden engellenir.
  */
 
-// Higgsfield birebir ses dalgası: SIK + İNCE barlar, ortadan simetrik (gerçek waveform hissi).
-// Konuşma zarfı taklidi: birkaç "hece kümesi" + aralarda sessizlik.
-function dalga(tohum: string, n = 40): number[] {
-  let h = 0; for (let i = 0; i < tohum.length; i++) h = (h * 31 + tohum.charCodeAt(i)) >>> 0;
-  const rnd = () => { h = (h * 1103515245 + 12345) & 0x7fffffff; return h / 0x7fffffff; };
-  return Array.from({ length: n }, (_, i) => {
-    // konuşma zarfı: yavaş dalgalanan genlik + hızlı mikro değişim
-    const zarf = 0.45 + 0.55 * Math.abs(Math.sin(i * 0.13 + (h % 7)) * Math.cos(i * 0.041));
-    const sessizlik = Math.sin(i * 0.055) > 0.86 ? 0.12 : 1; // arada kısa duraklamalar
-    return Math.max(6, Math.min(100, zarf * sessizlik * (55 + rnd() * 60)));
-  });
+/** Seslendirme ve diyalog bedeli metin uzunluğuyla: 1.000 karakter başına 1 kredi (en az 1). */
+const ttsKredi = (karakter: number) => Math.max(1, Math.ceil(karakter / 1000));
+/** Ses efekti: otomatik süre 2 kredi; süre seçilirse 10 sn başına 1 kredi (en az 1). */
+const efektKredi = (sn: number | null) => (sn === null ? 2 : Math.max(1, Math.ceil(sn / 10)));
+/** Ses değiştirme / temizleme / transkript dakika başına 1, çeviri dakika başına 12 kredi (başlayan her dakika). */
+const dakikaKredi = (sn: number, birim: number) => birim * Math.max(1, Math.ceil(sn / 60));
+/** Model etiketleri (kitaplıkta ve ayrıntıda görünür). */
+const MOD_MODELI: Record<"efekt" | "sesdegistir" | "ceviri" | "temizle" | "transkript", string> = { efekt: "Eleven Sound Effects", sesdegistir: "Eleven Speech to Speech", ceviri: "Eleven Dubbing", temizle: "Eleven Voice Isolator", transkript: "Eleven Scribe" };
+const MOD_IKON: Record<SesMod, typeof Mic> = { seslendirme: Mic, diyalog: MessagesSquare, efekt: Waves, sesdegistir: Repeat, ceviri: Languages, temizle: Eraser, transkript: Captions };
+/** Gerçek sağlayıcı olmadan hiç çalışmayan modlar (tarayıcı önizlemesi yok). */
+const KILITLI_MODLAR: SesMod[] = ["efekt", "sesdegistir", "ceviri", "temizle", "transkript"];
+/** Kaynak dosyayla çalışan modlar. */
+const KAYNAKLI_MODLAR: SesMod[] = ["sesdegistir", "ceviri", "temizle", "transkript"];
+/** Konuşma süresi tahmini (yaklaşık 15 karakter/sn; etiketler sayılmaz). */
+const sureTahmin = (t: string) => Math.max(1, Math.round(t.replace(/\[[^\]\n]{1,40}\]|<break[^>]*\/?>/g, "").length / 15));
+/** Metni sınırı aşmayacak parçalara böler: önce paragraf, gerekirse cümle sınırından. */
+function parcalara(metin: string, sinir: number): string[] {
+  const parcalar: string[] = [];
+  let gecerli = "";
+  const ekle = (p: string) => { if (p.trim()) parcalar.push(p.trim()); };
+  for (const parag of metin.split(/\n{2,}/)) {
+    const aday = gecerli ? `${gecerli}\n\n${parag}` : parag;
+    if (aday.length <= sinir) { gecerli = aday; continue; }
+    ekle(gecerli); gecerli = "";
+    if (parag.length <= sinir) { gecerli = parag; continue; }
+    let cumleGrubu = "";
+    for (const cumle of parag.split(/(?<=[.!?…])\s+/)) {
+      if ((cumleGrubu + " " + cumle).trim().length > sinir) { ekle(cumleGrubu); cumleGrubu = cumle.slice(0, sinir); }
+      else cumleGrubu = (cumleGrubu + " " + cumle).trim();
+    }
+    gecerli = cumleGrubu;
+  }
+  ekle(gecerli);
+  return parcalar;
 }
-function Waveform({ tohum, n = 40, className, aktif }: { tohum: string; n?: number; className?: string; aktif?: boolean }) {
-  const bars = useMemo(() => dalga(tohum, n), [tohum, n]);
-  return (
-    <div className={cn("flex items-center gap-[1.5px]", className)}>
-      {/* Barlar OPAK gri — yarı-saydam beyaz (bg-white/35) yüzlerce bar halinde üst üste
-          binince kutunun içini "çamurlu" gri sise çeviriyordu. */}
-      {bars.map((b, i) => (
-        <span key={i} className="w-[2px] shrink-0 rounded-full" style={{ height: `${b}%`, background: aktif ? "var(--sn-lime)" : "#3d3d3d" }} />
-      ))}
-    </div>
-  );
+/** i. paragrafın (boş satırla ayrılan blok) metin içindeki başlangıç konumu. */
+const paragrafOfset = (metin: string, i: number) => metin.split("\n\n").slice(0, i).reduce((n, p) => n + p.length + 2, 0);
+const DIYALOG_MODELLERI = SES_URETIM_MODELLERI.filter((m) => m.diyalog);
+type Satir = { id: string; ses: SecilenSes; metin: string };
+
+/** Ayar ön kümeleri: yalnız sağlayıcıya giden üç değeri birlikte ayarlar. */
+const HAZIR_STILLER: { ad: string; ikon: LucideIcon; hiz: number; kararlilik: number; stil: number; not: string }[] = [
+  { ad: "Anlatıcı", ikon: BookOpen, hiz: 1, kararlilik: 0.6, stil: 0, not: "Sakin, net belgesel anlatımı" },
+  { ad: "Reklam", ikon: Megaphone, hiz: 1.05, kararlilik: 0.35, stil: 0.4, not: "Enerjik, vurgulu" },
+  { ad: "Podcast", ikon: Mic, hiz: 1, kararlilik: 0.45, stil: 0.15, not: "Samimi sohbet tonu" },
+  { ad: "Sesli kitap", ikon: Library, hiz: 0.95, kararlilik: 0.7, stil: 0.05, not: "Uzun dinlemeye uygun, dingin" },
+  { ad: "Haber", ikon: Newspaper, hiz: 1.05, kararlilik: 0.8, stil: 0, not: "Tarafsız, tutarlı" },
+  { ad: "Masal", ikon: Moon, hiz: 0.9, kararlilik: 0.4, stil: 0.3, not: "Sıcak, canlandırmalı" },
+];
+const yeniId = () => Math.random().toString(36).slice(2, 9);
+
+const dilAdi = (kod: string) => {
+  const d = DILLER.find((x) => x.kod === kod);
+  return d ? d.ad.toLocaleLowerCase("tr").replace(/^\p{L}/u, (c) => c.toLocaleUpperCase("tr")) : kod;
+};
+
+/** Boş sayfada tek tıkla doldurulan örnekler (metin + uygun ses). */
+const ORNEKLER: { baslik: string; etiket: string; ses: string; metin: string }[] = [
+  { baslik: "Reklam spotu", etiket: "Reklam", ses: "Jessica", metin: "Yeni sezon burada. Hafif, nefes alan kumaşlar ve sana özel kesimler. Bu hafta sonuna kadar tüm koleksiyonda yüzde otuz indirim seni bekliyor." },
+  { baslik: "Belgesel anlatımı", ses: "George", etiket: "Anlatım", metin: "Kapadokya'nın vadilerinde güneş doğarken, binlerce yıllık peribacaları sabahın ilk ışığıyla altın rengine bürünür. Bu topraklar, rüzgârın ve zamanın birlikte yonttuğu bir hikâye anlatır." },
+  { baslik: "Podcast girişi", etiket: "Sohbet", ses: "Eric", metin: "Herkese merhaba, yeni bölüme hoş geldiniz. Bugün üretkenliği gerçekten artıran küçük alışkanlıkları konuşacağız ve sonunda size üç basit öneri bırakacağız." },
+  { baslik: "Haber bülteni", etiket: "Haber", ses: "Daniel", metin: "İyi akşamlar. Günün öne çıkan gelişmeleriyle karşınızdayız. Meteoroloji, hafta sonu için yurdun büyük bölümünde sağanak yağış uyarısında bulundu." },
+  { baslik: "Uyku masalı", etiket: "Anlatım", ses: "Lily", metin: "Bir zamanlar, ormanın en yaşlı ağacının kovuğunda küçük bir baykuş yaşardı. Her gece yıldızları sayar, hiçbirini atlamadan hepsine iyi geceler derdi." },
+  { baslik: "Sosyal medya", etiket: "Sosyal", ses: "Laura", metin: "Bunu kimse sana söylemedi ama sabah rutinini değiştirmek için tek bir şey yeter. Videonun sonuna kadar izle, ikinci madde hayatını kolaylaştıracak." },
+];
+
+/** Başlangıç çipleri ve efekt kutucukları için çizgi simgeler (ses küreleri yalnız sesler içindir). */
+const EFEKT_IKON: Record<string, typeof Mic> = { "Yağmur ve gök gürültüsü": CloudRain, "Şömine çıtırtısı": Flame, "Sinematik vuruş": Zap, "Fırtınalı deniz": Waves, "Uzay gemisi": Rocket, "Orman sabahı": Trees, "Arayüz sesi": BellRing, "Şehir trafiği": Car };
+
+/** Başlangıç ve efekt kartlarının fotoğrafları (projedeki gerçek görseller). */
+const ORNEK_GORSEL: Record<string, string> = {
+  "Reklam spotu": "/gercek/kesfet/editorial-moda1.webp", "Belgesel anlatımı": "/gercek/galeri/manzara1.webp", "Podcast girişi": "/gercek/kesfet/blog-ses.webp",
+  "Haber bülteni": "/gercek/kesfet/deniz-feneri-firtinasiveo-3-1.webp", "Uyku masalı": "/gercek/kesfet/mistik-orman-perisiframe-by-frame.webp", "Sosyal medya": "/gercek/sc/sc-ugc.webp",
+};
+const EFEKT_GORSEL: Record<string, string> = {
+  "Yağmur ve gök gürültüsü": "/gercek/kesfet/yagmurlu-tokyoauralab.webp", "Şömine çıtırtısı": "/gercek/gorsel/mood-sicak-ambiyans.webp", "Sinematik vuruş": "/gercek/arac/vfx-patlama.webp",
+  "Fırtınalı deniz": "/gercek/kesfet/deniz-feneri-firtinasiveo-3-1.webp", "Uzay gemisi": "/gercek/kesfet/uzay-istasyonuauralab.webp", "Orman sabahı": "/gercek/galeri/manzara5.webp",
+  "Arayüz sesi": "/gercek/kesfet/elevenlabsses.webp", "Şehir trafiği": "/gercek/paz/ortam-sokak.webp",
+};
+const ETIKET_IKON: Record<string, typeof Mic> = {
+  "[excited]": Sparkles, "[happy]": Smile, "[sad]": Frown, "[angry]": Angry, "[nervous]": Activity, "[curious]": HelpCircle, "[sarcastic]": Annoyed, "[calm]": Leaf,
+  "[whispers]": Ear, "[shouts]": Megaphone, "[softly]": Feather, "[dramatic]": Drama, "[rushed]": Zap, "[slowly]": Snail,
+  "[laughs]": Laugh, "[chuckles]": Smile, "[sighs]": Wind, "[gasps]": CircleAlert, "[clears throat]": MessageCircle, "[crying]": Droplets,
+  "[applause]": PartyPopper, "[door slams]": DoorClosed, "[footsteps]": Footprints, "[explosion]": Bomb,
+  "[short pause]": Pause, "[long pause]": Timer, '<break time="0.5s" />': Pause, '<break time="1.5s" />': Timer,
+};
+
+/** Dosya ile çalışan araçların adımları ve ipuçları (boş sayfa yerine işe yarar rehber). */
+const KAYNAK_ADIM: Partial<Record<SesMod, { alt: string; adimlar: [LucideIcon, string, string][]; ipuclari: [boolean, string][] }>> = {
+  sesdegistir: {
+    alt: "Konuşmanın ritmi ve duygusu kalır, yalnız ses rengi değişir",
+    adimlar: [[Mic, "Kaydet ya da yükle", "Tek konuşmacı, en fazla 5 dakika"], [AudioLines, "Hedef sesi seç", "Hazır, klonlanmış ya da tasarlanmış ses"], [Repeat, "Dönüştür", "Vurgu, duraklama ve duygu korunur"]],
+    ipuclari: [[true, "Sessiz bir odada, mikrofona yakın kayıt"], [true, "Doğal tonda, net konuşma"], [false, "Arka planda müzik ya da ikinci bir ses"], [false, "Çok kısa (2 saniyeden az) kayıt"]],
+  },
+  ceviri: {
+    alt: "Her konuşmacı kendi ses rengiyle hedef dilde konuşur",
+    adimlar: [[Upload, "Klibi ekle", "Dosya ya da YouTube, TikTok, X bağlantısı"], [Languages, "Hedef dilleri seç", "Bir seferde 8 dile kadar"], [Users, "Konuşmacılar korunur", "Her biri kendi sesiyle çevrilir"]],
+    ipuclari: [[true, "Konuşmanın net duyulduğu kayıt"], [true, "Konuşmacı sayısını biliyorsan seç"], [false, "Üst üste binen konuşmalar"], [false, "Yüksek sesli fon müziği"]],
+  },
+  temizle: {
+    alt: "Rüzgâr, uğultu, müzik ve oda yankısı ayıklanır",
+    adimlar: [[Upload, "Kaydı ekle", "Ses ya da video, en fazla 20 MB"], [Wind, "Gürültü ayıklanır", "Konuşma dışındaki her şey"], [AudioLines, "Net konuşmayı indir", "Aynı uzunlukta temiz kayıt"]],
+    ipuclari: [[true, "Röportaj, vlog ve telefon kayıtları"], [true, "Kalabalık ortamda tek konuşmacı"], [false, "Şarkı vokali ayırma (müzik aracı daha iyi)"], [false, "Konuşmanın tamamen boğulduğu kayıt"]],
+  },
+  transkript: {
+    alt: "Konuşmacılar ayrılır, her satır zamanıyla yazılır",
+    adimlar: [[Upload, "Kaydı ekle", "Ses ya da video"], [Users, "Konuşmacılar ayrılır", "Kim ne zaman konuştu"], [Captions, "Altyazıyı al", "TXT, SRT ya da VTT olarak indir"]],
+    ipuclari: [[true, "Dili biliyorsan seç, doğruluk artar"], [true, "Toplantı, ders, podcast kayıtları"], [false, "Çok uzak mikrofonla alınmış kayıt"], [false, "Aynı anda konuşan çok kişi"]],
+  },
+};
+
+function gunEtiketi(t: number) {
+  const g = new Date(t), bugun = new Date(), dun = new Date(Date.now() - 86_400_000);
+  if (g.toDateString() === bugun.toDateString()) return "Bugün";
+  if (g.toDateString() === dun.toDateString()) return "Dün";
+  return g.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: g.getFullYear() === bugun.getFullYear() ? undefined : "numeric" });
 }
 
+function dosyaDataUrl(f: File): Promise<string> {
+  return new Promise((ok, hata) => { const r = new FileReader(); r.onload = () => ok(String(r.result)); r.onerror = () => hata(r.error); r.readAsDataURL(f); });
+}
+function medyaSuresi(f: File): Promise<number> {
+  return new Promise((ok) => {
+    const el = document.createElement(f.type.startsWith("video/") ? "video" : "audio");
+    const url = URL.createObjectURL(f);
+    el.preload = "metadata";
+    el.onloadedmetadata = () => { URL.revokeObjectURL(url); ok(isFinite(el.duration) ? el.duration : 0); };
+    el.onerror = () => { URL.revokeObjectURL(url); ok(0); };
+    el.src = url;
+  });
+}
+
+type Kaynak = { ad: string; dataUrl: string; mb: number; sn: number; video: boolean; onizleme: string };
+
+const UCRETSIZ_HAK = 2;
+
+const YAY = { type: "spring", stiffness: 420, damping: 32 } as const;
+const POP = "rounded-[18px] border border-white/[0.09] bg-[#1b1c1f]";
+const ARAC = "flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[12.5px] font-medium text-metin-2 transition-colors hover:bg-white/[0.075] hover:text-metin";
+const IKON = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/[0.085] hover:text-metin disabled:pointer-events-none disabled:opacity-30";
+
 export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {}) {
-  /* Gömülüyken üretim, gömüldüğü projeye yazılır ve dış sayfaya haber verilir.
-     Tek sarmalayıcı: her `uretimBaslat` çağrısını ayrı ayrı değiştirmeye gerek
-     kalmadan hepsi buradan geçer (2026-08-02). */
   const uretimBaslat: typeof uretimBaslatHam = (istek) => {
     const s = uretimBaslatHam(gomulu && projeId ? { ...istek, projeId } : istek);
     if (s.ok && s.id) onUretildi?.(s.id);
     return s;
   };
-
-  const { aktifProjeId } = useAktifProje();
   const router = useRouter();
-  const uretimler = useProjeler((s) => s.uretimler);
-  const favoriToggle = useProjeler((s) => s.favoriToggle);
+  // Panel parçaları (açılır menüler, satır referansları) yalnız görünen düzende kurulur.
+  const masaustu = useMasaustu() || !!gomulu;
+  const aramaParam = useSearchParams();
+  const { aktifProjeId } = useAktifProje();
+  const gercek = useSesSaglayici();
+  const tumUretimler = useProjeler((s) => s.uretimler);
   const silUretim = useProjeler((s) => s.sil);
-  /* GERÇEK "Yeniden çalıştır" — önce yalnız toast basıyordu (kullanıcı:
-     "Yeniden çalıştır, kopyala sil gibi şeyler fake şuanda"). Artık aynı
-     ayarlarla yeni bir üretim başlatır ve krediyi düşürür. */
-  const yenidenCalistir = (u: Uretim) => {
-    const sonuc = uretimBaslat({
-      baslik: u.baslik, tur: u.tur, model: u.model, prompt: u.prompt,
-      kredi: u.kredi, arac: u.arac, meta: u.meta,
-    });
-    if (!sonuc.ok) return uretimHataToast(sonuc);
-    toast.success("Yeniden çalıştırılıyor 🔄", { description: u.baslik });
-  };
-  const projeler = useProje((s) => s.projeler);
-  const projeOlustur = useProje((s) => s.projeOlustur);
-  const secililer = useSecim((s) => s.secililer);
-  const secimToggle = useSecim((s) => s.toggle);
+  const guncelle = useProjeler((s) => s.guncelle);
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
+  const tumYorumlar = useYorumlar((s) => s.yorumlar);
+  const ozelSesler = useOzelSesler((s) => s.sesler);
   const secimTemizle = useSecim((s) => s.temizle);
-  useEffect(() => () => secimTemizle(), [secimTemizle]); // sayfadan çıkınca seçimi bırak
+  useEffect(() => () => secimTemizle(), [secimTemizle]);
+  // Sayfadan ayrılınca çalan ses durur.
+  useEffect(() => () => sesCalici.durdur(), []);
 
+  /* ── Üretim ayarları ── */
   const [mod, setMod] = useState<SesMod>("seslendirme");
   const [metin, setMetin] = useState("");
-  const [model, setModel] = useState("Eleven v3");
-  const [modelAcik, setModelAcik] = useState(false);
-  const [ses, setSes] = useState<SesModel>(SESLER[4]);
-  const [dil, setDil] = useState(DILLER[1]);
-  const [kaynakDosya, setKaynakDosya] = useState<string | null>(null);
-  const [uretiliyor, setUretiliyor] = useState(false);
+  useIstemParametresi(setMetin);
+  const [model, setModel] = useState("Eleven v4");
+  const [ses, setSes] = useState<SecilenSes>(() => hazirdanSes(SESLER[0]));
+  const [dil, setDil] = useState(""); // "" = otomatik
+  const [adet, setAdet] = useState(1);
   const [hiz, setHiz] = useState(1);
-  const [sesDuzey, setSesDuzey] = useState(1);
-  const [pitch, setPitch] = useState(0);
-  const [ayarAcik, setAyarAcik] = useState(false);
-
-  const [mobilModelAcik, setMobilModelAcik] = useState(false);
-  const [sesModalAcik, setSesModalAcik] = useState(false);
-  // ── ÖZEL SES / "Add Voice" (m22): Higgsfield birebir — Name + Yükle/Kaydet +
-  //    örnek metin + Sesi Klonla (40 kredi). Ayrı bir modal olarak açılır.
-  const [ozelSesFormu, setOzelSesFormu] = useState(false);
-  const [ozelSesAd, setOzelSesAd] = useState("");
-  const [ozelSesCinsiyet, setOzelSesCinsiyet] = useState<"Kadın" | "Erkek">("Kadın");
-  const [ozelSesDosya, setOzelSesDosya] = useState<string | null>(null); // yüklenen örnek ses adı
-  const [ozelSesKayit, setOzelSesKayit] = useState(false); // kayıt modu aktif mi
-  const [ozelSesKayitSn, setOzelSesKayitSn] = useState(0); // kayıt süresi (sn)
-  const ozelSesDosyaRef = useRef<HTMLInputElement>(null);
-  const kayitliSesler = useMuzik((s) => s.sesler);
-  const sesKaydet = useMuzik((s) => s.sesKaydet);
-  /** Kaydedilmiş özel sesler → ses seçicide gösterilebilir SesModel'e çevrilir. */
-  const ozelSesModelleri = useMemo<SesModel[]>(
-    () => kayitliSesler.map((s) => ({
-      ad: s.ad,
-      cinsiyet: s.cinsiyet === "Erkek" ? "Erkek" : "Kadın",
-      renk: "#55d6fd",
-      dil: "Türkçe",
-    })),
-    [kayitliSesler],
-  );
-  /** m22: GERÇEK klonlama — Higgsfield "Clone Voice" akışı: ad + örnek (yükleme
-      VEYA kayıt) gerekli; 40 kredi düşer; useMuzik'e kalıcı yazar ve seçili yapar. */
-  const ozelSesOlustur = () => {
-    const ad = ozelSesAd.trim();
-    if (ad.length < 2) { toast.error("Sese bir ad ver."); return; }
-    if (!ozelSesDosya && ozelSesKayitSn < 3) {
-      toast.error("Örnek ses gerekli", { description: "Bir ses dosyası yükle ya da en az 3 sn kaydet." });
-      return;
-    }
-    if (kayitliSesler.some((s) => s.ad.toLocaleLowerCase("tr") === ad.toLocaleLowerCase("tr"))) {
-      toast.error("Bu adda bir özel ses zaten var"); return;
-    }
-    sesKaydet({ ad, cinsiyet: ozelSesCinsiyet, tohum: "ozel-" + ad.toLocaleLowerCase("tr"), kaydedilmis: true });
-    setSes({ ad, cinsiyet: ozelSesCinsiyet, renk: "#55d6fd", dil: "Türkçe" });
-    setOzelSesAd(""); setOzelSesDosya(null); setOzelSesKayit(false); setOzelSesKayitSn(0);
-    setOzelSesFormu(false); setSesModalAcik(false);
-    toast.success(`${ad} sesi klonlandı 🎙`, { description: "Artık ses kütüphanende ve seçili. · 40 kredi" });
-  };
-  const [dilModalAcik, setDilModalAcik] = useState(false);
-  const [acikDetay, setAcikDetay] = useState<string | null>(null);
-  const [oynayan, setOynayan] = useState<string | null>(null);
-
-  // m22: kayıt modu aktifken saniye sayacı (max 120sn — higgs "up to 2 minutes").
-  useEffect(() => {
-    if (!ozelSesKayit) return;
-    const t = setInterval(() => setOzelSesKayitSn((s) => (s >= 120 ? 120 : s + 1)), 1000);
-    return () => clearInterval(t);
-  }, [ozelSesKayit]);
-
-  const [solPanel, setSolPanel] = useState(true);
-  const [gorunum, setGorunum] = useState<"grid" | "list">("grid");
-  const [filtre, setFiltre] = useState<"tumu" | "favori">("tumu");
+  const [kararlilik, setKararlilik] = useState(0.5);
+  const [benzerlik, setBenzerlik] = useState(0.75);
+  const [stil, setStil] = useState(0);
+  const [kaynak, setKaynak] = useState<Kaynak | null>(null);
+  const [kaynakYukleniyor, setKaynakYukleniyor] = useState(false);
+  const [gurultu, setGurultu] = useState(true);
+  const [kaynakDil, setKaynakDil] = useState("");
+  const [hedefDil, setHedefDil] = useState("en");
+  const [konusmaci, setKonusmaci] = useState(0);
+  const [istemAcik, setIstemAcik] = useState(false);
+  const [sesSecici, setSesSecici] = useState(false);
+  const [klon, setKlon] = useState<null | { klonlanacak?: Parameters<typeof KlonModal>[0]["klonlanacak"] }>(null);
+  const [uretiliyor, setUretiliyor] = useState(false);
+  /** Bu oturumda en son başlatılan üretim — editörün altındaki şeritte çalınır. */
+  const [sonId, setSonId] = useState<string | null>(null);
+  /** Sonuçlar çekmecesi: kullanıcı açıp kapatana dek sonuç varsa açık. */
+  const [cekmece, setCekmece] = useState<boolean | null>(null);
+  const [bicim, setBicim] = useState(CIKTI_BICIMLERI[0].id);
+  const [tohum, setTohum] = useState<number | null>(null);
+  const [etiketAcik, setEtiketAcik] = useState(false);
+  const [tasarim, setTasarim] = useState<false | { remixSesId?: string }>(false);
+  // Diyalog
+  const [diyalogModel, setDiyalogModel] = useState(DIYALOG_MODELLERI[0].ad);
+  const [satirlar, setSatirlar] = useState<Satir[]>(() => [
+    { id: yeniId(), ses: hazirdanSes(SESLER.find((x) => x.ad === "Jessica")!), metin: "" },
+    { id: yeniId(), ses: hazirdanSes(SESLER.find((x) => x.ad === "Eric")!), metin: "" },
+  ]);
+  const [satirSesAcik, setSatirSesAcik] = useState<string | null>(null);
+  const [diyalogOrnekAcik, setDiyalogOrnekAcik] = useState(false);
+  const odakSatir = useRef<string | null>(null);
+  const satirRefler = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  // Efekt
+  const [efektTarif, setEfektTarif] = useState("");
+  const [efektSn, setEfektSn] = useState<number | null>(null);
+  // Ses ayarları (sağlayıcıya gerçekten giden)
+  const [normalizasyon, setNormalizasyon] = useState<"auto" | "on" | "off">("auto");
+  const [konusmaciGuclendir, setKonusmaciGuclendir] = useState(true);
+  const [telaffuz, setTelaffuz] = useState<{ kelime: string; okunus: string }[]>([]);
+  const [ortam, setOrtam] = useState<{ filtre?: string; gurultu?: string; mekan?: string; mesafe?: number }>({});
+  const [uzunBol, setUzunBol] = useState(false);
+  // Çeviri: çoklu hedef dil + bağlantıdan kaynak
+  const [hedefDiller, setHedefDiller] = useState<string[]>(["en"]);
+  const [kaynakBaglanti, setKaynakBaglanti] = useState("");
+  // Geçmiş: arama, mod süzgeci, toplu seçim
+  const [gecmisAra, setGecmisAra] = useState("");
+  const [gecmisMod, setGecmisMod] = useState<SesMod | "tumu">("tumu");
+  const [secimModu, setSecimModu] = useState(false);
+  const [secilenler, setSecilenler] = useState<string[]>([]);
+  // Metin geliştirici (Gemini) + geri alma, kısayol ve kod paneli
+  const [gelistirHazir, setGelistirHazir] = useState<boolean | null>(null);
+  const [gelistiriliyor, setGelistiriliyor] = useState(false);
+  const [gelistirOnce, setGelistirOnce] = useState<string | null>(null);
+  const [kisayolAcik, setKisayolAcik] = useState(false);
+  const [kodAcik, setKodAcik] = useState(false);
+  const [kodDil, setKodDil] = useState<"curl" | "js">("curl");
+  const [dongu, setDongu] = useState(false);
+  const [istemEtkisi, setIstemEtkisi] = useState(0.3);
+  // Mikrofon kaydı (ses değiştirme kaynağı)
+  const [kayitta, setKayitta] = useState(false);
+  const [kayitSn, setKayitSn] = useState(0);
+  const kayitci = useRef<MediaRecorder | null>(null);
+  const kayitBas = useRef(0);
+  const metinRef = useRef<HTMLTextAreaElement>(null);
+  /** Seslendirme paragraf blokları: odaktaki blok ve blok alanları. */
+  const odakParagraf = useRef<number | null>(null);
+  const paragrafRefler = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const [odakBlok, setOdakBlok] = useState<number | null>(null);
   const dosyaRef = useRef<HTMLInputElement>(null);
 
-  /* ── Sol panel genişliği — /panel/sinema StudyoSidebar gibi kontrol edilebilir.
-     Sağ kenardan sürükle → 180..360px. NOT: genişlik useState'te; dışarıdan
-     (useTercih) persist bağlanabilmesi için ham state olarak tutuluyor. */
-  const PANEL_MIN = 180, PANEL_MAKS = 360;
-  const [panelGen, setPanelGen] = useState(260);
-  const panelSurukluyor = useRef(false);
-  const panelSurukle = (e: React.PointerEvent) => {
-    e.preventDefault();
-    panelSurukluyor.current = true;
-    const tasi = (ev: PointerEvent) => {
-      const g = Math.round(ev.clientX);
-      // Yeterince sola çekilirse paneli tamamen daralt (rail moduna geç).
-      if (g < PANEL_MIN - 30) { setSolPanel(false); return; }
-      setSolPanel(true);
-      setPanelGen(Math.max(PANEL_MIN, Math.min(PANEL_MAKS, g)));
-    };
-    const birak = () => {
-      panelSurukluyor.current = false;
-      window.removeEventListener("pointermove", tasi);
-      window.removeEventListener("pointerup", birak);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    window.addEventListener("pointermove", tasi);
-    window.addEventListener("pointerup", birak);
-  };
-  // Composer textarea büyütme tutamağı (görsel sayfasıyla aynı mantık).
-  const [metinYuk, setMetinYuk] = useState<number | null>(null);
-  const metinRef = useRef<HTMLTextAreaElement | null>(null);
-  const metinSurukle = (e: React.PointerEvent) => {
-    e.preventDefault();
-    const ta = metinRef.current;
-    const baslaY = e.clientY;
-    const baslaH = ta ? ta.getBoundingClientRect().height : (metinYuk ?? 48);
-    const tasi = (ev: PointerEvent) => setMetinYuk(Math.max(44, Math.min(300, baslaH + (baslaY - ev.clientY))));
-    const birak = () => { window.removeEventListener("pointermove", tasi); window.removeEventListener("pointerup", birak); };
-    window.addEventListener("pointermove", tasi);
-    window.addEventListener("pointerup", birak);
+  // ?model= (kataloğun "Üret" bağlantısı) ve ?prompt=
+  useEffect(() => {
+    const m = aramaParam.get("model");
+    if (m && SES_URETIM_MODELLERI.some((x) => x.ad === m)) setModel(m);
+    const p = aramaParam.get("prompt");
+    if (p) setMetin(p);
+  }, [aramaParam]);
+
+  const modelTanim = SES_URETIM_MODELLERI.find((m) => m.ad === model) ?? SES_URETIM_MODELLERI[0];
+  const sinir = modelTanim.karakterSiniri;
+  const karakter = metin.length;
+  const diyalogKarakter = satirlar.reduce((n, x) => n + x.metin.length, 0);
+  const doluSatirlar = satirlar.filter((x) => x.metin.trim());
+  const diyalogSesSayisi = new Set(doluSatirlar.map((x) => x.ses.ad)).size;
+  const diyalogTanim = SES_URETIM_MODELLERI.find((m) => m.ad === diyalogModel)!;
+  const birimKredi = mod === "seslendirme" ? ttsKredi(karakter) : mod === "diyalog" ? ttsKredi(diyalogKarakter) : mod === "efekt" ? efektKredi(efektSn)
+    : dakikaKredi(kaynak?.sn ?? 0, mod === "ceviri" ? 12 : 1);
+  const kac = mod === "seslendirme" || mod === "efekt" ? adet : mod === "ceviri" ? Math.max(1, hedefDiller.length) : 1;
+  const toplamKredi = birimKredi * kac;
+  const etkinModel = mod === "seslendirme" ? model : mod === "diyalog" ? diyalogModel : MOD_MODELI[mod];
+  const ozelKullanilamaz = (x: SecilenSes) => x.ozel && !x.sesId;
+
+  const eksik: string | null =
+    mod === "seslendirme"
+      ? metin.trim().length < 2 ? "Seslendirilecek metni yaz"
+        : karakter > sinir && !uzunBol ? `Metin ${model} için çok uzun (${karakter.toLocaleString("tr-TR")}/${sinir.toLocaleString("tr-TR")}) — "Paragraflara böl" ile üretebilirsin`
+        : ozelKullanilamaz(ses) ? "Bu özel ses henüz klonlanmadı"
+        : !modelTanim.saglayici ? `${model} yakında`
+        : null
+      : mod === "diyalog"
+        ? doluSatirlar.length < 2 ? "Diyalog için en az iki dolu satır yaz"
+          : diyalogKarakter > DIYALOG_KARAKTER ? `Diyalog çok uzun (${diyalogKarakter.toLocaleString("tr-TR")}/${DIYALOG_KARAKTER.toLocaleString("tr-TR")})`
+          : diyalogSesSayisi > DIYALOG_SES ? `En fazla ${DIYALOG_SES} farklı ses kullanılabilir`
+          : doluSatirlar.some((x) => ozelKullanilamaz(x.ses)) ? "Klonlanmamış bir özel ses seçili"
+          : null
+      : mod === "efekt"
+        ? efektTarif.trim().length < 3 ? "Üretilecek sesi tarif et"
+          : gercek === null ? "Ses sağlayıcısı durumu kontrol ediliyor"
+          : !gercek ? "Ses efekti için ses sağlayıcısı bağlantısı gerekli"
+          : null
+      : gercek === null ? "Ses sağlayıcısı durumu kontrol ediliyor"
+      : !gercek ? `${{ sesdegistir: "Ses değiştirme", ceviri: "Çeviri", temizle: "Temizleme", transkript: "Transkript" }[mod as "sesdegistir"]} için ses sağlayıcısı bağlantısı gerekli`
+      : mod === "ceviri" && !kaynak && kaynakBaglanti.trim() ? (/^https?:\/\/\S+$/.test(kaynakBaglanti.trim()) ? (hedefDiller.length ? null : "En az bir hedef dil seç") : "Geçerli bir bağlantı yapıştır")
+      : !kaynak ? ({ sesdegistir: "Dönüştürülecek kaydı yükle", ceviri: "Çevrilecek klibi yükle ya da bağlantı yapıştır", temizle: "Temizlenecek kaydı yükle", transkript: "Yazıya dökülecek kaydı yükle" }[mod as "sesdegistir"])
+      : mod === "ceviri" && !hedefDiller.length ? "En az bir hedef dil seç"
+      : mod === "ceviri" && kaynakDil && hedefDiller.includes(kaynakDil) ? "Kaynak dil hedef dillerde olamaz"
+      : null;
+
+  useEffect(() => {
+    let iptal = false;
+    fetch("/api/ses/gelistir").then((x) => x.json()).then((j: { hazir?: boolean }) => { if (!iptal) setGelistirHazir(!!j.hazir); }).catch(() => { if (!iptal) setGelistirHazir(false); });
+    return () => { iptal = true; };
+  }, []);
+  // Metin elle değişince "Geri al" anlamını yitirir.
+  const metinGelistir = async () => {
+    const t = metin.trim();
+    if (t.length < 2 || gelistiriliyor) return;
+    setGelistiriliyor(true);
+    try {
+      const x = await fetch("/api/ses/gelistir", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ metin: t }) });
+      const j = (await x.json()) as { ok?: boolean; metin?: string; hata?: string };
+      if (!j.ok || !j.metin) return void toast.error("Metin geliştirilemedi", { description: `${neden(j.hata, "Yanıt alınamadı.")} Biraz sonra yeniden dene.` });
+      const onceki = metin;
+      setGelistirOnce(onceki); setMetin(j.metin);
+      toast.success("Ton etiketleri eklendi", { description: "Kelimeler aynı kaldı.", action: { label: "Geri al", onClick: () => { setMetin(onceki); setGelistirOnce(null); } } });
+    } catch { mesaj.baglantiHatasi(); } finally { setGelistiriliyor(false); }
   };
 
-  const kredi = mod === "ceviri" ? 12 : mod === "sesdegistir" ? 1 : 0.15;
-
-  const sesUretimler = useMemo(() =>
-    /* SÜREN ÜRETİMLER DE LİSTEDE (kullanıcı isteği 2026-07-31: "bu sayfada
-       üretiliyor kutusu yok"). Önce yalnız `tamam`/`hata` geçiyordu, bu yüzden
-       üret'e basınca ekranda hiçbir şey olmuyor, 10-15 sn sonra sonuç birden
-       beliriyordu. Artık kuyruk/işleniyor da görünür ve ilerleme akar. */
-    uretimler.filter((u) => u.tur === "ses" && (filtre === "tumu" || u.favori)),
-    [uretimler, filtre]);
-  // Higgsfield birebir: üretimler TARİHE göre gruplanır ("Bugün" / "Dün" / "14 Temmuz 2026").
-  const sesGruplar = useMemo(() => {
-    const gruplar: { etiket: string; oge: typeof sesUretimler }[] = [];
-    const bugun = new Date(); bugun.setHours(0, 0, 0, 0);
-    const AYLAR = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-    const etiketle = (t: number) => {
-      const f = Math.floor((bugun.getTime() - new Date(t).setHours(0, 0, 0, 0)) / 86400000);
-      if (f <= 0) return "Bugün";
-      if (f === 1) return "Dün";
-      const d = new Date(t);
-      return `${d.getDate()} ${AYLAR[d.getMonth()]} ${d.getFullYear()}`;
-    };
-    for (const u of sesUretimler) {
-      const et = etiketle(u.olusturma);
-      const son = gruplar[gruplar.length - 1];
-      if (son && son.etiket === et) son.oge.push(u);
-      else gruplar.push({ etiket: et, oge: [u] });
+  /* ── Akış ── */
+  const [filtre, setFiltre] = useState<"tumu" | "favori">("tumu");
+  const sesUretimleri = useMemo(
+    // Tanıtım (seed_) kayıtları kullanıcının üretimi değildir.
+    () => tumUretimler.filter((u) => u.tur === "ses" && !u.id.startsWith("seed_") && ["tamam", "isleniyor", "kuyrukta", "hata"].includes(u.durum)),
+    [tumUretimler],
+  );
+  const gorunen = useMemo(() => {
+    const q = gecmisAra.trim().toLocaleLowerCase("tr");
+    return sesUretimleri.filter((u) => (filtre !== "favori" || u.favori)
+      && (gecmisMod === "tumu" || ((u.meta?.mod as SesMod | undefined) ?? "seslendirme") === gecmisMod)
+      && (!q || [u.baslik, u.prompt, u.meta?.ses, u.model, u.meta?.transkript].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q)));
+  }, [sesUretimleri, filtre, gecmisAra, gecmisMod]);
+  const gruplar = useMemo(() => {
+    const g: { etiket: string; oge: Uretim[] }[] = [];
+    for (const u of gorunen) {
+      const e = gunEtiketi(u.olusturma);
+      const son = g[g.length - 1];
+      if (son && son.etiket === e) son.oge.push(u); else g.push({ etiket: e, oge: [u] });
     }
-    return gruplar;
-  }, [sesUretimler]);
+    return g;
+  }, [gorunen]);
+  const aktifIs = sesUretimleri.filter((u) => u.durum === "kuyrukta" || u.durum === "isleniyor").length;
+  const sonMetinler = useMemo(() => {
+    const goruldu = new Set<string>(); const l: string[] = [];
+    for (const u of sesUretimleri) {
+      const p = ((u.meta?.hamIstem as string | undefined) ?? "").trim();
+      if (p.length < 3 || goruldu.has(p)) continue;
+      goruldu.add(p); l.push(p); if (l.length >= 5) break;
+    }
+    return l;
+  }, [sesUretimleri]);
 
-  const acik = acikDetay ? sesUretimler.find((u) => u.id === acikDetay) : null;
-  useScrollKilit(sesModalAcik || dilModalAcik || ozelSesFormu);
-  useEscKapat(ozelSesFormu, () => setOzelSesFormu(false));
-  useEscKapat(sesModalAcik && !ozelSesFormu, () => setSesModalAcik(false));
-  useEscKapat(dilModalAcik, () => setDilModalAcik(false));
-  useEscKapat(acikDetay !== null, () => setAcikDetay(null));
+  /* ── Görüntüleyici ── */
+  const [seciliId, setSeciliId] = useState<string | null>(null);
+  const [yorum, setYorum] = useState("");
+  const gezListe = useMemo(() => gorunen.filter((u) => u.durum === "tamam"), [gorunen]);
+  const secili = seciliId ? tumUretimler.find((u) => u.id === seciliId) : undefined;
+  const lbIndex = secili ? gezListe.findIndex((u) => u.id === secili.id) : -1;
+  useEffect(() => { if (seciliId && !secili) setSeciliId(null); }, [seciliId, secili]);
+  // ?u=<id> — paylaşılan/bildirimden gelen bağlantı ayrıntıyı açar.
+  useEffect(() => {
+    const id = aramaParam.get("u");
+    if (id && tumUretimler.some((u) => u.id === id && u.tur === "ses")) setSeciliId(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aramaParam]);
+  useScrollKilit(!!secili || sesSecici || !!klon || !!tasarim);
+  // Esc en üstteki katmanı kapatır: klon / tasarım → ses seçici.
+  useEffect(() => {
+    if (!sesSecici && !klon && !tasarim) return;
+    const f = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      if (klon) setKlon(null);
+      else if (tasarim) setTasarim(false);
+      else { setSesSecici(false); setSesHedef(null); }
+    };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, [sesSecici, klon, tasarim]);
 
-  const dosyaSecildi = (f: FileList | null) => {
-    if (!f?.length) return;
-    setKaynakDosya(f[0].name);
-    toast.success("Kaynak ses yüklendi 🎙️", { description: f[0].name });
+  /* ── Eylemler ── */
+  const kaynakSec = async (f?: File, bilinenSn?: number) => {
+    if (!f) return;
+    if (!/^(audio|video)\//.test(f.type)) return void mesaj.desteklenmeyenDosya("MP3, WAV, M4A, MP4, MOV ya da WebM");
+    const mb = f.size / 1024 / 1024;
+    if (mb > KAYNAK_MB) return void toast.error("Dosya çok büyük", { description: `Bu dosya ${mb.toFixed(1).replace(".", ",")} MB, en çok ${KAYNAK_MB} MB yükleyebilirsin. Daha küçük bir dosya seç.` });
+    setKaynakYukleniyor(true);
+    try {
+      const [dataUrl, olculen] = await Promise.all([dosyaDataUrl(f), bilinenSn ? Promise.resolve(bilinenSn) : medyaSuresi(f)]);
+      const sn = olculen || bilinenSn || 0;
+      if (kaynak) URL.revokeObjectURL(kaynak.onizleme);
+      setKaynak({ ad: f.name, dataUrl, mb, sn, video: f.type.startsWith("video/"), onizleme: URL.createObjectURL(f) });
+    } catch {
+      mesaj.dosyaOkunamadi();
+    } finally {
+      setKaynakYukleniyor(false);
+    }
+  };
+  const kaynakKaldir = () => {
+    if (kaynak) URL.revokeObjectURL(kaynak.onizleme);
+    if (sesCalici.durum().id === "kaynak") sesCalici.durdur();
+    setKaynak(null);
+  };
+
+  const etiketEkle = (etiket: string) => {
+    const satirId = mod === "diyalog" ? (odakSatir.current && satirlar.some((x) => x.id === odakSatir.current) ? odakSatir.current : satirlar[satirlar.length - 1]?.id) : null;
+    const el = satirId ? satirRefler.current[satirId] : metinRef.current;
+    const deger = satirId ? satirlar.find((x) => x.id === satirId)?.metin ?? "" : metin;
+    // Seslendirme paragraf bloklarından oluşur: imleç odaktaki paragrafa göredir.
+    const ofs = !satirId && el ? paragrafOfset(metin, odakParagraf.current ?? 0) : 0;
+    let bas = el ? el.selectionStart + ofs : deger.length, son = el ? el.selectionEnd + ofs : deger.length;
+    if (bas === son) { while (bas < deger.length && /[\p{L}\p{N}]/u.test(deger[bas]) && bas > 0 && /[\p{L}\p{N}]/u.test(deger[bas - 1])) bas++; son = bas; }
+    const once = deger.slice(0, bas), sonra = deger.slice(son);
+    const ek = `${once && !/\s$/.test(once) ? " " : ""}${etiket}${/^\s/.test(sonra) ? "" : " "}`;
+    if (satirId) setSatirlar((l) => l.map((x) => (x.id === satirId ? { ...x, metin: once + ek + sonra } : x)));
+    else setMetin(once + ek + sonra);
+    requestAnimationFrame(() => { el?.focus(); const k = (once + ek).length - ofs; el?.setSelectionRange(k, k); });
+  };
+  /** Duraklama sözdizimi modele göre: v3/v4 etiket, v2/Flash SSML. */
+  const etkinTanim = mod === "diyalog" ? diyalogTanim : modelTanim;
+  const duraklamalar = etkinTanim.duraklama === "ssml"
+    ? [{ etiket: '<break time="0.5s" />', ad: "Kısa duraklama" }, { etiket: '<break time="1.5s" />', ad: "Uzun duraklama" }]
+    : [{ etiket: "[short pause]", ad: "Kısa duraklama" }, { etiket: "[long pause]", ad: "Uzun duraklama" }];
+
+  /* ── Diyalog ── */
+  const satirGuncelle = (id: string, d: Partial<Satir>) => setSatirlar((l) => l.map((x) => (x.id === id ? { ...x, ...d } : x)));
+  const satirEkle = () => {
+    // Sıradaki konuşmacı: iki satır önceki ses (A-B-A-B akışı).
+    const onceki = satirlar[satirlar.length - 2]?.ses ?? satirlar[satirlar.length - 1]?.ses ?? ses;
+    const id = yeniId();
+    setSatirlar((l) => [...l, { id, ses: onceki, metin: "" }]);
+    requestAnimationFrame(() => satirRefler.current[id]?.focus());
+  };
+  /** "Ayşe: Merhaba" satırlarını konuşmacılara ayırır; aynı ad aynı sesi alır. */
+  const senaryoYapistir = (e: React.ClipboardEvent<HTMLTextAreaElement>, buradan: string) => {
+    const satir = e.clipboardData.getData("text").split(/\r?\n/).map((t) => t.trim()).filter(Boolean);
+    const es = satir.map((t) => t.match(/^([^:\[\]]{1,24}):\s*(.+)$/));
+    if (satir.length < 2 || es.some((m) => !m)) return;
+    e.preventDefault();
+    const havuz = [...new Map([...satirlar.map((y) => y.ses), ...menuSesleri].map((v) => [v.ad, v])).values()];
+    const atanan = new Map<string, SecilenSes>();
+    const yeni: Satir[] = es.map((m) => {
+      const ad = m![1].trim();
+      if (!atanan.has(ad)) {
+        const eslesen = havuz.find((v) => v.ad.toLocaleLowerCase("tr") === ad.toLocaleLowerCase("tr"));
+        atanan.set(ad, eslesen ?? havuz.find((v) => ![...atanan.values()].includes(v)) ?? ses);
+      }
+      return { id: yeniId(), ses: atanan.get(ad)!, metin: m![2].slice(0, 2000) };
+    });
+    setSatirlar((l) => {
+      const i = l.findIndex((x) => x.id === buradan);
+      const bos = l.every((x) => !x.metin.trim());
+      return bos ? yeni : [...l.slice(0, i + 1).filter((x) => x.id !== buradan || x.metin.trim()), ...yeni, ...l.slice(i + 1)];
+    });
+    toast.success(`${yeni.length} satır eklendi`, { description: `${atanan.size} konuşmacı: ${[...atanan].map(([a, v]) => `${a} → ${v.ad}`).join(", ")}.` });
+  };
+  const satirSil = (id: string) => setSatirlar((l) => (l.length > 1 ? l.filter((x) => x.id !== id) : l));
+  const satirTasi = (id: string, yon: -1 | 1) => setSatirlar((l) => {
+    const i = l.findIndex((x) => x.id === id), j = i + yon;
+    if (i < 0 || j < 0 || j >= l.length) return l;
+    const k = [...l]; [k[i], k[j]] = [k[j], k[i]]; return k;
+  });
+  const diyalogOrnekSec = (o: (typeof DIYALOG_ORNEKLERI)[number]) => {
+    setMod("diyalog");
+    setSatirlar(o.satirlar.map((x) => ({ id: yeniId(), ses: hazirdanSes(SESLER.find((v) => v.ad === x.ses) ?? SESLER[0]), metin: x.metin })));
+    setDiyalogOrnekAcik(false);
+  };
+
+  /* ── Efekt ── */
+  const efektRef = useRef<HTMLTextAreaElement>(null);
+  const efektOrnekSec = (o: (typeof EFEKT_ORNEKLERI)[number]) => {
+    setMod("efekt"); setEfektTarif(o.tarif); setEfektSn(o.sn ?? null); setDongu(!!o.dongu);
+    setTimeout(() => efektRef.current?.focus(), 50);
+  };
+
+  /* ── Mikrofon kaydı (ses değiştirme) ── */
+  useEffect(() => {
+    if (!kayitta) return;
+    const t = setInterval(() => {
+      const sn = (performance.now() - kayitBas.current) / 1000;
+      setKayitSn(sn);
+      if (sn >= 300 && kayitci.current?.state === "recording") kayitci.current.stop();
+    }, 200);
+    return () => clearInterval(t);
+  }, [kayitta]);
+  useEffect(() => () => { if (kayitci.current?.state === "recording") kayitci.current.stop(); }, []);
+  const kayitBaslat = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") return void toast.error("Ses kaydı desteklenmiyor", { description: "Tarayıcın kayıt yapamıyor. Bunun yerine bir dosya yükleyebilirsin." });
+    let akis: MediaStream;
+    try { akis = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false } }); }
+    catch { return void mesaj.izinGerekli("Mikrofon"); }
+    const tip = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((t) => MediaRecorder.isTypeSupported(t)) ?? "";
+    const kayit = new MediaRecorder(akis, tip ? { mimeType: tip } : undefined);
+    const parcalar: Blob[] = [];
+    kayit.ondataavailable = (e) => { if (e.data.size) parcalar.push(e.data); };
+    kayit.onstop = () => {
+      akis.getTracks().forEach((t) => t.stop());
+      setKayitta(false);
+      const sn = (performance.now() - kayitBas.current) / 1000;
+      if (sn < 1) return void toast.error("Kayıt çok kısa", { description: "En az 1 saniye konuş ve yeniden kaydet." });
+      const mime = kayit.mimeType || "audio/webm";
+      void kaynakSec(new File(parcalar, `kayit-${new Date().toLocaleTimeString("tr-TR").replace(/:/g, "-")}.${mime.includes("mp4") ? "m4a" : "webm"}`, { type: mime.split(";")[0] }), sn);
+    };
+    kayitci.current = kayit;
+    kayitBas.current = performance.now();
+    setKayitSn(0); setKayitta(true);
+    kayit.start(1000);
+  };
+
+  const ornekSec = (o: (typeof ORNEKLER)[number]) => {
+    setMod("seslendirme");
+    setMetin(o.metin);
+    const s = SESLER.find((x) => x.ad === o.ses);
+    if (s) setSes(hazirdanSes(s));
+    setTimeout(() => metinRef.current?.focus(), 50);
   };
 
   const uret = () => {
-    if (mod === "seslendirme" && metin.trim().length < 2) return toast.error("Seslendirilecek metni yaz.");
-    if (mod !== "seslendirme" && !kaynakDosya) return toast.error("Önce kaynak sesi yükle.");
+    if (uretiliyor) return;
+    if (gercek === null) return void toast.info("Bağlantı kontrol ediliyor", { description: "Bir saniye sonra yeniden dene." });
+    if (eksik) return void toast.error("Ses üretimi başlatılamadı", { description: neden(eksik, "Eksik ayar var.") });
+    const diyalogMetni = doluSatirlar.map((x) => `${x.ses.ad}: ${x.metin.trim()}`).join("\n");
+    const kaynakAd = kaynak?.ad ?? kaynakBaglanti.trim();
+    const istem = mod === "seslendirme" ? metin.trim() : mod === "diyalog" ? diyalogMetni : mod === "efekt" ? efektTarif.trim()
+      : mod === "sesdegistir" ? `${kaynakAd} → ${ses.ad} sesi` : mod === "ceviri" ? `${kaynakAd} → ${hedefDiller.map(dilAdi).join(", ")}`
+      : mod === "temizle" ? `${kaynakAd} · gürültü temizleme` : `${kaynakAd} · transkript`;
+    const denetim = icerikDenetle(istem);
+    if (!denetim.izin) return void toast.error(`İçerik engellendi · ${kategoriEtiket(denetim.kategori)}`, { description: denetim.mesaj });
+    const temiz = (t: string) => t.replace(/\[[a-z ]{2,20}\]/gi, "").replace(/<break[^>]*\/?>/gi, "").replace(/\s+/g, " ").trim();
+    const baslik = mod === "seslendirme" ? temiz(istem).slice(0, 48)
+      : mod === "diyalog" ? `Diyalog · ${[...new Set(doluSatirlar.map((x) => x.ses.ad))].join(", ")}`.slice(0, 48)
+      : mod === "efekt" ? (EFEKT_ORNEKLERI.find((o) => o.tarif === istem)?.ad ?? istem).slice(0, 48)
+      : mod === "sesdegistir" ? `${ses.ad} sesine dönüştürme` : mod === "ceviri" ? `${hedefDiller.map(dilAdi).join(", ")} çeviri`
+      : mod === "temizle" ? `${kaynakAd.replace(/\.[a-z0-9]+$/i, "")} · temiz` : `${kaynakAd.replace(/\.[a-z0-9]+$/i, "")} · transkript`;
     setUretiliyor(true);
-    const baslik = mod === "seslendirme" ? metin.slice(0, 40) : mod === "sesdegistir" ? `${ses.ad} sesine dönüştür` : `${dil.ad} çeviri`;
-    const prompt = mod === "seslendirme" ? `${metin} · ${ses.ad} sesi · ${model}` : mod === "sesdegistir" ? `${kaynakDosya} → ${ses.ad} sesi` : `${kaynakDosya} → ${dil.ad}`;
-    const sonuc = uretimBaslat({
-      baslik: baslik || "Ses", tur: "ses", model, prompt, kredi: Math.ceil(kredi) || 1,
-      arac: "Ses Stüdyosu", projeId: aktifProjeId ?? undefined, meta: { ses: ses.ad, sure: "0:08" },
-    });
-    if (!sonuc.ok) { setUretiliyor(false); return uretimHataToast(sonuc); }
-    toast.success("Ses üretiliyor ✦", { description: `${ses.ad} · ${model}` });
-    setTimeout(() => { setUretiliyor(false); if (mod === "seslendirme") setMetin(""); }, 1600);
+    setTimeout(() => setUretiliyor(false), 600);
+    let basarili = 0;
+    let ilkId: string | undefined;
+    // Uzun metin: sınırı aşan metin paragraflara bölünüp sıralı parçalar olarak üretilir.
+    const metinParcalari = mod === "seslendirme" && karakter > sinir ? parcalara(metin.trim(), sinir) : null;
+    const isler = metinParcalari ? metinParcalari.length : kac;
+    const grupId = isler > 1 ? yeniId() : undefined;
+    for (let i = 0; i < isler; i++) {
+      const parcaMetni = metinParcalari?.[i];
+      const hedef = mod === "ceviri" ? hedefDiller[i] : hedefDil;
+      const sonuc = uretimBaslat({
+        // Yalnız gerçek sağlayıcıda kredi düşer; demo (tarayıcı sesi) ücretsizdir — iade akışına bile girmez.
+        baslik: (metinParcalari ? `${(baslik || "Ses").slice(0, 40)} · ${i + 1}/${isler}` : mod === "ceviri" && isler > 1 ? `${dilAdi(hedef)} çeviri` : baslik) || "Ses",
+        tur: "ses", model: etkinModel, prompt: parcaMetni ?? istem,
+        kredi: gercek === true ? (parcaMetni ? ttsKredi(parcaMetni.length) : birimKredi) : 0,
+        arac: "Ses Stüdyosu", projeId: aktifProjeId ?? undefined,
+        meta: {
+          mod, ...(grupId ? { grupId } : {}),
+          ...(mod === "seslendirme" || mod === "sesdegistir" ? {
+            ses: ses.ad, ...(ses.sesId ? { sesId: ses.sesId } : {}), ...(ses.paylasimSahibi ? { paylasimSahibi: ses.paylasimSahibi } : {}),
+          } : {}),
+          ...(mod === "seslendirme" ? {
+            hamIstem: parcaMetni ?? istem, karakter: (parcaMetni ?? istem).length, bicim, ...(tohum !== null ? { tohum } : {}),
+            // Tek parça, MP3 ve gerçek sağlayıcı: ses üretilirken çalmaya başlar (akışlı uç nokta).
+            ...(gercek === true && !metinParcalari && isler === 1 && bicim.startsWith("mp3") && sesCalici.akisDestek() ? { akis: true } : {}),
+            ...(dil ? { dil } : {}),
+            ...(modelTanim.ayrintiliAyar ? { hiz, benzerlik, stil, konusmaciGuclendir } : {}),
+            kararlilik,
+            ...(normalizasyon !== "auto" ? { normalizasyon } : {}),
+            ...(telaffuz.some((t) => t.kelime.trim() && t.okunus.trim()) ? { telaffuz: telaffuz.filter((t) => t.kelime.trim() && t.okunus.trim()) } : {}),
+            ...(ortam.filtre || ortam.gurultu || ortam.mekan || typeof ortam.mesafe === "number" ? { ortam } : {}),
+          } : {}),
+          ...(mod === "diyalog" ? {
+            hamIstem: istem, karakter: diyalogKarakter, bicim, kararlilik, ...(tohum !== null ? { tohum } : {}), ...(dil ? { dil } : {}),
+            diyalog: doluSatirlar.map((x) => ({ metin: x.metin.trim(), sesId: x.ses.sesId ?? "", ses: x.ses.ad, ...(x.ses.paylasimSahibi ? { sahip: x.ses.paylasimSahibi } : {}) })),
+          } : {}),
+          ...(mod === "efekt" ? { hamIstem: istem, bicim, dongu, istemEtkisi, ...(efektSn !== null ? { efektSn } : {}) } : {}),
+          ...(KAYNAKLI_MODLAR.includes(mod) ? { kaynakAd } : {}),
+          ...(mod === "sesdegistir" ? { gurultuTemizle: gurultu, kararlilik, benzerlik, stil, bicim, ...(tohum !== null ? { tohum } : {}) } : {}),
+          ...(mod === "ceviri" ? { hedefDil: hedef, ...(kaynakDil ? { kaynakDil } : {}), konusmaciSayisi: konusmaci, ...(!kaynak && kaynakBaglanti.trim() ? { kaynakUrl: kaynakBaglanti.trim() } : {}) } : {}),
+          ...(mod === "transkript" && kaynakDil ? { kaynakDil } : {}),
+        },
+        ...(KAYNAKLI_MODLAR.includes(mod) && kaynak ? { girdi: { kaynak: kaynak.dataUrl } } : {}),
+      });
+      if (!sonuc.ok) { if (!basarili) uretimHataToast(sonuc); break; }
+      ilkId ??= sonuc.id;
+      basarili++;
+    }
+    if (!basarili) return;
+    // İlerleme bildirimle değil, editör şeridinde ve geçmişte gösterilir.
+    setFiltre("tumu"); setSonId(ilkId ?? null);
+    if (basarili > 1) setCekmece(true);
   };
 
-  const yeniProje = () => { projeOlustur("Yeni ses projesi", "Genel", { kaynakStudyo: "Ses" }); toast.success("Proje oluşturuldu"); };
-  const bosMu = sesUretimler.length === 0;
+  const ayarlariYukle = (u: Uretim) => {
+    const m = u.meta ?? {};
+    const md = (m.mod as SesMod | undefined) ?? "seslendirme";
+    setMod(md);
+    if (md === "seslendirme") {
+      setMetin(((m.hamIstem as string | undefined) ?? "").trim());
+      if (SES_URETIM_MODELLERI.some((x) => x.ad === u.model)) setModel(u.model);
+      setDil(m.dil ?? "");
+      if (typeof m.hiz === "number") setHiz(m.hiz);
+      if (typeof m.kararlilik === "number") setKararlilik(m.kararlilik);
+      if (typeof m.benzerlik === "number") setBenzerlik(m.benzerlik);
+      if (typeof m.stil === "number") setStil(m.stil);
+    }
+    if (md === "diyalog" && m.diyalog?.length) {
+      if (DIYALOG_MODELLERI.some((x) => x.ad === u.model)) setDiyalogModel(u.model);
+      setDil(m.dil ?? ""); if (typeof m.kararlilik === "number") setKararlilik(m.kararlilik);
+      setSatirlar(m.diyalog.map((x) => {
+        const h = SESLER.find((s) => s.ad === x.ses); const o = ozelSesler.find((s) => s.ad === x.ses);
+        const sv: SecilenSes = h ? hazirdanSes(h) : o ? ozeldenSes(o) : { ad: x.ses ?? "Ses", cinsiyet: "Nötr", renk: "#8b7bff", sesId: x.sesId, paylasimSahibi: x.sahip };
+        return { id: yeniId(), ses: sv, metin: x.metin };
+      }));
+    }
+    if (md === "efekt") {
+      setEfektTarif(((m.hamIstem as string | undefined) ?? "").trim()); setEfektSn(typeof m.efektSn === "number" ? m.efektSn : null);
+      setDongu(!!m.dongu); if (typeof m.istemEtkisi === "number") setIstemEtkisi(m.istemEtkisi);
+    }
+    if ((md === "seslendirme" || md === "diyalog" || md === "efekt") && m.bicim) setBicim(m.bicim);
+    if (md === "seslendirme" || md === "diyalog") setTohum(typeof m.tohum === "number" ? m.tohum : null);
+    if (md === "ceviri") { if (m.hedefDil) setHedefDil(m.hedefDil); setKaynakDil(m.kaynakDil ?? ""); setKonusmaci(m.konusmaciSayisi ?? 0); }
+    if (md === "sesdegistir" && typeof m.gurultuTemizle === "boolean") setGurultu(m.gurultuTemizle);
+    const hazir = SESLER.find((s) => s.ad === m.ses);
+    const ozel = ozelSesler.find((o) => o.ad === m.ses);
+    if (hazir) setSes(hazirdanSes(hazir)); else if (ozel) setSes(ozeldenSes(ozel));
+    setSeciliId(null);
+    toast.success("Ayarlar yüklendi", { description: md === "diyalog" ? "Satırları düzenleyip Üret'e basabilirsin." : md === "efekt" ? "Tarifi düzenleyip Üret'e basabilirsin." : md === "seslendirme" ? "Metni düzenleyip Üret'e basabilirsin." : "Kaynak dosya saklanmadı. Dosyayı yeniden yükleyip üret." });
+  };
 
-  /* ── MOBİL COMPOSER ──
-     Referansta ses composer: metin kutusu (içinde model satırı) + ses preset +
-     dil satırı + Üret. Masaüstündeki panelli düzen mobilde gizli. */
-  const mobilSesModeller: SeciciOge[] = SES_URETIM_MODELLERI.map((m) => ({ id: m.ad, ad: m.ad, ozet: m.ozet }));
+  /**
+   * Ücretsiz yeniden üretim (ElevenLabs'teki gibi): ücretli her seslendirme/diyalog, aynı metin, ses ve ayarla
+   * UCRETSIZ_HAK kez ücretsiz yeniden üretilebilir. Haklar kök üretime bağlıdır; hatalı denemeler hak yemez.
+   */
+  const ucretsizHak = (u: Uretim) => {
+    const m = u.meta ?? {};
+    if (gercek !== true || (m.mod && m.mod !== "seslendirme" && m.mod !== "diyalog")) return 0;
+    const kok = m.yenidenKok ?? u.id;
+    const kokU = m.yenidenKok ? tumUretimler.find((x) => x.id === kok) : u;
+    if (!kokU || !(kokU.kredi > 0)) return 0;
+    const kullanilan = tumUretimler.filter((x) => x.meta?.yenidenKok === kok && x.meta?.ucretsiz && x.durum !== "hata").length;
+    return Math.max(0, UCRETSIZ_HAK - kullanilan);
+  };
 
-  return (
-    <>
-    <div className="sinema-kapsam sm:hidden">
-      <MobilComposerKabuk
-        baslik="Ses Üret"
-        modId="ses"
-        onKapat={() => router.push("/panel")}
-        altCipler={
-          <>
-            {/* Ses/Dil çipleri her modda; Hız yalnız seslendirmede */}
-            <MobilCip baslik="Ses" deger={ses.ad} secenekler={SESLER.map((s) => s.ad)} onSec={(v) => setSes(SESLER.find((s) => s.ad === v) ?? ses)} />
-            <MobilCip baslik="Dil" deger={dil.ad} secenekler={DILLER.map((d) => d.ad)} onSec={(v) => setDil(DILLER.find((d) => d.ad === v) ?? dil)} />
-            {mod === "seslendirme" && (
-              <MobilCip baslik="Hız" deger={`${hiz}×`} secenekler={["0.5×", "1×", "1.5×", "2×"]} onSec={(v) => setHiz(Number(v.replace("×", "")))} />
-            )}
-            <MobilAltCip tip="kalite" deger={`Ayarlar`} secenekler={["Ayarlar"]} onSec={() => setAyarAcik(true)} />
-          </>
-        }
-        uretButonu={<MobilUretButonu kredi={Math.ceil(kredi) || 1}
-          onTikla={uret}
-          devreDisi={mod === "seslendirme" ? !metin.trim() : !kaynakDosya} />}
-      >
-        {/* ── SES MODU ŞERİDİ (Seslendirme / Ses Değiştir / Çeviri) ── */}
-        <div className="flex gap-5 overflow-x-auto border-b border-white/[0.07] pb-2 gizli-scroll">
-          {SES_MODLARI.map((m) => (
-            <button key={m.id} onClick={() => setMod(m.id)}
-              className={cn("shrink-0 whitespace-nowrap border-b-2 pb-1.5 pt-1 text-[15px] font-medium transition-colors",
-                mod === m.id ? "border-aksan text-white" : "border-transparent text-metin-2")}>
-              {m.ad}
+  const yenidenUret = (u: Uretim) => {
+    const m = u.meta ?? {};
+    if (gercek === null) return void toast.info("Bağlantı kontrol ediliyor", { description: "Bir saniye sonra yeniden dene." });
+    if (m.mod && KAYNAKLI_MODLAR.includes(m.mod as SesMod)) return void toast.error("Yeniden üretilemedi", { description: "Kaynak dosya saklanmıyor. Dosyayı yeniden yükleyip üret." });
+    if (m.mod === "efekt" && gercek !== true) return void toast.error("Ses efekti üretilemedi", { description: "Bunun için ses sağlayıcısı bağlantısı gerekli. Bağlantı kurulunca yeniden dene." });
+    const istem = ((m.hamIstem as string | undefined) ?? u.prompt ?? "").trim();
+    const kredi = m.mod === "efekt" ? efektKredi(typeof m.efektSn === "number" ? m.efektSn : null)
+      : ttsKredi(m.mod === "diyalog" ? (m.diyalog ?? []).reduce((n, x) => n + x.metin.length, 0) : istem.length);
+    const { kelimeler: _k, sureSn: _s, transkript: _t, ucretsiz: _u, ...temiz } = m; // eski zaman damgaları yeni sese ait değil
+    const hak = ucretsizHak(u);
+    const sonuc = uretimBaslat({ baslik: u.baslik, tur: "ses", model: u.model, prompt: istem, kredi: gercek === true && !hak ? kredi : 0, arac: "Ses Stüdyosu", projeId: aktifProjeId ?? undefined,
+      meta: { ...temiz, kaynakId: u.id, yenidenKok: m.yenidenKok ?? u.id, ...(hak ? { ucretsiz: true } : {}) } });
+    if (!sonuc.ok) return uretimHataToast(sonuc);
+    if (hak) toast.success("Ücretsiz yeniden üretim başladı", { description: hak - 1 ? `Bu ses için ${hak - 1} ücretsiz hak kaldı.` : "Bu sesin ücretsiz hakları bitti. Sonraki yeniden üretim kredili." });
+    setSeciliId(null); setSonId(sonuc.id ?? null);
+  };
+
+  const sesiSil = (u: Uretim, sessiz = false) => {
+    if (sesCalici.durum().id === u.id) sesCalici.durdur();
+    if (seciliId === u.id) { const s = gezListe[lbIndex + 1] ?? gezListe[lbIndex - 1]; setSeciliId(s && s.id !== u.id ? s.id : null); }
+    silUretim(u.id);
+    if (!sessiz) mesaj.silindi("Ses", () => uretimGeriYukle(u));
+  };
+
+  const sesSecildi = (s: SecilenSes) => {
+    if (sesHedef) { satirGuncelle(sesHedef, { ses: s }); setSesHedef(null); }
+    else setSes(s);
+    setSesSecici(false);
+  };
+
+  const calici = useCalici();
+  const kaynakCaliyor = calici.id === "kaynak" && calici.calisiyor;
+  const sesTanim = SESLER.find((s) => s.ad === ses.ad);
+
+  /* ═══════════════════════ ARAYÜZ ═══════════════════════
+     Metin sayfası + yüzen komut kutusu: ortada belge gibi geniş yazı alanı, altta ses / model /
+     okuma çipleri ve Üret; sonuçlar sağdan açılan çekmecede (dalga satırları). */
+  const [sesHedef, setSesHedef] = useState<string | null>(null);
+  const [cip, setCip] = useState<string | null>(null);
+  const [mobilGecmis, setMobilGecmis] = useState(false);
+  const [etiketAra, setEtiketAra] = useState("");
+  const [etiketGrup, setEtiketGrup] = useState("Duygu");
+  const [sesAra, setSesAra] = useState("");
+  const [sesCins, setSesCins] = useState<"tumu" | "Kadın" | "Erkek">("tumu");
+  const [dilAra, setDilAra] = useState("");
+  const [filtreAcik, setFiltreAcik] = useState(false);
+  const [mac, setMac] = useState(false);
+  useEffect(() => { setMac(/mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent)); }, []);
+  useEffect(() => { setCip(null); }, [mod]);
+  const demo = gercek === false;
+  const menuSesleri: SecilenSes[] = [
+    ...ozelSesler.filter((o) => o.durum === "klonlandi" && gercek).map(ozeldenSes),
+    ...SESLER.map(hazirdanSes),
+  ];
+  const son = sonId ? tumUretimler.find((u) => u.id === sonId) : undefined;
+  const cekmeceAcik = cekmece ?? sesUretimleri.length > 0;
+  const ac = (k: string) => ({ acik: cip === k, setAcik: (v: boolean) => setCip(v ? k : null) });
+
+  // Boşluk: odak bir girdide değilken çalan ya da son üretimi çalar/duraklatır.
+  useEffect(() => {
+    const f = (e: KeyboardEvent) => {
+      if (secili || sesSecici || klon || tasarim || mobilGecmis) return;
+      const h = e.target as HTMLElement;
+      const girdide = /^(INPUT|TEXTAREA|SELECT)$/.test(h.tagName) || h.isContentEditable;
+      if (e.key === "?" && !girdide) { e.preventDefault(); return setKisayolAcik((v) => !v); }
+      if (e.key === "Escape" && (kisayolAcik || kodAcik)) { setKisayolAcik(false); setKodAcik(false); return; }
+      if (girdide || e.ctrlKey || e.metaKey || e.altKey) return;
+      const tus = e.key.toLowerCase();
+      if ((tus === "d" || tus === "f" || tus === "r") && son && son.durum === "tamam") {
+        e.preventDefault();
+        if (tus === "d") return uretimIndir(son);
+        if (tus === "f") { begeniBildir(son.favori); return favoriToggle(son.id); }
+        if (KAYNAKLI_MODLAR.includes(son.meta?.mod as SesMod)) return void toast.error("Yeniden üretilemedi", { description: "Kaynak dosya saklanmıyor. Dosyayı yeniden yükleyip üret." });
+        return yenidenUret(son);
+      }
+      if (e.key !== " " || /^(BUTTON|A)$/.test(h.tagName) || h.getAttribute("role") === "slider") return;
+      const d = sesCalici.durum();
+      const hedef = (d.id ? sesUretimleri.find((u) => u.id === d.id) : undefined) ?? son;
+      if (!hedef || hedef.durum !== "tamam") return;
+      e.preventDefault();
+      if (d.id === hedef.id && d.calisiyor) return sesCalici.duraklat();
+      const k = uretimKaynagi(hedef); if (k) void sesCalici.cal(hedef.id, k);
+    };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  });
+
+  /* ── Ses önizleme (hazır sesler sağlayıcının örneğiyle, özel sesler kayıtlı örnekle) ── */
+  const onizleKimlik = (v: SecilenSes) => {
+    const h = !v.ozel ? SESLER.find((s) => s.ad === v.ad) : undefined;
+    if (h) return "onizleme-" + h.sesId;
+    const o = v.ozel ? ozelSesler.find((x) => x.ad === v.ad) : undefined;
+    return o ? "ornek-" + o.id : "";
+  };
+  const onizle = async (v: SecilenSes) => {
+    const id = onizleKimlik(v);
+    if (!id) return;
+    if (calici.id === id && calici.calisiyor) return sesCalici.duraklat();
+    const h = !v.ozel ? SESLER.find((s) => s.ad === v.ad) : undefined;
+    if (h) return void sesCalici.cal(id, { tur: "dosya", url: `/api/ses/onizleme/${h.sesId}` });
+    const o = ozelSesler.find((x) => x.ad === v.ad);
+    if (!o) return;
+    const b = await yerelDepo.oku(o.ornekAnahtar).catch(() => undefined);
+    if (!b) return void toast.error("Ses örneği bulunamadı", { description: "Bu sesin örneği bu tarayıcıda kayıtlı değil. Örneği kaydettiğin cihazdan dinleyebilirsin." });
+    void sesCalici.cal(id, { tur: "dosya", url: URL.createObjectURL(b) });
+  };
+  const sesAlt = (v: SecilenSes) => (v.ozel ? "Kendi sesin" : v.paylasimSahibi ? "Topluluk sesi" : SESLER.find((h) => h.ad === v.ad)?.tanim ?? v.cinsiyet);
+  const bayrakOf = (v: SecilenSes) => { const b = v.ozel || v.paylasimSahibi ? null : aksanBayrak(SESLER.find((h) => h.ad === v.ad)?.aksan); return b && b !== "🌐" ? b : null; };
+
+  /* ── Popover içerikleri ── */
+  const sesListesi = (secili: string, onSec: (s: SecilenSes) => void) => {
+    const q = sesAra.trim().toLocaleLowerCase("tr");
+    const l = menuSesleri.filter((v) => (sesCins === "tumu" || v.cinsiyet === sesCins)
+      && (!q || `${v.ad} ${sesAlt(v)} ${SESLER.find((h) => h.ad === v.ad)?.kullanim ?? ""}`.toLocaleLowerCase("tr").includes(q)));
+    return (
+      <>
+        <div className="mb-2"><MenuKart baslik="Daha fazla ses" sag={<span className="text-[11.5px] text-metin-3">Kendi sesini ekle</span>}>
+        <div className="grid grid-cols-3 gap-1.5 p-1.5">
+          {([["Kütüphane", Library, () => setSesSecici(true)], ["Klonla", Fingerprint, () => setKlon({})], ["Tasarla", Wand2, () => setTasarim({})]] as const).map(([a, I, f]) => (
+            <button key={a} onClick={() => { setCip(null); setSatirSesAcik(null); f(); }} className="flex items-center justify-center gap-2 whitespace-nowrap rounded-[12px] px-1.5 py-2 text-[12.5px] font-medium text-metin-2 ring-1 ring-inset ring-white/[0.06] transition hover:bg-white/[0.065] hover:text-metin active:scale-95">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.08]"><I className="h-4 w-4" /></span>{a}
             </button>
           ))}
         </div>
+        </MenuKart></div>
+        <div className="space-y-2 px-1 pb-2">
+          <label className="flex h-9 items-center gap-2 rounded-full bg-white/[0.065] px-3 ring-1 ring-inset ring-white/[0.06] focus-within:ring-white/20">
+            <Search className="h-4 w-4 shrink-0 text-metin-2" />
+            <input value={sesAra} onChange={(e) => setSesAra(e.target.value)} placeholder="Ses, tarz ya da kullanım ara" aria-label="Ses ara" spellCheck={false}
+              className="min-w-0 flex-1 bg-transparent text-[13.5px] text-metin outline-none placeholder:text-metin-2" />
+          </label>
+          <Segment deger={sesCins} onDegis={setSesCins} etiket="Cinsiyet" secenekler={[["tumu", "Tümü"], ["Kadın", "Kadın"], ["Erkek", "Erkek"]]} />
+        </div>
+        <MenuKart baslik={sesCins === "tumu" ? "Sesler" : sesCins === "Kadın" ? "Kadın sesler" : "Erkek sesler"} sag={<span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] tabular-nums text-metin-2">{l.length}</span>}>
+        <div className="grid grid-cols-2 gap-1.5 p-1.5 max-sm:grid-cols-1">
+        {l.map((v) => {
+          const id = onizleKimlik(v);
+          const caliyor = !!id && calici.id === id && calici.calisiyor;
+          const sec = secili === v.ad;
+          const b = bayrakOf(v);
+          const hazir = SESLER.find((h) => h.ad === v.ad);
+          return (
+            <div key={v.ad} className={cn("group relative flex min-w-0 flex-col overflow-hidden rounded-[14px] p-2.5 ring-inset transition-[box-shadow,transform] duration-200 hover:-translate-y-px", sec ? "ring-2 ring-white" : "ring-1 ring-white/[0.07] hover:ring-white/25")}
+              style={{ background: `radial-gradient(120% 90% at 0% 0%, ${v.renk}${sec ? "33" : "1f"}, transparent 60%), rgba(255,255,255,0.03)` }}>
+              <button onClick={() => onSec(v)} aria-label={`${v.ad} sesini seç`} className="absolute inset-0 rounded-[14px]" />
+              <span className="pointer-events-none relative flex items-center gap-2.5">
+                <button onClick={(e) => { e.stopPropagation(); void onizle(v); }} disabled={!id} aria-label={caliyor ? "Önizlemeyi durdur" : `${v.ad} sesini dinle`}
+                  className="group/orb pointer-events-auto relative block h-10 w-10 shrink-0 rounded-full transition-transform hover:scale-105 active:scale-90 disabled:cursor-default">
+                  <SesAvatar ad={v.ad} renk={v.renk} boyut={40} aktif={caliyor} />
+                  <span className={cn("absolute inset-0 flex items-center justify-center rounded-full bg-black/40 transition-opacity", caliyor ? "opacity-100" : "opacity-0 group-hover/orb:opacity-100 group-hover:opacity-100")}>
+                    {caliyor ? <Pause className="h-4 w-4 fill-current text-white" /> : <Play className="h-4 w-4 translate-x-px fill-current text-white" />}
+                  </span>
+                </button>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="flex items-center gap-1.5"><span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-metin">{v.ad}</span>{b && <Bayrak b={b} boyut={13} />}{v.ozel && <span className="shrink-0 rounded-full bg-white/[0.12] px-1.5 py-px text-[10.5px] font-medium text-metin">Senin</span>}</span>
+                  <span className="mt-1 block truncate text-[11.5px] text-metin-3">{[v.cinsiyet, hazir?.kullanim].filter(Boolean).join(" · ")}</span>
+                </span>
+              </span>
+              <span className="pointer-events-none relative mt-2 line-clamp-1 text-[12px] text-metin-2">{sesAlt(v) || " "}</span>
+              <SDalga ad={v.ad} renk={v.renk} adet={30} yukseklik={16} canli={caliyor} className="pointer-events-none relative mt-1.5 w-full justify-between" />
+            </div>
+          );
+        })}
+        {!l.length && <p className="col-span-full px-3 py-6 text-center text-[13px] text-metin-3">Eşleşen ses yok</p>}
+        </div>
+        </MenuKart>
+      </>
+    );
+  };
 
-        {mod === "seslendirme" ? (
-          <MobilIstemKutusu deger={metin} onDegis={setMetin} yerTutucu="Seslendirilecek metni yaz…"
-            modelAdi={model} onModelTikla={() => setMobilModelAcik(true)} satir={6} />
-        ) : (
-          /* Ses Değiştir / Çeviri: kaynak dosya yükleme */
-          <>
-            {kaynakDosya ? (
-              <div className="flex items-center gap-3 rounded-[14px] bg-yuzey-2 p-4">
-                <span className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-white/[0.06] text-aksan"><AudioLines className="h-5 w-5" /></span>
-                <span className="flex-1 text-[15px] font-medium text-white">Kaynak dosya yüklendi</span>
-                <button onClick={() => setKaynakDosya(null)} aria-label="Kaldır" className="text-metin-2"><X className="h-[18px] w-[18px]" /></button>
-              </div>
-            ) : (
-              <label className="flex h-[140px] cursor-pointer flex-col items-center justify-center gap-3 rounded-[14px] bg-yuzey-2">
-                <input type="file" accept="audio/*,video/*" className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) { const r = new FileReader(); r.onload = () => setKaynakDosya(String(r.result)); r.readAsDataURL(f); } e.target.value = ""; }} />
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.07] text-metin-2"><AudioLines className="h-5 w-5" /></span>
-                <span className="text-[14px] text-metin-2">{mod === "sesdegistir" ? "Dönüştürülecek sesi yükle" : "Çevrilecek video/ses yükle"}</span>
-              </label>
-            )}
-            <button onClick={() => setMobilModelAcik(true)}
-              className="flex w-full items-center justify-between rounded-[14px] bg-yuzey-2 px-4 py-3.5 text-left">
-              <span className="text-[15px] text-metin-2">Model</span>
-              <span className="text-[15px] font-medium text-white">{model} ⌄</span>
+  const modelListesi = (deger: string, onSec: (v: string) => void, yalniz?: (m: (typeof SES_URETIM_MODELLERI)[number]) => boolean) => {
+    const liste = SES_URETIM_MODELLERI.filter((m) => !yalniz || yalniz(m));
+    const satir = (m: (typeof SES_URETIM_MODELLERI)[number]) => {
+      const kapali = !m.saglayici;
+      return (
+        <button key={m.ad} disabled={kapali} onClick={() => { onSec(m.ad); setCip(null); }} aria-pressed={deger === m.ad}
+          className={cn("flex w-full items-center gap-3 rounded-[12px] p-2 text-left ring-1 ring-inset transition-colors disabled:cursor-not-allowed", deger === m.ad ? "bg-white/[0.085] ring-2 ring-white" : "ring-transparent hover:bg-white/[0.065]", kapali && "opacity-45")}>
+          <MarkaKare ad={m.ad} boyut={32} />
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 text-[13.5px] font-medium text-metin"><span className="truncate">{m.ad}</span>{m.rozet === "Yeni" && !kapali && <span className="rounded-full bg-white/[0.08] px-2 py-px text-[11px] font-medium text-metin-2">Yeni</span>}</span>
+            <span className="block text-[12px] leading-snug text-metin-3">{m.ozet}</span>
+          </span>
+        </button>
+      );
+    };
+    return (
+      <div className="space-y-2">
+        <MenuKart baslik="Kullanılabilir" sag={<span className="text-[11.5px] text-metin-3">Kredi karakter başına</span>}><div className="space-y-0.5 p-1.5">{liste.filter((m) => m.saglayici).map(satir)}</div></MenuKart>
+      </div>
+    );
+  };
+
+  const dilListesi = (deger: string, onSec: (k: string) => void, otomatik?: string, haric?: string) => {
+    const q = dilAra.trim().toLocaleLowerCase("tr");
+    const l = DILLER_SIRALI.filter((d) => d.kod !== haric && (!q || `${dilAdi(d.kod)} ${d.kod}`.toLocaleLowerCase("tr").includes(q)));
+    const satir = (id: string, ad: React.ReactNode, ikon: React.ReactNode, alt?: string) => (
+      <button key={id || "oto"} onClick={() => { onSec(id); setCip(null); }} aria-pressed={deger === id}
+        className={cn("flex min-w-0 items-center gap-2.5 rounded-[12px] p-2 text-left ring-1 ring-inset transition-colors", deger === id ? "bg-white/[0.085] ring-2 ring-white" : "ring-white/[0.05] hover:bg-white/[0.065]", !id && "col-span-2")}>
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center">{ikon}</span>
+        <span className="min-w-0 flex-1 leading-tight"><span className="block truncate text-[13px] font-medium text-metin">{ad}</span>{alt && <span className="block truncate text-[11.5px] text-metin-3">{alt}</span>}</span>
+      </button>
+    );
+    return (
+      <>
+        <label className="mx-1 mb-1.5 flex h-9 items-center gap-2 rounded-full bg-white/[0.065] px-3 ring-1 ring-inset ring-white/[0.06] focus-within:ring-white/20">
+          <Search className="h-4 w-4 shrink-0 text-metin-2" />
+          <input value={dilAra} onChange={(e) => setDilAra(e.target.value)} placeholder="Dil ara" aria-label="Dil ara" spellCheck={false} className="min-w-0 flex-1 bg-transparent text-[13.5px] text-metin outline-none placeholder:text-metin-2" />
+        </label>
+        <MenuKart baslik="Diller" sag={<span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] tabular-nums text-metin-2">{l.length}</span>}>
+          <div className="grid grid-cols-2 gap-1.5 p-1.5">
+            {otomatik && !q && satir("", otomatik, <Globe2 className="h-4 w-4 text-metin-2" />, etkinTanim.dilSayisi ? `${etkinTanim.dilSayisi} ve üstü dil metinden algılanır` : "Metnin dilinden algılanır")}
+            {l.map((d) => satir(d.kod, dilAdi(d.kod), <Bayrak b={d.bayrak} boyut={20} />))}
+          </div>
+          {!l.length && <p className="px-3 pb-4 text-center text-[13px] text-metin-3">Eşleşen dil yok</p>}
+        </MenuKart>
+      </>
+    );
+  };
+
+  const bicimListesi = (
+    <div className="space-y-0.5 p-1.5">
+      {CIKTI_BICIMLERI.map((b) => (
+        <button key={b.id} onClick={() => setBicim(b.id)} aria-pressed={bicim === b.id} className={cn("flex w-full items-center gap-3 rounded-[12px] p-2 text-left ring-1 ring-inset transition-colors", bicim === b.id ? "bg-white/[0.085] ring-2 ring-white" : "ring-transparent hover:bg-white/[0.065]")}>
+          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors", bicim === b.id ? "bg-white text-black" : "bg-white/[0.085] text-metin-2")}><AudioLines className="h-4 w-4" /></span>
+          <span className="min-w-0 flex-1"><span className="block text-[13px] font-medium text-metin">{b.ad}</span><span className="block text-[11.5px] text-metin-3">{b.not ?? "Standart"}</span></span>
+        </button>
+      ))}
+    </div>
+  );
+  const bicimAd = CIKTI_BICIMLERI.find((b) => b.id === bicim)?.ad.split(" · ")[0] ?? "MP3";
+
+  const tohumSatiri = (
+    <div className="flex items-center gap-2">
+      <span className="min-w-0 flex-1"><span className="block text-[13px] font-medium text-metin">Tohum</span><span className="block text-[11.5px] text-metin-3">Aynı tohum ve ayarlar benzer sonucu verir</span></span>
+      <input inputMode="numeric" value={tohum ?? ""} placeholder="Rastgele" aria-label="Tohum" spellCheck={false}
+        onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 10); setTohum(v === "" ? null : Math.min(4294967295, Number(v))); }}
+        className="h-8 w-[104px] rounded-[9px] bg-white/[0.065] px-2.5 text-right text-[13px] tabular-nums text-metin outline-none ring-1 ring-inset ring-white/[0.07] placeholder:text-metin-2 focus:ring-white/20" />
+      <button onClick={() => setTohum(Math.floor(Math.random() * 4294967295))} aria-label="Rastgele tohum" title="Zar at" className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/[0.075] hover:text-metin"><Dices className="h-4 w-4" /></button>
+    </div>
+  );
+
+  const yuzde = (n: number) => `%${Math.round(n * 100)}`;
+
+  /* ── Okuma tarzı (seslendirme): hazır tarzlar 2 sütun + kaydırıcılar ── */
+  const hazirTarz = HAZIR_STILLER.find((h) => hiz === h.hiz && kararlilik === h.kararlilik && stil === h.stil);
+  const varsayilanAyar = hiz === 1 && kararlilik === 0.5 && benzerlik === 0.75 && stil === 0;
+  const okumaIcerik = (
+    <div className="space-y-2">
+      <MenuKart baslik="Tarzlar" sag={<span className="text-[11.5px] text-metin-3">Hız ve tonu birlikte ayarlar</span>}>
+      <div className="grid grid-cols-2 gap-1.5 p-1.5">
+        {([["Doğal", "Sesin kendi tonu, varsayılan", Mic, varsayilanAyar, () => { setHiz(1); setKararlilik(0.5); setBenzerlik(0.75); setStil(0); }], ["Özel", "Aşağıdaki ince ayarla kendi tarzın", SlidersHorizontal, !varsayilanAyar && !hazirTarz, () => { if (varsayilanAyar || hazirTarz) { setKararlilik(0.4); setStil(0.2); } }]] as const).map(([ad, not, I, a, f]) => (
+          <button key={ad} onClick={f} aria-pressed={a}
+            className={cn("flex items-center gap-2.5 rounded-[12px] p-2 text-left ring-1 ring-inset transition-colors", a ? "bg-white/[0.085] ring-2 ring-white" : "ring-white/[0.05] hover:bg-white/[0.065]")}>
+            <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors", a ? "bg-white text-black" : "bg-white/[0.085] text-metin-2")}><I className="h-3.5 w-3.5" /></span>
+            <span className="min-w-0 flex-1 leading-tight"><span className="block text-[13px] font-medium text-metin">{ad}</span><span className="mt-0.5 block text-[11.5px] leading-snug text-metin-3">{not}</span></span>
+          </button>
+        ))}
+        {HAZIR_STILLER.map((h) => {
+          const a = hazirTarz?.ad === h.ad;
+          return (
+            <button key={h.ad} onClick={() => { setHiz(h.hiz); setKararlilik(h.kararlilik); setStil(h.stil); }} aria-pressed={a}
+              className={cn("flex items-center gap-2.5 rounded-[12px] p-2 text-left ring-1 ring-inset transition-colors", a ? "bg-white/[0.085] ring-2 ring-white" : "ring-white/[0.05] hover:bg-white/[0.065]")}>
+              <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors", a ? "bg-white text-black" : "bg-white/[0.085] text-metin-2")}><h.ikon className="h-3.5 w-3.5" /></span>
+              <span className="min-w-0 flex-1 leading-tight"><span className="block text-[13px] font-medium text-metin">{h.ad}</span><span className="mt-0.5 block text-[11.5px] leading-snug text-metin-3">{h.not}</span></span>
             </button>
+          );
+        })}
+      </div>
+      </MenuKart>
+      <MenuKart baslik="İnce ayar" sag={<Sifirla fn={() => { setHiz(1); setKararlilik(0.5); setBenzerlik(0.75); setStil(0); }} kapali={varsayilanAyar} />}>
+      <div className="space-y-3.5 p-3">
+        {model === "Eleven v3" ? (
+          <div className="space-y-1.5">
+            <span className="text-[13px] text-metin-2">Kararlılık</span>
+            <Segment deger={kararlilik <= 0.25 ? 0 : kararlilik >= 0.75 ? 1 : 0.5} onDegis={setKararlilik} etiket="Kararlılık" secenekler={[[0, "Yaratıcı"], [0.5, "Doğal"], [1, "Sağlam"]]} />
+          </div>
+        ) : (
+          <Kaydirici ad="Kararlılık" deger={kararlilik} min={0} max={1} adim={0.05} onDegis={setKararlilik} yaz={yuzde} varsayilan={0.5} aciklama="Düşük değer daha duygulu ama her seferinde farklı okur" />
+        )}
+        {modelTanim.ayrintiliAyar && (
+          <>
+            <div className="space-y-1.5">
+              <span className="text-[13px] text-metin-2">Hız</span>
+              <Segment deger={hiz} onDegis={setHiz} etiket="Konuşma hızı" secenekler={[[0.7, "0,7×"], [0.85, "0,85×"], [1, "1×"], [1.1, "1,1×"], [1.2, "1,2×"]]} />
+            </div>
+            <Kaydirici ad="Benzerlik" deger={benzerlik} min={0} max={1} adim={0.05} onDegis={setBenzerlik} yaz={yuzde} varsayilan={0.75} aciklama="Sesin aslına ne kadar sadık kalınacağı" />
+            <Kaydirici ad="Stil abartısı" deger={stil} min={0} max={1} adim={0.05} onDegis={setStil} yaz={yuzde} varsayilan={0} />
           </>
         )}
-      </MobilComposerKabuk>
-
-      {/* Gelişmiş ayarlar: ses düzeyi + perde */}
-      <MobilAyarCekmecesi acik={ayarAcik} onKapat={() => setAyarAcik(false)} baslik="Gelişmiş ayarlar"
-        onSifirla={() => { setSesDuzey(1); setPitch(0); }} onKaydet={() => setAyarAcik(false)}>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-[14px]"><span className="text-white">Ses düzeyi</span><span className="text-metin-2">{sesDuzey.toFixed(1)}×</span></div>
-          <input type="range" min={0} max={2} step={0.1} value={sesDuzey} onChange={(e) => setSesDuzey(Number(e.target.value))} className="h-1.5 w-full cursor-pointer accent-aksan" />
-        </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-[14px]"><span className="text-white">Perde</span><span className="text-metin-2">{pitch > 0 ? "+" : ""}{pitch}</span></div>
-          <input type="range" min={-12} max={12} step={1} value={pitch} onChange={(e) => setPitch(Number(e.target.value))} className="h-1.5 w-full cursor-pointer accent-aksan" />
-        </div>
-      </MobilAyarCekmecesi>
-
-      <MobilSecici acik={mobilModelAcik} onKapat={() => setMobilModelAcik(false)}
-        ogeler={mobilSesModeller} seciliId={model} onSec={(o) => setModel(o.id)} aramaYerTutucu="Model ara…" />
+      </div>
+      </MenuKart>
     </div>
+  );
 
-    {/* Gömülüyken kendi zemini YOK — proje sayfasının zemini görünsün
-        (kullanıcı: "ses sayfasındayken arka plan oluyo", 2026-08-02). */}
-    <div className={cn("sinema-kapsam overflow-hidden text-[var(--sn-metin)]",
-      gomulu ? "flex bg-transparent" : "hidden h-[calc(100vh-3rem)] bg-[var(--sn-zemin)] sm:flex")}>
-      <input ref={dosyaRef} type="file" accept="audio/*,video/*" hidden onChange={(e) => { dosyaSecildi(e.target.files); e.target.value = ""; }} />
-
-      {/* SOL PANEL kaldırıldı — ses sayfasında sidebar gereksiz (madde 26). */}
-
-      {/* ═══ ORTA — GALERİ ═══ */}
-      <main className="relative flex min-w-0 flex-1 flex-col">
-        <div className={cn("items-center gap-2 border-b border-[var(--sn-kenar)] px-5 py-3", gomulu ? "hidden" : "flex")}>
-          <div className="flex gap-1">
-            <button onClick={() => setFiltre("tumu")} className={cn("rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors", filtre === "tumu" ? "glass-cip-aktif text-metin" : "glass-cip text-metin-2 hover:text-metin")}>Tümü</button>
-            <button onClick={() => setFiltre("favori")} className={cn("flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium transition-colors", filtre === "favori" ? "glass-cip-aktif text-metin" : "glass-cip text-metin-2 hover:text-metin")}><Heart className="h-3.5 w-3.5" /> Beğenilenler</button>
-          </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <button onClick={() => setGorunum("list")} className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", gorunum === "list" ? "glass-cip-aktif text-metin" : "text-metin-3 hover:text-metin")} aria-label="Liste"><List className="h-4 w-4" /></button>
-            <button onClick={() => setGorunum("grid")} className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", gorunum === "grid" ? "glass-cip-aktif text-metin" : "text-metin-3 hover:text-metin")} aria-label="Izgara"><LayoutGrid className="h-4 w-4" /></button>
-          </div>
+  /* ── Gelişmiş (seslendirme): biçim, okuma, telaffuz, ortam, tohum ── */
+  const ortamSayisi = [ortam.filtre, ortam.gurultu, ortam.mekan].filter(Boolean).length + (ortam.mesafe ? 1 : 0);
+  const kuralSayisi = telaffuz.filter((t) => t.kelime.trim()).length;
+  const gelismisIcerik = (
+    <div className="space-y-2">
+      <MenuKart baslik="Çıktı biçimi">{bicimListesi}</MenuKart>
+      <MenuKart baslik="Okuma">
+      <div className="space-y-3 p-3">
+        <div className="space-y-1.5">
+          <span className="text-[13px] text-metin-2">Sayı ve tarihleri yazıya çevir</span>
+          <Segment deger={normalizasyon} onDegis={setNormalizasyon} etiket="Sayı ve tarihler" secenekler={[["auto", "Otomatik"], ["on", "Açık"], ["off", "Kapalı"]]} />
         </div>
+        {modelTanim.ayrintiliAyar && <AnahtarSatir ad="Konuşmacı güçlendirme" alt="Sesi aslına yaklaştırır; gecikmeyi biraz artırır" acik={konusmaciGuclendir} onDegis={() => setKonusmaciGuclendir((v) => !v)} />}
+      </div>
+      </MenuKart>
+      <MenuKart baslik="Telaffuz sözlüğü" sag={kuralSayisi > 0 ? <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] tabular-nums text-metin-2">{kuralSayisi} kural</span> : <span className="text-[11.5px] text-metin-3">Marka ve kısaltmalar</span>}>
+      <div className="space-y-2 p-3">
+        <AnimatePresence initial={false}>
+          {telaffuz.map((t, i) => (
+            <motion.div key={i} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.16 }} className="flex items-center gap-1.5">
+              <input value={t.kelime} onChange={(e) => setTelaffuz((l) => l.map((x, j) => (j === i ? { ...x, kelime: e.target.value.slice(0, 60) } : x)))} placeholder="Vayra" aria-label="Kelime" spellCheck={false}
+                className="h-8 min-w-0 flex-1 rounded-[9px] bg-white/[0.065] px-2.5 text-[13px] text-metin outline-none ring-1 ring-inset ring-white/[0.07] placeholder:text-metin-2 focus:ring-white/20" />
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-metin-3" />
+              <input value={t.okunus} onChange={(e) => setTelaffuz((l) => l.map((x, j) => (j === i ? { ...x, okunus: e.target.value.slice(0, 60) } : x)))} placeholder="vay-ra" aria-label="Okunuş" spellCheck={false}
+                className="h-8 min-w-0 flex-1 rounded-[9px] bg-white/[0.065] px-2.5 text-[13px] text-metin outline-none ring-1 ring-inset ring-white/[0.07] placeholder:text-metin-2 focus:ring-white/20" />
+              <button onClick={() => setTelaffuz((l) => l.filter((_, j) => j !== i))} aria-label="Kuralı sil" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-metin-3 transition-colors hover:bg-white/[0.075] hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        <button onClick={() => setTelaffuz((l) => [...l, { kelime: "", okunus: "" }].slice(0, 100))} className="flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[12.5px] font-medium text-metin-2 transition-colors hover:bg-white/[0.075] hover:text-metin">
+          <Plus className="h-3.5 w-3.5" />Kural ekle
+        </button>
+      </div>
+      </MenuKart>
+      <MenuKart baslik="Ortam ve efekt" sag={<span className="rounded-full bg-white/[0.08] px-2 py-px text-[11px] font-medium text-metin-2">Yeni</span>}>
+      <div className="space-y-3 p-3">
+        {([["Filtre", "filtre", [["", "Yok"], ["telephone", "Telefon"], ["radio", "Radyo"], ["robot", "Robot"]]],
+          ["Arka plan", "gurultu", [["", "Yok"], ["cafe", "Kafe"], ["city", "Şehir"]]],
+          ["Mekân", "mekan", [["", "Yok"], ["room", "Oda"], ["hall", "Salon"], ["outdoors", "Dış mekân"]]]] as const).map(([ad, k, s]) => (
+          <div key={k} className="space-y-1.5">
+            <span className="text-[13px] text-metin-2">{ad}</span>
+            <Segment deger={ortam[k] ?? ""} onDegis={(v: string) => setOrtam((o) => ({ ...o, [k]: v || undefined }))} etiket={ad} secenekler={s.map(([v, a]) => [v, a] as const)} />
+          </div>
+        ))}
+        <Kaydirici ad="Mesafe" deger={ortam.mesafe ?? 0} min={0} max={1} adim={0.1} onDegis={(v) => setOrtam((o) => ({ ...o, mesafe: v }))} yaz={(n) => (n < 0.34 ? "Yakın" : n < 0.67 ? "Orta" : "Uzak")} varsayilan={0} />
+      </div>
+      </MenuKart>
+      <MenuKart baslik="Tekrarlanabilirlik"><div className="p-3">{tohumSatiri}</div></MenuKart>
+    </div>
+  );
 
-        {/* Gömülüyken galeri + boş-durum kahramanı YOK: proje sekmesi
-            üretimleri kendi ızgarasında gösteriyor (2026-08-02). */}
-        <div className={cn("overflow-y-auto px-5 pt-5", gomulu ? "hidden" : "flex-1 pb-48")}>
-          {bosMu ? (
-            /* BOŞ DURUM — Higgsfield "Ready to give your scene a voice?" birebir:
-               ortada "SES" etiketi + köşe kesim çizgileriyle çerçevelenmiş dev
-               gradient başlık, en altta ekranı boydan boya kaplayan soluk waveform. */
-            <div className="relative flex h-full flex-col items-center justify-center overflow-hidden text-center">
-              <div className="relative px-8 py-6">
-                {/* köşe kesim çizgileri (4 köşe) */}
-                <span className="pointer-events-none absolute left-0 top-0 h-5 w-5 border-l border-t border-white/25" />
-                <span className="pointer-events-none absolute right-0 top-0 h-5 w-5 border-r border-t border-white/25" />
-                <span className="pointer-events-none absolute bottom-0 left-0 h-5 w-5 border-b border-l border-white/25" />
-                <span className="pointer-events-none absolute bottom-0 right-0 h-5 w-5 border-b border-r border-white/25" />
-                <span className="text-[11px] font-semibold uppercase tracking-[0.3em] text-metin-3">SES</span>
-                <h2 className="mt-3 max-w-lg bg-gradient-to-r from-aksan via-amber-300 to-aksan bg-clip-text text-4xl font-black leading-tight text-transparent sm:text-5xl">
-                  Sahnene bir ses<br />vermeye hazır mısın?
-                </h2>
+  /* ── Ton etiketi menüsü ("İfade ekle") ── */
+  const etiketGruplari = [
+    ...(etkinTanim.etiketler ? SES_ETIKET_GRUPLARI.map((g) => ({ grup: g.grup, renk: ETIKET_GRUP_RENK[g.grup], etiketler: g.etiketler })) : []),
+    { grup: "Duraklama", renk: ETIKET_GRUP_RENK["Anlatım"], etiketler: duraklamalar },
+  ].map((g) => {
+    const q = etiketAra.trim().toLocaleLowerCase("tr");
+    return { ...g, etiketler: q ? g.etiketler.filter((t) => `${t.ad} ${t.etiket}`.toLocaleLowerCase("tr").includes(q)) : g.etiketler };
+  }).filter((g) => g.etiketler.length);
+  const aramaVar = etiketAra.trim().length > 0;
+  const etkinGrup = etiketGruplari.find((g) => g.grup === etiketGrup) ?? etiketGruplari[0];
+  const gosterilen = aramaVar ? etiketGruplari.flatMap((g) => g.etiketler.map((t) => ({ ...t, renk: g.renk }))) : (etkinGrup?.etiketler ?? []).map((t) => ({ ...t, renk: etkinGrup!.renk }));
+  const etiketMenusu = (
+    <div className="relative">
+      <button onClick={() => { setEtiketAcik((v) => !v); setEtiketAra(""); }} aria-expanded={etiketAcik} className={cn(ARAC, etiketAcik && "bg-white/[0.08] text-metin")}>
+        <Tags className="h-4 w-4" />{etkinTanim.etiketler ? "İfade ekle" : "Duraklama ekle"}
+      </button>
+      <AnimatePresence>
+        <Yuzen acik={etiketAcik} onKapat={() => setEtiketAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="İfade ekle" className={cn(POP, "flex max-h-[min(520px,70vh)] flex-col overflow-hidden")} style={{ width: "min(600px, calc(100vw - 24px))" }}>
+          <div className="flex items-center gap-2 border-b border-white/[0.06] p-2.5">
+            <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-white/[0.065] px-3.5 ring-1 ring-inset ring-white/[0.06] focus-within:ring-white/25">
+              <Search className="h-4 w-4 shrink-0 text-metin-2" />
+              <input autoFocus value={etiketAra} onChange={(e) => setEtiketAra(e.target.value)} placeholder="Ara: fısıltı, gülme, duraklama" aria-label="İfade ara" spellCheck={false}
+                onKeyDown={(e) => { if (e.key === "Enter" && gosterilen[0]) { e.preventDefault(); etiketEkle(gosterilen[0].etiket); setEtiketAcik(false); } }}
+                className="min-w-0 flex-1 bg-transparent text-[13.5px] text-metin outline-none placeholder:text-metin-2" />
+              {aramaVar && <button onClick={() => setEtiketAra("")} aria-label="Aramayı temizle" className="text-metin-3 hover:text-metin"><X className="h-3.5 w-3.5" /></button>}
+            </label>
+            <span className="hidden shrink-0 items-center gap-1 rounded-full bg-white/[0.065] px-2.5 py-1.5 text-[11.5px] text-metin-3 sm:flex">Metinde <kbd className="rounded-[5px] bg-white/[0.1] px-1.5 font-sans text-[11px] font-semibold text-metin">[</kbd> yaz</span>
+          </div>
+          <div className="flex min-h-0 flex-1 max-sm:flex-col">
+            {!aramaVar && etiketGruplari.length > 1 && (
+              <div role="tablist" aria-label="İfade türü" aria-orientation="vertical" className="isolate flex shrink-0 gap-0.5 overflow-y-auto border-r border-white/[0.06] p-1.5 [scrollbar-width:none] max-sm:flex-wrap max-sm:border-b max-sm:border-r-0 sm:w-[150px] sm:flex-col">
+                {etiketGruplari.map((g) => {
+                  const a = etkinGrup?.grup === g.grup;
+                  return (
+                    <button key={g.grup} role="tab" aria-selected={a} onClick={() => setEtiketGrup(g.grup)}
+                      className={cn("relative flex h-9 shrink-0 items-center gap-2 rounded-[10px] px-2.5 text-left text-[13px] font-medium transition-colors", a ? "text-metin" : "text-metin-2 hover:bg-white/[0.055] hover:text-metin")}>
+                      {a && <motion.span layoutId="ses-ifade-grup" transition={YAY} className="absolute inset-0 -z-10 rounded-[10px] bg-white/[0.09] ring-1 ring-inset ring-white/20" />}
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: g.renk }} />
+                      <span className="min-w-0 flex-1 truncate">{g.grup}</span>
+                      <span className="text-[11.5px] tabular-nums text-metin-3 max-sm:hidden">{g.etiketler.length}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {/* alt boydan boya soluk waveform */}
-              <span className="pointer-events-none absolute inset-x-0 bottom-0 flex h-40 items-end justify-center gap-[3px] opacity-[0.12]">
-                {dalga("bos-ses-ekrani", 120).map((b, i) => (
-                  <span key={i} className="w-1.5 rounded-t bg-white" style={{ height: `${b * 2.2}px` }} />
-                ))}
-              </span>
+            )}
+            <div className="min-h-0 flex-1 overflow-y-auto p-2 [scrollbar-width:thin]">
+              {!etkinTanim.etiketler && <p className="mb-2 rounded-[12px] bg-white/[0.055] px-3 py-2 text-[12px] leading-relaxed text-metin-2 ring-1 ring-inset ring-white/[0.06]">Ton ifadeleri Eleven v4 ve v3&apos;te çalışır; bu modelde yalnız duraklama eklenir.</p>}
+              {gosterilen.length === 0 && <p className="py-10 text-center text-[13px] text-metin-3">Eşleşen ifade yok. Köşeli parantezle kendin yaz: [korkmuş]</p>}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div key={aramaVar ? "ara" : etkinGrup?.grup} initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.14 }} className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {gosterilen.map((t) => {
+                    const I = ETIKET_IKON[t.etiket] ?? Tags;
+                    return (
+                      <button key={t.etiket} onClick={() => { etiketEkle(t.etiket); setEtiketAcik(false); }} title={`${t.etiket} ekle`}
+                        className="group flex min-w-0 flex-col items-start gap-2 rounded-[14px] p-2.5 text-left ring-1 ring-inset ring-white/[0.06] transition-[background-color,box-shadow,transform] hover:bg-white/[0.065] hover:ring-white/25 active:scale-[0.97]">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full transition-transform group-hover:scale-110" style={{ background: `color-mix(in srgb, ${t.renk} 20%, transparent)`, color: t.renk }}><I className="h-[18px] w-[18px]" /></span>
+                        <span className="w-full min-w-0 leading-tight">
+                          <span className="block truncate text-[13.5px] font-semibold text-metin">{t.ad}</span>
+                          <span className="mt-0.5 block truncate text-[11.5px] text-metin-3">{t.etiket.length > 22 ? "duraklama" : t.etiket}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              </AnimatePresence>
             </div>
-          ) : (
-            <div className="space-y-6">
-              {sesGruplar.map((grup) => {
-                const grupIdler = grup.oge.map((u) => u.id);
-                const hepsiSecili = grupIdler.length > 0 && grupIdler.every((id) => secililer.includes(id));
-                const grupSecToggle = () => {
-                  if (hepsiSecili) grupIdler.forEach((id) => { if (secililer.includes(id)) secimToggle(id); });
-                  else grupIdler.forEach((id) => { if (!secililer.includes(id)) secimToggle(id); });
-                };
-                return (
-                <div key={grup.etiket}>
-                  {/* Tarih başlığı — sol checkbox tüm grubu seçer (video birebir) */}
-                  <button onClick={grupSecToggle} className="mb-2.5 flex items-center gap-2.5">
-                    <span className={cn("flex h-4.5 w-4.5 items-center justify-center rounded-[5px] border-2 transition-all",
-                      hepsiSecili ? "border-aksan bg-aksan text-zemin" : "border-white/30 hover:border-white/60")}>
-                      {hepsiSecili && <Check className="h-3 w-3" strokeWidth={3.5} />}
-                    </span>
-                    <span className="text-[15px] font-semibold text-metin">{grup.etiket}</span>
-                  </button>
-                  <div className={cn(gorunum === "grid" ? "grid grid-cols-2 gap-4 xl:grid-cols-3" : "space-y-5")}>
-                    {grup.oge.map((u) => (
-                      <SesKart key={u.id} u={u} gorunum={gorunum} secili={secililer.includes(u.id)} onSec={() => secimToggle(u.id)}
-                        oynayan={oynayan} setOynayan={setOynayan}
-                        // Detay açılırken composer'ın açık popover'larını da kapat —
-                        // yoksa panel gizlenince ekranda sahipsiz bir popover kalıyor.
-                        onAc={() => { setAcikDetay(u.id); setSesModalAcik(false); setDilModalAcik(false); setAyarAcik(false); setModelAcik(false); }}
-                        onFavori={() => favoriToggle(u.id)}
-                        onKopya={() => { void kopyala(u.prompt || u.baslik, "İstem kopyalandı"); }} onIndir={() => uretimIndir(u)} onSil={() => { silUretim(u.id); if (acikDetay === u.id) setAcikDetay(null); toast.success("Silindi"); }}
-                        onYenidenCalistir={() => yenidenCalistir(u)} />
-                    ))}
-                  </div>
-                </div>
-                );
+          </div>
+        </Yuzen>
+      </AnimatePresence>
+    </div>
+  );
+
+  const sonMetinMenusu = sonMetinler.length > 0 && (
+    <div className="relative">
+      <button onClick={() => setIstemAcik((v) => !v)} aria-expanded={istemAcik} className={cn(ARAC, istemAcik && "bg-white/[0.08] text-metin")}><History className="h-4 w-4" />Son metinler</button>
+      <AnimatePresence>
+        <Yuzen acik={istemAcik} onKapat={() => setIstemAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Son metinler" className={cn(POP, "p-1.5")} style={{ width: "min(360px, calc(100vw - 24px))" }}>
+          <p className="px-2 pb-1 pt-1.5 text-[13px] font-semibold text-metin">Son metinlerin</p>
+          {sonMetinler.map((p) => (
+            <button key={p} onClick={() => { setMetin(p); setIstemAcik(false); metinRef.current?.focus(); }} className="flex w-full items-start gap-2.5 rounded-[10px] px-2 py-2 text-left transition-colors hover:bg-white/[0.065]">
+              <History className="mt-0.5 h-3.5 w-3.5 shrink-0 text-metin-3" /><span className="line-clamp-2 text-[13px] leading-snug text-metin">{p}</span>
+            </button>
+          ))}
+        </Yuzen>
+      </AnimatePresence>
+    </div>
+  );
+
+  const senaryoMenusu = (
+    <div className="relative">
+      <button onClick={() => setDiyalogOrnekAcik((v) => !v)} aria-expanded={diyalogOrnekAcik} className={cn(ARAC, diyalogOrnekAcik && "bg-white/[0.08] text-metin")}><Lightbulb className="h-4 w-4" />Hazır senaryo</button>
+      <AnimatePresence>
+        <Yuzen acik={diyalogOrnekAcik} onKapat={() => setDiyalogOrnekAcik(false)} yerlesim="ust-sol" bosluk={10} etiket="Hazır senaryolar" className={cn(POP, "p-1.5")} style={{ width: "min(330px, calc(100vw - 24px))" }}>
+          <MenuKart baslik="Hazır senaryolar"><div className="p-1">{DIYALOG_ORNEKLERI.map((o) => <SenaryoSatiri key={o.baslik} o={o} onClick={() => diyalogOrnekSec(o)} />)}</div></MenuKart>
+        </Yuzen>
+      </AnimatePresence>
+    </div>
+  );
+
+  /* ── Sayaç ve süre ── */
+  const sure = mod === "seslendirme" ? (metin.trim() ? sureTahmin(metin) : 0) : mod === "diyalog" ? (doluSatirlar.length ? sureTahmin(doluSatirlar.map((x) => x.metin).join(" ")) : 0) : 0;
+  const sayac = mod === "seslendirme" ? (
+    <span className={cn("tabular-nums", karakter > sinir ? "font-medium text-rose-300" : karakter > sinir * 0.9 ? "text-amber-200" : "text-metin-3")}>{karakter.toLocaleString("tr-TR")} / {sinir.toLocaleString("tr-TR")}</span>
+  ) : mod === "diyalog" ? (
+    <span className={cn("tabular-nums", diyalogKarakter > DIYALOG_KARAKTER ? "font-medium text-rose-300" : "text-metin-3")}>{diyalogKarakter.toLocaleString("tr-TR")} / {DIYALOG_KARAKTER.toLocaleString("tr-TR")}</span>
+  ) : mod === "efekt" ? <span className="tabular-nums text-metin-3">{efektTarif.length} / 1.000</span> : null;
+  const surePill = sure > 0 && (
+    <span title="Tahmini okuma süresi" className="flex h-7 items-center gap-1 rounded-full bg-white/[0.065] px-2.5 text-[12px] font-medium tabular-nums text-metin-2">
+      <Clock className="h-3.5 w-3.5" /><motion.span key={sure} initial={{ y: -4, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={YAY}>{sureYaz(sure)}</motion.span>
+    </span>
+  );
+
+  /* ── Komut kutusu: üst araç satırı ── */
+  const araclar = mod === "seslendirme" ? (
+    <>
+      {etiketMenusu}
+      {sonMetinMenusu}
+      {etkinTanim.etiketler && (gelistirOnce !== null ? (
+        <button onClick={() => { setMetin(gelistirOnce); setGelistirOnce(null); }} className={ARAC}><Undo2 className="h-4 w-4" />Geri al</button>
+      ) : (
+        <Tooltip label={gelistirHazir === false ? "Metne uygun ton ifadeleri ekler" : "Metne uygun ton ifadeleri ekler; kelimelere dokunmaz. Kredi düşmez."} side="top">
+          <button onClick={() => void metinGelistir()} disabled={gelistirHazir !== true || metin.trim().length < 2 || gelistiriliyor} className={cn(ARAC, "disabled:pointer-events-none disabled:opacity-40")}>
+            {gelistiriliyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}Geliştir
+          </button>
+        </Tooltip>
+      ))}
+      <span className="flex-1" />
+      {surePill}
+      <span className="px-1.5 text-[12px] max-sm:hidden">{sayac}</span>
+      <AnimatePresence>
+        {metin && (
+          <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} transition={YAY}
+            onClick={() => { setMetin(""); setGelistirOnce(null); metinRef.current?.focus(); }} aria-label="Metni temizle" title="Metni temizle"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/[0.075] hover:text-metin"><Eraser className="h-4 w-4" /></motion.button>
+        )}
+      </AnimatePresence>
+    </>
+  ) : mod === "diyalog" ? (
+    <>
+      {etiketMenusu}
+      {gomulu && senaryoMenusu}
+      <span className="flex-1" />
+      {surePill}
+      <span className="px-1.5 text-[12px] max-sm:hidden">{sayac}</span>
+    </>
+  ) : mod === "efekt" && efektTarif ? (
+    <>
+      <span className="flex-1" />
+      <span className="px-1.5 text-[12px]">{sayac}</span>
+      <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={YAY} onClick={() => { setEfektTarif(""); efektRef.current?.focus(); }} aria-label="Tarifi temizle" title="Tarifi temizle"
+        className="flex h-8 w-8 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/[0.075] hover:text-metin"><Eraser className="h-4 w-4" /></motion.button>
+    </>
+  ) : null;
+
+  /* ── Komut kutusu: çipler ── */
+  const sabitModel = (ad: string) => (
+    <span title="Bu aracın modeli" className="flex h-12 items-center gap-2.5 rounded-full bg-white/[0.055] pl-1.5 pr-4 text-[13.5px] ring-1 ring-inset ring-white/[0.06]">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/[0.08]"><MarkaKare ad={ad} boyut={26} /></span>
+      <span className="flex flex-col items-start leading-tight"><span className="text-[11px] text-metin-3">Model</span><span className="whitespace-nowrap font-medium text-metin">{ad.replace(/^Eleven /, "")}</span></span>
+    </span>
+  );
+  const sesCipi = (baslik: string) => (
+    <KCip buyuk {...ac("ses")} etiket={baslik} genislik={560} ikon={<SesAvatar ad={ses.ad} renk={ses.renk} boyut={24} />} deger={ses.ad}>
+      {sesListesi(ses.ad, (s) => { setSes(s); setCip(null); })}
+    </KCip>
+  );
+  const dilCipi = (k: string, baslik: string, deger: string, onSec: (v: string) => void, otomatik?: string, haric?: string) => (
+    <KCip buyuk {...ac(k)} etiket={baslik} genislik={400} ikon={deger ? <Bayrak b={DILLER.find((d) => d.kod === deger)?.bayrak} boyut={15} /> : <Globe2 className="h-3.5 w-3.5" />} deger={deger ? dilAdi(deger) : otomatik ?? "Seç"}>
+      {dilListesi(deger, onSec, otomatik, haric)}
+    </KCip>
+  );
+  const adetCipi = (
+    <KCip buyuk {...ac("adet")} etiket="Varyasyon" genislik={320} ikon={<Copy className="h-3.5 w-3.5" />} deger={<><motion.span key={adet} initial={{ y: -4, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={YAY} className="inline-block tabular-nums">{adet}</motion.span> sürüm</>}>
+      <MenuKart baslik="Kaç sürüm" sag={<span className="text-[11.5px] text-metin-3">En iyisini seçersin</span>}>
+        <div className="p-2"><Segment deger={adet} onDegis={setAdet} etiket="Varyasyon sayısı" secenekler={[[1, "1"], [2, "2"], [3, "3"], [4, "4"]]} /></div>
+      </MenuKart>
+    </KCip>
+  );
+  const bicimCipi = (
+    <KCip buyuk {...ac("bicim")} etiket="Çıktı biçimi" genislik={300} ikon={<AudioLines className="h-4 w-4" />} deger={bicimAd}><MenuKart baslik="Dosya biçimi">{bicimListesi}</MenuKart></KCip>
+  );
+
+  const cipler = mod === "seslendirme" ? (
+    <>
+      {sesCipi("Ses")}
+      <KCip buyuk {...ac("model")} etiket="Model" genislik={420} ikon={<MarkaKare ad={model} boyut={24} />} deger={model.replace(/^Eleven /, "")}>
+        {modelListesi(model, setModel)}
+      </KCip>
+      {modelTanim.dilZorla && dilCipi("dil", "Dil", dil, setDil, "Otomatik")}
+      <KCip buyuk {...ac("okuma")} etiket="Okuma tarzı" genislik={440} ikon={hazirTarz ? <hazirTarz.ikon className="h-3.5 w-3.5" /> : <SlidersHorizontal className="h-3.5 w-3.5" />} deger={hazirTarz?.ad ?? (varsayilanAyar ? "Doğal" : "Özel")}>
+        {okumaIcerik}
+      </KCip>
+      {adetCipi}
+      <KCip buyuk {...ac("gelismis")} etiket="Gelişmiş" genislik={400} ikon={<Settings2 className="h-3.5 w-3.5" />}
+        deger={<span className="flex items-center gap-1.5">{bicimAd}{(kuralSayisi > 0 || ortamSayisi > 0 || tohum !== null) && <span className="h-1.5 w-1.5 rounded-full bg-white" />}</span>}>
+        {gelismisIcerik}
+      </KCip>
+    </>
+  ) : mod === "diyalog" ? (
+    <>
+      <KCip buyuk {...ac("model")} etiket="Model" genislik={420} ikon={<MarkaKare ad={diyalogModel} boyut={24} />} deger={diyalogModel.replace(/^Eleven /, "")}>
+        {modelListesi(diyalogModel, setDiyalogModel, (m) => !!m.diyalog)}
+      </KCip>
+      {dilCipi("dil", "Dil", dil, setDil, "Otomatik")}
+      <KCip buyuk {...ac("okuma")} etiket="Kararlılık" genislik={360} ikon={<SlidersHorizontal className="h-3.5 w-3.5" />} deger={yuzde(kararlilik)}>
+        <MenuKart baslik="Okuma"><div className="grid grid-cols-3 gap-1.5 p-1.5">
+          {([[0.25, "Duygulu", "Her seferinde farklı"], [0.5, "Doğal", "Dengeli, önerilen"], [0.8, "Sabit", "Hep aynı okur"]] as const).map(([v, ad, not]) => {
+            const a = Math.abs(kararlilik - v) < 0.03;
+            return (
+              <button key={ad} onClick={() => setKararlilik(v)} aria-pressed={a} className={cn("flex flex-col items-start rounded-[12px] p-2.5 text-left ring-inset transition-colors", a ? "bg-white/[0.085] ring-2 ring-white" : "ring-1 ring-white/[0.06] hover:bg-white/[0.065]")}>
+                <span className="text-[13px] font-semibold text-metin">{ad}</span>
+                <span className="mt-0.5 text-[11px] leading-snug text-metin-3">{not}</span>
+                <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-white/[0.1]"><span className="block h-full rounded-full bg-white" style={{ width: `${Math.round(v * 100)}%` }} /></span>
+              </button>
+            );
+          })}
+        </div></MenuKart>
+        <div className="mt-2"><MenuKart baslik="Özel"><div className="p-3"><Kaydirici ad="Kararlılık" deger={kararlilik} min={0} max={1} adim={0.05} onDegis={setKararlilik} yaz={yuzde} varsayilan={0.5} /></div></MenuKart></div>
+      </KCip>
+      <KCip buyuk {...ac("gelismis")} etiket="Gelişmiş" genislik={340} ikon={<Settings2 className="h-3.5 w-3.5" />} deger={bicimAd}>
+        <div className="space-y-2"><MenuKart baslik="Çıktı biçimi">{bicimListesi}</MenuKart><MenuKart baslik="Tekrarlanabilirlik"><div className="p-3">{tohumSatiri}</div></MenuKart></div>
+      </KCip>
+    </>
+  ) : mod === "efekt" ? (
+    <>
+      {sabitModel("Eleven Sound Effects")}
+      <KCip buyuk {...ac("sure")} etiket="Süre" genislik={340} ikon={<Clock className="h-3.5 w-3.5" />} deger={efektSn === null ? "Otomatik" : `${String(efektSn).replace(".", ",")} sn`}>
+        <MenuKart baslik="Efekt süresi" sag={<span className="text-[11.5px] text-metin-3">En çok 30 sn</span>}>
+          <div className="space-y-3 p-3">
+            <div className="grid grid-cols-3 gap-1.5">
+              {([null, 2, 5, 10, 20, 30] as const).map((n) => {
+                const a = efektSn === n;
+                return <button key={String(n)} onClick={() => setEfektSn(n)} aria-pressed={a} className={cn("flex h-11 flex-col items-center justify-center rounded-[12px] ring-inset transition-colors", a ? "bg-white/[0.085] ring-2 ring-white" : "ring-1 ring-white/[0.06] hover:bg-white/[0.065]")}><span className="text-[13px] font-semibold tabular-nums text-metin">{n === null ? "Otomatik" : `${n} sn`}</span>{n === null && <span className="text-[10.5px] text-metin-3">Tariften</span>}</button>;
               })}
             </div>
-          )}
+            {efektSn !== null && <Kaydirici ad="Özel uzunluk" deger={efektSn} min={0.5} max={30} adim={0.5} onDegis={setEfektSn} yaz={(n) => `${String(n).replace(".", ",")} sn`} />}
+          </div>
+        </MenuKart>
+      </KCip>
+      <AcKapaCip acik={dongu} onDegis={() => setDongu((v) => !v)} ikon={InfinityIcon} etiket="Döngü" title="Başı ve sonu birleşir; ortam sesleri için" />
+      <KCip buyuk {...ac("baglilik")} etiket="Tarife bağlılık" genislik={360} ikon={<Target className="h-3.5 w-3.5" />} deger={yuzde(istemEtkisi)}>
+        <MenuKart baslik="Ne kadar sıkı uysun"><div className="grid grid-cols-3 gap-1.5 p-1.5">
+          {([[0.3, "Yaratıcı", "Tarifi yorumlar"], [0.6, "Dengeli", "Çoğunlukla uyar"], [0.9, "Birebir", "Tarife sıkı uyar"]] as const).map(([v, ad, not]) => {
+            const a = Math.abs(istemEtkisi - v) < 0.03;
+            return (
+              <button key={ad} onClick={() => setIstemEtkisi(v)} aria-pressed={a} className={cn("flex flex-col items-start rounded-[12px] p-2.5 text-left ring-inset transition-colors", a ? "bg-white/[0.085] ring-2 ring-white" : "ring-1 ring-white/[0.06] hover:bg-white/[0.065]")}>
+                <span className="text-[13px] font-semibold text-metin">{ad}</span>
+                <span className="mt-0.5 text-[11px] leading-snug text-metin-3">{not}</span>
+                <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-white/[0.1]"><span className="block h-full rounded-full bg-white" style={{ width: `${Math.round(v * 100)}%` }} /></span>
+              </button>
+            );
+          })}
+        </div></MenuKart>
+        <div className="mt-2"><MenuKart baslik="Özel"><div className="p-3"><Kaydirici ad="Bağlılık" deger={istemEtkisi} min={0} max={1} adim={0.05} onDegis={setIstemEtkisi} yaz={yuzde} varsayilan={0.3} /></div></MenuKart></div>
+      </KCip>
+      {adetCipi}
+      {bicimCipi}
+    </>
+  ) : mod === "sesdegistir" ? (
+    <>
+      {sesCipi("Hedef ses")}
+      <AcKapaCip acik={gurultu} onDegis={() => setGurultu((v) => !v)} ikon={Wind} etiket="Gürültü temizleme" title="Kayıttaki arka plan gürültüsü dönüştürmeden önce ayıklanır" />
+      <KCip buyuk {...ac("okuma")} etiket="Ses ayarları" genislik={320} ikon={<SlidersHorizontal className="h-3.5 w-3.5" />} deger={kararlilik === 0.5 && benzerlik === 0.75 && stil === 0 ? "Varsayılan" : "Özel"}>
+        <div className="space-y-2">
+          <MenuKart baslik="Dönüşüm" sag={<Sifirla fn={() => { setKararlilik(0.5); setBenzerlik(0.75); setStil(0); }} kapali={kararlilik === 0.5 && benzerlik === 0.75 && stil === 0} />}>
+            <div className="space-y-3.5 p-3">
+              <Kaydirici ad="Kararlılık" deger={kararlilik} min={0} max={1} adim={0.05} onDegis={setKararlilik} yaz={yuzde} varsayilan={0.5} />
+              <Kaydirici ad="Benzerlik" deger={benzerlik} min={0} max={1} adim={0.05} onDegis={setBenzerlik} yaz={yuzde} varsayilan={0.75} aciklama="Hedef sese ne kadar sadık kalınacağı" />
+              <Kaydirici ad="Stil abartısı" deger={stil} min={0} max={1} adim={0.05} onDegis={setStil} yaz={yuzde} varsayilan={0} />
+            </div>
+          </MenuKart>
+          <MenuKart baslik="Tekrarlanabilirlik"><div className="p-3">{tohumSatiri}</div></MenuKart>
         </div>
-
-        {/* ═══ YÜZEN COMPOSER — Apple buzlu-cam (kabarık, üst ışık + arka bulanıklık) ═══
-            Bir üretimin detayı açıkken GİZLENİR: o an odak o üretimde, üretme paneli
-            arkada asılı kalmamalı (görsel/video sayfalarında lightbox tam ekran olduğu
-            için composer'ı zaten örtüyor; buradaki detay yan drawer olduğundan elle
-            gizliyoruz). Aşağı kayıp solarak çıkar. */}
-        <motion.div
-          initial={false}
-          animate={(acikDetay || secililer.length > 0) ? { opacity: 0, y: 24 } : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className={cn(
-            // Detay açıkken VEYA çoklu seçim yapılırken gizlenir (seçim çubuğu ile
-            // üst üste binmesin — görsel sayfasındaki mantığın aynısı).
-            // Hafif üst fade: sadece composer'a girişte yumuşak geçiş. Composer'ın
-            // KENDİSİ (.ses-composer + iç glass-cip) tam opak + z-10 izole olduğu için
-            // arkadaki içerik zaten sızmıyor — agresif koyu katmana gerek yok.
-            "pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pb-5 pt-4",
-            (acikDetay || secililer.length > 0) && "invisible",
-          )}
-          /* Arka gradyan KALDIRILDI (kullanıcı isteği 2026-07-31: "kutunun
-             şeridinde bi arkada blur efekti oluyor ... onu kaldır agam saçma").
-             Composer'ın kendi cam yüzeyi zaten okunurluğu sağlıyor; üstteki
-             16 birimlik gradyan bant içerik üstünde gri bir şerit bırakıyordu. */
-          >
-          {/* items-stretch: mod seçici kutusu, composer ile AYNI yüksekliğe
-              uzasın (2026-08-01). Sağdaki çipler kendi `self-end`'i ile
-              eskisi gibi alta yaslı kalır. */}
-          <div className="pointer-events-auto relative z-10 flex w-full max-w-4xl items-stretch gap-2.5">
-          {/* MOD SEÇİCİ — composer'ın SOLUNDA ayrı kutu, üç ÇEYREK DAİRE
-              (kullanıcı isteği 2026-07-31; /panel/sinema'daki yan seçici deseni).
-              Önce composer'ın İÇİNDE düz dikey liste olarak duruyordu. */}
-          {/* self-stretch + justify-between: kutu, yanındaki üretim kutusuyla
-              AYNI YÜKSEKLİKTE olur (kullanıcı isteği 2026-08-01). Önce
-              `self-end` ile kendi doğal yüksekliğinde kalıyor, composer
-              büyüdükçe kısa görünüyordu. */}
-          <div className="ses-mod-kutu flex shrink-0 flex-col justify-between gap-2 self-stretch rounded-[22px] p-2">
-            {SES_MODLARI.map((m) => {
-              const Ikon = m.id === "seslendirme" ? Mic : m.id === "sesdegistir" ? Repeat : Languages;
-              const aktif = mod === m.id;
+      </KCip>
+      {bicimCipi}
+    </>
+  ) : mod === "ceviri" ? (
+    <>
+      {dilCipi("kdil", "Kaynak dil", kaynakDil, setKaynakDil, "Otomatik")}
+      {masaustu && <ArrowRight className="h-4 w-4 shrink-0 text-metin-3" />}
+      <KCip buyuk {...ac("hedef")} etiket="Hedef diller" genislik={420} ikon={hedefDiller[0] ? <Bayrak b={DILLER.find((d) => d.kod === hedefDiller[0])?.bayrak} boyut={15} /> : <Languages className="h-3.5 w-3.5" />}
+        deger={hedefDiller.length === 0 ? "Seç" : hedefDiller.length === 1 ? dilAdi(hedefDiller[0]) : `${dilAdi(hedefDiller[0])} +${hedefDiller.length - 1}`}>
+        <MenuKart baslik="Çevrilecek diller" sag={<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin">{hedefDiller.length} / 8</span>}>
+          <div className="grid grid-cols-2 gap-1.5 p-1.5">
+            {DILLER_SIRALI.filter((d) => d.kod !== kaynakDil).map((d) => {
+              const sec = hedefDiller.includes(d.kod), no = hedefDiller.indexOf(d.kod) + 1;
               return (
-                <Tooltip key={m.id} label={m.ad} side="left">
-                  <button onClick={() => setMod(m.id)} aria-label={m.ad} aria-pressed={aktif}
-                    className={cn("ses-dilim flex h-[52px] w-[52px] items-center justify-center",
-                      aktif && "ses-dilim-aktif")}>
-                    <Ikon className="h-[19px] w-[19px]" strokeWidth={2.1} />
-                  </button>
-                </Tooltip>
+                <button key={d.kod} role="checkbox" aria-checked={sec} onClick={() => setHedefDiller((l) => (sec ? l.filter((x) => x !== d.kod) : [...l, d.kod].slice(0, 8)))}
+                  className={cn("flex min-w-0 items-center gap-2.5 rounded-[12px] p-2 text-left ring-1 ring-inset transition-colors active:scale-[0.97]", sec ? "bg-white/[0.085] ring-2 ring-white" : "ring-white/[0.05] hover:bg-white/[0.065]")}>
+                  <Bayrak b={d.bayrak} boyut={20} /><span className="min-w-0 flex-1 truncate text-[13px] font-medium text-metin">{dilAdi(d.kod)}</span>
+                  <AnimatePresence>{sec && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={YAY} className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold tabular-nums text-black">{no}</motion.span>}</AnimatePresence>
+                </button>
               );
             })}
           </div>
-          <div className="ses-composer relative flex min-w-0 flex-1 items-end gap-2 rounded-[22px] p-2.5" style={{ isolation: "isolate" }}>
-            {/* Boyut tutamağı — composer'ın en tepesinde, ortada (görsel sayfasıyla
-                aynı). Yukarı çek = büyüt, aşağı = küçült. Yalnız seslendirme modunda. */}
-            {mod === "seslendirme" && (
-              <div onPointerDown={metinSurukle}
-                className="group/tut absolute -top-1.5 left-1/2 z-20 flex h-5 w-24 -translate-x-1/2 cursor-ns-resize items-center justify-center"
-                aria-label="Kutu boyutunu ayarla">
-                {/* LIME tutamak — diğer stüdyolarla aynı. */}
-                <span className="h-[5px] w-12 rounded-full transition-all group-hover/tut:h-[6px] group-hover/tut:w-14"
-                  style={{ background: "#55d6fd", opacity: 0.75 }} />
-              </div>
-            )}
-            {/* giriş */}
-            <div className="glass-cip flex min-w-0 flex-1 flex-col justify-center rounded-2xl px-3 py-2">
-              {mod === "seslendirme" ? (
-                <>
-                  <textarea ref={metinRef} value={metin} onChange={(e) => setMetin(e.target.value)} rows={2} placeholder="Seslendirilecek metni yaz…"
-                    style={metinYuk !== null ? { height: metinYuk, overflowY: "auto" } : undefined}
-                    className="prompt-alan w-full resize-none bg-transparent text-[15px] leading-relaxed text-metin outline-none placeholder:text-metin-3" />
-                  <div className="relative mt-1.5 flex items-center gap-2">
-                    <button onClick={() => setModelAcik((v) => !v)} className="hf-btn glass-cip flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-metin"><Pause className="h-3.5 w-3.5" /> {model} <ChevronDown className="h-3 w-3 text-metin-3" /></button>
-                    <button onClick={() => setAyarAcik((v) => !v)} className="hf-btn glass-cip rounded-lg px-2.5 py-1.5 text-[12px] font-medium text-metin-2 hover:text-metin">Gelişmiş</button>
-                    <AnimatePresence>
-                      {modelAcik && (
-                        <>
-                          <div className="fixed inset-0 z-30" onClick={() => setModelAcik(false)} />
-                          <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} className="menu-surface absolute bottom-full left-0 z-40 mb-2 w-72 rounded-xl p-1.5">
-                            {SES_URETIM_MODELLERI.map((m) => (
-                              <button key={m.ad} onClick={() => { setModel(m.ad); setModelAcik(false); }}
-                                className={cn("flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-white/8", model === m.ad && "bg-white/[0.06]")}>
-                                <span className="glass-ikon mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md"><AudioLines className={cn("h-3.5 w-3.5", model === m.ad ? "text-aksan" : "text-metin-2")} /></span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block text-[13px] font-medium text-metin">{m.ad}</span>
-                                  <span className="block text-[11px] leading-snug text-metin-3">{m.ozet}</span>
-                                </span>
-                                {model === m.ad && <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-aksan" />}
-                              </button>
-                            ))}
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </>
-              ) : (
-                <button onClick={() => dosyaRef.current?.click()} className="flex h-full min-h-[64px] w-full items-center gap-3 rounded-xl border border-dashed border-white/15 px-3 text-left transition-colors hover:border-aksan/40">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg glass-ikon glass-ikon-lime"><Upload className="h-5 w-5" /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-medium text-metin">{kaynakDosya ?? "Kaynak sesi yükle"}</span>
-                    <span className="block text-[11px] text-metin-3">{mod === "sesdegistir" ? "Dönüştürülecek ses/video" : "Çevrilecek video sesi"}</span>
-                  </span>
-                  {kaynakDosya && <span onClick={(e) => { e.stopPropagation(); setKaynakDosya(null); }} className="cursor-pointer text-metin-3 hover:text-metin"><X className="h-4 w-4" /></span>}
+        </MenuKart>
+      </KCip>
+      <KCip buyuk {...ac("konusmaci")} etiket="Konuşmacı" genislik={340} ikon={<Users className="h-3.5 w-3.5" />} deger={konusmaci === 0 ? "Otomatik" : `${konusmaci >= 5 ? "5+" : konusmaci} kişi`}>
+        <MenuKart baslik="Kaç kişi konuşuyor" sag={<span className="text-[11.5px] text-metin-3">Her biri kendi sesiyle</span>}>
+          <div className="grid grid-cols-3 gap-1.5 p-1.5">
+            {([0, 1, 2, 3, 4, 5] as const).map((n) => {
+              const a = Math.min(konusmaci, 5) === n;
+              return (
+                <button key={n} onClick={() => setKonusmaci(n)} aria-pressed={a} className={cn("flex flex-col items-center gap-1.5 rounded-[12px] px-1 py-2.5 ring-inset transition-colors", a ? "bg-white/[0.085] ring-2 ring-white" : "ring-1 ring-white/[0.06] hover:bg-white/[0.065]")}>
+                  <span className="flex h-5 items-center -space-x-1.5">{n === 0 ? <Sparkles className="h-4 w-4 text-white/80" /> : Array.from({ length: Math.min(n, 4) }, (_, i) => <span key={i} className="h-4 w-4 rounded-full ring-2 ring-[#1b1c1f]" style={{ background: ["#55d6fd", "#f472b6", "#facc15", "#a78bfa"][i] }} />)}</span>
+                  <span className="text-[12.5px] font-semibold text-metin">{n === 0 ? "Otomatik" : n >= 5 ? "5 ve üstü" : `${n} kişi`}</span>
                 </button>
-              )}
-            </div>
-
-            {/* Ses Ön-ayarı / Dil — dot-matrix ekran. self-end: prompt büyürken ALTA
-                yapışık kalır (üstte boşlukta asılı kalmaz). */}
-            {/* SEÇİLİ ROZET (kullanıcı isteği 2026-07-31): dil modunda seçilen
-                DİLİN BAYRAĞI, ses modunda seçilen SESİN renk/baş-harf kabı
-                butonun içinde görünür. Önce yalnız ad yazıyordu. */}
-            <button onClick={() => mod === "ceviri" ? setDilModalAcik(true) : setSesModalAcik(true)}
-              className="hf-btn glass-cip flex w-[210px] shrink-0 flex-col justify-center self-end rounded-2xl px-4 py-3 text-left">
-              <span className="text-[11px] tracking-wide text-metin-3">{mod === "ceviri" ? "Dil" : "Ses Ön-ayarı"}</span>
-              <span className="mt-1 flex items-center gap-2">
-                {mod === "ceviri" ? (
-                  <span className="text-[20px] leading-none">{dil.bayrak}</span>
-                ) : (
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[12px] font-black text-black/40"
-                    style={{ background: `linear-gradient(135deg, ${ses.renk}, ${ses.renk}66)` }}>
-                    {ses.ad.slice(0, 1)}
-                  </span>
-                )}
-                {/* `.hf-led` KULLANILMADI: o sınıf `color:transparent` +
-                    `-webkit-text-fill-color:transparent` ile dot-matrix efekti
-                    yapıyor ve bu kutuda ad TAMAMEN GÖRÜNMEZ oluyordu (ölçüldü).
-                    Okunurluk imzadan önce gelir — mono+uppercase yeterli. */}
-                <span className="min-w-0 flex-1 truncate font-mono text-[17px] font-bold uppercase tracking-wide text-aksan">{mod === "ceviri" ? dil.ad : ses.ad}</span>
-              </span>
-              <Waveform tohum={mod === "ceviri" ? dil.ad : ses.ad} n={44} className="mt-2 h-5" aktif />
-            </button>
-
-            {/* Üret — self-end + sabit yükseklik: prompt kutusu büyüyünce ÜRET
-                UZAMAZ, Ses Ön-ayarı ile aynı boyda kompakt kalır (alta yapışık). */}
-            <button onClick={uret} disabled={uretiliyor} className="hf-uret flex h-[92px] shrink-0 items-center justify-center gap-2 self-end rounded-2xl px-6 disabled:opacity-60">
-              {uretiliyor ? (
-                <RefreshCw className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <span className="text-[15px] font-black tracking-wide">ÜRET</span>
-                  <span className="flex items-center gap-1 rounded-full bg-black/15 px-2 py-0.5 text-[12px] font-bold"><Sparkles className="h-3 w-3" /> {kredi}</span>
-                </>
-              )}
-            </button>
+              );
+            })}
           </div>
-          </div>
-        </motion.div>
-
-        {/* gelişmiş ayarlar popover */}
-        <AnimatePresence>
-          {ayarAcik && (
-            <>
-              <div className="fixed inset-0 z-30" onClick={() => setAyarAcik(false)} />
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="menu-surface absolute bottom-28 left-1/2 z-40 w-72 -translate-x-1/2 rounded-2xl p-4">
-                <p className="mb-3 text-[13px] font-semibold">Gelişmiş ayarlar</p>
-                <AyarSlider ad="Hız" v={hiz} min={0.5} max={2} step={0.1} onChange={setHiz} birim="×" />
-                <AyarSlider ad="Ses Düzeyi" v={sesDuzey} min={0} max={2} step={0.1} onChange={setSesDuzey} birim="×" />
-                <AyarSlider ad="Perde" v={pitch} min={-12} max={12} step={1} onChange={setPitch} birim="" />
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </main>
-
-      {/* ═══ SES SEÇİCİ — composer üstünde popover (Higgsfield birebir) ═══ */}
-      <AnimatePresence>
-        {sesModalAcik && (
-          <div className="fixed inset-0 z-[70] flex items-end justify-center px-4 pb-[104px]">
-            {/* şeffaf tık-kapatma katmanı (galeri kararmaz) */}
-            <div className="absolute inset-0" onClick={() => setSesModalAcik(false)} />
-            <motion.div initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }} transition={{ duration: 0.16 }}
-              className="hf-kart relative w-full max-w-3xl overflow-hidden bg-[#0f1113] shadow-2xl shadow-black/60">
-              <div className="flex items-start justify-between border-b border-[var(--sn-kenar)] p-5">
-                <div><h3 className="text-xl font-black text-metin">BİR SES SEÇ VEYA EKLE</h3><p className="mt-1 text-[13px] text-metin-2">Hazır seslerden seç, kendi sesini kaydet ya da bir ses yükle.</p></div>
-                <button onClick={() => setSesModalAcik(false)} className="hf-btn glass-ikon flex h-8 w-8 items-center justify-center rounded-full text-metin-2" aria-label="Kapat"><X className="h-5 w-5" /></button>
-              </div>
-              <div className="max-h-[60vh] overflow-y-auto p-5">
-                {/* m22: "Ses ekle" — Higgsfield "Add Voice" modalını açar (Name + Yükle/Kaydet
-                    + örnek metin + Sesi Klonla). Basit inline form KALDIRILDI. */}
-                <button onClick={() => { setOzelSesFormu(true); setOzelSesDosya(null); setOzelSesKayit(false); setOzelSesKayitSn(0); }}
-                  className="mb-4 flex items-center gap-2 rounded-xl bg-aksan px-4 py-2.5 text-[13px] font-bold text-zemin transition-transform hover:scale-[1.02]"><Mic className="h-4 w-4" /> Ses ekle</button>
-                {ozelSesModelleri.length > 0 && (
-                  <>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-metin-3">Özel seslerin</p>
-                    <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                      {ozelSesModelleri.map((s) => {
-                        const secili = ses.ad === s.ad;
-                        return (
-                          <button key={s.ad} onClick={() => { setSes(s); setSesModalAcik(false); toast.success(`${s.ad} sesi seçildi`); }}
-                            className={cn("group flex flex-col overflow-hidden rounded-xl border text-left transition-all", secili ? "border-aksan ring-2 ring-aksan/30" : "border-[var(--sn-kenar)] hover:border-[var(--sn-kenar-2)]")}>
-                            <div className="h-16 w-full" style={{ background: `linear-gradient(135deg, ${s.renk}, ${s.renk}66)` }} />
-                            <div className="p-2.5">
-                              <span className="text-[10px] text-metin-3">{s.cinsiyet} · Özel</span>
-                              <div className="hf-led mt-0.5 text-metin" style={{ fontSize: 15 }}>{s.ad}</div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-metin-3">Hazır sesler</p>
-                  </>
-                )}
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {SESLER.map((s) => {
-                    const secili = ses.ad === s.ad;
-                    const oyn = oynayan === "ses-" + s.ad;
-                    return (
-                      <button key={s.ad} onClick={() => { setSes(s); setSesModalAcik(false); toast.success(`${s.ad} sesi seçildi`); }} className={cn("group flex flex-col overflow-hidden rounded-xl border text-left transition-all", secili ? "border-aksan ring-2 ring-aksan/30" : "border-[var(--sn-kenar)] hover:border-[var(--sn-kenar-2)]")}>
-                        <div className="relative h-24 w-full overflow-hidden" style={{ background: `linear-gradient(135deg, ${s.renk}, ${s.renk}66)` }}>
-                          <img src={sesGorsel(s.ad)} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]" onError={(e) => { e.currentTarget.style.display = "none"; }} />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                        </div>
-                        <div className="p-2.5">
-                          <span className="text-[10px] text-metin-3">{s.cinsiyet} · {s.dil}</span>
-                          <div className="hf-led mt-0.5 text-metin" style={{ fontSize: 15 }}>{s.ad}</div>
-                          <div className="mt-1.5 flex items-center gap-2">
-                            <span onClick={(e) => { e.stopPropagation(); setOynayan(oyn ? null : "ses-" + s.ad); }} className="glass-ikon flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full text-metin">{oyn ? <Pause className="h-3 w-3" /> : <Play className="ml-0.5 h-3 w-3 fill-current" />}</span>
-                            <Waveform tohum={s.ad} n={16} className="h-4 flex-1" aktif={oyn} />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ SES EKLE / "Add Voice" — Higgsfield birebir (m22) ═══
-          Name + Yükle/Kaydet + örnek metin + Sesi Klonla (40 kredi). */}
-      <AnimatePresence>
-        {ozelSesFormu && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOzelSesFormu(false)} />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
-              transition={{ type: "spring", stiffness: 360, damping: 30 }}
-              className="hf-kart relative w-full max-w-2xl overflow-hidden bg-[#0f1113] shadow-2xl shadow-black/60"
-            >
-              <input ref={ozelSesDosyaRef} type="file" accept="audio/*" className="hidden"
-                onChange={(e) => {
-                  const d = e.target.files?.[0]; e.target.value = "";
-                  if (!d) return;
-                  if (d.size > 11 * 1024 * 1024) { toast.error("Dosya çok büyük", { description: "En fazla 11MB (MP3/WAV)." }); return; }
-                  setOzelSesDosya(d.name); setOzelSesKayit(false); setOzelSesKayitSn(0);
-                  toast.success("Örnek ses yüklendi 🎧", { description: d.name });
-                }} />
-              {/* Başlık */}
-              <div className="flex items-start justify-between border-b border-[var(--sn-kenar)] p-5">
-                <div>
-                  <h3 className="text-[20px] font-bold text-metin">Ses ekle</h3>
-                  <p className="mt-1 text-[13px] text-metin-2">Klonlamak için bir ses örneği kaydet ya da yükle.</p>
-                </div>
-                <button onClick={() => setOzelSesFormu(false)} className="hf-btn glass-ikon flex h-8 w-8 items-center justify-center rounded-full text-metin-2" aria-label="Kapat"><X className="h-5 w-5" /></button>
-              </div>
-
-              <div className="max-h-[64vh] space-y-5 overflow-y-auto p-5">
-                {/* İsim */}
-                <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-metin"><span className="text-rose-400">*</span> İsim</label>
-                  <input value={ozelSesAd} onChange={(e) => setOzelSesAd(e.target.value)}
-                    placeholder="Sesini adlandır" autoFocus
-                    className="h-11 w-full rounded-xl border border-[var(--sn-kenar)] bg-zemin px-3.5 text-[14px] text-metin outline-none focus:border-aksan/60" />
-                  {/* cinsiyet — küçük yardımcı */}
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-[12px] text-metin-3">Ton:</span>
-                    {(["Kadın", "Erkek"] as const).map((c) => (
-                      <button key={c} onClick={() => setOzelSesCinsiyet(c)}
-                        className={cn("rounded-full px-3 py-1 text-[12px] font-semibold transition-colors", ozelSesCinsiyet === c ? "bg-aksan text-zemin" : "border border-[var(--sn-kenar)] text-metin-2 hover:text-metin")}>{c}</button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Yükle | Kaydet — iki sütun */}
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {/* Yükle */}
-                  <button onClick={() => ozelSesDosyaRef.current?.click()}
-                    className={cn("flex flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed p-6 text-center transition-colors",
-                      ozelSesDosya ? "border-aksan/60 bg-aksan/[0.06]" : "border-[var(--sn-kenar)] hover:border-[var(--sn-kenar-2)]")}>
-                    <Upload className={cn("h-7 w-7", ozelSesDosya ? "text-aksan" : "text-metin-2")} />
-                    <span className="text-[14px] font-semibold text-metin">{ozelSesDosya ? "Örnek yüklendi ✓" : "Sürükle bırak veya tıkla"}</span>
-                    <span className="text-[12px] text-metin-3">{ozelSesDosya ? ozelSesDosya : "MP3 veya WAV, en fazla 11MB"}</span>
-                  </button>
-
-                  {/* Kaydet */}
-                  <div className={cn("flex flex-col items-center justify-center gap-2.5 rounded-2xl border p-6 text-center transition-colors",
-                    ozelSesKayit ? "border-rose-400/60 bg-rose-500/[0.06]" : "border-[var(--sn-kenar)]")}>
-                    <button onClick={() => { setOzelSesKayit((v) => !v); if (!ozelSesKayit) { setOzelSesDosya(null); setOzelSesKayitSn(0); } }}
-                      className={cn("flex h-11 items-center gap-2 rounded-full px-5 text-[14px] font-bold transition-transform hover:scale-[1.03]",
-                        ozelSesKayit ? "bg-rose-500 text-white" : "bg-white/8 text-metin hover:bg-white/12")}>
-                      <span className={cn("h-2.5 w-2.5 rounded-full", ozelSesKayit ? "animate-pulse bg-white" : "bg-rose-500")} />
-                      {ozelSesKayit ? `Kaydediliyor ${Math.floor(ozelSesKayitSn / 60)}:${String(ozelSesKayitSn % 60).padStart(2, "0")}` : "Kaydı başlat"}
-                    </button>
-                    <span className="text-[14px] font-semibold text-metin">Kendi sesini oluştur</span>
-                    <span className="text-[12px] text-metin-3">{ozelSesKayit ? "Örnek metni oku, bitince tekrar bas" : "'Kaydet'e bas ve 2 dakikaya kadar net konuş"}</span>
-                  </div>
-                </div>
-
-                {/* Örnek metin */}
-                <div className="rounded-2xl border border-[var(--sn-kenar)] bg-yuzey p-4">
-                  <p className="text-[13px] font-semibold text-metin">Örnek metin</p>
-                  <p className="mt-1 text-[12px] text-metin-3">En iyi klon için kayıt sırasında bunu sesli oku</p>
-                  <p className="mt-2.5 text-[13px] leading-relaxed text-metin-2">
-                    En iyi fikirler tam biçimlenmiş gelmez. Küçük bir sezgi olarak başlar — peşini bırakmayan bir şey.
-                    Taslağını çıkarır, tartışır, yarısını atar ve kalanı yeniden kurarsın. Süreç budur; dağınık,
-                    sinir bozucu ve arada bir muhteşem. Ben hep hızın kusursuzluktan önemli olduğuna inandım.
-                  </p>
-                </div>
-              </div>
-
-              {/* Alt aksiyon */}
-              <div className="flex items-center justify-end gap-2 border-t border-[var(--sn-kenar)] p-4">
-                <button onClick={() => setOzelSesFormu(false)} className="rounded-xl px-4 py-2.5 text-[13px] font-medium text-metin-2 hover:text-metin">İptal</button>
-                <button onClick={ozelSesOlustur}
-                  className="flex items-center gap-2 rounded-xl bg-aksan px-5 py-2.5 text-[13px] font-bold text-zemin transition-transform hover:scale-[1.02]">
-                  <Sparkles className="h-4 w-4" /> Sesi klonla <span className="opacity-70">· 40</span>
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ DİL SEÇİCİ — composer üstünde popover (Higgsfield birebir) ═══ */}
-      <AnimatePresence>
-        {dilModalAcik && (
-          <div className="fixed inset-0 z-[70] flex items-end justify-center px-4 pb-[104px]">
-            <div className="absolute inset-0" onClick={() => setDilModalAcik(false)} />
-            <motion.div initial={{ opacity: 0, y: 16, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 16, scale: 0.98 }} transition={{ duration: 0.16 }}
-              className="hf-kart relative w-full max-w-2xl overflow-hidden bg-[#0f1113] shadow-2xl shadow-black/60">
-              <div className="flex items-start justify-between border-b border-[var(--sn-kenar)] p-5">
-                <div><h3 className="text-xl font-black text-metin">DİL SEÇ</h3><p className="mt-1 text-[13px] text-metin-2">Videonun sesinin çevrileceği dili seç.</p></div>
-                <button onClick={() => setDilModalAcik(false)} className="hf-btn glass-ikon flex h-8 w-8 items-center justify-center rounded-full text-metin-2" aria-label="Kapat"><X className="h-5 w-5" /></button>
-              </div>
-              <div className="max-h-[55vh] overflow-y-auto p-5">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                  {DILLER.map((d) => {
-                    const secili = dil.ad === d.ad;
-                    // m22: bayrak ORTADA ve BÜYÜK (higgs birebir)
-                    return (
-                      <button key={d.ad} onClick={() => { setDil(d); setDilModalAcik(false); toast.success(`${d.ad} seçildi`); }} className={cn("flex flex-col items-center justify-center gap-2 rounded-xl border py-5 transition-all", secili ? "border-aksan ring-2 ring-aksan/30" : "border-[var(--sn-kenar)] hover:border-[var(--sn-kenar-2)]")}>
-                        <span className="text-5xl leading-none">{d.bayrak}</span>
-                        <span className="hf-led text-metin" style={{ fontSize: 13 }}>{d.ad}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ═══ ÇIKTI DETAY DRAWER ═══ */}
-      <AnimatePresence>
-        {acik && <SesDetayDrawer u={acik} onKapat={() => setAcikDetay(null)} onFavori={() => favoriToggle(acik.id)} onSil={() => { silUretim(acik.id); setAcikDetay(null); toast.success("Silindi"); }} oynayan={oynayan} setOynayan={setOynayan} />}
-      </AnimatePresence>
-
-      {/* Toplu seçim çubuğu — video/görsel birebir ("N seçili") */}
-      <SecimToolbar />
-    </div>
+        </MenuKart>
+      </KCip>
     </>
+  ) : mod === "temizle" ? sabitModel("Eleven Voice Isolator")
+    : (
+      <>
+        {sabitModel("Eleven Scribe")}
+        {dilCipi("kdil", "Konuşma dili", kaynakDil, setKaynakDil, "Otomatik")}
+      </>
+    );
+
+  /* ── Üret ── */
+  const ctaEtiket = ({ seslendirme: "Seslendir", diyalog: "Seslendir", efekt: "Üret", sesdegistir: "Dönüştür", ceviri: "Çevir", temizle: "Temizle", transkript: "Yazıya dök" } as Record<SesMod, string>)[mod];
+  const kilitli = demo && KILITLI_MODLAR.includes(mod);
+  const parcaSayisi = mod === "seslendirme" && karakter > sinir && uzunBol ? parcalara(metin.trim(), sinir).length : 0;
+  const isSayisi = parcaSayisi || kac;
+  const uretDugmesi = (
+    <motion.button whileTap={{ scale: 0.97 }} onClick={uret} disabled={uretiliyor} aria-busy={uretiliyor} title={eksik ?? `${ctaEtiket} (${mac ? "⌘" : "Ctrl"}+Enter)`}
+      className="group ml-auto flex h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full bg-white px-5 text-[14.5px] font-semibold text-black transition active:scale-95 max-sm:ml-0 max-sm:w-full">
+      {uretiliyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 transition-transform duration-300 group-hover:rotate-12 group-hover:scale-110" />}
+      <span>{ctaEtiket}{isSayisi > 1 && <> <motion.span key={isSayisi} initial={{ y: -6, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={YAY} className="inline-block tabular-nums">{isSayisi}</motion.span> {parcaSayisi ? "parça" : mod === "ceviri" ? "dil" : "sürüm"}</>}</span>
+      {gercek === true && !kilitli && <span className="flex items-center gap-0.5 rounded-full bg-black/10 px-2 py-0.5 text-[12px] tabular-nums"><KrediYildiz className="h-3 w-3" />{toplamKredi}</span>}
+    </motion.button>
   );
-}
 
-function SesKart({ u, gorunum, secili, onSec, oynayan, setOynayan, onAc, onFavori, onKopya, onIndir, onSil, onYenidenCalistir }: {
-  u: Uretim; gorunum: "grid" | "list"; secili: boolean; onSec: () => void; oynayan: string | null; setOynayan: (v: string | null) => void;
-  onAc: () => void; onFavori: () => void; onKopya: () => void; onIndir: () => void; onSil: () => void;
-  onYenidenCalistir: () => void;
-}) {
-  const oyn = oynayan === u.id;
-  const metin = u.prompt || u.baslik;
-  /* GERÇEK oynatma motoru (kullanıcı isteği 2026-07-31): ▶ artık sesi
-     gerçekten çalar, ⟲10/10⟳ konumu değiştirir, süre ses dosyasından okunur
-     ve ilerleme çubuğu canlı akar. Öncesi tamamen görseldi. */
-  const { an, toplam, gercek, atla, konumaGit, oran } = useSesOynat({
-    sesUrl: u.sesUrl,
-    varsayilanSure: sureCoz(u.meta?.sure),
-    aktif: oyn,
-    onBitti: () => setOynayan(null),
+  const girdiVar = mod === "seslendirme" ? metin.trim().length > 0 : mod === "diyalog" ? doluSatirlar.length > 0 : mod === "efekt" ? efektTarif.trim().length > 0 : !!kaynak || !!kaynakBaglanti.trim();
+  // Tek durum hapı: önce engel, sonra eksik, sonra demo bilgisi; aynı bilgi başka yerde tekrarlanmaz.
+  const hapMetni = eksik && girdiVar && !/sağlayıcı/i.test(eksik) ? eksik : null;
+  const durumHap = hapMetni && (
+    <span title={hapMetni} className="max-w-[340px] shrink-0 truncate rounded-full bg-amber-300/[0.08] px-2.5 py-1 text-[11.5px] text-amber-200/90 ring-1 ring-inset ring-amber-300/20 max-sm:hidden">{hapMetni}</span>
+  );
+  const durum = null;
+
+  const komut = (
+    <div className={cn("pointer-events-auto relative w-full min-w-0", gomulu ? "pt-1" : "cam-istemci rounded-[26px] p-3")}
+      onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); uret(); } }}>
+      {araclar && <div className="mb-2.5 flex items-center gap-1 border-b border-white/[0.08] pb-2.5 max-sm:-mx-3 max-sm:overflow-x-auto max-sm:px-3 max-sm:[scrollbar-width:none]">{araclar}{durumHap}</div>}
+      <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&>*]:shrink-0 max-sm:grid max-sm:grid-cols-2 max-sm:overflow-visible max-sm:[&>*:last-child:nth-child(odd)]:col-span-2 max-sm:[&>*>button]:w-full max-sm:[&>*>button>span:nth-child(2)]:min-w-0 max-sm:[&>*>button>span:nth-child(2)]:flex-1 max-sm:[&_.whitespace-nowrap]:block max-sm:[&_.whitespace-nowrap]:max-w-full max-sm:[&_.whitespace-nowrap]:truncate">{cipler}</div>
+        {!araclar && durumHap}
+        {uretDugmesi}
+      </div>
+    </div>
+  );
+
+  const sonGrup = son?.meta?.grupId ? sesUretimleri.filter((u) => u.meta?.grupId === son.meta?.grupId).sort((a, b) => a.olusturma - b.olusturma) : undefined;
+  const sonSeridi = (mobil: boolean) => son && ((son.meta?.mod as SesMod | undefined) ?? "seslendirme") === mod && (
+    <motion.div key="son" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={YAY} className="pointer-events-auto mb-2">
+      <SonSerit u={son} mobil={mobil} onAc={() => setSeciliId(son.id)} grup={sonGrup} onSec={setSonId} onIptal={() => uretimIptal(son.id)}
+        onYenidenUret={KAYNAKLI_MODLAR.includes(son.meta?.mod as SesMod) ? undefined : () => yenidenUret(son)} ucretsizHak={ucretsizHak(son)} onBegen={() => { begeniBildir(son.favori); favoriToggle(son.id); }} onIndir={() => uretimIndir(son)}
+        onKapat={() => { if (sesCalici.durum().id === son.id) sesCalici.durdur(); setSonId(null); }} onYenidenDene={() => yenidenUret(son)} />
+    </motion.div>
+  );
+
+  /* ── Belge: uyarılar ── */
+  const etiketVar = /\[[^\]\n]{1,40}\]/.test(metin);
+  const kucukDugme = (aktif?: boolean) => cn("h-8 rounded-full px-3 text-[12.5px] font-medium transition-colors", aktif ? "bg-white text-black" : "bg-white/[0.085] text-metin hover:bg-white/[0.12]");
+  const uyarilar = (
+    <div className="space-y-2 empty:hidden">
+      {mod === "seslendirme" && etiketVar && !modelTanim.etiketler && (
+        <Uyari ikon={Tags} eylem={<>
+          <button onClick={() => setMetin((t) => t.replace(/\[[^\]\n]{1,40}\]\s*/g, "").replace(/[ \t]{2,}/g, " "))} className={kucukDugme()}>İfadeleri kaldır</button>
+          <button onClick={() => setModel("Eleven v4")} className={kucukDugme(true)}>Eleven v4&apos;e geç</button>
+        </>}>
+          <b className="font-semibold text-metin">{model} ton ifadelerini anlamaz.</b> Gönderirken çıkarılır.
+        </Uyari>
+      )}
+      {mod === "seslendirme" && karakter > sinir && (
+        <Uyari ikon={Scissors} eylem={<button onClick={() => setUzunBol((v) => !v)} aria-pressed={uzunBol} className={kucukDugme(uzunBol)}>{uzunBol ? "Bölünecek" : "Paragraflara böl"}</button>}>
+          <b className="font-semibold text-metin">Metin {sinir.toLocaleString("tr-TR")} karakteri aşıyor.</b> Paragraflara bölüp sırayla üretebilirsin ({parcalara(metin.trim(), sinir).length} parça).
+        </Uyari>
+      )}
+    </div>
+  );
+
+  /* ── Belge: mod içerikleri ── */
+  const ornekBaslik = (metin: string, sag?: React.ReactNode) => (
+    <div className="mb-3 flex items-center justify-between gap-3"><p className="text-[14px] font-semibold text-metin">{metin}</p>{sag}</div>
+  );
+  /* ── Seslendirme: paragraf blokları (ElevenLabs Studio deseni) ──
+     Metin tek dize olarak tutulur; boş satırla ayrılan her paragraf ayrı bir bloktur.
+     Enter imleçten yeni paragraf açar, baştaki Backspace öncekiyle birleştirir. */
+  const bloklar = metin.split("\n\n");
+  const blokYaz = (l: string[]) => { setMetin(l.join("\n\n")); setGelistirOnce(null); };
+  const blokOdakla = (i: number, k?: number) => requestAnimationFrame(() => {
+    const el = paragrafRefler.current[i];
+    if (!el) return;
+    el.focus();
+    const n = k ?? el.value.length;
+    el.setSelectionRange(n, n);
   });
-  const sure = sureBicim(toplam);
-  const suruyor = u.durum === "kuyrukta" || u.durum === "isleniyor";
-
-  /* Kullanılan ses ve dil — liste görünümündeki mod rozetinin hover kartında
-     gösterilir (kullanıcı isteği: "kullanılan ses ve dil kartı çıksın"). */
-  const meta = (u.meta ?? {}) as Record<string, unknown>;
-  const modAd = (meta.mod as string) || "Seslendirme";
-  const kullanilanSes = (meta.ses as string) || u.model || "—";
-  const kullanilanDil = (meta.dil as string) || "Türkçe";
-
-  if (gorunum === "list") {
-    return (
-      <div className="group/sk grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-        {/* SOL: siyah kutu + GERÇEK transport kontrolleri */}
-        <div className={cn("relative flex aspect-[16/10] flex-col items-center justify-center overflow-hidden rounded-2xl border bg-[#0d0d0e] px-8",
-          secili ? "border-aksan/60" : "border-[var(--sn-kenar)]")}>
-          <button onClick={onAc} className="absolute inset-0" aria-label="Sesi aç" />
-          <span onClick={(e) => { e.stopPropagation(); onSec(); }}
-            className={cn("absolute left-3 top-3 z-10 flex h-5 w-5 items-center justify-center rounded-[5px] border-2 backdrop-blur-sm transition-all",
-              secili ? "border-aksan bg-aksan text-zemin opacity-100" : "border-white/70 opacity-0 group-hover/sk:opacity-100")}>
-            {secili && <Check className="h-3 w-3" strokeWidth={3.5} />}
-          </span>
-          {/* KALICI BEĞENİ ROZETİ — sağ üstte, hover gerekmez (görsel/video ile aynı) */}
-          {u.favori && (
-            <span aria-hidden className="kart-begeni pointer-events-none absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full transition-opacity group-hover/sk:opacity-0">
-              <Heart className="h-[18px] w-[18px] fill-rose-400 text-rose-400" />
-            </span>
-          )}
-          <Waveform tohum={u.id} n={120} className="pointer-events-none z-0 h-[30%] w-full justify-center" aktif={oyn || suruyor} />
-          {/* ÜRETİLİYOR — transport yerine ilerleme göstergesi (kullanıcı isteği) */}
-          {suruyor ? (
-            <div className="relative z-10 mt-5 flex flex-col items-center gap-2.5">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-aksan" />
-              <span className="text-[13px] font-medium text-white">
-                {u.durum === "kuyrukta" ? "Kuyrukta…" : `Üretiliyor · %${u.ilerleme}`}
-              </span>
-              <span className="h-1.5 w-40 overflow-hidden rounded-full bg-white/12">
-                <span className="block h-full rounded-full bg-aksan transition-[width] duration-300" style={{ width: `${u.ilerleme}%` }} />
-              </span>
-              <span className="text-[11px] text-metin-3">{u.model}</span>
-            </div>
-          ) : (
-          <div className="relative z-10 mt-5 flex items-center gap-5">
-            <button onClick={(e) => { e.stopPropagation(); atla(-10); }} aria-label="10 saniye geri"
-              className="flex flex-col items-center text-metin-2 transition-colors hover:text-metin">
-              <RotateCcw className="h-6 w-6" /><span className="-mt-4 text-[9px] font-bold">10</span></button>
-            <button onClick={(e) => { e.stopPropagation(); setOynayan(oyn ? null : u.id); }}
-              aria-label={oyn ? "Duraklat" : "Oynat"}
-              className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-zemin shadow-xl transition-transform hover:scale-105">
-              {oyn ? <Pause className="h-6 w-6" /> : <Play className="ml-1 h-6 w-6 fill-current" />}
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); atla(10); }} aria-label="10 saniye ileri"
-              className="flex flex-col items-center text-metin-2 transition-colors hover:text-metin">
-              <RotateCw className="h-6 w-6" /><span className="-mt-4 text-[9px] font-bold">10</span></button>
+  const blokTus = (i: number) => (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const el = e.currentTarget;
+    if (e.key === "[" && !e.ctrlKey && !e.metaKey) { e.preventDefault(); setEtiketAra(""); setEtiketAcik(true); return; }
+    if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      const l = [...bloklar];
+      l.splice(i, 1, l[i].slice(0, el.selectionStart).trimEnd(), l[i].slice(el.selectionEnd).trimStart());
+      blokYaz(l); blokOdakla(i + 1, 0);
+      return;
+    }
+    if (e.key === "Backspace" && i > 0 && el.selectionStart === 0 && el.selectionEnd === 0) {
+      e.preventDefault();
+      const l = [...bloklar];
+      const onceki = l[i - 1];
+      l.splice(i - 1, 2, onceki + (onceki && l[i] ? " " : "") + l[i]);
+      blokYaz(l); blokOdakla(i - 1, onceki.length + (onceki && bloklar[i] ? 1 : 0));
+      return;
+    }
+    if (e.key === "ArrowUp" && i > 0 && el.selectionStart === 0) { e.preventDefault(); blokOdakla(i - 1); }
+    if (e.key === "ArrowDown" && i < bloklar.length - 1 && el.selectionEnd === el.value.length) { e.preventDefault(); blokOdakla(i + 1, 0); }
+  };
+  const taslakId = (i: number) => `taslak-${i}`;
+  const taslakDinle = (i: number) => {
+    const id = taslakId(i);
+    if (calici.id === id && calici.calisiyor) return sesCalici.duraklat();
+    const t = bloklar[i].replace(/\[[^\]\n]{1,40}\]\s*/g, "").replace(/<break[^>]*\/?>/g, " ").replace(/\s+/g, " ").trim();
+    if (!t) return;
+    void sesCalici.cal(id, { tur: "tarayici", metin: t, dil: dil || undefined, cinsiyet: ses.cinsiyet, hiz });
+  };
+  const toplamSure = metin.trim() ? sureTahmin(metin) : 0;
+  const doluBlok = bloklar.filter((b) => b.trim()).length;
+  const seslendirmeBelge = (
+    <div className="space-y-8">
+      <div>
+        <div className="overflow-hidden rounded-[22px] ring-1 ring-inset ring-white/[0.07]" style={{ background: "rgba(255,255,255,0.025)" }}>
+          <div className="flex items-center gap-3 border-b border-white/[0.06] px-4 py-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-metin"><BookOpen className="h-4 w-4" /></span>
+            <span className="min-w-0 flex-1 leading-tight"><span className="block text-[14.5px] font-semibold text-metin">Metin</span><span className="block truncate text-[12.5px] text-metin-3">Her paragrafın solundaki küreyle taslağını dinle</span></span>
+            <AnimatePresence>{doluBlok > 0 && <motion.span key={doluBlok} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={YAY} className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] tabular-nums text-metin-2">{doluBlok} paragraf</motion.span>}</AnimatePresence>
           </div>
-          )}
-          {/* İLERLEME ÇUBUĞU — tıklanabilir (konuma atlar). Önce hiç yoktu. */}
-          <div onClick={(e) => {
-              e.stopPropagation();
-              const r = e.currentTarget.getBoundingClientRect();
-              konumaGit((e.clientX - r.left) / r.width);
-            }}
-            className={cn("absolute inset-x-6 bottom-9 z-10 h-1.5 cursor-pointer rounded-full bg-white/12", suruyor && "hidden")}>
-            <span className="block h-full rounded-full bg-aksan transition-[width] duration-100"
-              style={{ width: `${Math.round(oran * 100)}%` }} />
-          </div>
-          <span className="absolute bottom-3 left-6 z-10 text-[12px] tabular-nums text-metin-2">{sureBicim(an)}</span>
-          <span className="absolute bottom-3 right-6 z-10 flex items-center gap-1.5 text-[12px] tabular-nums text-metin-2">
-            {!gercek && <span className="rounded bg-white/10 px-1 py-0.5 text-[9px] font-medium text-metin-3">demo</span>}
-            {sure}
-          </span>
-        </div>
-
-        {/* SAĞ: prompt kutusu — mod rozeti (hover'da ses/dil kartı) + prompt + araçlar */}
-        <div className={cn("flex flex-col rounded-2xl border bg-[var(--sn-panel,#131517)] p-5", secili ? "border-aksan/60" : "border-[var(--sn-kenar)]")}>
-          {/* MOD ROZETİ — hover'da kullanılan ses + dil kartı açılır
-              (kullanıcı isteği 2026-07-31). Önce yalnız etiketti. */}
-          <span className="group/rz relative mb-3 inline-flex w-fit cursor-default items-center gap-1.5 rounded-full border border-[var(--sn-kenar)] px-2.5 py-1 text-[12px] font-medium text-metin">
-            <AudioLines className="h-3.5 w-3.5 text-aksan" /> {modAd}
-            <span className="pointer-events-none absolute bottom-full left-0 z-30 mb-2 w-56 rounded-xl border border-white/10 bg-[#1c1c1f] p-3 opacity-0 shadow-2xl transition-opacity group-hover/rz:opacity-100">
-              <span className="mb-2 block text-[10.5px] font-semibold uppercase tracking-wide text-metin-3">Bu üretimde kullanıldı</span>
-              <span className="mb-1.5 flex items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-aksan/15 text-[11px] font-black text-aksan">{kullanilanSes.slice(0, 1)}</span>
-                <span className="min-w-0">
-                  <span className="block text-[9.5px] uppercase tracking-wide text-metin-3">Ses</span>
-                  <span className="block truncate text-[13px] font-semibold text-white">{kullanilanSes}</span>
-                </span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/[0.07] text-[13px]">
-                  {DILLER.find((d) => d.ad.toLocaleLowerCase("tr") === kullanilanDil.toLocaleLowerCase("tr"))?.bayrak ?? "🌐"}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[9.5px] uppercase tracking-wide text-metin-3">Dil</span>
-                  <span className="block truncate text-[13px] font-semibold text-white">{kullanilanDil}</span>
-                </span>
-              </span>
-            </span>
-          </span>
-          <p onClick={(e) => { e.stopPropagation(); void kopyala(metin, "İstem kopyalandı"); }}
-            title="Tıkla — kopyala"
-            className="cursor-copy select-text rounded-md text-[14px] leading-relaxed text-metin transition-colors selection:bg-aksan/30 hover:bg-white/[0.04]">{metin}</p>
-          <div className="mt-auto flex items-center justify-between pt-4">
-            {/* GERÇEK yeniden çalıştırma — önce yalnız toast basıyordu */}
-            <button onClick={(e) => { e.stopPropagation(); onYenidenCalistir(); }}
-              className="flex items-center gap-1.5 rounded-lg text-[13px] text-metin-2 transition-colors hover:text-metin"><RotateCcw className="h-4 w-4" /> Yeniden çalıştır</button>
-            <div className="flex items-center gap-2">
-              <button onClick={(e) => { e.stopPropagation(); onFavori(); }} aria-label="Beğen"
-                className={cn("hf-btn flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-white/8", u.favori ? "text-rose-400" : "text-metin-2 hover:text-metin")}>
-                <Heart className={cn("h-4 w-4", u.favori && "fill-current")} /></button>
-              <button onClick={(e) => { e.stopPropagation(); onKopya(); }} aria-label="Kopyala" className="hf-btn flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 transition-colors hover:bg-white/8 hover:text-metin"><Copy className="h-4 w-4" /></button>
-              <button onClick={(e) => { e.stopPropagation(); onIndir(); }} aria-label="İndir" className="hf-btn flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 transition-colors hover:bg-white/8 hover:text-metin"><Download className="h-4 w-4" /></button>
-              <button onClick={(e) => { e.stopPropagation(); onSil(); }} aria-label="Sil" className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 transition-colors hover:bg-rose-500/15 hover:text-rose-400"><Trash2 className="h-4 w-4" /></button>
-            </div>
-          </div>
+          <AnimatePresence initial={false}>
+            {bloklar.map((b, i) => {
+              const odak = odakBlok === i;
+              const caliyor = calici.id === taslakId(i) && calici.calisiyor;
+              const dolu = !!b.trim();
+              return (
+                <motion.div key={i} initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={YAY}
+                  className={cn("group/blok relative border-white/[0.06] transition-colors [&+&]:border-t", odak ? "bg-white/[0.035]" : "hover:bg-white/[0.035]")}>
+                  {odak && <motion.span layoutId="ses-blok-odak" transition={YAY} className="absolute inset-y-2 left-0 w-[3px] rounded-r-full bg-white" />}
+                  <div className="flex gap-3.5 px-4 py-3.5 max-sm:gap-2.5 max-sm:px-3">
+                    <button onClick={() => taslakDinle(i)} disabled={!dolu} aria-label={caliyor ? "Taslağı durdur" : `${i + 1}. paragrafı dinle`}
+                      title="Taslağı dinle · tarayıcı sesiyle, kredi düşmez"
+                      className="relative mt-1 h-8 w-8 shrink-0 rounded-full disabled:cursor-default disabled:opacity-40">
+                      <SesAvatar ad={ses.ad} renk={ses.renk} boyut={32} aktif={caliyor} />
+                      {dolu && (
+                        <span className={cn("absolute inset-0 flex items-center justify-center rounded-full transition-colors", caliyor ? "bg-black/45" : "bg-black/25 group-hover/blok:bg-black/45")}>
+                          {caliyor ? <Pause className="h-3 w-3 fill-white text-white" /> : <Play className="ml-0.5 h-3 w-3 fill-white text-white" />}
+                        </span>
+                      )}
+                    </button>
+                    <EtiketliMetin deger={b} onDegis={(v) => { const l = [...bloklar]; l[i] = v; blokYaz(l); }} taRef={{ current: null }}
+                      kayit={(el) => { paragrafRefler.current[i] = el; if (i === (odakParagraf.current ?? 0)) metinRef.current = el; }}
+                      onOdak={() => { odakParagraf.current = i; metinRef.current = paragrafRefler.current[i]; setOdakBlok(i); }}
+                      etiket={`${i + 1}. paragraf`} onTus={blokTus(i)}
+                      yerTutucu={i === 0 && bloklar.length === 1 ? (etkinTanim.etiketler ? "Okunmasını istediğin metni yaz ya da yapıştır. Ton eklemek için [ yaz." : "Okunmasını istediğin metni yaz ya da yapıştır.") : "Yeni paragraf…"}
+                      className="min-w-0 flex-1 pt-0.5 text-[18px] max-sm:text-[16px]" />
+                    <span className="w-9 shrink-0 pt-2 text-right text-[12px] tabular-nums text-metin-3">{dolu ? sureYaz(sureTahmin(b)) : ""}</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+          <button onClick={() => { const son = bloklar[bloklar.length - 1]; if (!son.trim()) return blokOdakla(bloklar.length - 1); blokYaz([...bloklar, ""]); blokOdakla(bloklar.length, 0); }}
+            className="flex w-full items-center gap-2 border-t border-white/[0.06] px-4 py-3 text-[13px] font-medium text-metin-2 transition-colors hover:bg-white/[0.045] hover:text-metin">
+            <Plus className="h-4 w-4" />Paragraf ekle<span className="ml-auto text-[12px] font-normal text-metin-3 max-sm:hidden">Enter yeni paragraf, Shift+Enter alt satır</span>
+          </button>
         </div>
       </div>
+      {metin.trim() && !gomulu && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+          <Kart ikon={AudioLines} baslik="Bu metni başka sesle" alt="Küreye bas, sesin örneğini dinle; ada bas, seç" sag={<button onClick={() => setSesSecici(true)} className="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.085] px-3 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.12] hover:text-metin active:scale-95"><Library className="h-3.5 w-3.5" />Tüm sesler</button>}>
+            <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-4">
+              {SESLER.slice(0, 8).map((h, i) => {
+                const v = hazirdanSes(h), id = onizleKimlik(v), caliyor = calici.id === id && calici.calisiyor, sec = ses.ad === h.ad, b = bayrakOf(v);
+                return (
+                  <motion.div key={h.ad} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
+                    className={cn("group flex min-w-0 items-center gap-2.5 rounded-[14px] p-2 ring-1 ring-inset transition-colors", sec ? "bg-white/[0.085] ring-2 ring-white" : "ring-white/[0.06] hover:bg-white/[0.055]")}>
+                    <button onClick={() => void onizle(v)} aria-label={caliyor ? "Durdur" : `${h.ad} sesini dinle`} className="relative shrink-0 rounded-full">
+                      <SesAvatar ad={h.ad} renk={h.renk} boyut={36} aktif={caliyor} />
+                      <span className={cn("absolute inset-0 flex items-center justify-center rounded-full bg-black/40 transition-opacity", caliyor ? "opacity-100" : "opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100")}>{caliyor ? <Pause className="h-3.5 w-3.5 fill-white text-white" /> : <Play className="ml-0.5 h-3.5 w-3.5 fill-white text-white" />}</span>
+                    </button>
+                    <button onClick={() => setSes(v)} aria-pressed={sec} className="min-w-0 flex-1 text-left leading-tight">
+                      <span className="flex items-center gap-1.5 text-[13.5px] font-medium text-metin"><span className="truncate">{h.ad}</span>{b && <Bayrak b={b} boyut={13} />}</span>
+                      <span className="mt-0.5 line-clamp-2 block text-[12px] leading-snug text-metin-3">{h.tanim}</span>
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </Kart>
+        </motion.div>
+      )}
+      <AnimatePresence initial={false}>
+        {!metin && !gomulu && (
+          <motion.section key="ornek" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.18 }}>
+            <Kart ikon={Sparkles} baslik="Bir örnekle başla" alt="Metin ve ona uygun ses birlikte gelir" sag={<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] tabular-nums text-metin-2">{ORNEKLER.length}</span>}>
+              <div className="grid grid-cols-3 gap-3 p-3.5 max-sm:grid-cols-2">
+                {ORNEKLER.map((o, i) => <OrnekKart key={o.baslik} o={o} i={i} onClick={() => ornekSec(o)} />)}
+              </div>
+            </Kart>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+  const efektBelge = (
+    <div className="space-y-8">
+      <Kart ikon={Waves} baslik="Ses tarifi" alt="Kaynak, ortam, mesafe ve yoğunluğu yaz" sag={<span className="rounded-full bg-white/[0.075] px-2.5 py-0.5 text-[11.5px] text-metin-2 max-sm:hidden">İngilizce tarif daha iyi sonuç verir</span>}>
+        <textarea ref={efektRef} value={efektTarif} onChange={(e) => setEfektTarif(e.target.value.slice(0, 1000))} aria-label="Ses efekti tarifi" spellCheck={false}
+          placeholder="Örneğin: boş bir koridorda yavaşça açılan eski ahşap kapı"
+          className={cn("block w-full resize-none bg-transparent px-5 py-4 text-[18px] leading-relaxed text-metin outline-none [field-sizing:content] placeholder:text-metin-2 max-sm:text-[16px]", efektTarif ? "min-h-[180px]" : "min-h-[96px]")} />
+      </Kart>
+      <AnimatePresence initial={false}>
+        {!gomulu && (
+          <motion.section key="efekt" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} transition={{ duration: 0.18 }}>
+            <Kart ikon={Sparkles} baslik="Örnek sesler" alt="Tıkla, tarif ve süre ayarı birlikte gelsin" sag={<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] tabular-nums text-metin-2">{EFEKT_ORNEKLERI.length}</span>}>
+              <div className="grid grid-cols-4 gap-3 p-3.5 max-sm:grid-cols-2">
+                {EFEKT_ORNEKLERI.map((o, i) => <EfektKart key={o.ad} o={o} i={i} onClick={() => efektOrnekSec(o)} />)}
+              </div>
+            </Kart>
+          </motion.section>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+  const konusmacilar = [...new Map(satirlar.map((x) => [x.ses.ad, x.ses])).values()];
+  const diyalogBelge = (mobil: boolean) => (
+    <div className="space-y-6">
+      <div className="overflow-hidden rounded-[22px] ring-1 ring-inset ring-white/[0.07]" style={{ background: "rgba(255,255,255,0.025)" }}>
+      <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] px-4 py-3">
+        <span className="flex shrink-0 -space-x-2">{konusmacilar.slice(0, 5).map((v) => <SesAvatar key={v.ad} ad={v.ad} renk={v.renk} boyut={30} className="ring-2 ring-[#17181b]" />)}</span>
+        <span className="min-w-0 flex-1 leading-tight"><span className="block text-[14.5px] font-semibold text-metin">Senaryo</span><span className="block text-[12.5px] text-metin-3">{konusmacilar.length} konuşmacı, {satirlar.length} satır</span></span>
+        <span className="rounded-full bg-white/[0.075] px-2.5 py-0.5 text-[11.5px] tabular-nums text-metin-2 max-sm:hidden">En fazla {DIYALOG_SES} ses</span>
+      </div>
+      <div className="space-y-1 p-2">
+        <AnimatePresence initial={false}>
+          {satirlar.map((x, i) => (
+            <motion.div key={x.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} transition={YAY}
+              className="group/satir relative flex gap-3 rounded-[16px] px-2 py-2 transition-colors focus-within:bg-white/[0.045] hover:bg-white/[0.025] max-sm:flex-col max-sm:gap-1.5">
+              <div className="relative w-[150px] shrink-0 pt-0.5 max-sm:w-auto">
+                <button onClick={() => { setSesAra(""); setSatirSesAcik((v) => (v === x.id ? null : x.id)); }} aria-expanded={satirSesAcik === x.id} aria-label={`Satır ${i + 1} sesi: ${x.ses.ad}, değiştir`}
+                  className={cn("flex h-8 max-w-full items-center gap-1.5 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-white/[0.085]", satirSesAcik === x.id && "bg-white/[0.08]")}>
+                  <SesAvatar ad={x.ses.ad} renk={x.ses.renk} boyut={24} />
+                  <span className="truncate text-[13.5px] font-semibold" style={{ color: `color-mix(in srgb, ${x.ses.renk} 55%, white)` }}>{x.ses.ad}</span>
+                  <ChevronDown className="h-3.5 w-3.5 shrink-0 text-metin-3" />
+                </button>
+                <AnimatePresence>
+                  <Yuzen acik={satirSesAcik === x.id} onKapat={() => setSatirSesAcik(null)} yerlesim="alt-sol" bosluk={6} etiket="Konuşmacı" className={cn(POP, "max-h-[min(440px,60vh)] overflow-y-auto p-2 [scrollbar-width:thin]")} style={{ width: "min(360px, calc(100vw - 24px))" }}>
+                    {sesListesi(x.ses.ad, (v) => { satirGuncelle(x.id, { ses: v }); setSatirSesAcik(null); })}
+                  </Yuzen>
+                </AnimatePresence>
+              </div>
+              <EtiketliMetin deger={x.metin} onDegis={(v) => satirGuncelle(x.id, { metin: v })} taRef={{ current: null }} kayit={(el) => { satirRefler.current[x.id] = el; }}
+                etiket={`Satır ${i + 1} metni`} onOdak={() => { odakSatir.current = x.id; }} onYapistir={(e) => senaryoYapistir(e, x.id)}
+                onTus={(e) => { if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey && i === satirlar.length - 1 && x.metin.trim()) { e.preventDefault(); satirEkle(); } }}
+                yerTutucu={i === 0 ? "İlk konuşmacının sözü…" : i === satirlar.length - 1 ? "Yanıt… (Enter yeni satır açar)" : "Yanıt…"}
+                className="min-w-0 flex-1 text-[17px]" />
+              <div className={cn("flex shrink-0 items-start gap-0.5 transition-opacity max-sm:absolute max-sm:right-1 max-sm:top-1.5", mobil ? "opacity-100" : "opacity-0 focus-within:opacity-100 group-hover/satir:opacity-100")}>
+                {etkinTanim.etiketler && (
+                  <button onClick={() => { odakSatir.current = x.id; satirRefler.current[x.id]?.focus(); setEtiketAra(""); setEtiketAcik(true); }} aria-label={`Satır ${i + 1} için ifade ekle`} title="İfade ekle" className={IKON}><Tags className="h-3.5 w-3.5" /></button>
+                )}
+                <button onClick={() => satirTasi(x.id, -1)} disabled={i === 0} aria-label={`Satır ${i + 1} yukarı`} title="Yukarı" className={IKON}><ArrowUp className="h-3.5 w-3.5" /></button>
+                <button onClick={() => satirTasi(x.id, 1)} disabled={i === satirlar.length - 1} aria-label={`Satır ${i + 1} aşağı`} title="Aşağı" className={IKON}><ArrowDown className="h-3.5 w-3.5" /></button>
+                <button onClick={() => satirSil(x.id)} disabled={satirlar.length <= 1} aria-label={`Satır ${i + 1} sil`} title="Sil" className={cn(IKON, "hover:text-rose-300")}><Trash2 className="h-3.5 w-3.5" /></button>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-white/[0.06] px-4 py-3">
+          <motion.button whileTap={{ scale: 0.97 }} onClick={satirEkle} className="flex h-9 items-center gap-1.5 rounded-full bg-white/[0.085] px-3.5 text-[13px] font-medium text-metin transition-colors hover:bg-white/[0.12]">
+            <Plus className="h-4 w-4" />Satır ekle
+          </motion.button>
+          <span className="flex min-w-0 items-center gap-1.5 rounded-full bg-white/[0.055] px-3 py-1.5 text-[12px] text-metin-2"><ClipboardPaste className="h-3.5 w-3.5 shrink-0" /><span className="truncate">Ayşe: Merhaba! biçimindeki senaryoyu yapıştır, satırlar ayrılır</span></span>
+        </div>
+      </div>
+      {!gomulu && (
+        <Kart ikon={Sparkles} baslik="Hazır senaryolar" alt="Tıkla, satırlar ve sesler birlikte gelsin" sag={<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] tabular-nums text-metin-2">{DIYALOG_ORNEKLERI.length}</span>}>
+          <div className="grid grid-cols-3 gap-2 p-3.5 max-sm:grid-cols-1">
+            {DIYALOG_ORNEKLERI.map((o) => <SenaryoSatiri key={o.baslik} o={o} kart onClick={() => diyalogOrnekSec(o)} />)}
+          </div>
+        </Kart>
+      )}
+    </div>
+  );
+
+  const KAYNAK_METIN: Record<string, { baslik: string; alt: string }> = {
+    sesdegistir: { baslik: "Kaydet ya da bir ses yükle", alt: "Ritim ve duygu korunur; yalnız ses rengi seçtiğin sese dönüşür. Başlayan her dakika 1 kredi." },
+    ceviri: { baslik: "Çevrilecek klibi ekle", alt: "Her konuşmacı kendi sesiyle hedef dilde konuşur. Dil başına, başlayan her dakika 12 kredi." },
+    temizle: { baslik: "Temizlenecek kaydı ekle", alt: "Rüzgâr, uğultu, müzik ve oda yankısı ayıklanır. Başlayan her dakika 1 kredi." },
+    transkript: { baslik: "Yazıya dökülecek kaydı ekle", alt: "Konuşmacılar ayrılır; TXT, SRT ya da VTT indir. Başlayan her dakika 1 kredi." },
+  };
+  const mikrofonlu = mod === "sesdegistir" || mod === "temizle";
+  const kaynakBelge = (
+    <div className="space-y-5">
+    <div className={cn("flex justify-center", gomulu ? "[&>*]:max-w-none" : "")}>
+      <AnimatePresence mode="wait" initial={false}>
+        {kaynak ? (
+          <motion.div key="dosya" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={YAY}
+            className="w-full rounded-[20px] bg-white/[0.045] p-4 ring-1 ring-inset ring-white/[0.07]">
+            <div className="flex items-center gap-3.5">
+              <motion.button whileTap={{ scale: 0.92 }} onClick={() => (kaynakCaliyor ? sesCalici.duraklat() : void sesCalici.cal("kaynak", { tur: "dosya", url: kaynak.onizleme }))}
+                aria-label={kaynakCaliyor ? "Kaynağı duraklat" : "Kaynağı dinle"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-[#0b0c0e]">
+                {kaynakCaliyor ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
+              </motion.button>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-[14.5px] font-medium text-metin">{kaynak.video ? <Film className="h-4 w-4 shrink-0 text-metin-2" /> : <AudioLines className="h-4 w-4 shrink-0 text-metin-2" />}<span className="truncate">{kaynak.ad}</span></span>
+                <span className="mt-0.5 block text-[12.5px] tabular-nums text-metin-3">{sureYaz(kaynak.sn)} · {kaynak.mb.toFixed(1).replace(".", ",")} MB · {kaynak.video ? "Video" : "Ses"}</span>
+              </span>
+              <button onClick={() => dosyaRef.current?.click()} className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium text-metin-2 transition-colors hover:bg-white/[0.075] hover:text-metin max-sm:hidden"><Upload className="h-3.5 w-3.5" />Değiştir</button>
+              <button onClick={kaynakKaldir} aria-label="Kaynağı kaldır" title="Kaldır" className={cn(IKON, "h-8 w-8 hover:text-rose-300")}><Trash2 className="h-4 w-4" /></button>
+            </div>
+            <Dalga url={kaynak.onizleme} tohum={kaynak.ad} n={120} oran={kaynakCaliyor && calici.toplam ? calici.an / calici.toplam : 0} className="mt-4 h-14 w-full" />
+          </motion.div>
+        ) : kayitta ? (
+          <motion.div key="kayit" initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={YAY}
+            className="flex w-full items-center gap-4 rounded-[20px] bg-rose-500/[0.06] p-4 ring-1 ring-inset ring-rose-400/25">
+            <span className="relative flex h-12 w-12 shrink-0 items-center justify-center">
+              <span className="absolute inset-0 animate-ping rounded-full bg-rose-500/25" />
+              <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-rose-500 text-white"><Mic className="h-5 w-5" /></span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[22px] font-light tabular-nums text-metin">{sureYaz(kayitSn)}</span>
+              <span className="block text-[12.5px] text-metin-3">Kaydediliyor · en fazla 5 dakika</span>
+            </span>
+            <button onClick={() => kayitci.current?.state === "recording" && kayitci.current.stop()} className="flex h-10 items-center gap-2 rounded-full bg-white px-4 text-[13.5px] font-semibold text-[#0b0c0e]">
+              <Square className="h-3.5 w-3.5 fill-current" />Bitir
+            </button>
+          </motion.div>
+        ) : (
+          <motion.div key="bos" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={YAY}
+            onDragOver={(e) => { if (e.dataTransfer.types.includes("Files")) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); void kaynakSec(e.dataTransfer.files[0]); }}
+            className="w-full overflow-hidden rounded-[20px] bg-white/[0.045] ring-1 ring-inset ring-white/[0.07]">
+            <div className="flex items-center gap-4 p-5 max-sm:flex-col max-sm:items-start">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/[0.075] text-metin">
+                {kaynakYukleniyor ? <Loader2 className="h-5 w-5 animate-spin" /> : mikrofonlu ? <Mic className="h-5 w-5" /> : mod === "transkript" ? <Captions className="h-5 w-5" /> : <Upload className="h-5 w-5" />}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[16px] font-semibold text-metin">{KAYNAK_METIN[mod]?.baslik}</span>
+                <span className="mt-0.5 block text-[13px] leading-snug text-metin-2">{KAYNAK_METIN[mod]?.alt}</span>
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.06] px-5 py-3.5">
+              {mikrofonlu && (
+                <motion.button whileTap={{ scale: 0.97 }} onClick={() => void kayitBaslat()} disabled={kaynakYukleniyor} className="flex h-9 items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0b0c0e] disabled:opacity-50">
+                  <Mic className="h-4 w-4" />Mikrofonla kaydet
+                </motion.button>
+              )}
+              <motion.button whileTap={{ scale: 0.97 }} onClick={() => dosyaRef.current?.click()} disabled={kaynakYukleniyor}
+                className={cn("flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold disabled:opacity-50", mikrofonlu ? "bg-white/[0.085] text-metin ring-1 ring-inset ring-white/[0.08] hover:bg-white/[0.12]" : "bg-white text-[#0b0c0e]")}>
+                <Upload className="h-4 w-4" />Dosya seç
+              </motion.button>
+              <span className="text-[12.5px] text-metin-3">ya da buraya sürükle · {mod === "sesdegistir" ? "MP3, WAV, M4A" : "MP3, WAV, M4A, MP4, MOV"} · en fazla {KAYNAK_MB} MB</span>
+            </div>
+            {mod === "ceviri" && (
+              <label className="flex items-center gap-2.5 border-t border-white/[0.06] px-5 py-3 focus-within:bg-white/[0.035]">
+                <Link2 className="h-4 w-4 shrink-0 text-metin-2" />
+                <input value={kaynakBaglanti} onChange={(e) => setKaynakBaglanti(e.target.value.slice(0, 500))} placeholder="ya da bağlantı yapıştır: YouTube, TikTok, X, doğrudan medya" aria-label="Kaynak bağlantısı" spellCheck={false}
+                  className="min-w-0 flex-1 bg-transparent text-[13.5px] text-metin outline-none placeholder:text-metin-2" />
+                {kaynakBaglanti && <button onClick={() => setKaynakBaglanti("")} aria-label="Bağlantıyı temizle" className="text-metin-3 hover:text-metin"><X className="h-4 w-4" /></button>}
+              </label>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+    {!gomulu && KAYNAK_ADIM[mod] && (
+      <>
+        <Kart ikon={Lightbulb} baslik="Nasıl çalışır" alt={KAYNAK_ADIM[mod].alt}>
+          <ol className="grid gap-2 p-3 sm:grid-cols-3">
+            {KAYNAK_ADIM[mod].adimlar.map(([I, b, a], i) => (
+              <motion.li key={b} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ ...YAY, delay: i * 0.05 }}
+                className="flex items-start gap-3 rounded-[16px] p-3.5 ring-1 ring-inset ring-white/[0.06]" style={{ background: "rgba(255,255,255,0.02)" }}>
+                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-metin"><I className="h-[18px] w-[18px]" />
+                  <span className="absolute -right-1 -top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white text-[10.5px] font-bold tabular-nums text-black">{i + 1}</span></span>
+                <span className="min-w-0 leading-snug"><span className="block text-[14px] font-semibold text-metin">{b}</span><span className="mt-0.5 block text-[12.5px] text-metin-2">{a}</span></span>
+              </motion.li>
+            ))}
+          </ol>
+        </Kart>
+        <Kart ikon={Check} baslik="İyi sonuç için">
+          <ul className="grid gap-x-6 gap-y-2.5 p-4 sm:grid-cols-2">
+            {KAYNAK_ADIM[mod].ipuclari.map(([iyi, m]) => (
+              <li key={m} className="flex items-center gap-2.5 text-[13px] text-metin-2">
+                <span className={cn("flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full", iyi ? "bg-emerald-400 text-[#052e1b]" : "bg-rose-500 text-white")}>{iyi ? <Check className="h-3 w-3" strokeWidth={3} /> : <X className="h-3 w-3" strokeWidth={3} />}</span>{m}
+              </li>
+            ))}
+          </ul>
+        </Kart>
+      </>
+    )}
+    </div>
+  );
+  const belge = (mobil: boolean) => (
+    <div className="space-y-5">
+      {uyarilar}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={mod} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}>
+          {mod === "seslendirme" ? seslendirmeBelge : mod === "efekt" ? efektBelge : mod === "diyalog" ? diyalogBelge(mobil) : kaynakBelge}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+
+  /* ── Mod seçici: kayan arka planlı bölmeli düğme ── */
+  const modSecici = (
+    <div role="radiogroup" aria-label="Ses işlemi" className="isolate inline-flex max-w-full gap-0.5 overflow-x-auto rounded-full p-[3px] ring-1 ring-inset ring-white/[0.08] [scrollbar-width:none]" style={{ background: "rgba(255,255,255,0.04)" }}>
+      {SES_MODLARI.map((m) => {
+        const I = MOD_IKON[m.id];
+        const a = mod === m.id;
+        return (
+          <button key={m.id} role="radio" aria-checked={a} onClick={() => setMod(m.id)} title={m.ozet}
+            className={cn("relative flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-[13.5px] font-medium transition-colors max-sm:h-8 max-sm:px-3 max-sm:text-[13px]", a ? "text-black" : "text-metin-2 hover:text-metin")}>
+            {a && <motion.span layoutId="ses-mod" transition={{ type: "spring", stiffness: 480, damping: 36 }} className="absolute inset-0 -z-10 rounded-full bg-white" />}
+            <I className="h-4 w-4" />{m.ad}
+          </button>
+        );
+      })}
+    </div>
+  );
+  const demoRozet = null;
+
+  /* ── Sonuçlar çekmecesi ── */
+  const modSayilari = SES_MODLARI.map((m) => ({ ...m, n: sesUretimleri.filter((u) => ((u.meta?.mod as SesMod | undefined) ?? "seslendirme") === m.id).length })).filter((m) => m.n > 0);
+  const sonuclar = (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="space-y-2 px-3 pb-2">
+        <label className="flex h-9 items-center gap-2 rounded-full bg-white/[0.065] px-3 ring-1 ring-inset ring-white/[0.06] focus-within:ring-white/20">
+          <Search className="h-4 w-4 shrink-0 text-metin-2" />
+          <input value={gecmisAra} onChange={(e) => setGecmisAra(e.target.value)} placeholder="Metin, ses ya da model ara" aria-label="Sonuçlarda ara" spellCheck={false}
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-metin outline-none placeholder:text-metin-2" />
+          {gecmisAra && <button onClick={() => setGecmisAra("")} aria-label="Aramayı temizle" className="text-metin-3 hover:text-metin"><X className="h-3.5 w-3.5" /></button>}
+        </label>
+        <div className="flex items-center gap-1">
+          <div className="relative">
+            <button onClick={() => setFiltreAcik((v) => !v)} aria-expanded={filtreAcik} className={cn(ARAC, "bg-white/[0.055]", filtreAcik && "bg-white/[0.08] text-metin")}>
+              {(() => { const I = gecmisMod === "tumu" ? AudioLines : MOD_IKON[gecmisMod]; return <I className="h-4 w-4" />; })()}
+              {gecmisMod === "tumu" ? "Tüm türler" : SES_MODLARI.find((m) => m.id === gecmisMod)!.ad}<ChevronDown className="h-3.5 w-3.5 text-metin-3" />
+            </button>
+            <AnimatePresence>
+              <Yuzen acik={filtreAcik} onKapat={() => setFiltreAcik(false)} yerlesim="alt-sol" bosluk={6} etiket="Tür" className={cn(POP, "w-[230px] p-1.5")}>
+                {[{ id: "tumu" as const, ad: "Tüm türler", n: sesUretimleri.length }, ...modSayilari].map((m) => {
+                  const I = m.id === "tumu" ? AudioLines : MOD_IKON[m.id];
+                  return (
+                    <button key={m.id} onClick={() => { setGecmisMod(m.id); setFiltreAcik(false); }} className={cn("flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] ring-inset transition-colors", gecmisMod === m.id ? "bg-white/[0.085] ring-2 ring-white" : "hover:bg-white/[0.065]")}>
+                      <I className="h-4 w-4 text-metin-2" /><span className="flex-1 text-metin">{m.ad}</span><span className="tabular-nums text-metin-3">{m.n}</span>
+                    </button>
+                  );
+                })}
+              </Yuzen>
+            </AnimatePresence>
+          </div>
+          <button onClick={() => setFiltre((f) => (f === "favori" ? "tumu" : "favori"))} aria-pressed={filtre === "favori"} aria-label="Yalnız beğenilenler" title="Yalnız beğenilenler"
+            className={cn(IKON, "h-8 w-8", filtre === "favori" && "bg-rose-400/10 text-rose-300")}><Heart className={cn("h-4 w-4", filtre === "favori" && "fill-current")} /></button>
+          <span className="flex-1" />
+          {secimModu && <button onClick={() => setSecilenler(secilenler.length === gorunen.length ? [] : gorunen.map((u) => u.id))} className={ARAC}>{secilenler.length === gorunen.length ? "Hiçbiri" : "Tümü"}</button>}
+          <button onClick={() => { setSecimModu((v) => !v); setSecilenler([]); }} aria-pressed={secimModu} className={cn(ARAC, secimModu && "bg-white/[0.08] text-metin")}>
+            <ListChecks className="h-4 w-4" />{secimModu ? "Bitti" : "Seç"}
+          </button>
+        </div>
+        <AnimatePresence>
+          {secimModu && secilenler.length > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.16 }} className="overflow-hidden">
+              <div className="flex items-center gap-1.5 rounded-[12px] bg-white/[0.065] p-1.5 pl-3">
+                <span className="flex-1 text-[13px] font-medium text-metin">{secilenler.length} seçili</span>
+                <button onClick={() => { const l = sesUretimleri.filter((u) => secilenler.includes(u.id) && u.durum === "tamam"); l.forEach((u, i) => setTimeout(() => uretimIndir(u), i * 350)); toast.success(`${l.length} ses indiriliyor`, { description: "Tarayıcı indirmeleri sırayla başlatır." }); }} className={ARAC}><Download className="h-4 w-4" />İndir</button>
+                <button onClick={() => { const l = sesUretimleri.filter((x) => secilenler.includes(x.id)); l.forEach((u) => sesiSil(u, true)); setSecilenler([]); setSecimModu(false); mesaj.silindi(`${l.length} ses`, () => uretimGeriYukle(l)); }}
+                  className={cn(ARAC, "text-rose-300 hover:text-rose-200")}><Trash2 className="h-4 w-4" />Sil</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 [scrollbar-width:thin]">
+        {sesUretimleri.length === 0 ? (
+          <div className="rounded-[16px] bg-white/[0.045] p-4 ring-1 ring-inset ring-white/[0.06]">
+            <p className="text-[14px] font-semibold text-metin">Henüz ses yok</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-metin-2">Ürettiğin her ses burada listelenir: dinle, indir, beğen ya da aynı ayarlarla yeniden üret.</p>
+          </div>
+        ) : gorunen.length === 0 ? (
+          <p className="px-4 py-10 text-center text-[13px] text-metin-3">{gecmisAra || gecmisMod !== "tumu" ? "Bu süzgece uyan ses yok." : "Beğendiğin ses yok; kalp ile beğenebilirsin."}</p>
+        ) : gruplar.map((g) => (
+          <div key={g.etiket} className="mt-3 first:mt-1">
+            <p className="pb-1.5"><span className="inline-flex rounded-full bg-white/[0.075] px-2.5 py-0.5 text-[12px] font-medium text-metin-2">{g.etiket}</span></p>
+            <div className="space-y-1.5">
+              <AnimatePresence initial={false}>
+                {g.oge.map((u) => (
+                  <motion.div key={u.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={YAY}>
+                    <GecmisSatiri u={u} onAc={() => (secimModu ? setSecilenler((l) => (l.includes(u.id) ? l.filter((x) => x !== u.id) : [...l, u.id])) : (setSeciliId(u.id), setMobilGecmis(false)))}
+                      secimModu={secimModu} secili={secilenler.includes(u.id)} onSecim={() => setSecilenler((l) => (l.includes(u.id) ? l.filter((x) => x !== u.id) : [...l, u.id]))}
+                      onIptal={() => uretimIptal(u.id)} onYenidenUret={KAYNAKLI_MODLAR.includes(u.meta?.mod as SesMod) ? undefined : () => yenidenUret(u)} ucretsizHak={ucretsizHak(u)}
+                      onBegen={() => { begeniBildir(u.favori); favoriToggle(u.id); }} onIndir={() => uretimIndir(u)} onAyar={() => { ayarlariYukle(u); setMobilGecmis(false); }}
+                      onYenidenDene={() => yenidenUret(u)} onSil={() => sesiSil(u)} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        ))}
+      </div>
+      <OynaticiCubugu uretimler={sesUretimleri} haric={son?.id} onAc={setSeciliId} onIndir={uretimIndir} />
+    </div>
+  );
+
+  /* ── Kısayollar ve API kodu ── */
+  const apiGovde = mod === "seslendirme"
+    ? { model: "eleven-tts", input: { prompt: metin.trim() || "Merhaba, Vayra'ya hoş geldin.", voice_id: sesTanim ? sesTanim.ad.toLocaleLowerCase("tr") : ses.sesId ?? "brian", ...(["tr", "en", "de", "fr", "es", "ar", "ru"].includes(dil) ? { language: dil } : {}), stability: kararlilik } }
+    : null;
+  const apiKod = apiGovde && (kodDil === "curl"
+    ? `curl -X POST ${typeof location !== "undefined" ? location.origin : ""}/api/v1/generations \\\n  -H "Authorization: Bearer $VAYRA_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '${JSON.stringify(apiGovde, null, 2).replace(/'/g, "'\\''")}'`
+    : `const yanit = await fetch("${typeof location !== "undefined" ? location.origin : ""}/api/v1/generations", {\n  method: "POST",\n  headers: {\n    Authorization: \`Bearer \${process.env.VAYRA_API_KEY}\`,\n    "Content-Type": "application/json",\n  },\n  body: JSON.stringify(${JSON.stringify(apiGovde, null, 2).replace(/\n/g, "\n  ")}),\n});\nconst { id } = await yanit.json(); // GET /api/v1/generations/{id} ile durumu sorgula`);
+  const KISAYOLLAR: [string[], string][] = [
+    [[mac ? "⌘" : "Ctrl", "↵"], ctaEtiket],
+    [["Boşluk"], "Son sesi çal / duraklat"],
+    [["D"], "Son sesi indir"],
+    [["F"], "Son sesi beğen"],
+    [["R"], "Son sesi yeniden üret"],
+    [["["], "İfade menüsü (metin alanında)"],
+    [["↵"], "Diyalogda son satırdan yeni satır"],
+    [["←", "→"], "Ayrıntıda önceki / sonraki ses"],
+    [["Esc"], "Açık pencereyi kapat"],
+    [["?"], "Bu listeyi aç / kapat"],
+  ];
+  const yardimOdak = useOdakTuzagi(kisayolAcik || kodAcik);
+  const seciciOdak = useOdakTuzagi(sesSecici);
+  const modallar = (
+    <>
+      <AnimatePresence>
+        {(kisayolAcik || kodAcik) && (
+          <div ref={yardimOdak} className="fixed inset-0 z-[75] flex justify-end" role="dialog" aria-modal="true" aria-label={kodAcik ? "API kodu" : "Klavye kısayolları"}>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="perde absolute inset-0 bg-black/70" onClick={() => { setKisayolAcik(false); setKodAcik(false); }} />
+            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%", transition: { duration: 0.2 } }} transition={{ type: "spring", stiffness: 380, damping: 38 }}
+              className={cn("relative flex h-full w-full flex-col overflow-y-auto border-l border-white/[0.08] bg-[#151618]", kodAcik ? "max-w-[640px]" : "max-w-[440px]")}>
+              <div className="mb-3 flex items-center gap-3 border-b border-white/[0.06] px-5 py-3.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-white">{kodAcik ? <Code2 className="h-[18px] w-[18px]" /> : <Keyboard className="h-[18px] w-[18px]" />}</span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block text-[16px] font-semibold text-metin">{kodAcik ? "Bu ayarlarla API'den üret" : "Klavye kısayolları"}</span>
+                  <span className="block text-[12.5px] text-metin-3">{kodAcik ? "Formdaki değerler isteğe aktarılır" : "Fareye uzanmadan çalış"}</span>
+                </span>
+                <button onClick={() => { setKisayolAcik(false); setKodAcik(false); }} aria-label="Kapat" className={cn(IKON, "h-9 w-9")}><X className="h-4 w-4" /></button>
+              </div>
+              {kodAcik ? (
+                <div className="space-y-3 px-5 pb-5">
+                  {apiKod ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="w-[200px]"><Segment deger={kodDil} onDegis={setKodDil} etiket="Dil" secenekler={[["curl", "cURL"], ["js", "JavaScript"]]} /></div>
+                        <span className="flex-1" />
+                        <button onClick={() => { void mesaj.kopyala(apiKod, "Kod"); }} className={cn(ARAC, "bg-white/[0.075] text-metin")}><Copy className="h-4 w-4" />Kopyala</button>
+                      </div>
+                      <pre style={{ fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace" }} className="max-h-[48vh] overflow-auto whitespace-pre-wrap break-words rounded-[14px] bg-black/30 p-4 text-[12px] leading-relaxed text-metin-2 ring-1 ring-inset ring-white/[0.06] [scrollbar-width:thin]">{apiKod}</pre>
+                      <a href="/gelistirici" className="flex items-center gap-1.5 text-[12.5px] text-aksan hover:underline">API anahtarı al ve belgelere git <ArrowRight className="h-3.5 w-3.5" /></a>
+                    </>
+                  ) : (
+                    <p className="rounded-[14px] bg-white/[0.055] p-4 text-[13px] leading-relaxed text-metin-2"><b className="font-semibold text-metin">Bu araç henüz API&apos;de yok.</b> Genel API şimdilik yalnız seslendirme (eleven-tts) sunar.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="divide-y divide-white/[0.06] px-5 pb-4">
+                  {KISAYOLLAR.map(([tuslar, ne]) => (
+                    <div key={ne} className="flex items-center justify-between gap-3 py-2.5">
+                      <span className="text-[13px] text-metin-2">{ne}</span>
+                      <span className="flex gap-1">{tuslar.map((t) => <kbd key={t} className="min-w-[26px] rounded-md bg-white/[0.085] px-1.5 py-0.5 text-center font-sans text-[11.5px] font-medium text-metin ring-1 ring-inset ring-white/[0.08]">{t}</kbd>)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <input ref={dosyaRef} type="file" accept="audio/*,video/*" hidden onChange={(e) => { void kaynakSec(e.target.files?.[0]); e.target.value = ""; }} />
+      <AnimatePresence>
+        {sesSecici && (
+          <div ref={seciciOdak} className="fixed inset-0 z-[70] flex justify-end" role="dialog" aria-modal="true" aria-label="Ses kütüphanesi">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="perde absolute inset-0 bg-black/60" onClick={() => { setSesSecici(false); setSesHedef(null); }} />
+            <motion.div initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%", transition: { duration: 0.2 } }} transition={{ type: "spring", stiffness: 380, damping: 38 }}
+              className="relative flex h-full w-full max-w-[880px] flex-col overflow-hidden border-l border-white/[0.08] bg-[#151618]">
+              <div className="flex items-center gap-3 border-b border-white/[0.06] px-6 py-3.5">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-white"><Library className="h-[18px] w-[18px]" /></span>
+                <span className="min-w-0 flex-1 leading-tight">
+                  <span className="block text-[16px] font-semibold text-metin">{sesHedef ? `Satır ${satirlar.findIndex((x) => x.id === sesHedef) + 1} için ses` : mod === "sesdegistir" ? "Hedef ses" : "Ses kütüphanesi"}</span>
+                  <span className="block text-[12.5px] text-metin-3">Dinle, seç ya da kendi sesini oluştur</span>
+                </span>
+                <button onClick={() => { setSesSecici(false); setSesHedef(null); }} className={cn(IKON, "h-9 w-9")} aria-label="Kapat"><X className="h-4 w-4" /></button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-6 pt-4 [scrollbar-width:thin]">
+                <SesKutuphanesi kompakt secili={sesHedef ? satirlar.find((x) => x.id === sesHedef)?.ses.ad : ses.ad} gercek={gercek} onSec={sesSecildi} onSesEkle={() => setKlon({})} onTasarla={() => setTasarim({})} onKlonla={(o) => setKlon({ klonlanacak: o })}
+                  onRemix={(o) => { if (o.sesId) setTasarim({ remixSesId: o.sesId }); }} />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {klon && <KlonModal gercek={gercek} klonlanacak={klon.klonlanacak} onKapat={() => setKlon(null)}
+          onKlonlandi={(ad) => { const o = useOzelSesler.getState().sesler.find((x) => x.ad === ad); if (o) setSes(ozeldenSes(o)); setSesSecici(false); }} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {tasarim && <TasarimModal gercek={gercek} remixSesId={tasarim.remixSesId} onKapat={() => setTasarim(false)}
+          onKaydedildi={(ad) => { const o = useOzelSesler.getState().sesler.find((x) => x.ad === ad); if (o && !sesHedef) setSes(ozeldenSes(o)); }} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {secili && (
+          <SesGoruntuleyici key="ses-goruntuleyici" u={secili} sira={lbIndex >= 0 ? { i: lbIndex, n: gezListe.length } : null}
+            onGez={(y) => { const n = gezListe[lbIndex + y]; if (n) setSeciliId(n.id); }} onKapat={() => setSeciliId(null)}
+            onAdKaydet={(ad) => { guncelle(secili.id, { baslik: ad }); toast.success("Ad değiştirildi", { description: `${ad}.${bicimUzantisi(secili.meta)} olarak inecek.` }); }}
+            onSeslendir={(t) => { setSeciliId(null); setMod("seslendirme"); setMetin(t.slice(0, 40000)); setGelistirOnce(null); requestAnimationFrame(() => metinRef.current?.focus()); }}
+            yorumlar={<YorumSekmesi yorum={yorum} setYorum={setYorum} konuId={secili.id} />} yorumSayisi={tumYorumlar.filter((y) => y.konuId === secili.id).length}
+            ustKatmanAcik={sesSecici || !!klon || !!tasarim}
+            onAyarlariYukle={() => ayarlariYukle(secili)} onYenidenUret={() => yenidenUret(secili)} ucretsizHak={ucretsizHak(secili)}
+            yenidenUretilemez={KAYNAKLI_MODLAR.includes(secili.meta?.mod as SesMod) ? "Kaynak dosya saklanmadı; dosyayı yeniden yükleyip üret" : undefined}
+            onIndir={() => uretimIndir(secili)} onBegen={() => { favoriToggle(secili.id); toast.success(secili.favori ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); }} onSil={() => sesiSil(secili)} />
+        )}
+      </AnimatePresence>
+    </>
+  );
+
+  const sayiRozet = (n: number) => n > 0 && <span className="rounded-full bg-white/[0.08] px-1.5 text-[11.5px] tabular-nums text-metin-2">{n}</span>;
+
+  /* ═══ GÖMÜLÜ (proje Varlıklar'ının alt kutusu) ═══ */
+  if (gomulu) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <div className="cam-istemci space-y-2.5 rounded-[26px] p-3">
+          <div className="flex items-center gap-2">
+            <div className="min-w-0">{modSecici}</div>
+            <span className="min-w-0 flex-1" />
+            {demoRozet}
+            <button onClick={() => setSesSecici(true)} aria-label="Ses kütüphanesi" title="Ses kütüphanesi" className={cn(IKON, "h-8 w-8 shrink-0")}><Library className="h-4 w-4" /></button>
+          </div>
+          <div className="max-h-[min(150px,18vh)] overflow-y-auto rounded-[18px] bg-black/15 px-4 py-3 ring-1 ring-inset ring-white/[0.06] [scrollbar-width:thin]">{belge(false)}</div>
+          <AnimatePresence>{sonSeridi(false)}</AnimatePresence>
+          {komut}
+          {durum}
+        </div>
+        {modallar}
+      </MotionConfig>
     );
   }
 
-  // IZGARA — koyu kutu; üstte prompt, ortada waveform, altta ses adı + süre.
-  const sesAdi = (u.model || u.arac || "ROMAN").toUpperCase();
-  return (
-    <div className="group/sk">
-      {/* KÖK <div> (buton DEĞİL): içeride hover araç butonları var ve
-          button-in-button geçersiz HTML → hydration hatası veriyordu (ölçüldü).
-          Tıklama/klavye erişimi role+tabIndex ile korunur. */}
-      <div onClick={onAc} role="button" tabIndex={0}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onAc(); } }}
-        className={cn("relative flex aspect-[16/10] w-full cursor-pointer flex-col overflow-hidden rounded-xl border bg-[#0e0e0f] p-4 text-left transition-colors",
-          secili ? "border-aksan/60" : "border-[var(--sn-kenar)] hover:border-[var(--sn-kenar-2)]")}>
-        <p className="line-clamp-1 pr-20 text-left text-[13px] text-metin-2">{metin}</p>
-
-        <span className="flex flex-1 items-center justify-center">
-          <Waveform tohum={u.id} n={110} className="h-[42%] w-full justify-center" aktif={oyn} />
-        </span>
-
-        {/* Aynı `.hf-led` tuzağı — bkz. yukarıdaki not. */}
-        <span className="text-left font-mono text-[14px] font-bold uppercase tracking-wide text-metin">{sesAdi}</span>
-
-        <span onClick={(e) => { e.stopPropagation(); onSec(); }}
-          className={cn("absolute left-3 top-3 z-10 flex h-5 w-5 items-center justify-center rounded-[5px] border-2 backdrop-blur-sm transition-all",
-            secili ? "border-aksan bg-aksan text-zemin opacity-100" : "border-white/70 opacity-0 group-hover/sk:opacity-100")}>
-          {secili && <Check className="h-3 w-3" strokeWidth={3.5} />}
-        </span>
-
-        {/* KALICI BEĞENİ ROZETİ — hover olmadan da görünür (görsel/video ile aynı
-            davranış, kullanıcı isteği 2026-07-31). Hover'da ray kalbine yer bırakır. */}
-        {u.favori && (
-          <span aria-hidden className="kart-begeni pointer-events-none absolute right-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full transition-opacity group-hover/sk:opacity-0">
-            <Heart className="h-[18px] w-[18px] fill-rose-400 text-rose-400" />
-          </span>
-        )}
-
-        {/* ÜRETİLİYOR katmanı — ızgara kartında (kullanıcı isteği) */}
-        {suruyor ? (
-          <span className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-[#0e0e0f]/75 backdrop-blur-sm">
-            <span className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-aksan" />
-            <span className="text-[12.5px] font-medium text-white">
-              {u.durum === "kuyrukta" ? "Kuyrukta…" : `Üretiliyor · %${u.ilerleme}`}
-            </span>
-            <span className="h-1 w-28 overflow-hidden rounded-full bg-white/12">
-              <span className="block h-full rounded-full bg-aksan transition-[width] duration-300" style={{ width: `${u.ilerleme}%` }} />
-            </span>
-          </span>
-        ) : (
-        <span onClick={(e) => { e.stopPropagation(); setOynayan(oyn ? null : u.id); }}
-          className={cn("absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white text-zemin shadow-xl transition-all hover:scale-110",
-            oyn ? "opacity-100" : "opacity-0 group-hover/sk:opacity-100")}>
-          {oyn ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
-        </span>
-        )}
-
-        {/* Sağ-üst hover araçları — boyut bir tık büyütüldü (28 → 36px,
-            ikon 14 → 17px; kullanıcı isteği 2026-07-31). */}
-        <div className="absolute right-3 top-3 z-10 flex flex-col gap-2 opacity-0 transition-opacity group-hover/sk:opacity-100">
-          {([[Heart, onFavori, !!u.favori], [Download, onIndir, false], [Copy, onKopya, false]] as const).map(([Ik, fn, aktif], i) => (
-            <button key={i} onClick={(e) => { e.stopPropagation(); fn(); }}
-              className={cn("flex h-9 w-9 items-center justify-center rounded-full glass-ikon transition-colors", aktif ? "text-rose-400" : "text-white/85 hover:text-white")}>
-              <Ik className={cn("h-[17px] w-[17px]", aktif && "fill-current")} />
+  /* ═══ MOBİL ═══ */
+  if (!masaustu) {
+    return (
+      <MotionConfig reducedMotion="user">
+        <div className="flex min-h-[100dvh] flex-col overflow-x-hidden bg-zemin pb-[env(safe-area-inset-bottom)]">
+          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1.5 bg-zemin/90 px-2 backdrop-blur-md">
+            <button onClick={() => router.push("/panel")} aria-label="Geri" className="flex h-10 w-10 items-center justify-center rounded-full text-metin"><ChevronLeft className="h-5 w-5" /></button>
+            <h1 className="flex-1 text-[18px] font-semibold tracking-[-0.01em] text-metin">Ses</h1>
+            {demoRozet}
+            <button onClick={() => setSesSecici(true)} aria-label="Ses kütüphanesi" className={cn(IKON, "h-9 w-9")}><Library className="h-4 w-4" /></button>
+            <button onClick={() => setMobilGecmis(true)} aria-label="Sonuçlar" className={cn(IKON, "relative h-9 w-9")}>
+              <History className="h-4 w-4" />
+              {aktifIs > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-white" />}
             </button>
-          ))}
+          </header>
+          <div className="shrink-0 px-3 pb-3 pt-1">{modSecici}</div>
+          <main className="flex-1 px-4 pb-6">{belge(true)}</main>
+          <div className="sticky bottom-0 z-30 bg-gradient-to-t from-zemin via-zemin to-zemin/0 px-2 pb-2 pt-4">
+            <AnimatePresence>{sonSeridi(true)}</AnimatePresence>
+            {komut}
+            {durum}
+          </div>
+          <AltSayfa acik={mobilGecmis} baslik="Sonuçlar" onKapat={() => setMobilGecmis(false)}><div className="h-[70vh]">{sonuclar}</div></AltSayfa>
+          {modallar}
         </div>
+      </MotionConfig>
+    );
+  }
 
-        {/* Çalarken ince ilerleme çubuğu — kartın en altında */}
-        {oyn && (
-          <span className="absolute inset-x-0 bottom-0 h-1 bg-white/10">
-            <span className="block h-full bg-aksan transition-[width] duration-100" style={{ width: `${Math.round(oran * 100)}%` }} />
-          </span>
-        )}
-
-        <span className="absolute bottom-4 right-4 text-[12px] tabular-nums text-metin-2">{oyn ? sureBicim(an) : sure}</span>
-      </div>
-    </div>
-  );
-}
-
-const HIZLAR = [0.5, 1, 1.25, 1.5, 2] as const;
-function sesSure(u: Uretim): number {
-  // meta.sure "3:24" veya "8.7sn" biçiminde olabilir; ikisini de çöz.
-  const s = u.meta?.sure ?? "";
-  if (s.includes(":")) { const [d, sn] = s.split(":").map(Number); return (d || 0) * 60 + (sn || 0); }
-  const n = parseFloat(s.replace(/[^\d.]/g, ""));
-  return Number.isFinite(n) && n > 0 ? n : 8.7;
-}
-function zmn(t: number): string {
-  const d = Math.floor(t / 60), sn = Math.floor(t % 60);
-  return `${d}:${String(sn).padStart(2, "0")}`;
-}
-
-function SesOynatici({ u, oyn, onOyn }: { u: Uretim; oyn: boolean; onOyn: (v: boolean) => void }) {
-  const sure = useMemo(() => sesSure(u), [u]);
-  const bars = useMemo(() => dalga(u.id, 200), [u.id]);
-  const [konum, setKonum] = useState(0);
-  const [hiz, setHiz] = useState(1);
-  const [sesDuzey, setSesDuzey] = useState(1);
-  const [hizAcik, setHizAcik] = useState(false);
-
-  // Deterministik ilerleme motoru — çalarken konumu hızla ilerlet.
-  useEffect(() => {
-    if (!oyn) return;
-    const t = setInterval(() => {
-      setKonum((k) => {
-        const yeni = k + 0.1 * hiz;
-        if (yeni >= sure) { onOyn(false); return sure; }
-        return yeni;
-      });
-    }, 100);
-    return () => clearInterval(t);
-  }, [oyn, hiz, sure, onOyn]);
-
-  const basaSar = () => setKonum((k) => Math.max(0, k - 10));
-  const ileriSar = () => setKonum((k) => Math.min(sure, k + 10));
-  const oynatDurdur = () => {
-    // Sona gelmişse baştan başlat.
-    if (!oyn && konum >= sure) setKonum(0);
-    onOyn(!oyn);
-  };
-  const cubugaTikla = (e: React.MouseEvent) => {
-    // e.currentTarget: tıklanan öğe (waveform VEYA seek bar) — kendi genişliğine göre hesapla.
-    const r = e.currentTarget.getBoundingClientRect();
-    setKonum(Math.max(0, Math.min(sure, ((e.clientX - r.left) / r.width) * sure)));
-  };
-  const oran = sure ? konum / sure : 0;
-  const sessiz = sesDuzey === 0;
-
+  /* ═══ MASAÜSTÜ ═══ */
   return (
-    <div className="flex w-full max-w-3xl flex-col items-center">
-      {/* Waveform — çalınan kısım lime, kalan gri; tıkla → o konuma atla */}
-      <div onClick={cubugaTikla}
-        className="flex h-32 w-full cursor-pointer items-center justify-center gap-[2px]" aria-label="Konuma atla" role="slider"
-        aria-valuemin={0} aria-valuemax={Math.round(sure)} aria-valuenow={Math.round(konum)}>
-        {bars.map((b, i) => (
-          <span key={i} className="w-[3px] shrink-0 rounded-full transition-colors"
-            style={{ height: `${b}%`, background: i / bars.length <= oran ? "var(--sn-lime)" : "#3a3a3a" }} />
-        ))}
-      </div>
-
-      {/* Seek bar — ince tıklanabilir progress + zaman göstergesi */}
-      <div className="mt-6 flex w-full max-w-xl items-center gap-3">
-        <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-metin-2">{zmn(konum)}</span>
-        <button onClick={cubugaTikla} aria-label="Konuma atla"
-          className="group/sk relative h-2 min-w-0 flex-1 cursor-pointer rounded-full bg-white/12">
-          <span className="absolute inset-y-0 left-0 rounded-full bg-aksan" style={{ width: `${oran * 100}%` }} />
-          <span className="absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-aksan opacity-0 shadow transition-opacity group-hover/sk:opacity-100" style={{ left: `${oran * 100}%` }} />
-        </button>
-        <span className="w-11 shrink-0 text-[12px] tabular-nums text-metin-2">{zmn(sure)}</span>
-      </div>
-
-      {/* Transport: hız · ⟲10 · play/pause · 10⟳ · ses */}
-      <div className="mt-6 flex items-center gap-6">
-        {/* oynatma hızı */}
-        <div className="relative">
-          <button onClick={() => setHizAcik((v) => !v)} aria-label="Oynatma hızı"
-            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[13px] font-semibold text-metin-2 transition-colors hover:bg-white/8 hover:text-metin">
-            <Gauge className="h-4 w-4" /> {hiz}×
-          </button>
-          <AnimatePresence>
-            {hizAcik && (
-              <>
-                <div className="fixed inset-0 z-30" onClick={() => setHizAcik(false)} />
-                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                  className="menu-surface absolute bottom-full left-1/2 z-40 mb-2 w-28 -translate-x-1/2 rounded-xl p-1.5">
-                  {HIZLAR.map((h) => (
-                    <button key={h} onClick={() => { setHiz(h); setHizAcik(false); }}
-                      className={cn("flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[13px] transition-colors hover:bg-white/8",
-                        hiz === h ? "text-aksan" : "text-metin")}>
-                      {h}× {hiz === h && <Check className="h-3.5 w-3.5" />}
-                    </button>
-                  ))}
-                </motion.div>
-              </>
-            )}
-          </AnimatePresence>
+    <MotionConfig reducedMotion="user">
+      <div className={cn("relative flex w-full bg-zemin", gomulu ? "h-[760px] overflow-hidden rounded-2xl" : "h-[calc(100dvh-var(--ust-nav))]")}>
+        <div className="relative flex min-w-0 flex-1 flex-col">
+          <div className="shrink-0 px-6 pt-4">
+            <div className="flex min-h-[60px] items-center gap-2 rounded-[22px] bg-[#121315] py-2 pl-2 pr-2.5 ring-1 ring-inset ring-white/[0.07]">
+              <span className="ml-1 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.085] text-white max-[1500px]:hidden"><AudioLines className="h-5 w-5" /></span>
+              <div className="min-w-0">{modSecici}</div>
+              <span className="min-w-0 flex-1" />
+              <Tooltip label="Klavye kısayolları (?)" side="bottom">
+                <button onClick={() => setKisayolAcik(true)} aria-label="Klavye kısayolları" className={cn(IKON, "h-9 w-9 shrink-0")}><Keyboard className="h-4 w-4" /></button>
+              </Tooltip>
+              {!!apiKod && <Tooltip label="Bu ayarlarla API kodu" side="bottom">
+                <button onClick={() => setKodAcik(true)} aria-label="API kodu" className={cn(IKON, "h-9 w-9 shrink-0")}><Code2 className="h-4 w-4" /></button>
+              </Tooltip>}
+              <button onClick={() => setSesSecici(true)} className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.075] px-3.5 text-[13px] font-medium text-metin ring-1 ring-inset ring-white/[0.08] transition hover:bg-white/[0.1] active:scale-95"><Library className="h-4 w-4" />Sesler</button>
+              <AnimatePresence initial={false}>
+                {!cekmeceAcik && (
+                  <motion.button initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} transition={YAY} onClick={() => setCekmece(true)}
+                    className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.075] px-3.5 text-[13px] font-medium text-metin ring-1 ring-inset ring-white/[0.08] transition hover:bg-white/[0.1] active:scale-95">
+                    <History className="h-4 w-4" />Sonuçlar{sayiRozet(sesUretimleri.length)}{aktifIs > 0 && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">
+            <div className="mx-auto max-w-[880px] px-8 pb-[300px] pt-6">{belge(false)}</div>
+          </div>
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 flex justify-center px-6 pb-5">
+            <motion.div initial={{ y: 28, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ ...YAY, delay: 0.05 }} className="w-full max-w-[1040px]">
+              <AnimatePresence>{sonSeridi(false)}</AnimatePresence>
+              {komut}
+              {durum}
+            </motion.div>
+          </div>
         </div>
-
-        <button onClick={basaSar} aria-label="10 saniye geri"
-          className="flex flex-col items-center text-metin-2 transition-colors hover:text-metin">
-          <Rewind className="h-6 w-6" /><span className="-mt-1 text-[9px] font-bold">10</span>
-        </button>
-        <button onClick={oynatDurdur} aria-label={oyn ? "Duraklat" : "Oynat"}
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-zemin shadow-2xl transition-transform hover:scale-105">
-          {oyn ? <Pause className="h-7 w-7" /> : <Play className="ml-1 h-7 w-7 fill-current" />}
-        </button>
-        <button onClick={ileriSar} aria-label="10 saniye ileri"
-          className="flex flex-col items-center text-metin-2 transition-colors hover:text-metin">
-          <FastForward className="h-6 w-6" /><span className="-mt-1 text-[9px] font-bold">10</span>
-        </button>
-
-        {/* ses seviyesi */}
-        <div className="flex items-center gap-2">
-          <button onClick={() => setSesDuzey((v) => (v === 0 ? 1 : 0))} aria-label="Sesi aç/kapat"
-            className="text-metin-2 transition-colors hover:text-metin">
-            {sessiz ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-          </button>
-          <input type="range" min={0} max={1} step={0.05} value={sesDuzey}
-            onChange={(e) => setSesDuzey(Number(e.target.value))} aria-label="Ses seviyesi"
-            className="h-1.5 w-20 cursor-pointer accent-aksan" />
-        </div>
+        <AnimatePresence initial={false}>
+          {cekmeceAcik && (
+            <motion.aside key="cekmece" initial={{ width: 0, opacity: 0 }} animate={{ width: 360, opacity: 1 }} exit={{ width: 0, opacity: 0 }} transition={YAY}
+              className="shrink-0 overflow-hidden border-l border-white/[0.06] bg-[#111214]">
+              <div className="flex h-full w-[360px] flex-col">
+                <div className="mb-3 flex items-center gap-2 border-b border-white/[0.06] px-4 py-3">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/[0.085] text-metin"><History className="h-4 w-4" /></span><h2 className="text-[15px] font-semibold text-metin">Sonuçlar</h2>
+                  {sayiRozet(sesUretimleri.length)}
+                  {aktifIs > 0 && <span className="flex items-center gap-1 rounded-full bg-white/[0.085] px-2 py-0.5 text-[12px] text-metin-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />{aktifIs} sürüyor</span>}
+                  <span className="flex-1" />
+                  <button onClick={() => setCekmece(false)} aria-label="Sonuçları kapat" className={cn(IKON, "h-8 w-8")}><X className="h-4 w-4" /></button>
+                </div>
+                <div className="min-h-0 flex-1">{sonuclar}</div>
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+      {modallar}
+    </MotionConfig>
   );
 }
 
-/* Paylaşım hedefleri — kart menüsündeki setle AYNI (tek yerde tanımlı). */
-const PAYLAS_HEDEFLERI: { ad: string; ikon: typeof Share2; fn: (u: Uretim) => void }[] = [
-  { ad: "Bağlantıyı kopyala", ikon: Link2, fn: (u) => { void baglantiyiKopyala(`/panel/ses?u=${u.id}`, "Bağlantı kopyalandı"); } },
-  { ad: "X'te paylaş", ikon: XIkon, fn: (u) => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(u.baslik)}`, "_blank") },
-  { ad: "WhatsApp'ta paylaş", ikon: MessageCircle, fn: (u) => window.open(`https://wa.me/?text=${encodeURIComponent(u.baslik)}`, "_blank") },
-  { ad: "LinkedIn'de paylaş", ikon: Briefcase, fn: () => window.open("https://www.linkedin.com/sharing/share-offsite/?url=" + encodeURIComponent(typeof location !== "undefined" ? location.href : ""), "_blank") },
-];
+/* ═══════════════════════ Küçük parçalar ═══════════════════════ */
 
-function SesDetayDrawer({ u, onKapat, onFavori, onSil, oynayan, setOynayan }: {
-  u: Uretim; onKapat: () => void; onFavori: () => void; onSil: () => void; oynayan: string | null; setOynayan: (v: string | null) => void;
+/** Başlık şeritli kart: kartsız yüzen başlık yok. */
+function Kart({ ikon: I, baslik, alt, sag, children, className }: { ikon: LucideIcon; baslik: React.ReactNode; alt?: React.ReactNode; sag?: React.ReactNode; children: React.ReactNode; className?: string }) {
+  return (
+    <section className={cn("overflow-hidden rounded-[22px] ring-1 ring-inset ring-white/[0.07]", className)} style={{ background: "rgba(255,255,255,0.025)" }}>
+      <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] px-4 py-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-metin"><I className="h-4 w-4" /></span>
+        <span className="min-w-0 flex-1 leading-tight"><span className="block text-[14.5px] font-semibold text-metin">{baslik}</span>{alt && <span className="block text-[12.5px] text-metin-3">{alt}</span>}</span>
+        {sag}
+      </div>
+      {children}
+    </section>
+  );
+}
+/** Açılır menü içindeki başlık şeritli küçük kart. */
+function MenuKart({ baslik, sag, children }: { baslik: React.ReactNode; sag?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-[14px] ring-1 ring-inset ring-white/[0.07]" style={{ background: "rgba(255,255,255,0.025)" }}>
+      <div className="flex min-h-[38px] items-center gap-2 border-b border-white/[0.06] px-3 py-2"><span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-metin">{baslik}</span>{sag}</div>
+      {children}
+    </div>
+  );
+}
+/** Aç/kapa ayarı: büyük çip boyunda, açıkken beyaz ikon dairesi ve beyaz çerçeve. */
+function AcKapaCip({ acik, onDegis, ikon: I, etiket, title }: { acik: boolean; onDegis: () => void; ikon: LucideIcon; etiket: string; title?: string }) {
+  return (
+    <button onClick={onDegis} aria-pressed={acik} title={title}
+      className={cn("flex h-12 items-center gap-2.5 rounded-full pl-1.5 pr-4 text-[13.5px] ring-1 ring-inset transition-[background-color,box-shadow,transform] active:scale-[0.97]", acik ? "bg-white/[0.1] ring-white/40" : "bg-white/[0.075] ring-white/[0.08] hover:bg-white/[0.1]")}>
+      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors", acik ? "bg-white text-black" : "bg-white/[0.08] text-metin-2")}><I className="h-4 w-4" /></span>
+      <span className="flex flex-col items-start leading-tight"><span className="text-[11px] text-metin-3">{etiket}</span><span className="whitespace-nowrap font-medium text-metin">{acik ? "Açık" : "Kapalı"}</span></span>
+    </button>
+  );
+}
+
+/* Popover başlığı, Sıfırla ve uyarı şeridi */
+const Baslik = ({ children, sag }: { children: React.ReactNode; sag?: React.ReactNode }) => (
+  <div className="flex min-h-6 items-center justify-between gap-2"><span className="text-[13px] font-semibold text-metin">{children}</span>{sag}</div>
+);
+const Sifirla = ({ fn, kapali }: { fn: () => void; kapali: boolean }) => (
+  <button onClick={fn} disabled={kapali} className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[12px] text-metin-3 transition-colors hover:bg-white/[0.075] hover:text-metin disabled:pointer-events-none disabled:opacity-40"><RotateCcw className="h-3 w-3" />Sıfırla</button>
+);
+const Uyari = ({ ikon: I, children, eylem }: { ikon: LucideIcon; children: React.ReactNode; eylem?: React.ReactNode }) => (
+  <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={YAY} className="flex flex-wrap items-center gap-3 rounded-[14px] bg-amber-300/[0.06] px-3.5 py-2.5 ring-1 ring-inset ring-amber-300/20">
+    <I className="h-4 w-4 shrink-0 text-amber-200" />
+    <span className="min-w-0 flex-1 text-[13px] leading-snug text-metin-2">{children}</span>
+    {eylem && <span className="flex gap-1.5">{eylem}</span>}
+  </motion.div>
+);
+
+/** Başlangıç örneği: fotoğraf, örneğin sesi, başlık; üzerine gelince metinden alıntı. */
+function OrnekKart({ o, i, onClick }: { o: (typeof ORNEKLER)[number]; i: number; onClick: () => void }) {
+  const v = SESLER.find((s) => s.ad === o.ses);
+  return (
+    <motion.button initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...YAY, delay: i * 0.04 }} whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }}
+      onClick={onClick} className="group relative aspect-[16/10] overflow-hidden rounded-[16px] bg-white/[0.055] text-left outline outline-1 -outline-offset-1 outline-white/[0.08] hover:outline-white/25">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={ORNEK_GORSEL[o.baslik]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]" />
+      <span className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/0" />
+      <span className="absolute inset-x-3 bottom-2.5">
+        <span className="block text-[15px] font-semibold leading-tight text-white">{o.baslik}</span>
+        <span className="mt-1 flex items-center gap-1.5 text-[12px] text-white/75">{v && <SesAvatar ad={v.ad} renk={v.renk} boyut={16} />}{o.ses} · {o.etiket}</span>
+        <span className="mt-1 hidden text-[12px] leading-snug text-white/80 group-hover:line-clamp-2">“{o.metin}”</span>
+      </span>
+    </motion.button>
+  );
+}
+
+/** Ses efekti örneği: fotoğraf, süre ve döngü bilgisi. */
+function EfektKart({ o, i, onClick }: { o: (typeof EFEKT_ORNEKLERI)[number]; i: number; onClick: () => void }) {
+  const I = EFEKT_IKON[o.ad] ?? Waves;
+  return (
+    <motion.button initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ ...YAY, delay: i * 0.035 }} whileHover={{ y: -3 }} whileTap={{ scale: 0.98 }}
+      onClick={onClick} title={o.tarif} className="group flex min-w-0 flex-col self-start text-left">
+      <span className="relative block aspect-[4/3] overflow-hidden rounded-[14px] bg-white/[0.055] outline outline-1 -outline-offset-1 outline-white/[0.08] group-hover:outline-white/25">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={EFEKT_GORSEL[o.ad]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.06]" />
+        <span className="absolute left-2 top-2 flex h-6 items-center gap-1 rounded-full bg-black/55 px-2 text-[11px] font-medium tabular-nums text-white backdrop-blur-sm">
+          <I className="h-3 w-3" />{o.sn ? `${String(o.sn).replace(".", ",")} sn` : "Oto"}{o.dongu && <InfinityIcon className="h-3 w-3" />}
+        </span>
+      </span>
+      <span className="mt-1.5 block truncate text-[13.5px] font-medium text-metin">{o.ad}</span>
+      <span className="line-clamp-2 block text-[12px] leading-snug text-metin-3">{o.aciklama}</span>
+    </motion.button>
+  );
+}
+
+/** Hazır diyalog senaryosu: üst üste ses küreleri, başlık, satır sayısı. */
+function SenaryoSatiri({ o, onClick, kart }: { o: (typeof DIYALOG_ORNEKLERI)[number]; onClick: () => void; kart?: boolean }) {
+  const sesler = [...new Set(o.satirlar.map((x) => x.ses))];
+  return (
+    <button onClick={onClick} className={cn("flex w-full items-center gap-3 text-left transition-colors", kart ? "rounded-[16px] bg-white/[0.045] p-3 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.075]" : "rounded-[10px] px-2 py-2 hover:bg-white/[0.065]")}>
+      <span className="flex shrink-0 -space-x-2">{sesler.slice(0, 3).map((a) => { const v = SESLER.find((s) => s.ad === a)!; return <SesAvatar key={a} ad={v.ad} renk={v.renk} boyut={26} className="ring-2 ring-[#1b1c1f]" />; })}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[13.5px] font-medium text-metin">{o.baslik}</span>
+        <span className="block truncate text-[12px] text-metin-3">{o.satirlar.length} satır · {sesler.join(", ")}</span>
+      </span>
+      {kart && <ArrowRight className="h-4 w-4 shrink-0 text-metin-3" />}
+    </button>
+  );
+}
+
+/**
+ * Ton ifadeleri ([excited]) ve duraklamalar (<break …/>) grubunun rengiyle vurgulanan metin alanı:
+ * arkada aynı yazı tipiyle çizilen ayna katmanı etiketleri renklendirir, üstteki şeffaf textarea
+ * yazmayı ve imleci taşır (ElevenLabs v3 editör deseni).
+ */
+function EtiketliMetin({ deger, onDegis, taRef, kayit, etiket, yerTutucu, className, onOdak, onTus, onYapistir }: {
+  deger: string; onDegis: (v: string) => void; taRef: React.RefObject<HTMLTextAreaElement | null>; kayit?: (el: HTMLTextAreaElement | null) => void;
+  etiket: string; yerTutucu: string; className?: string; onOdak?: () => void; onTus?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onYapistir?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }) {
-  const [sekme, setSekme] = useState<"bilgi" | "yorum">("bilgi");
-  const oyn = oynayan === u.id;
-  /* AD DÜZENLEME — indirme dosya adı da bu olur (kullanıcı isteği 2026-07-31). */
-  const guncelleUretim = useProjeler((s) => s.guncelle);
-  const [adDuzenleniyor, setAdDuzenleniyor] = useState(false);
-  const [adTaslak, setAdTaslak] = useState("");
-  const [paylasAcik, setPaylasAcik] = useState(false);
-  /** İndirme — kullanıcının verdiği AD dosya adı olur. */
-  const sesIndir = () => {
-    const ad = (u.baslik.replace(/[^\wğüşiöçİĞÜŞÖÇ -]/gi, "").trim().slice(0, 60) || "vayra-ses");
-    if (u.sesUrl) {
-      const a = document.createElement("a");
-      a.href = u.sesUrl; a.download = `${ad}.mp3`;
-      document.body.appendChild(a); a.click(); a.remove();
-      toast.success("Ses indiriliyor 🎧", { description: `${ad}.mp3` });
-      return;
-    }
-    uretimIndir(u);
-  };
-  const adKaydet = () => {
-    const yeni = adTaslak.trim();
-    setAdDuzenleniyor(false);
-    if (!yeni || yeni === u.baslik) return;
-    guncelleUretim(u.id, { baslik: yeni });
-    toast.success("Ad güncellendi", { description: `${yeni}.mp3 olarak inecek` });
-  };
-  // m23: GERÇEK yorumlar (useYorumlar) — kalıcı, emoji, göreli zaman.
-  const [yorumMetin, setYorumMetin] = useState("");
-  const [sesEmojiAcik, setSesEmojiAcik] = useState(false);
-  const yorumEkle = useYorumlar((s) => s.ekle);
-  const yorumBegeni = useYorumlar((s) => s.begeniToggle);
-  const yorumSilStore = useYorumlar((s) => s.sil);
-  const tumYorumlar = useYorumlar((s) => s.yorumlar);
-  const yorumlar = useMemo(() => tumYorumlar.filter((y) => y.konuId === u.id).sort((a, b) => b.zaman - a.zaman), [tumYorumlar, u.id]);
-  const SES_EMOJI = ["❤️", "🔥", "😍", "👏", "🤩", "💯", "🎧", "🎉"];
-  const olusturma = useMemo(() => { const d = new Date(u.olusturma); const AY = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]; return `${d.getDate()} ${AY[d.getMonth()]} ${d.getFullYear()}`; }, [u.olusturma]);
-  // Higgsfield DETAILS birebir sırası.
-  const detaylar: [string, string][] = [
-    ["Ses Ön-ayarı", u.meta?.ses ?? "Roman"], ["Model", u.model], ["Süre", "8.7sn"], ["Hız", "1.0×"],
-    ["Ses Düzeyi", "1.0×"], ["Perde", "0"], ["Biçim", "WAV"], ["Örnekleme Hızı", "24000 Hz"], ["Oluşturuldu", olusturma],
-  ];
-  /* Yeniden Üret — GERÇEK üretim (kredi düşer, kuyruğa girer, kitaplığa yazılır). */
-  const yenidenUret = () => {
-    const sonuc = uretimBaslatHam({
-      baslik: u.baslik, tur: u.tur, model: u.model,
-      prompt: u.prompt || u.baslik, kredi: u.kredi || 1,
-      arac: u.arac ?? "Ses Stüdyosu", meta: u.meta,
-    });
-    if (!sonuc.ok) return uretimHataToast(sonuc);
-    toast.success("Yeniden üretiliyor ✦", { description: `${u.baslik} · ${u.kredi || 1} kredi` });
-    onKapat();
-  };
+  const parcalar = deger.split(/(\[[^\]\n]{1,30}\]|<break[^>]*\/?>)/g);
+  const ortak = "col-start-1 row-start-1 w-full whitespace-pre-wrap break-words leading-[1.7]";
   return (
-    // Higgsfield /audio detay BİREBİR: TAM EKRAN split — SOL büyük ses alanı
-    // (boydan boya waveform + merkez play), SAĞ ~400px panel (Bilgi/Yorumlar,
-    // PROMPT kutusu, DETAYLAR, altta Yeniden Üret + İndir + ♡/paylaş/⋯).
-    <>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[65] bg-black/80 backdrop-blur-xl" onClick={onKapat} />
-      <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ duration: 0.2 }} onClick={(e) => e.stopPropagation()}
-        className="fixed inset-0 z-[66] flex">
-        {/* SOL: büyük ses sahnesi + GERÇEK oynatıcı */}
-        <div className="relative flex min-w-0 flex-1 flex-col items-center justify-center overflow-hidden p-8">
-          <SesOynatici u={u} oyn={oyn} onOyn={(v) => setOynayan(v ? u.id : null)} />
-        </div>
-
-        {/* SAĞ: panel */}
-        <aside className="flex h-full w-[400px] max-w-full shrink-0 flex-col border-l border-[var(--sn-kenar)] bg-yuzey">
-          {/* BAŞLIK — üretimin ADI, kalemle düzenlenir ve İNDİRME DOSYA ADI da
-              bu olur (görsel sayfasıyla aynı; kullanıcı isteği 2026-07-31).
-              Eskiden "Sen / Üretici" yazıyordu — hiçbir bilgi taşımıyordu. */}
-          <div className="flex items-center gap-2 border-b border-[var(--sn-kenar)] px-4 py-3.5">
-            {adDuzenleniyor ? (
-              <input autoFocus value={adTaslak} onChange={(e) => setAdTaslak(e.target.value)}
-                onBlur={adKaydet}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); adKaydet(); }
-                  if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setAdDuzenleniyor(false); }
-                }}
-                aria-label="Üretim adı"
-                className="min-w-0 flex-1 rounded-lg bg-white/8 px-2.5 py-1.5 text-[15px] font-semibold text-white outline-none ring-1 ring-aksan/50" />
-            ) : (
-              <button onClick={() => { setAdTaslak(u.baslik); setAdDuzenleniyor(true); }}
-                className="group/ad flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1.5 py-1 text-left transition-colors hover:bg-white/6"
-                title="Adı düzenle">
-                <span className="min-w-0 flex-1 truncate text-[15px] font-semibold text-metin">{u.baslik}</span>
-                <Pencil className="h-3.5 w-3.5 shrink-0 text-metin-3 transition-colors group-hover/ad:text-aksan" />
-              </button>
-            )}
-            <button onClick={onKapat} className="hf-btn glass-ikon flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-metin-2" aria-label="Kapat"><X className="h-5 w-5" /></button>
-          </div>
-          <div className="flex items-center gap-1.5 px-4 py-3">
-            {([["bilgi", "Bilgi", InfoIcon], ["yorum", "Yorumlar", MessageCircle]] as const).map(([id, ad, Ik]) => (
-              <button key={id} onClick={() => setSekme(id)} className={cn("flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-medium transition-colors", sekme === id ? "glass-cip-aktif text-white" : "glass-cip text-metin-2 hover:text-metin")}><Ik className="h-3.5 w-3.5" />{ad}</button>
-            ))}
-          </div>
-          <div className="flex-1 overflow-y-auto px-5 pb-4">
-            {sekme === "bilgi" ? (
-              <div className="space-y-5">
-                {/* İSTEM — lime dalga ikonu + kutu içinde prompt + Kopyala (Higgsfield birebir) */}
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[11px] font-semibold tracking-wide text-metin-3">İSTEM</span>
-                    <button onClick={() => { void kopyala(u.prompt || u.baslik, "İstem kopyalandı"); }} className="flex items-center gap-1 text-[12px] text-metin-2 hover:text-metin"><Copy className="h-3.5 w-3.5" />Kopyala</button>
-                  </div>
-                  <div className="panel-ic rounded-xl p-3">
-                    <span className="mb-2.5 flex h-11 w-11 items-center justify-center rounded-lg glass-ikon glass-ikon-lime"><AudioLines className="h-5 w-5" /></span>
-                    <p className="text-[13.5px] leading-relaxed text-metin-2">{u.prompt || u.baslik}</p>
-                  </div>
-                </div>
-                {/* DETAYLAR */}
-                <div>
-                  <span className="mb-2 block text-[11px] font-semibold tracking-wide text-metin-3">DETAYLAR</span>
-                  <div className="panel-ic space-y-2 rounded-xl p-3 text-[13.5px]">
-                    {detaylar.map(([k, v]) => (
-                      <div key={k} className="flex items-center justify-between gap-3">
-                        <span className="text-metin-3">{k}</span>
-                        {k === "Ses Ön-ayarı"
-                          ? <span className="flex items-center gap-2 font-medium text-metin">{v}<span className="h-5 w-5 rounded bg-gradient-to-br from-violet-500 to-violet-700" /></span>
-                          : <span className="truncate text-right font-medium text-metin">{v}</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* m23: GERÇEK yorumlar — higgs birebir görünüm (avatar + zaman + emoji büyük) */
-              yorumlar.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center"><div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full glass-ikon"><MessageCircle className="h-6 w-6 text-metin-3" /></div><p className="text-sm text-metin-2">Henüz yorum yok</p><p className="mt-1 text-[12px] text-metin-3">İlk yorumu sen yaz</p></div>
-              ) : (
-                <div className="space-y-3 py-3">
-                  {yorumlar.map((y) => {
-                    const saltEmoji = /^(\p{Extended_Pictographic}|️|‍|\s){1,8}$/u.test(y.metin);
-                    return (
-                      <div key={y.id} className="group/y flex gap-2.5">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-aksan to-amber-400 text-[11px] font-bold text-zemin">{y.yazar.charAt(0).toLocaleUpperCase("tr")}</span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2"><span className="text-[13px] font-medium text-metin">{y.yazar}</span><span className="text-[11px] text-metin-3">{goreliZaman(y.zaman)}</span></div>
-                          <p className={cn("mt-0.5 break-words text-metin-2", saltEmoji ? "text-3xl leading-tight" : "text-[13px]")}>{y.metin}</p>
-                          <div className="mt-1 flex items-center gap-3">
-                            <button onClick={() => yorumBegeni(y.id)} className={cn("flex items-center gap-1 text-[11px] transition-colors", y.begendim ? "text-rose-400" : "text-metin-3 hover:text-metin")}><Heart className={cn("h-3 w-3", y.begendim && "fill-current")} />{y.begeniler > 0 && y.begeniler}</button>
-                            <button onClick={() => yorumSilStore(y.id)} className="text-[11px] text-metin-3 opacity-0 transition-all hover:text-rose-400 group-hover/y:opacity-100">Sil</button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )
-            )}
-          </div>
-
-          {/* m23: yorum sekmesi giriş kutusu — panel dibinde sabit */}
-          {sekme === "yorum" && (
-            <div className="border-t border-[var(--sn-kenar)] p-3">
-              <div className="mb-2 flex flex-wrap gap-0.5">
-                {SES_EMOJI.map((e) => (
-                  <button key={e} onClick={() => yorumEkle(u.id, e, "Sen")} className="flex h-8 w-8 items-center justify-center rounded-lg text-lg transition-colors hover:bg-white/8">{e}</button>
-                ))}
-              </div>
-              <div className="flex items-center gap-2 rounded-2xl bg-white/[0.05] p-2">
-                <input value={yorumMetin} onChange={(e) => setYorumMetin(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && yorumMetin.trim()) { yorumEkle(u.id, yorumMetin.trim(), "Sen"); setYorumMetin(""); } }}
-                  placeholder="Yorum ekle…" className="h-8 flex-1 bg-transparent px-2 text-sm text-metin outline-none placeholder:text-metin-3" />
-                <button onClick={() => { if (yorumMetin.trim()) { yorumEkle(u.id, yorumMetin.trim(), "Sen"); setYorumMetin(""); } }}
-                  disabled={!yorumMetin.trim()} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-aksan text-zemin transition-transform hover:scale-105 disabled:opacity-40" aria-label="Gönder"><ChevronDown className="h-4 w-4 -rotate-90" /></button>
-              </div>
-            </div>
-          )}
-          {sekme === "bilgi" && (
-            <div className="border-t border-[var(--sn-kenar)] p-4">
-              <div className="mb-2 grid grid-cols-2 gap-2">
-                <button onClick={yenidenUret} className="flex items-center justify-center gap-2 rounded-xl bg-aksan py-2.5 text-[14px] font-semibold text-zemin transition-transform hover:scale-[1.02]"><RefreshCw className="h-4 w-4" />Yeniden Üret</button>
-                <button onClick={sesIndir} className="hf-btn glass-cip flex items-center justify-center gap-2 rounded-xl py-2.5 text-[14px] font-medium text-metin"><Download className="h-4 w-4" />İndir</button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button onClick={onFavori} className={cn("hf-btn glass-cip flex h-11 flex-1 items-center justify-center rounded-xl", u.favori && "text-rose-400")}><Heart className={cn("h-4 w-4", u.favori && "fill-current")} /></button>
-                {/* PAYLAŞ — tek eylem yerine GERÇEK paylaşım menüsü
-                    (bağlantı + X + WhatsApp + LinkedIn); kart menüsüyle aynı set. */}
-                <div className="relative flex-1">
-                  <button onClick={() => setPaylasAcik((v) => !v)}
-                    className="hf-btn glass-cip flex h-11 w-full items-center justify-center rounded-xl text-metin" aria-label="Paylaş"><Share2 className="h-4 w-4" /></button>
-                  <AnimatePresence>
-                    {paylasAcik && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setPaylasAcik(false)} />
-                        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
-                          className="menu-surface absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-xl p-1.5">
-                          {PAYLAS_HEDEFLERI.map((h) => (
-                            <button key={h.ad} onClick={() => { h.fn(u); setPaylasAcik(false); }}
-                              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-metin transition-colors hover:bg-white/8">
-                              <h.ikon className="h-4 w-4 text-metin-2" /> {h.ad}
-                            </button>
-                          ))}
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                </div>
-                <button onClick={onSil} className="hf-btn glass-cip flex h-11 flex-1 items-center justify-center rounded-xl text-metin transition-colors hover:text-rose-400" aria-label="Sil"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            </div>
-          )}
-        </aside>
-      </motion.div>
-    </>
-  );
-}
-
-function AyarSlider({ ad, v, min, max, step, onChange, birim }: { ad: string; v: number; min: number; max: number; step: number; onChange: (n: number) => void; birim: string }) {
-  return (
-    <div className="mb-3">
-      <div className="mb-1.5 flex items-center justify-between text-[13px]"><span className="text-metin-2">{ad}</span><span className="hf-led text-aksan" style={{ fontSize: 12 }}>{v}{birim}</span></div>
-      <input type="range" min={min} max={max} step={step} value={v} onChange={(e) => onChange(Number(e.target.value))} className="h-1 w-full cursor-pointer accent-aksan" />
+    <div className={cn("grid", className)}>
+      <div aria-hidden className={cn(ortak, "pointer-events-none text-metin")}>
+        {parcalar.map((p, i) => (i % 2 === 1
+          ? <span key={i} className="rounded-[5px] px-0.5" style={{ color: etiketRengi(p), background: `color-mix(in srgb, ${etiketRengi(p)} 14%, transparent)` }}>{p}</span>
+          : <span key={i}>{p}</span>))}
+        {"​"}
+      </div>
+      <textarea ref={(el) => { (taRef as React.MutableRefObject<HTMLTextAreaElement | null>).current = el; kayit?.(el); }} value={deger}
+        onChange={(e) => onDegis(e.target.value)} onFocus={onOdak} onKeyDown={onTus} onPaste={onYapistir} aria-label={etiket} placeholder={yerTutucu} spellCheck={false} rows={1}
+        className={cn(ortak, "resize-none overflow-hidden bg-transparent text-transparent caret-white outline-none placeholder:text-metin-2 selection:bg-white/25 selection:text-transparent")} />
     </div>
   );
 }

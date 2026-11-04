@@ -4,3 +4,6 @@ node_modules
 .DS_Store
 *.log
 .next-build/
+
+# Üretim çıktıları deposu (sunucu)
+.veri/

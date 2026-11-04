@@ -33,7 +33,7 @@ const etiket = "mb-1.5 block text-[13px] font-medium";
 function ModalKabuk({ baslik, ikon: Ikon, renk, onKapat, children, altlik }: { baslik: string; ikon: typeof Sparkles; renk?: string; onKapat: () => void; children: React.ReactNode; altlik: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onKapat} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onKapat} className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <motion.div initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={SPRING}
         className="ad-panel relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-[color:var(--ad-kenar)] p-5">
@@ -186,7 +186,7 @@ export default function Icerik() {
     if (!ok) return;
     onKabul();
     denetle(ad, "uyari", baslik);
-    toast.success("Silindi");
+    toast.success(`"${baslik}" silindi`);
   };
 
   const sekmeler = [
@@ -259,7 +259,7 @@ export default function Icerik() {
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><Newspaper className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1"><div className={cn("text-[13px] font-medium", AD.metin)}>{b.baslik}</div><div className={cn("truncate text-[11px]", AD.metin3)}>{b.dil} · /blog/{b.slug} · {tarihEtiket(b.tarih)}</div></div>
                   <Rozet ton={b.durum === "yayin" ? "basari" : "notr"}>{b.durum === "yayin" ? "yayın" : "taslak"}</Rozet>
-                  {b.durum === "taslak" && <Dugme boyut="sm" tur="glass" onClick={() => { st.blogYayinla(b.id); denetle(`Blog yayınlandı: ${b.baslik}`, "bilgi", b.id); toast.success("Yayınlandı"); }}>Yayınla</Dugme>}
+                  {b.durum === "taslak" && <Dugme boyut="sm" tur="glass" onClick={() => { st.blogYayinla(b.id); denetle(`Blog yayınlandı: ${b.baslik}`, "bilgi", b.id); toast.success("Blog yazısı yayınlandı", { description: b.baslik }); }}>Yayınla</Dugme>}
                   <button onClick={() => setBlogModal({ mevcut: b })} className="flex h-8 w-8 items-center justify-center rounded-lg text-[color:var(--ad-metin-3)] hover:bg-white/5 hover:text-[color:var(--ad-metin)]"><Pencil className="h-4 w-4" /></button>
                   <button onClick={() => sil(b.baslik, () => st.blogSil(b.id), "Blog silindi")} className="flex h-8 w-8 items-center justify-center rounded-lg text-[color:var(--ad-metin-3)] hover:bg-[color:var(--ad-tehlike)]/10 hover:text-[color:var(--ad-tehlike)]"><Trash2 className="h-4 w-4" /></button>
                 </div>
@@ -280,7 +280,7 @@ export default function Icerik() {
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: d.tur === "bakim" ? "rgba(251,191,36,0.12)" : "rgba(85,214,253,0.12)", color: d.tur === "bakim" ? "var(--ad-uyari)" : "var(--ad-aksan)" }}><Megaphone className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1"><div className={cn("text-[13px] font-medium", AD.metin)}>{d.baslik}</div><div className={cn("truncate text-[11px]", AD.metin3)}>{d.segment} · {tarihEtiket(d.baslangic)} – {tarihEtiket(d.bitis)}</div></div>
                   <Rozet ton={d.tur === "banner" ? "aksan" : d.tur === "changelog" ? "mor" : "uyari"}>{d.tur === "bakim" ? "bakım" : d.tur}</Rozet>
-                  <button onClick={() => { st.duyuruToggle(d.id); denetle(`Duyuru ${d.aktif ? "kapatıldı" : "aktifleştirildi"}: ${d.baslik}`, "bilgi", d.id); toast.success(d.aktif ? "Kapatıldı" : "Aktifleştirildi"); }} className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", d.aktif ? "bg-emerald-500" : "bg-white/15")}><span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", d.aktif ? "left-[22px]" : "left-0.5")} /></button>
+                  <button onClick={() => { st.duyuruToggle(d.id); denetle(`Duyuru ${d.aktif ? "kapatıldı" : "aktifleştirildi"}: ${d.baslik}`, "bilgi", d.id); toast.success(d.aktif ? "Duyuru kapatıldı" : "Duyuru yayında", { description: d.baslik }); }} className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", d.aktif ? "bg-emerald-500" : "bg-white/15")}><span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", d.aktif ? "left-[22px]" : "left-0.5")} /></button>
                   <button onClick={() => sil(d.baslik, () => st.duyuruSil(d.id), "Duyuru silindi")} className="flex h-8 w-8 items-center justify-center rounded-lg text-[color:var(--ad-metin-3)] hover:bg-[color:var(--ad-tehlike)]/10 hover:text-[color:var(--ad-tehlike)]"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </Kart>
@@ -318,8 +318,8 @@ export default function Icerik() {
         {blogModal && (
           <BlogModal mevcut={blogModal.mevcut} onKapat={() => setBlogModal(null)}
             onKaydet={(b) => {
-              if (blogModal.mevcut) { st.blogGuncelle(blogModal.mevcut.id, b); denetle(`Blog güncellendi: ${b.baslik}`, "bilgi", blogModal.mevcut.id); toast.success(b.durum === "yayin" ? "Güncellendi & yayınlandı" : "Taslak kaydedildi"); }
-              else { st.blogEkle(b); denetle(`Blog eklendi: ${b.baslik}`, "bilgi"); toast.success(b.durum === "yayin" ? "Yayınlandı" : "Taslak kaydedildi"); }
+              if (blogModal.mevcut) { st.blogGuncelle(blogModal.mevcut.id, b); denetle(`Blog güncellendi: ${b.baslik}`, "bilgi", blogModal.mevcut.id); toast.success(b.durum === "yayin" ? "Blog yazısı güncellendi" : "Taslak kaydedildi", { description: b.baslik }); }
+              else { st.blogEkle(b); denetle(`Blog eklendi: ${b.baslik}`, "bilgi"); toast.success(b.durum === "yayin" ? "Blog yazısı yayınlandı" : "Taslak kaydedildi", { description: b.baslik }); }
               setBlogModal(null);
             }} />
         )}
@@ -329,7 +329,7 @@ export default function Icerik() {
         )}
         {yasalModal && (
           <YasalModal metin={yasalModal} onKapat={() => setYasalModal(null)}
-            onKaydet={(icerik) => { st.yasalYeniVersiyon(yasalModal.id, icerik); denetle(`Yasal metin yeni versiyon: ${yasalModal.ad} ${versiyonArtir(yasalModal.versiyon)}`, "kritik", yasalModal.id); toast.success(`${versiyonArtir(yasalModal.versiyon)} yayınlandı — kabul akışı başladı`); setYasalModal(null); }} />
+            onKaydet={(icerik) => { st.yasalYeniVersiyon(yasalModal.id, icerik); denetle(`Yasal metin yeni versiyon: ${yasalModal.ad} ${versiyonArtir(yasalModal.versiyon)}`, "kritik", yasalModal.id); toast.success(`${yasalModal.ad} ${versiyonArtir(yasalModal.versiyon)} yayınlandı`, { description: "Kullanıcılardan yeni metni kabul etmeleri istenecek." }); setYasalModal(null); }} />
         )}
       </AnimatePresence>
     </RotaGuard>

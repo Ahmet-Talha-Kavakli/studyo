@@ -67,7 +67,7 @@ export function CizimTuvali({ onKapat, onKullan }: { onKapat: () => void; onKull
   const geriAl = () => {
     const c = canvasRef.current!;
     const onceki = gecmis.current.pop();
-    if (!onceki) return toast("Geri alınacak adım yok");
+    if (!onceki) return toast.info("Geri alınacak adım yok", { description: "Tuvalde henüz bir çizim yapmadın." });
     c.getContext("2d")!.putImageData(onceki, 0, 0);
   };
 

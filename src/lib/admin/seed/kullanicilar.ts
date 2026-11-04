@@ -55,7 +55,7 @@ function ipUret(r: () => number): string {
 }
 
 /* Paylaşılan IP havuzu — fraud/çoklu-hesap tespiti için kasıtlı çakışma.
-   ~40 "şüpheli" IP; kullanıcıların ~%4'ü bunlardan birini paylaşır (aynı
+   yaklaşık 40 "şüpheli" IP; kullanıcıların ~%4'ü bunlardan birini paylaşır (aynı
    cihaz zinciri / VPN çıkışı / ofis-NAT), böylece ayniIpKumeleri() gerçek
    kümeler bulur. Deterministik: sabit tohumdan üretilir. */
 const PAYLASILAN_IP: string[] = (() => {

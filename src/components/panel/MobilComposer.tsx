@@ -1,5 +1,7 @@
 "use client";
 
+import { KrediYildiz } from "@/components/ui/KrediHap";
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -218,14 +220,10 @@ export function MobilCip({
         {deger}
       </button>
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setAcik(false)} />
-            <motion.div
+        <Yuzen acik={!!(acik)} onKapat={() => setAcik(false)} alt={"tam"} sol={0} bosluk={8}><motion.div
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
               transition={{ duration: 0.14 }}
-              className={cn("menu-surface absolute bottom-full left-0 z-50 mb-2 overflow-hidden rounded-[12px]",
-                sutun === 2 ? "w-[190px]" : "min-w-[160px]")}
+              className={cn("menu-surface overflow-hidden rounded-[12px]", sutun === 2 ? "w-[190px]" : "min-w-[160px]")}
             >
               {baslik && (
                 <p className="px-4 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-metin-3">{baslik}</p>
@@ -242,9 +240,7 @@ export function MobilCip({
                   </button>
                 ))}
               </div>
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );
@@ -328,9 +324,9 @@ export function MobilUretButonu({
 }: { kredi: number; onTikla: () => void; etiket?: string; devreDisi?: boolean }) {
   return (
     <button onClick={onTikla} disabled={devreDisi}
-      className="hf-uret flex h-14 w-full items-center justify-center gap-2 rounded-[14px] text-[17px] font-bold disabled:opacity-45">
+      className="flex h-14 w-full items-center justify-center gap-2 rounded-full bg-white text-[16px] font-semibold text-black transition active:scale-[0.98] disabled:opacity-45">
       {etiket}
-      <span className="flex items-center gap-1">✦ {kredi}</span>
+      {kredi > 0 && <span className="flex items-center gap-1 tabular-nums"><KrediYildiz className="h-4 w-4" />{kredi}</span>}
     </button>
   );
 }
@@ -843,14 +839,10 @@ export function MobilAltCip({
         {deger}
       </button>
       <AnimatePresence>
-        {acik && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setAcik(false)} />
-            <motion.div
+        <Yuzen acik={!!(acik)} onKapat={() => setAcik(false)} alt={"tam"} sol={0} bosluk={8}><motion.div
               initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
               transition={{ duration: 0.14 }}
-              className={cn("menu-surface absolute bottom-full left-0 z-50 mb-2 overflow-hidden rounded-[14px]",
-                izgara ? "w-[212px]" : "min-w-[172px]")}
+              className={cn("menu-surface overflow-hidden rounded-[14px]", izgara ? "w-[212px]" : "min-w-[172px]")}
             >
               <p className="px-4 pb-1.5 pt-3 text-[11px] font-semibold uppercase tracking-wider text-metin-3">
                 {baslik ?? ALT_CIP_BASLIK[tip]}
@@ -873,9 +865,7 @@ export function MobilAltCip({
                   );
                 })}
               </div>
-            </motion.div>
-          </>
-        )}
+            </motion.div></Yuzen>
       </AnimatePresence>
     </div>
   );
@@ -988,108 +978,3 @@ export function MobilAltCipler({
   );
 }
 
-/* ══════════════ Before/After karşılaştırma slider'ı (Upscale) ══════════════
- *
- * create-upscale boş durumu: kesikli çerçeveli alanda görselin ortasında
- * dikey ‹› tutamaç; sol=düşük, sağ=yüksek çözünürlük. Dokun-sürükle ile bölme
- * konumu değişir. Görsel yoksa dekoratif stok görsel gösterilir.
- */
-export function MobilKarsilastirma({ solArka, sagArka }: { solArka: string; sagArka: string }) {
-  const [bolme, setBolme] = useState(50);
-  const kapRef = useRef<HTMLDivElement>(null);
-
-  const surukle = (clientX: number) => {
-    const el = kapRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const yuzde = ((clientX - r.left) / r.width) * 100;
-    setBolme(Math.max(4, Math.min(96, yuzde)));
-  };
-
-  return (
-    <div ref={kapRef} className="relative aspect-[4/5] w-full max-w-[280px] overflow-hidden rounded-2xl select-none"
-      onPointerMove={(e) => { if (e.buttons === 1) surukle(e.clientX); }}
-      onPointerDown={(e) => surukle(e.clientX)}>
-      {/* Sağ (yüksek) katman — tam kaplar */}
-      <span className="absolute inset-0 bg-cover bg-center" style={{ background: sagArka }} aria-hidden />
-      {/* Sol (düşük) katman — bölmeye kadar kırpılır, hafif bulanık */}
-      <span className="absolute inset-0 bg-cover bg-center blur-[1.5px] brightness-90"
-        style={{ background: solArka, clipPath: `inset(0 ${100 - bolme}% 0 0)` }} aria-hidden />
-      {/* Bölme çizgisi + tutamaç */}
-      <span className="absolute inset-y-0 w-[2px] bg-white/90" style={{ left: `${bolme}%` }} aria-hidden />
-      <span className="absolute top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-white text-[#131517] shadow-lg"
-        style={{ left: `${bolme}%` }} aria-hidden>
-        <ChevronLeft className="h-3.5 w-3.5" />
-        <ChevronRight className="-ml-1 h-3.5 w-3.5" />
-      </span>
-    </div>
-  );
-}
-
-/* ══════════════ Ölçek faktörü segmenti (Upscale) ══════════════
- *
- * create-upscale: x1 | x2 | x4 | x8 | x16 yatay segment; seçili beyaz dolgu,
- * kilitli (yüksek) seçenekler soluk. Referans birebir.
- */
-export function MobilOlcekFaktoru({
-  deger, onSec, kilitliler = [],
-}: { deger: string; onSec: (v: string) => void; kilitliler?: string[] }) {
-  const secenekler = ["x1", "x2", "x4", "x8", "x16"];
-  return (
-    <div className="flex gap-1.5 rounded-[12px] bg-yuzey-2 p-1">
-      {secenekler.map((s) => {
-        const kilitli = kilitliler.includes(s);
-        const secili = s === deger;
-        return (
-          <button key={s} onClick={() => !kilitli && onSec(s)} disabled={kilitli}
-            className={cn("flex-1 rounded-[9px] py-2.5 text-[15px] font-semibold transition-colors",
-              secili ? "bg-white text-[#131517]" : kilitli ? "text-white/25" : "text-white/70")}>
-            {s}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ══════════════ Ayar satırı (Advanced settings gibi) ══════════════
- *
- * Tam genişlik satır: solda etiket, sağda ikon/chevron. Tıklanınca sheet açar.
- */
-export function MobilBuyukSatir({
-  etiket, sagIkon, onTikla,
-}: { etiket: string; sagIkon?: ReactNode; onTikla: () => void }) {
-  return (
-    <button onClick={onTikla}
-      className="flex h-[52px] w-full items-center justify-between rounded-[12px] bg-yuzey-2 px-4 text-[16px] font-medium text-white">
-      {etiket}
-      <span className="text-metin-2">{sagIkon ?? <ChevronRight className="h-5 w-5" />}</span>
-    </button>
-  );
-}
-
-/* ══════════════ Yükleme kutusu — büyük "Upload Media" (Upscale/Reframe intro) ══════════════ */
-export function MobilBuyukYukle({
-  baslik, aciklama, butonEtiket = "Medya Yükle", onDosya, kabul = "image/*,video/*", onizleme,
-}: {
-  baslik?: string;
-  aciklama?: string;
-  butonEtiket?: string;
-  onDosya: (dosyalar: FileList) => void;
-  kabul?: string;
-  /** Yüklenen medyanın önizlemesi (varsa kutu yerine bunu gösterir). */
-  onizleme?: ReactNode;
-}) {
-  if (onizleme) return <>{onizleme}</>;
-  return (
-    <div className="flex flex-col items-center justify-center gap-5 rounded-[16px] border-2 border-dashed border-white/12 px-6 py-12 text-center">
-      {baslik && <h2 className="text-[26px] font-extrabold uppercase tracking-tight text-white">{baslik}</h2>}
-      {aciklama && <p className="max-w-[260px] text-[14px] leading-relaxed text-metin-2">{aciklama}</p>}
-      <label className="flex cursor-pointer items-center gap-2 rounded-[12px] bg-white px-6 py-3.5 text-[16px] font-semibold text-[#131517]">
-        <input type="file" accept={kabul} className="hidden"
-          onChange={(e) => { if (e.target.files?.length) onDosya(e.target.files); e.target.value = ""; }} />
-        <ImagePlus className="h-5 w-5" /> {butonEtiket}
-      </label>
-    </div>
-  );
-}

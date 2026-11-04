@@ -55,7 +55,7 @@ export function SesOynatici({
     if (!gercek) {
       // Demo: gerçek ses yok — dekoratif oynat/durdur + bilgi.
       setOynat((v) => !v);
-      if (!oynat) toast.info("Demo ses — gerçek çıktı için ElevenLabs anahtarı ekle.");
+      if (!oynat) toast.info("Örnek ses çalınıyor", { description: "Bu bir önizleme. Gerçek ses için ElevenLabs anahtarı gerekli." });
       return;
     }
     const a = ref.current;
@@ -64,7 +64,7 @@ export function SesOynatici({
       a.pause();
       setOynat(false);
     } else {
-      a.play().catch(() => toast.error("Ses oynatılamadı."));
+      a.play().catch(() => toast.error("Ses oynatılamadı", { description: "Tarayıcı oynatmayı engelledi ya da dosyaya ulaşılamadı. Yeniden dene." }));
       setOynat(true);
     }
   };
@@ -77,14 +77,14 @@ export function SesOynatici({
   };
 
   const indir = () => {
-    if (!sesUrl) return toast.info("Demo çıktı indirilemez — gerçek üretim için anahtar ekle.");
+    if (!sesUrl) return toast.info("Örnek ses indirilemez", { description: "Bu bir önizleme. Gerçek üretim için sağlayıcı anahtarı gerekli." });
     const a = document.createElement("a");
     a.href = sesUrl;
     a.download = `${baslik.replace(/[^\wğüşiöçİĞÜŞÖÇ -]/gi, "").slice(0, 40) || "vayra-ses"}.mp3`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    toast.success("Ses indiriliyor 🎧");
+    toast.success("Ses indiriliyor", { description: a.download });
   };
 
   const dk = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -109,7 +109,7 @@ export function SesOynatici({
             >
               <div className={`absolute inset-y-0 left-0 rounded-full ${renk}`} style={{ width: `${ilerleme}%` }} />
               <div
-                className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ${renk} opacity-0 shadow transition-opacity group-hover:opacity-100`}
+                className={`absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ${renk} opacity-0 transition-opacity group-hover:opacity-100`}
                 style={{ left: `calc(${ilerleme}% - 6px)` }}
               />
             </div>

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 
    EN AYIRT EDİCİ TİPOGRAFİK KARAR (referansta çok net):
      • Kullanıcı mesajı  → BALONLU, sans, --sc-cip zemin
-     • Asistan cevabı    → BALONSUZ, SERİF, ~20px, sola dayalı
+     • Asistan cevabı    → BALONSUZ, SERİF, yaklaşık 20px, sola dayalı
      • Akıl yürütme      → gri sans, girintili (cevaptan ayrışır)
    ============================================================ */
 

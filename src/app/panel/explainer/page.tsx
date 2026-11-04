@@ -1,10 +1,8 @@
 "use client";
 
-/* Route sarmalayıcısı — gerçek bileşen `@/components/studyo/ExplainerStudyo`.
-   Next route dosyasından fazladan export edilemediği için bileşen ayrı
-   dosyada durur; "Tüm varlıklar" sekmesi onu `gomulu` ile mount eder. */
-import { ExplainerStudyo } from "@/components/studyo/ExplainerStudyo";
+/* Route sarmalayıcısı — gerçek bileşen `@/components/explainer/ExplainerSayfa`. */
+import { ExplainerSayfa } from "@/components/explainer/ExplainerSayfa";
 
 export default function ExplainerStudyoSayfa() {
-  return <ExplainerStudyo />;
+  return <ExplainerSayfa />;
 }

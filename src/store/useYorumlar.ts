@@ -29,11 +29,21 @@ export interface Yorum {
   yanitId?: string; // bir yoruma yanıtsa üst yorumun id'si
   sabit?: boolean;  // içerik sahibi bu yorumu sabitlediyse (pin — en üste, rozetli)
   benim?: boolean;  // kullanıcının kendi yorumu (sil/pin yetkisi)
+  /** Görselin üzerindeki işaret (0–1 oran; görsel boyutundan bağımsız). */
+  nokta?: { x: number; y: number };
+  /** İnceleme akışı: not çözüldü olarak işaretlendi. */
+  cozuldu?: boolean;
+  /** Son düzenleme zamanı ("düzenlendi" etiketi). */
+  duzenlendi?: number;
 }
 
 interface YorumlarState {
   yorumlar: Yorum[];
-  ekle: (konuId: string, metin: string, yazar?: string, yanitId?: string, benim?: boolean) => void;
+  ekle: (konuId: string, metin: string, yazar?: string, yanitId?: string, benim?: boolean, ek?: { nokta?: { x: number; y: number } }) => string | undefined;
+  guncelle: (id: string, metin: string) => void;
+  cozulduToggle: (id: string) => void;
+  /** Silineni geri yükler (yanıtlarıyla birlikte). */
+  geriYukle: (l: Yorum[]) => void;
   sil: (id: string) => void;
   begeniToggle: (id: string) => void;
   /** Yorumu sabitle/kaldır — konu başına yalnızca BİR sabit yorum (içerik sahibi yetkisi). */
@@ -52,14 +62,16 @@ export const useYorumlar = create<YorumlarState>()(
   persist(
     (set, get) => ({
       yorumlar: [],
-      ekle: (konuId, metin, yazar = "Sen", yanitId, benim) => {
+      ekle: (konuId, metin, yazar = "Sen", yanitId, benim, ek) => {
         const temiz = metin.trim();
-        if (!temiz) return;
+        if (!temiz) return undefined;
+        const id = yeniId();
         set((s) => ({
           yorumlar: [
             ...s.yorumlar,
             {
-              id: yeniId(),
+              id,
+              ...(ek?.nokta ? { nokta: ek.nokta } : {}),
               konuId,
               yazar,
               metin: temiz,
@@ -71,7 +83,15 @@ export const useYorumlar = create<YorumlarState>()(
             },
           ],
         }));
+        return id;
       },
+      guncelle: (id, metin) => {
+        const temiz = metin.trim();
+        if (!temiz) return;
+        set((s) => ({ yorumlar: s.yorumlar.map((y) => (y.id === id ? { ...y, metin: temiz, duzenlendi: Date.now() } : y)) }));
+      },
+      cozulduToggle: (id) => set((s) => ({ yorumlar: s.yorumlar.map((y) => (y.id === id ? { ...y, cozuldu: !y.cozuldu } : y)) })),
+      geriYukle: (l) => set((s) => ({ yorumlar: [...s.yorumlar.filter((y) => !l.some((k) => k.id === y.id)), ...l] })),
       sil: (id) => set((s) => ({ yorumlar: s.yorumlar.filter((y) => y.id !== id && y.yanitId !== id) })),
       begeniToggle: (id) =>
         set((s) => ({
@@ -123,3 +143,13 @@ export function goreliZaman(ms: number): string {
   if (ay < 12) return `${ay}ay önce`;
   return `${Math.floor(g / 365)}y önce`;
 }
+
+/**
+ * Görselde işaretleme köprüsü — yorum sekmesi ile görüntüleyici arasında anlık durum
+ * (kalıcı değil). Sekme açıkken görüntüleyici işaretleri çizer; işaret modu açıkken
+ * görsele tıklamak taslak noktayı koyar.
+ */
+export const useYorumIsaret = create<{
+  konuId: string | null; mod: boolean; taslak: { x: number; y: number } | null; vurgu: string | null;
+  ayarla: (p: Partial<{ konuId: string | null; mod: boolean; taslak: { x: number; y: number } | null; vurgu: string | null }>) => void;
+}>()((set) => ({ konuId: null, mod: false, taslak: null, vurgu: null, ayarla: (p) => set(p) }));

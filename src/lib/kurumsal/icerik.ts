@@ -88,7 +88,7 @@ export const ISTATISTIKLER: Istatistik[] = [
 export const HIZLI_GERCEKLER: { etiket: string; deger: string }[] = [
   { etiket: "Kuruluş", deger: "2024" },
   { etiket: "Merkez", deger: "Amsterdam" },
-  { etiket: "Ofisler", deger: "4 şehir · 3 kıta" },
+  { etiket: "Ofisler", deger: "5 şehir · 3 kıta" },
   { etiket: "Çalışma modeli", deger: "Uzaktan öncelikli" },
   { etiket: "Ekip", deger: "30+ kişi · 18 ülke" },
   { etiket: "Kategori", deger: "Yaratıcı AI platformu" },

@@ -96,14 +96,14 @@ export function PazSeciciModal({
       {acik && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={onKapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+            onClick={onKapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
           <motion.div
             initial={{ opacity: 0, scale: 0.97, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 14 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="relative flex max-h-[90vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-[24px] bg-[#232327]"
-            style={{ boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
+            style={{ boxShadow: "none" }}>
 
             {/* ── başlık bölgesi (kaydırılabilir) ── */}
             <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:thin]">

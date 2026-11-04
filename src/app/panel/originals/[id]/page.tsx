@@ -191,14 +191,14 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
 
   function oynatDegis() {
     setOynuyor((o) => !o);
-    toast(oynuyor ? "Duraklatıldı" : `Oynatılıyor · ${film.ad}`);
+    toast(oynuyor ? "Duraklatıldı" : "Oynatılıyor", oynuyor ? undefined : { description: `${film.ad} · Önizleme oynatıcı, gerçek video yok.` });
   }
 
   function begen() {
     setBegenildi((b) => {
       const yeni = !b;
       setBegeniSayi((s) => s + (yeni ? 1 : -1));
-      toast(yeni ? "Beğenildi ♥" : "Beğeni geri alındı");
+      toast(yeni ? "Beğenildi" : "Beğeni kaldırıldı");
       return yeni;
     });
   }
@@ -272,7 +272,7 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
               <button onClick={oynatDegis} className="hf-btn" aria-label="Oynat/Duraklat">
                 {oynuyor ? <Pause size={18} className="fill-white" /> : <Play size={18} className="fill-white" />}
               </button>
-              <button className="hf-btn text-[13px] font-semibold" onClick={() => toast("Hız: 1×")}>1×</button>
+              <button className="hf-btn text-[13px] font-semibold" onClick={() => toast.info("Oynatma hızı 1×", { description: "Önizleme oynatıcıda hız değiştirilemiyor." })}>1×</button>
               <button className="hf-btn" onClick={() => setSessiz((s) => !s)} aria-label="Ses">
                 <Volume2 size={18} className={cn(sessiz && "opacity-40")} />
               </button>
@@ -297,7 +297,7 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
                     <div className="fixed inset-0 z-[60]" onClick={() => setKaliteAcik(false)} />
                     <div
                       style={{ position: "fixed", top: kaliteKonum.top, left: kaliteKonum.left }}
-                      className="menu-surface z-[61] w-40 overflow-hidden rounded-xl py-1 shadow-2xl">
+                      className="menu-surface z-[61] w-40 overflow-hidden rounded-xl py-1">
                       <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--sn-metin-3)]">
                         Kalite
                       </div>
@@ -307,7 +307,7 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
                           onClick={() => {
                             setSeciliKalite(k.etiket);
                             setKaliteAcik(false);
-                            toast(`Kalite: ${k.etiket}`);
+                            toast(`Kalite ${k.etiket} seçildi`);
                           }}
                           className="flex w-full items-center gap-2 px-3 py-1.5 text-[13px] hover:bg-white/8"
                         >
@@ -327,10 +327,10 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
                     </>
                   )}
                 </div>
-                <button className="hf-btn" onClick={() => toast("Altyazı açıldı")} aria-label="Altyazı">
+                <button className="hf-btn" onClick={() => toast.info("Altyazı henüz hazır değil", { description: "Önizleme oynatıcı; altyazı desteği yakında eklenecek." })} aria-label="Altyazı">
                   <Subtitles size={18} />
                 </button>
-                <button className="hf-btn" onClick={() => toast("Tam ekran")} aria-label="Tam ekran">
+                <button className="hf-btn" onClick={() => toast.info("Tam ekran henüz hazır değil", { description: "Önizleme oynatıcı; tam ekran desteği yakında eklenecek." })} aria-label="Tam ekran">
                   <Maximize2 size={18} />
                 </button>
               </div>
@@ -366,7 +366,7 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
                 onClick={() => {
                   // GERÇEK: filmi Sinema Stüdyosu'nda yeni bir projeye kopyala, oraya git.
                   const yeniId = useProje.getState().projeOlustur(`${film.ad} (kopya)`, film.kat, { kaynakStudyo: "Vayra Originals" });
-                  toast.success("Proje kopyalandı · Stüdyo'na eklendi");
+                  toast.success("Proje kopyalandı", { description: "Kopyası Sinema Stüdyosu'nda açılıyor." });
                   router.push(`/panel/sinema/${yeniId}`);
                 }}
                 className="hf-btn inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-semibold"
@@ -445,10 +445,10 @@ export default function OriginalDetayPage({ params }: { params: Promise<{ id: st
                 className="w-full resize-none bg-transparent text-[14px] text-[var(--sn-metin)] placeholder:text-[var(--sn-metin-3)] focus:outline-none"
               />
               <div className="mt-2 flex items-center gap-3 text-[var(--sn-metin-3)]">
-                <button className="hf-btn" onClick={() => toast("Birini etiketle")} aria-label="Etiketle">
+                <button className="hf-btn" onClick={() => toast.info("Kişi etiketleme henüz hazır değil", { description: "Yorumlarda kişi etiketleme yakında eklenecek." })} aria-label="Etiketle">
                   <AtSign size={18} />
                 </button>
-                <button className="hf-btn" onClick={() => toast("Emoji")} aria-label="Emoji">
+                <button className="hf-btn" onClick={() => toast.info("Emoji seçici henüz hazır değil", { description: "Şimdilik emojiyi klavyeden ekleyebilirsin." })} aria-label="Emoji">
                   <Smile size={18} />
                 </button>
                 <button
@@ -631,7 +631,7 @@ function SeriesGovde({
                   <button
                     onClick={() => {
                       setTakipEdilen((p) => ({ ...p, [y.ad]: !p[y.ad] }));
-                      toast(takip ? "Takipten çıkıldı" : `${y.ad} takip ediliyor`);
+                      toast(takip ? `${y.ad} takipten çıkarıldı` : `${y.ad} takip ediliyor`);
                     }}
                     className={cn(
                       "hf-btn rounded-full border px-3 py-1 text-[12px] font-semibold",
@@ -718,7 +718,7 @@ function SeriesGovde({
               {klipler.map((v) => (
                 <button
                   key={v}
-                  onClick={() => toast("Klip oynatılıyor")}
+                  onClick={() => toast.info("Klip önizlemesi henüz hazır değil", { description: "Klipler yakında burada oynatılacak." })}
                   className="hf-btn hf-kart relative aspect-video overflow-hidden rounded-lg"
                 >
                   <div className="absolute inset-0" style={{ background: origArka(v, film.kat) }} />

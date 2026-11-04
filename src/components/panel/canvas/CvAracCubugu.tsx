@@ -136,7 +136,7 @@ export function CvAracCubugu({
             style={{
               width: 250, background: CV.bar,
               border: `1px solid ${CV.barKenar}`, borderRadius: 12,
-              boxShadow: "0 12px 34px rgba(0,0,0,0.45)",
+              boxShadow: "none",
             }}>
             {/* dolgu rengi satırı */}
             <div className="flex items-center px-[15px]" style={{ height: 43 }}>
@@ -238,7 +238,7 @@ export function CvAracCubugu({
             initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.14 }}
             className="absolute bottom-[146px] left-1/2 z-50 -translate-x-1/2 overflow-hidden rounded-[16px]"
-            style={{ width: 372, background: CV.panel, border: `1px solid ${CV.barKenar}`, boxShadow: "0 20px 60px rgba(0,0,0,0.6)" }}>
+            style={{ width: 372, background: CV.panel, border: `1px solid ${CV.barKenar}`, boxShadow: "none" }}>
             <div className="p-2.5 pb-1.5">
               <label className="flex h-10 items-center gap-2 rounded-[10px] px-3" style={{ background: CV.panelAra }}>
                 <Search className="h-4 w-4 shrink-0" style={{ color: CV.panelPlaceholder }} />
@@ -249,7 +249,7 @@ export function CvAracCubugu({
             </div>
             {/* kategorisiz tek sonsuz liste — referans birebir, 7 sütun */}
             <div className="grid max-h-[268px] grid-cols-7 gap-1 overflow-y-auto p-2.5 pt-1
-                            [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+ [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {emojiSuzulu.map((e, i) => (
                 <button key={`${e}-${i}`} onClick={() => { onTepkiSec(e); setEmojiAcik(false); }}
                   className="flex h-11 items-center justify-center rounded-[8px] text-[21px] transition-colors hover:bg-[#2E3033]"
@@ -283,7 +283,7 @@ export function CvAracCubugu({
           background: CV.bar,
           border: `1px solid ${CV.barKenar}`,
           borderRadius: CV_OLCU.barRadius,
-          boxShadow: "0 12px 34px rgba(0,0,0,0.45)",
+          boxShadow: "none",
         }}>
         {ARACLAR.map((a) => (
           <div key={a.arac} className="flex items-center">
@@ -310,7 +310,7 @@ function Kontekst({ children }: { children: React.ReactNode }) {
       style={{
         height: 48, background: CV.bar,
         border: `1px solid ${CV.barKenar}`, borderRadius: 24,
-        boxShadow: "0 12px 34px rgba(0,0,0,0.45)",
+        boxShadow: "none",
       }}>
       {children}
     </motion.div>
@@ -389,7 +389,7 @@ function AracBtn({ ikon: Ik, ad, ks, aktif, onTikla }: {
             initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
             transition={{ duration: 0.1 }}
             className="pointer-events-none absolute -top-[34px] left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-[8px] px-2.5 py-1.5 text-[13px] text-white"
-            style={{ background: CV.tooltip, boxShadow: "0 6px 18px rgba(0,0,0,0.5)" }}>
+            style={{ background: CV.tooltip, boxShadow: "none" }}>
             {ad}{ks && ` (${ks})`}
           </motion.span>
         )}

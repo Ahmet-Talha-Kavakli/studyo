@@ -62,7 +62,7 @@ export function YakindaSayfa({
           className="mb-7">
           <motion.span
             animate={{ y: [0, -8, 0] }} transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-            className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-aksan to-emerald-400 text-zemin shadow-[0_12px_40px_-8px_rgba(85, 214, 253,0.5)]">
+            className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-aksan to-emerald-400 text-zemin shadow-[0_12px_40px_-8px_rgba(85,_214,_253,0.5)]">
             <Ikon className="h-10 w-10" strokeWidth={2} />
           </motion.span>
         </motion.div>
@@ -83,15 +83,15 @@ export function YakindaSayfa({
           initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
           className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
           <button
-            onClick={() => { setHaberVerildi(true); toast.success("Harika! Yayına girince ilk sen haberdar olacaksın 🔔"); }}
+            onClick={() => { setHaberVerildi(true); toast.success("Haber listesine eklendin", { description: "Yayına girince ilk sen haberdar olacaksın." }); }}
             disabled={haberVerildi}
             className={cn("flex items-center gap-2 rounded-full px-6 py-3 text-[15px] font-bold transition-transform",
               haberVerildi ? "bg-white/10 text-metin-2" : "bg-aksan text-zemin hover:scale-[1.03]")}>
             <Bell className="h-4.5 w-4.5" /> {haberVerildi ? "Haber verilecek ✓" : "Yayına girince haber ver"}
           </button>
-          <Link href="/panel/akis"
+          <Link href="/panel"
             className="flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.03] px-6 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/8">
-            <ArrowLeft className="h-4.5 w-4.5" /> Akış'a göz at
+            <ArrowLeft className="h-4.5 w-4.5" /> Keşfet'e göz at
           </Link>
         </motion.div>
 

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Flame, FolderOpen, CircleUser, type LucideIcon } from "lucide-react";
+import { Home, Wand2, FolderOpen, CircleUser, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,15 +26,13 @@ type Sekme = { ad: string; href: string; ikon?: LucideIcon; fab?: boolean };
 
 /* Higgsfield mobil alt bar BİREBİR sırası:
    Home · Community · Generate(FAB) · Library · Profile.
-   İkinci sekme TikTok-tarzı topluluk feed'i "Akış" (/panel/akis) — mobilde
-   dikey tam-ekran deneyimi bar'a doğal oturur. Presetler'e üst menü + ana
-   navdan erişilir. */
+   Akış sayfası 2026-10-27'de kaldırıldı; ikinci sekme Presetler (Ana Sayfa zaten Keşfet). */
 const SEKMELER: Sekme[] = [
   { ad: "Ana Sayfa", href: "/panel", ikon: Home },
-  { ad: "Akış", href: "/panel/akis", ikon: Flame },
+  { ad: "Presetler", href: "/panel/presetler", ikon: Wand2 },
   { ad: "Üret", href: "/panel/gorsel", fab: true },
   { ad: "Kitaplık", href: "/panel/kitaplik", ikon: FolderOpen },
-  { ad: "Profil", href: "/panel/profil", ikon: CircleUser },
+  { ad: "Ayarlar", href: "/panel/ayarlar", ikon: CircleUser },
 ];
 
 /** Yıldız/sparkle — FAB glifi (lucide Sparkles'tan farklı: tek 4-uçlu yıldız, dolu). */
@@ -56,7 +54,7 @@ export function AltTabBar() {
   return (
     <nav
       aria-label="Alt gezinme"
-      className="mobil-lime fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.05] bg-zemin pb-[env(safe-area-inset-bottom)] sm:hidden"
+      className="mobil-lime vayra-mono fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.05] bg-zemin pb-[env(safe-area-inset-bottom)] sm:hidden"
     >
       <div className="relative flex h-[60px] items-stretch">
         {SEKMELER.map((s) => {
@@ -69,8 +67,7 @@ export function AltTabBar() {
                 className="relative flex flex-1 flex-col items-center justify-end pb-[9px]"
               >
                 {/* FAB çubuğun üstüne taşar: 40px yüksek, 16px yukarı */}
-                {/* Referansta FAB lime; bizde marka aksanı (cyan) — panelin geri
-                    kalanıyla tek renk kalsın diye token kullanıyoruz. */}
+                {/* FAB aksan token'ını kullanır; .vayra-mono altında beyaz. */}
                 <span className="absolute left-1/2 top-0 flex h-10 w-14 -translate-x-1/2 -translate-y-4 items-center justify-center rounded-xl bg-aksan text-zemin">
                   <DortUc className="h-5 w-5" />
                 </span>

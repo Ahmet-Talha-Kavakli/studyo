@@ -66,7 +66,7 @@ export function AiSohbet({ kompakt }: { kompakt?: boolean }) {
         ai.guncelle(asistanId, { metin: data.metin || `\`${data.tool}\` işlemini önerdim.`, adimlar: data.adimlar, yukleniyor: false });
         const sonuc = await writeToolUygula(data.tool, data.girdi, onayIste);
         ai.ekle({ rol: "asistan", metin: sonuc.onaylandi ? `✓ ${sonuc.sonuc}` : `İşlem iptal edildi. ${sonuc.sonuc}` });
-        if (sonuc.onaylandi) toast.success("AI işlemi uygulandı");
+        if (sonuc.onaylandi) toast.success("Önerilen işlem uygulandı", { description: String(sonuc.sonuc ?? "").slice(0, 140) || undefined });
       } else {
         ai.guncelle(asistanId, { metin: data.metin, adimlar: data.adimlar, veri: data.veri, yukleniyor: false });
       }

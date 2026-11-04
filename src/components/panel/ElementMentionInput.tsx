@@ -2,10 +2,23 @@
 
 import { useRef, useState, useEffect, type CSSProperties, type RefObject } from "react";
 import { AnimatePresence } from "framer-motion";
-import { ElementSecici } from "./ElementSecici";
+import { ElementSecici, elementOnerileri } from "./ElementSecici";
 import { ElementCip } from "./ElementCip";
 import { ElementDuzenleModal } from "./element/ElementDuzenleModal";
 import { useElements } from "@/store/useElements";
+
+/** Textarea'yı içeriğine göre boyutlar. `height: auto` anlık olarak kutuyu küçülttüğü için
+   kaydırılabilir atalar yukarı/aşağı zıplıyordu ("istem kutusu aşağı kayıyor"); kaydırma
+   konumları ölçümden önce saklanıp sonra geri yüklenir. */
+function yukseklikAyarla(t: HTMLTextAreaElement, enBuyuk: number) {
+  const kaplar: [Element, number][] = [];
+  for (let e: Element | null = t.parentElement; e; e = e.parentElement) if (e.scrollTop) kaplar.push([e, e.scrollTop]);
+  const sayfa = window.scrollY;
+  t.style.height = "auto";
+  t.style.height = Math.min(t.scrollHeight, enBuyuk) + "px";
+  for (const [e, y] of kaplar) e.scrollTop = y;
+  if (window.scrollY !== sayfa) window.scrollTo({ top: sayfa });
+}
 
 /**
  * Higgsfield birebir element deneyimi taşıyan prompt girişi — HER YERDE ortak.
@@ -57,30 +70,33 @@ export function ElementMentionInput({
   const taRef = inputRef ?? yerelRef;
   const [mentionFiltre, setMentionFiltre] = useState<string | null>(null);
   const elementler = useElements((s) => s.elementler);
+  const [aktif, setAktif] = useState(0);
+  const oneriler = mentionFiltre === null ? [] : elementOnerileri(elementler, mentionFiltre);
+  const bul = (ad: string) => elementler.find((e) => e.ad.toLocaleLowerCase("tr") === ad.toLocaleLowerCase("tr"));
 
   // Kayıtlı elementlerle eşleşen @isim'leri çip olarak ayır.
   const secilenAdlar: string[] = [];
   {
     const gorulen = new Set<string>();
-    for (const m of deger.matchAll(/@(\w+)/g)) {
-      const ad = m[1];
-      if (!gorulen.has(ad) && elementler.some((e) => e.ad === ad)) {
-        gorulen.add(ad); secilenAdlar.push(ad);
-      }
+    for (const m of deger.matchAll(/@([\p{L}\p{N}_]+)/gu)) {
+      const e = bul(m[1]);
+      if (e && !gorulen.has(e.ad)) { gorulen.add(e.ad); secilenAdlar.push(e.ad); }
     }
   }
-  const kayitliMi = (t: string) => elementler.some((e) => "@" + e.ad === t.trim());
+  const kayitliMi = (t: string) => !!bul(t.trim().slice(1));
   // Element çipi olarak ayrılmış @isim'ler metinden çıkarılır AMA gövde
   // boşlukları KORUNUR. Önceki kod `.replace(/\s{2,}/," ").trim()` uyguluyordu;
   // controlled textarea'da bu, kullanıcı boşluğa basar basmaz boşluğu geri silip
   // harfleri yapıştırıyordu (imleç kayması). Artık sadece kayıtlı etiketler ayrılır.
   const hamMetin = secilenAdlar.length
-    ? deger.replace(/(?:^|\s)@\w+(?=\s|$)/g, (t) => (kayitliMi(t) ? "" : t)).replace(/\s{2,}/g, " ").replace(/^\s+/, "")
+    ? deger.replace(/(?:^|\s)@[\p{L}\p{N}_]+(?=\s|$)/gu, (t) => (kayitliMi(t) ? "" : t)).replace(/[ \t]{2,}/g, " ").replace(/^[ \t]+/, "")
     : deger;
 
   const birlestir = (ham: string, adlar: string[]) => {
     const etiket = adlar.map((a) => `@${a}`).join(" ");
-    onDeger(etiket ? (ham ? `${ham.trim()} ${etiket}` : etiket) : ham);
+    // Sondaki boşluk KORUNUR (trim yok): kullanıcı kelime arasına boşluk yazınca silinmesin.
+    // Etiketten önce her zaman tek boşluk eklenir; hamMetin türetilirken " @Ad" ile birlikte çıkar.
+    onDeger(etiket ? (ham.trim() ? `${ham.replace(/^\s+/, "")} ${etiket}` : etiket) : ham);
   };
 
   /* Seçici YÖNÜ otomatik: aşağıda yer yoksa yukarı açılır.
@@ -92,16 +108,18 @@ export function ElementMentionInput({
   const [otoYukari, setOtoYukari] = useState(false);
   const SECICI_YUK = 340; // menü + "Yeni element oluştur" satırı
   const mentionKontrol = (v: string, imlec: number) => {
-    const eslesme = v.slice(0, imlec).match(/@(\w*)$/);
+    const eslesme = v.slice(0, imlec).match(/(?:^|\s)@([\p{L}\p{N}_]*)$/u);
     if (eslesme) {
       const r = taRef.current?.getBoundingClientRect();
       if (r) setOtoYukari(r.bottom + SECICI_YUK > window.innerHeight && r.top > SECICI_YUK);
     }
-    setMentionFiltre(eslesme ? eslesme[1] : null);
+    const yeni = eslesme ? eslesme[1] : null;
+    if (yeni !== mentionFiltre) setAktif(0);
+    setMentionFiltre(yeni);
   };
 
   const mentionSec = (ad: string) => {
-    const temizHam = hamMetin.replace(/@\w*$/, "").trim();
+    const temizHam = hamMetin.replace(/@[\p{L}\p{N}_]*$/u, "").trim();
     const yeniAdlar = secilenAdlar.includes(ad) ? secilenAdlar : [...secilenAdlar, ad];
     birlestir(temizHam, yeniAdlar);
     setMentionFiltre(null);
@@ -127,7 +145,7 @@ export function ElementMentionInput({
     const el = useElements.getState().elementler.find((e) => e.id === id);
     if (!el) return;
     // @-yazımını temizleyip yeni elementi çip olarak ekle.
-    const temizHam = hamMetin.replace(/@\w*$/, "").trim();
+    const temizHam = hamMetin.replace(/@[\p{L}\p{N}_]*$/u, "").trim();
     birlestir(temizHam, secilenAdlar.includes(el.ad) ? secilenAdlar : [...secilenAdlar, el.ad]);
     setTimeout(() => taRef.current?.focus(), 0);
   };
@@ -150,8 +168,7 @@ export function ElementMentionInput({
   const boyutla = () => {
     const t = taRef.current;
     if (!t || !otoBuyu || elYukseklik !== null) return;   // elle ayarlıysa otomatiğe karışma
-    t.style.height = "auto";
-    t.style.height = Math.min(t.scrollHeight, enBuyuk) + "px";
+    yukseklikAyarla(t, enBuyuk);
   };
   useEffect(boyutla, [hamMetin, otoBuyu, enBuyuk, secilenAdlar.length, elYukseklik]);
 
@@ -173,7 +190,8 @@ export function ElementMentionInput({
         {/* disabled iken seçici açılmasın: giriş kilitliyken menü çıkması
             (üretim sürerken) tıklanabilir ama yazılamaz bir hâl yaratıyordu. */}
         {mentionFiltre !== null && !disabled && (
-          <ElementSecici filtre={mentionFiltre} onSec={mentionSec} onYeni={yeniElement} yukariAc={seciciYukari || otoYukari} />
+          <ElementSecici liste={oneriler} filtre={mentionFiltre} aktif={Math.min(aktif, Math.max(0, oneriler.length - 1))} onAktif={setAktif}
+            onSec={mentionSec} onYeni={yeniElement} yukariAc={seciciYukari || otoYukari} />
         )}
       </AnimatePresence>
 
@@ -194,6 +212,13 @@ export function ElementMentionInput({
         onChange={(e) => { hamDegisti(e.target.value); mentionKontrol(e.target.value, e.target.selectionStart ?? 0); }}
         onKeyUp={(e) => mentionKontrol(e.currentTarget.value, e.currentTarget.selectionStart ?? 0)}
         onKeyDown={(e) => {
+          // Öneri listesi açıkken klavye listeyi yönetir.
+          if (mentionFiltre !== null && !disabled) {
+            if (e.key === "ArrowDown" && oneriler.length) { e.preventDefault(); setAktif((a) => (a + 1) % oneriler.length); return; }
+            if (e.key === "ArrowUp" && oneriler.length) { e.preventDefault(); setAktif((a) => (a - 1 + oneriler.length) % oneriler.length); return; }
+            if ((e.key === "Enter" || e.key === "Tab") && oneriler.length && !e.ctrlKey && !e.metaKey) { e.preventDefault(); mentionSec(oneriler[Math.min(aktif, oneriler.length - 1)].ad); return; }
+            if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); setMentionFiltre(null); return; }
+          }
           if (e.key === "Enter" && onEnter) {
             // Tek satır: düz Enter üretir. Çok satır: ⌘/Ctrl+Enter üretir.
             if ((!cokSatir && !e.shiftKey) || (e.metaKey || e.ctrlKey)) { e.preventDefault(); onEnter(); }
@@ -212,16 +237,10 @@ export function ElementMentionInput({
         onInput={(e) => {
           // Otomatik büyüme yalnız elle ayar YOKKEN.
           if (!otoBuyu || elYukseklik !== null) {
-            if (!otoBuyu) {
-              const t = e.currentTarget;
-              t.style.height = "auto";
-              t.style.height = Math.min(t.scrollHeight, cokSatir ? 160 : 120) + "px";
-            }
+            if (!otoBuyu) yukseklikAyarla(e.currentTarget, cokSatir ? 160 : 120);
             return;
           }
-          const t = e.currentTarget;
-          t.style.height = "auto";
-          t.style.height = Math.min(t.scrollHeight, enBuyuk) + "px";
+          yukseklikAyarla(e.currentTarget, enBuyuk);
         }}
       />
     </div>

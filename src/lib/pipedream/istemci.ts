@@ -90,11 +90,11 @@ export async function baglantiKaldir(hesapId: string): Promise<boolean> {
 export async function baglanVeBildir(appSlug: string, appAd: string, kullaniciId: string): Promise<BaglanSonuc> {
   const sonuc = await baglayiciyaBaglan(appSlug, kullaniciId);
   if (sonuc.yapilandirilmadi) {
-    toast.error("Bağlayıcılar henüz aktif değil", { description: "Yönetici Pipedream anahtarlarını tanımlamalı." });
+    toast.error("Bağlayıcılar henüz etkin değil", { description: "Yönetici Pipedream anahtarlarını tanımlayınca bağlanabilirsin." });
   } else if (sonuc.basarili) {
     toast.success(`${appAd} bağlandı`, { description: "Artık iş akışlarında kullanabilirsin." });
   } else {
-    toast.error(`${appAd} bağlanamadı`, { description: sonuc.hata });
+    toast.error(`${appAd} bağlanamadı`, { description: sonuc.hata ?? "Bağlantı tamamlanmadı. Yeniden dene." });
   }
   return sonuc;
 }

@@ -15,7 +15,7 @@ export interface SCIs {
   olusturma: number;
 }
 
-/* ── Ajan sohbeti (Higgsfield Supercomputer birebir) ─────────────── */
+/* ── Ajan sohbeti (Higgsfield Usta birebir) ─────────────── */
 
 export type MesajRol = "kullanici" | "ajan";
 
@@ -28,12 +28,19 @@ export interface SCAdim {
 /** Üretilen çıktı — gerçek görsel/video ya da GERÇEK ÇALIŞAN site/oyun/uygulama (html gömülü). */
 export interface SCCikti {
   id: string;
-  tur: "gorsel" | "video" | "site" | "oyun" | "dashboard";
+  tur: "gorsel" | "video" | "site" | "oyun" | "dashboard" | "uygulama";
   url?: string;        // görsel/video için gerçek URL veya CSS background
   html?: string;       // site/oyun/dashboard için GERÇEK çalışan tek-dosya HTML (iframe srcdoc)
   ad?: string;         // "Nova · Landing" gibi başlık
   durum: "uretiliyor" | "tamam";
+  /** Sağlayıcı bağlı değilken üretilen örnek çıktı. */
+  demo?: boolean;
+  /** Site çıktısının üretim planı — takip istekleri bunun üstüne revize edilir. */
+  plan?: import("@/lib/siteUretici").SitePlan;
 }
+
+/** Sohbetin yayınlanmış site/uygulaması (/y/<id>); anahtar yalnız bu tarayıcıda. */
+export interface SCYayin { id: string; anahtar: string; ciktiId: string; zaman: number; remix: boolean }
 
 export interface SCMesaj {
   id: string;
@@ -53,7 +60,36 @@ export interface SCMesaj {
   /** Üretilen medya/çıktı (galeri/önizleme sütununda gösterilir) */
   ciktilar?: SCCikti[];
   zaman: number;
+  /** Model yanıtı (akış parçaları, kaynaklar, durum) — lib/scSohbet ScYanit. */
+  yanit?: import("@/lib/scSohbet").ScYanit;
+  /** Kullanıcı mesajının ekleri (yalnız küçük önizleme ve ad saklanır). */
+  ekler?: { tur: "gorsel" | "metin"; ad: string; onizleme?: string; boyut?: number }[];
+  /** Mesaj gönderilirken seçili niyet (sohbet / görsel / site). */
+  niyet?: "oto" | "gorsel" | "site";
+  /** Ajan işi: plan başlangıcı/bitişi ve onay/soru durumu. */
+  is?: { tur: "gorsel" | "site"; basla?: number; bitis?: number; bekleyen?: "onay" | "oran"; kredi?: number; oran?: string; reddedildi?: boolean; toplam?: number };
+  /** Kullanıcı geri bildirimi. */
+  geri?: { puan: 1 | -1; neden?: string[]; not?: string };
+  /** Kullanıcı mesajı: yanıttan alıntılanan parça (mesajın üstünde gösterilir, modele alıntı olarak gider). */
+  alinti?: string;
+  /** Kullanıcı mesajı: bu mesajda uygulanan beceri (ad). */
+  beceri?: string;
+  /** Bu mesajda "@" ile çağrılan çalışanın adı. */
+  calisan?: string;
+  /** Asistan yanıtı belge olarak açıldıysa: başlık ve sürümler (Belge paneli). */
+  belge?: import("@/components/sc/sohbet/BelgePaneli").ScBelge;
+  /** Karşılaştırma: aynı soruya ikinci modelin yanıtı (kullanıcı birini seçince kaldırılır). */
+  ikinci?: import("@/lib/scSohbet").ScYanit;
+  /** Asistan yanıtı: sonraki soru önerileri. */
+  oneriler?: string[];
+  /** Çok adımlı iş planı (onaylanınca adım adım çalışır). */
+  plan?: import("@/lib/scPlan").ScPlan;
+  /** Bu yanıttan sonra belleğe eklenen bilgiler ("Bellek güncellendi"). */
+  anilar?: string[];
 }
+
+/** Dal: bir konumdan itibaren alternatif mesaj kuyrukları (düzenle / yeniden üret). */
+export interface SCDal { surumler: SCMesaj[][]; aktif: number }
 
 export interface SCSohbet {
   id: string;
@@ -69,6 +105,36 @@ export interface SCSohbet {
   /** Sohbet listesinde üste sabitlensin mi */
   sabit?: boolean;
   olusturma: number;
+  /** Composer ayarları (model, düşünme, web, stil, onay). */
+  ayar?: import("@/components/sc/sohbet/Composer").ScAyar;
+  /** Konum (mesaj sırası) → alternatif kuyruklar. */
+  dallar?: Record<string, SCDal>;
+  yayin?: SCYayin;
+  /** Kilitli sohbet: şifrenin SHA-256 özeti (kenar çubuğunda/aramada görünmez, açmak için şifre). */
+  kilit?: string;
+  /** Arşivlenmiş: kenar çubuğunda görünmez, Sohbetler › Arşiv'de durur. */
+  arsiv?: boolean;
+  /** Paylaşım bağlantısı (/s/<id>); anahtar yalnız bu tarayıcıda güncelleme/kaldırma için tutulur. */
+  paylasim?: { id: string; anahtar: string; zaman: number };
+  /** Çalışanla açılan sohbet: çalışanın talimatı ve dosyaları her mesajda modele gider. */
+  calisanId?: string;
+  /** Bağlı olduğu proje (talimat ve dosyalar modele bağlam olarak gider). */
+  projeId?: string;
+  /** Geçici sohbet: geçmişte listelenmez, tarayıcıya kaydedilmez (sayfa yenilenince/çıkınca silinir). */
+  gecici?: boolean;
+}
+
+/** Proje: sohbetleri bir arada tutar; talimatı ve dosyaları her sohbette modele bağlam olarak gider. */
+export interface SCProje {
+  id: string;
+  ad: string;
+  aciklama?: string;
+  /** Projeye özel talimat (sistem istemine eklenir). */
+  talimat?: string;
+  /** Bilgi dosyaları (yalnız metin; tarayıcıda saklandığı için boyut sınırlı). */
+  dosyalar: { id: string; ad: string; boyut: number; icerik: string }[];
+  olusturma: number;
+  sabit?: boolean;
 }
 
 interface SupercomputerState {
@@ -90,6 +156,13 @@ interface SupercomputerState {
   mesajEkle: (sohbetId: string, mesaj: Omit<SCMesaj, "id" | "zaman">) => string;
   mesajGuncelle: (sohbetId: string, mesajId: string, patch: Partial<SCMesaj>) => void;
   calisiyorAyarla: (sohbetId: string, calisiyor: boolean) => void;
+
+  /* Projeler */
+  projeler: SCProje[];
+  projeAc: (ad: string, aciklama?: string) => string;
+  projeGuncelle: (id: string, patch: Partial<SCProje>) => void;
+  /** Projeyi siler; sohbetleri silinmez, projeden çıkarılır. */
+  projeSil: (id: string) => void;
 }
 
 const kimlik = () => Math.random().toString(36).slice(2, 10);
@@ -154,6 +227,15 @@ export const useSupercomputer = create<SupercomputerState>()(
           ),
         })),
 
+      projeler: [],
+      projeAc: (ad, aciklama) => {
+        const id = kimlik();
+        set((s) => ({ projeler: [{ id, ad, aciklama, dosyalar: [], olusturma: Date.now() }, ...s.projeler] }));
+        return id;
+      },
+      projeGuncelle: (id, patch) => set((s) => ({ projeler: s.projeler.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      projeSil: (id) => set((s) => ({ projeler: s.projeler.filter((x) => x.id !== id), sohbetler: s.sohbetler.map((x) => (x.projeId === id ? { ...x, projeId: undefined } : x)) })),
+
       calisiyorAyarla: (sohbetId, calisiyor) =>
         set((s) => ({
           sohbetler: s.sohbetler.map((x) =>
@@ -163,6 +245,10 @@ export const useSupercomputer = create<SupercomputerState>()(
           ),
         })),
     }),
-    { name: "vayra-supercomputer", version: 2, migrate: alanlariKoru },
+    {
+      name: "vayra-supercomputer", version: 2, migrate: alanlariKoru,
+      // Geçici sohbetler diske yazılmaz.
+      partialize: (s) => ({ ...s, sohbetler: s.sohbetler.filter((x) => !x.gecici) }),
+    },
   ),
 );

@@ -1,10 +1,8 @@
 "use client";
 
-import { PazUretimIzgara } from "@/components/panel/pazarlama/PazUretimIzgara";
+import { PazarlamaAna } from "@/components/studyo/PazarlamaAna";
 
-/** Favorilerim — referanslar/marketing/favorites birebir.
-    Referansta üst satır yazısı yine "Tüm üretimler" (üst kırıntı),
-    aktif sayfa yalnızca kenar çubuğundaki seçili satırla belli olur. */
+/** Eski "Favorilerim" adresi — stüdyonun Beğenilenler görünümünü açar. */
 export default function PazFavorilerSayfasi() {
-  return <PazUretimIzgara baslik="Tüm üretimler" yalnizFavori />;
+  return <PazarlamaAna baslangic="favoriler" />;
 }

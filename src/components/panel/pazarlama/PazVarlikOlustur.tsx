@@ -71,13 +71,13 @@ export function PazVarlikOlustur({ tur, onKapat, onOlustu }: {
 
   const olustur = () => {
     const temizAd = ad.trim();
-    if (temizAd.length < 2) { toast.error("Bir ad gir"); return; }
+    if (temizAd.length < 2) { toast.error("Ad eksik", { description: "En az 2 karakterlik bir ad yaz." }); return; }
     if (yontem === "istem" && istem.trim().length < 6) {
-      toast.error(`${m.istemEtiket.toLocaleLowerCase("tr")}`, { description: "Birkaç kelimeden fazlasını yaz." });
+      toast.error("Tarif çok kısa", { description: `${m.istemEtiket}: birkaç kelimeden fazlasını yaz.` });
       return;
     }
     if (yontem === "medya" && medyalar.length === 0) {
-      toast.error("Örnek medya gerekli", { description: m.medyaOzet });
+      toast.error("Örnek medya eksik", { description: `${m.medyaOzet} yükle.` });
       return;
     }
     const id = varlikEkle({
@@ -86,8 +86,8 @@ export function PazVarlikOlustur({ tur, onKapat, onOlustu }: {
       medyaUrl: medyalar[0],
       tohum: `${tur}-${temizAd.toLocaleLowerCase("tr").replace(/\s+/g, "-")}`,
     });
-    toast.success(`${temizAd} oluşturuldu ✦`, {
-      description: yontem === "istem" ? "İsteminden öğrenildi" : `${medyalar.length} medyadan öğrenildi`,
+    toast.success(`${temizAd} oluşturuldu`, {
+      description: yontem === "istem" ? "Tarifinden oluşturuldu ve kitaplığına eklendi." : `${medyalar.length} örnek medyayla oluşturuldu ve kitaplığına eklendi.`,
     });
     onOlustu?.(id);
     onKapat();
@@ -98,7 +98,7 @@ export function PazVarlikOlustur({ tur, onKapat, onOlustu }: {
   return createPortal(
     <>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        onClick={onKapat} className="fixed inset-0 z-[260] bg-black/70 backdrop-blur-md" />
+        onClick={onKapat} className="perde fixed inset-0 z-[260] bg-black/70 backdrop-blur-md" />
       <motion.div
         initial={{ opacity: 0, scale: 0.97, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
         transition={{ type: "spring", stiffness: 360, damping: 30 }}

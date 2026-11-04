@@ -73,7 +73,7 @@ export default function Joblar() {
     if (tip === "oncelik") jobStore.oncelikVer(j.id, 10);
     jobStore.islemEkle({ jobId: j.id, tur: tip === "yeniden" ? "retry" : tip === "iptal" ? "iptal" : tip === "iade" ? "iade" : "oncelik", yapan: admin, detay: etiket });
     denetle(etiket, "bilgi", j.id);
-    toast.success("İşlem uygulandı");
+    toast.success({ iptal: "Job iptal edildi", yeniden: "Job yeniden kuyruğa alındı", iade: "Kredi iade edildi", oncelik: "Öncelik verildi" }[tip], { description: `${j.modelAd} · ${j.id}` });
   };
 
   const stuckTemizle = async () => {
@@ -81,7 +81,7 @@ export default function Joblar() {
     if (!ok) return;
     jobStore.toplu(stuck.map((j) => j.id), "iptal", admin, "iptal");
     denetle("Stuck joblar toplu temizlendi", "uyari", `${stuck.length} job`);
-    toast.success(`${stuck.length} job temizlendi + iade yapıldı`);
+    toast.success(`${stuck.length} takılı job temizlendi`, { description: "Hepsi iptal edildi ve kredileri iade edildi." });
   };
 
   const sekmeler = [

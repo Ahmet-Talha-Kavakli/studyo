@@ -24,7 +24,27 @@ interface TercihState {
   // KrediModal + YukseltModal'daki "Kur/Kapat" butonu bu GERÇEK tercihi değiştirir.
   otomatikYukleme: boolean;
   otomatikYuklemeToggle: () => boolean; // yeni durumu döner
+  /* ── Görünüm ve davranış (Ayarlar › Görünüm) ── */
+  /** Vurgu rengi kimliği — VURGU_RENKLERI'nden. */
+  vurgu: string;
+  /** Hareketi azalt: "sistem" işletim sistemi tercihine uyar. */
+  hareket: "sistem" | "azalt" | "tam";
+  /** Sekme arka plandayken işletim sistemi bildirimi göster. */
+  masaustuBildirim: boolean;
+  /** Üretim bitince kısa bir ses çal. */
+  bildirimSesi: boolean;
+  /** Bu krediye inince "Kredin azalıyor" uyarısı. */
+  krediEsigi: number;
+  /** Tek tuşlu panel kısayolları (g, v, s, k …). */
+  kisayollar: boolean;
+  /** Yeni üretimler Keşfet'te otomatik yayınlansın. */
+  otoYayin: boolean;
+  /** Otomatik yüklemede alınacak paketin kredisi (KREDI_PAKETLERI). */
+  otoPaket: number;
+  gorunumAyarla: (p: Partial<Pick<TercihState, "vurgu" | "hareket" | "masaustuBildirim" | "bildirimSesi" | "krediEsigi" | "kisayollar" | "otoYayin" | "otoPaket">>) => void;
 }
+
+export { VURGU_RENKLERI } from "@/lib/vurgu";
 
 export const useTercih = create<TercihState>()(
   persist(
@@ -45,6 +65,15 @@ export const useTercih = create<TercihState>()(
       sidebarTercih: {},
       sidebarAyarla: (anahtar, patch) =>
         set((s) => ({ sidebarTercih: { ...s.sidebarTercih, [anahtar]: { ...s.sidebarTercih[anahtar], ...patch } } })),
+      vurgu: "elektrik",
+      hareket: "sistem",
+      masaustuBildirim: false,
+      bildirimSesi: false,
+      krediEsigi: 200,
+      kisayollar: true,
+      otoYayin: false,
+      otoPaket: 2500,
+      gorunumAyarla: (p) => set(p),
       otomatikYukleme: false,
       otomatikYuklemeToggle: () => {
         const yeni = !get().otomatikYukleme;
@@ -52,6 +81,6 @@ export const useTercih = create<TercihState>()(
         return yeni;
       },
     }),
-    { name: "vayra-tercih", version: 5, migrate: alanlariKoru },
+    { name: "vayra-tercih", version: 6, migrate: alanlariKoru },
   ),
 );

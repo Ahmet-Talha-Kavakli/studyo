@@ -1,11 +1,13 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState } from "react";
 import {
   Search, Upload, LayoutGrid, Box, Palette, PersonStanding, SlidersHorizontal,
   CheckSquare, Tag, Trash2, X, Download, FolderPlus, Check,
 } from "lucide-react";
-import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
+import { uretimGeriAl } from "../uretimGeriAl";
 import { GALERI_SEKMELERI } from "@/lib/uc-boyut";
 import type { Uretim } from "@/store/useProjeler";
 import { cn, saltUrl } from "@/lib/utils";
@@ -61,7 +63,7 @@ export function WorkspacePaneli({
   const secimDegistir = (id: string) => {
     setSecili((s) => { const y = new Set(s); y.has(id) ? y.delete(id) : y.add(id); return y; });
   };
-  const seciliSil = () => { secili.forEach((id) => onSil(id)); toast.success(`${secili.size} model silindi`); setSecili(new Set()); setSecimModu(false); };
+  const seciliSil = () => { const geriAl = uretimGeriAl([...secili]); secili.forEach((id) => onSil(id)); mesaj.silindi(`${secili.size} model`, geriAl); setSecili(new Set()); setSecimModu(false); };
 
   return (
     <div className="flex flex-1 flex-col overflow-hidden bg-zemin">
@@ -99,10 +101,7 @@ export function WorkspacePaneli({
               className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", filtreAcik ? "bg-aksan/15 text-aksan" : "bg-white/[0.03] text-metin-2 hover:bg-white/[0.06] hover:text-metin")}>
               <SlidersHorizontal className="h-3.5 w-3.5" />
             </button>
-            {filtreAcik && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setFiltreAcik(false)} />
-                <div className="menu-surface absolute right-0 top-10 z-50 w-56 rounded-xl p-3 text-sm shadow-2xl">
+            <Yuzen acik={!!(filtreAcik)} onKapat={() => setFiltreAcik(false)} sag={0} ust={40} bosluk={0} className="menu-surface w-56 rounded-xl p-3 text-sm">
                   <div className="mb-1.5 text-xs font-semibold text-metin-2">Durum</div>
                   <div className="mb-3 flex flex-wrap gap-1.5">
                     {[["hepsi", "Hepsi"], ["indirildi", "İndirildi"], ["yayinda", "Yayınlandı"], ["yayinsiz", "Yayınlanmadı"]].map(([id, ad]) => (
@@ -118,9 +117,7 @@ export function WorkspacePaneli({
                     ))}
                   </div>
                   <button onClick={() => { setDurum("hepsi"); setSira("yeni"); }} className="w-full rounded-lg bg-white/6 py-1.5 text-xs text-metin-2 hover:bg-white/[0.1]">↻ Sıfırla</button>
-                </div>
-              </>
-            )}
+                </Yuzen>
           </div>
           <button onClick={() => { setSecimModu((v) => !v); setSecili(new Set()); }} title="Çoklu seçim"
             className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", secimModu ? "bg-aksan/15 text-aksan" : "bg-white/[0.03] text-metin-2 hover:bg-white/[0.06] hover:text-metin")}>
@@ -175,7 +172,7 @@ export function WorkspacePaneli({
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-end gap-1.5 bg-gradient-to-t from-zemin/85 to-transparent p-2 opacity-0 transition-opacity group-hover:opacity-100">
                         <button onClick={(e) => { e.stopPropagation(); onIndir(u.id); }} title="İndir"
                           className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full glass-ikon text-white/90"><Download className="h-3.5 w-3.5" /></button>
-                        <button onClick={(e) => { e.stopPropagation(); onSil(u.id); toast.success("Silindi"); }} title="Sil"
+                        <button onClick={(e) => { e.stopPropagation(); const geriAl = uretimGeriAl([u.id]); onSil(u.id); mesaj.silindi("Model", geriAl); }} title="Sil"
                           className="pointer-events-auto flex h-7 w-7 items-center justify-center rounded-full glass-ikon text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     )}

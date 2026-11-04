@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { kopyala as panoyaKopyala } from "@/lib/gercekEylem";
 import {
   Server, Activity, DollarSign, Zap, RefreshCcw, GitBranch, Power, Check, X, Pencil,
   KeyRound, Gauge, Copy, AlertTriangle, TimerReset,
@@ -54,7 +55,7 @@ export default function Saglayici() {
     if (!ok) return;
     prov.toggle(id);
     denetle(`Provider ${aktif ? "kapatıldı" : "açıldı"}`, "kritik", ad);
-    toast.success(aktif ? "Provider kapatıldı" : "Provider açıldı");
+    toast.success(aktif ? "Sağlayıcı kapatıldı" : "Sağlayıcı açıldı", { description: aktif ? `${ad} trafiği failover hedefine yönlendirildi.` : `${ad} yeniden trafik alıyor.` });
   };
 
   const anahtarRotate = async (id: string, ad: string) => {
@@ -66,12 +67,11 @@ export default function Saglayici() {
     if (!ok) return;
     const yeni = prov.keyRotate(id);
     denetle("API anahtarı döndürüldü", "kritik", ad);
-    toast.success(`Yeni anahtar: ${yeni}`);
+    toast.success("API anahtarı döndürüldü", { description: `${ad} yeni anahtarı: ${yeni}` });
   };
 
   const kopyala = (deger: string) => {
-    navigator.clipboard?.writeText(deger).catch(() => {});
-    toast.success("Panoya kopyalandı");
+    void panoyaKopyala(deger, "Anahtar kopyalandı");
   };
 
   const duzenleAc = (id: string) => {
@@ -89,7 +89,7 @@ export default function Saglayici() {
     if (!ok) return;
     prov.guncelle(id, taslak);
     denetle(`Provider bağlantısı güncellendi (rate ${taslak.rateLimit}/dk, eşzaman ${taslak.esZamanlilikLimiti})`, "uyari", ad);
-    toast.success("Bağlantı ayarları güncellendi");
+    toast.success("Bağlantı ayarları kaydedildi", { description: `${ad} için hemen geçerli.` });
     setDuzenle(null);
   };
 
@@ -102,7 +102,7 @@ export default function Saglayici() {
     prov.failoverAyarla(id, hedef);
     const hedefAd = PROVIDERLAR.find((p) => p.id === hedef)?.ad ?? "yok";
     denetle(`Failover hedefi ayarlandı: ${hedefAd}`, "uyari", ad);
-    toast.success("Failover kuralı güncellendi");
+    toast.success("Failover hedefi güncellendi", { description: `${ad} → ${hedefAd}` });
   };
 
   const alarmAyarla = (id: string, ad: string, esik: number) => {
@@ -180,7 +180,7 @@ export default function Saglayici() {
                 {(dusukBakiye || tukenmeYakin) && (
                   <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-rose-500/10 px-2.5 py-1.5 text-[12px] text-rose-300">
                     <Zap className="h-3.5 w-3.5" />
-                    {dusukBakiye ? `Bakiye eşik (${dolar(a.alarmEsigiUsd)}) altında — yükleme gerek` : `~${d.tahminiTukenmeGun} günde tükeniyor`}
+                    {dusukBakiye ? `Bakiye eşik (${dolar(a.alarmEsigiUsd)}) altında — yükleme gerek` : `yaklaşık ${d.tahminiTukenmeGun} günde tükeniyor`}
                   </div>
                 )}
               </Kart>

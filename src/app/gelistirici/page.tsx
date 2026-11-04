@@ -125,9 +125,9 @@ export default function GelistiriciPage() {
   // gerçekten başladıysa çıkar.
   const skillIndir = () => {
     if (metinIndir(kodlar.skill.kod, "SKILL.md", "text/markdown")) {
-      toast.success("SKILL.md indirildi", { description: "Ajanının yetenek klasörüne ekle." });
+      toast.success("SKILL.md indirildi", { description: "Dosyayı ajanının yetenek klasörüne ekle." });
     } else {
-      toast.error("İndirilemedi", { description: "Tarayıcı indirmeyi engelledi." });
+      toast.error("SKILL.md indirilemedi", { description: "Tarayıcı indirmeyi engelledi. Bu site için indirme iznini açıp yeniden dene." });
     }
   };
 

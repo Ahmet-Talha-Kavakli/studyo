@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Supercomputer alt sayfası çerçevesi — Higgsfield birebir (HIGGSFIELD-SPEC.md §2.5-2.9).
+ * Usta alt sayfası çerçevesi — Higgsfield birebir (HIGGSFIELD-SPEC.md §2.5-2.9).
  * Üst bar: sol başlık · ortada segment sekmeler · sağda aksan CTA.
  */
 export function SCSayfaBaslik({

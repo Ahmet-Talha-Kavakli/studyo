@@ -1,208 +1,176 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo } from "react";
-import { Gauge, KeyRound, Timer, ShieldAlert, Layers } from "lucide-react";
-import { toast } from "@/lib/toast";
-import { useAuth } from "@/store/useAuth";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Activity, Check, Gauge, KeyRound, Loader2, Zap } from "lucide-react";
 import { useApiAnahtar } from "@/store/useApiAnahtar";
-import { BosDurum, KodBlok, MetrikKart, SayfaBaslik } from "@/components/api/parcalar";
+import { apiIstek, senkronize } from "@/lib/api/istemci";
+import { toast } from "@/lib/toast";
+import { AnahtarSecici, Kart, KodEditor, OrtamRozet, SayfaBaslik, birincil, ikincil, useSeciliAnahtar } from "@/components/api/ui";
+import { useHazir } from "@/components/api/veri";
 import { cn } from "@/lib/utils";
 
-/* ============================================================
-   HIZ LİMİTLERİ — Higgsfield'da YOK, bizim ekstramız.
-   Plan bazlı eşzamanlılık tablosu + anahtar bazlı dakikalık istek sınırı
-   (GERÇEKTEN kaydedilir: useApiAnahtar.hizLimitAyarla).
-   ============================================================ */
+const SINIRLAR: [string, string, string][] = [
+  ["İstek hızı", "Anahtar başına, dakikada", "Canlı 60 · test 20 varsayılan; 1–600 arası ayarlanabilir"],
+  ["İstem uzunluğu", "input.prompt", "4.000 karakter"],
+  ["Görsel adedi", "input.num_images", "Modele göre 1–4"],
+  ["Senkron bekleme", "sync: true", "En çok 55 saniye; sonra 201 ile kuyruktaki üretim döner"],
+  ["Kayıt saklama", "GET /v1/generations", "24 saat"],
+  ["Webhook uç noktası", "Hesap başına", "20"],
+  ["Webhook zaman aşımı", "Teslim başına", "10 saniye · 3 deneme (0, 2, 8 sn)"],
+  ["metadata", "İstek başına", "16 anahtar"],
+  ["Idempotency-Key", "Geçerlilik", "24 saat"],
+];
 
-const PLAN_LIMIT: Record<string, { rpm: number; esZamanli: number; aylikCagri: string }> = {
-  baslangic: { rpm: 20, esZamanli: 2, aylikCagri: "5.000" },
-  arti: { rpm: 60, esZamanli: 6, aylikCagri: "50.000" },
-  ultra: { rpm: 240, esZamanli: 8, aylikCagri: "500.000" },
-  kurumsal: { rpm: 1200, esZamanli: 32, aylikCagri: "Sınırsız" },
-};
+/** Orta sütunda kod olan satırlar (alan adı, uç nokta); diğerleri düz metin. */
+const KOD_SUTUN = new Set(["input.prompt", "input.num_images", "sync: true", "GET /v1/generations"]);
 
-const BASLIK_KODU = `HTTP/1.1 200 OK
-x-vayra-ratelimit-limit: 60
-x-vayra-ratelimit-remaining: 57
-x-vayra-ratelimit-reset: 1784927220
+const GERI_CEKILME = `async function vayraIstek(url, secenek, deneme = 0) {
+  const yanit = await fetch(url, secenek);
+  if (yanit.status !== 429 || deneme >= 5) return yanit;
 
-# 429 alırsan Retry-After başlığındaki saniye kadar bekle
-# ve üstel geri çekilme (exponential backoff) uygula.`;
-
-const GERICEKILME = `async function istekAt(gorev, deneme = 0) {
-  const yanit = await fetch(gorev.url, gorev.ayar);
-  if (yanit.status !== 429) return yanit;
-
-  const bekle = Number(yanit.headers.get("Retry-After") ?? 2 ** deneme);
-  await new Promise((r) => setTimeout(r, bekle * 1000));
-  if (deneme >= 5) throw new Error("Hız limiti aşıldı");
-  return istekAt(gorev, deneme + 1);
+  // Retry-After saniye cinsinden; yoksa üstel geri çekilme + titreşim
+  const bekle = Number(yanit.headers.get("retry-after")) * 1000
+    || Math.min(30_000, 2 ** deneme * 500) + Math.random() * 250;
+  await new Promise((r) => setTimeout(r, bekle));
+  return vayraIstek(url, secenek, deneme + 1);
 }`;
 
+type Olcum = { limit: number; kalan: number; sifirlanma: number };
+
 export default function HizLimitleri() {
-  const { kullanici } = useAuth();
-  const { anahtarlar, cagrilar, hizLimitAyarla } = useApiAnahtar();
+  const hazir = useHazir();
+  const anahtarlar = useApiAnahtar((s) => s.anahtarlar);
+  const guncelle = useApiAnahtar((s) => s.anahtarGuncelle);
+  const [anahtar, setAnahtar] = useSeciliAnahtar();
+  const [olcum, setOlcum] = useState<Olcum | null>(null);
+  const [simdi, setSimdi] = useState(Date.now());
+  const [test, setTest] = useState<{ calisiyor: boolean; ok: number; red: number; retry: string | null } | null>(null);
+  const [taslak, setTaslak] = useState<Record<string, number>>({});
 
-  const plan = kullanici?.plan ?? "baslangic";
-  const limit = PLAN_LIMIT[plan] ?? PLAN_LIMIT.baslangic;
+  useEffect(() => { const t = setInterval(() => setSimdi(Date.now()), 1000); return () => clearInterval(t); }, []);
+  const olc = async () => {
+    if (!anahtar) return;
+    const r = await apiIstek(anahtar.tam, "GET", "/account", { kaydetme: true });
+    if (r.baslik["x-ratelimit-limit"]) setOlcum({ limit: Number(r.baslik["x-ratelimit-limit"]), kalan: Number(r.baslik["x-ratelimit-remaining"]), sifirlanma: Number(r.baslik["x-ratelimit-reset"]) * 1000 });
+  };
+  useEffect(() => { void olc(); }, [anahtar?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Son dakikadaki gerçek istek sayısı — anlık kullanım oranı.
-  const sonDakika = useMemo(() => {
-    const esik = Date.now() - 60_000;
-    return cagrilar.filter((c) => c.zaman >= esik).length;
-  }, [cagrilar]);
+  if (!hazir) return <div className="h-[60vh]" />;
 
-  const doluluk = Math.min(100, Math.round((sonDakika / limit.rpm) * 100));
+  const patlama = async () => {
+    if (!anahtar) return;
+    const n = Math.min(anahtar.hizLimiti + 3, 80);
+    setTest({ calisiyor: true, ok: 0, red: 0, retry: null });
+    const sonuclar = await Promise.all(Array.from({ length: n }, () => apiIstek(anahtar.tam, "GET", "/models?type=image", { kaydetme: true })));
+    const red = sonuclar.filter((r) => r.durum === 429);
+    setTest({ calisiyor: false, ok: sonuclar.filter((r) => r.durum === 200).length, red: red.length, retry: red[0]?.baslik["retry-after"] ?? null });
+    void olc();
+  };
+
+  const kalanSn = olcum ? Math.max(0, Math.ceil((olcum.sifirlanma - simdi) / 1000)) : 0;
+  const kullanilan = olcum ? olcum.limit - olcum.kalan : 0;
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 lg:px-8">
-      <SayfaBaslik baslik="Hız Limitleri" ozet="Planına göre istek sınırlarını gör ve anahtar bazlı kısıt tanımla" />
+    <>
+      <SayfaBaslik baslik="Hız limitleri" aciklama="Limitler anahtar başına, 60 saniyelik kayan pencerede uygulanır. Her yanıt kalan hakkı başlıklarda taşır; aşıldığında 429 ve Retry-After döner." />
 
-      <div className="grid gap-3 lg:grid-cols-4">
-        <MetrikKart
-          deger={`${limit.rpm}/dk`}
-          etiket="Plan İstek Sınırı"
-          alt={`${plan} planı`}
-          ikon={<Gauge className="h-4 w-4 text-aksan" />}
-          vurgulu
-        />
-        <MetrikKart
-          deger={String(limit.esZamanli)}
-          etiket="Eşzamanlı Üretim"
-          ikon={<Layers className="h-4 w-4 text-violet-300" />}
-        />
-        <MetrikKart
-          deger={limit.aylikCagri}
-          etiket="Aylık Çağrı Kotası"
-          ikon={<Timer className="h-4 w-4 text-sky-300" />}
-        />
-        <MetrikKart
-          deger={`${sonDakika}`}
-          etiket="Son 1 Dakika"
-          alt={`%${doluluk} doluluk`}
-          ikon={<ShieldAlert className={cn("h-4 w-4", doluluk > 80 ? "text-rose-300" : "text-emerald-300")} />}
-        />
-      </div>
-
-      {/* Anlık doluluk çubuğu */}
-      <div className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <div className="mb-2 flex items-center justify-between text-sm">
-          <span className="font-semibold text-metin">Anlık Kullanım</span>
-          <span className="text-metin-2">{sonDakika} / {limit.rpm} istek</span>
-        </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.07]">
-          <div
-            className={cn("h-full rounded-full transition-all", doluluk > 80 ? "bg-rose-400" : "bg-aksan")}
-            style={{ width: `${Math.max(2, doluluk)}%` }}
-          />
-        </div>
-        <p className="mt-2 text-xs text-metin-3">
-          Limit aşıldığında API <code className="font-mono">429 Too Many Requests</code> döner.
-        </p>
-      </div>
-
-      {/* Anahtar bazlı limit */}
-      <div className="mt-5 rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h3 className="text-base font-semibold text-metin">Anahtar Bazlı Sınırlar</h3>
-        <p className="mb-4 text-xs text-metin-2">
-          Her anahtara ayrı dakikalık istek sınırı ver — örneğin test anahtarını kıs.
-        </p>
-        {anahtarlar.length === 0 ? (
-          <BosDurum
-            ikon={<KeyRound className="h-8 w-8" />}
-            baslik="Henüz anahtarın yok"
-            ozet="Sınır tanımlamak için önce bir API anahtarı oluştur."
-            aksiyon={
-              <Link
-                href="/panel/api/anahtarlar"
-                className="hf-btn inline-flex items-center gap-1.5 rounded-xl bg-aksan px-3.5 py-2 text-sm font-bold text-[#12140c]"
-              >
-                <KeyRound className="h-4 w-4" /> Anahtar Oluştur
-              </Link>
-            }
-          />
-        ) : (
-          <div className="space-y-3">
-            {anahtarlar.map((k) => (
-              <div key={k.id} className="rounded-xl border border-white/[0.06] bg-yuzey-2 p-4">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg glass-ikon glass-ikon-lime">
-                    <KeyRound className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="text-sm font-semibold text-metin">{k.ad}</span>
-                  <code className="font-mono text-[11px] text-metin-3">{k.onEk}…</code>
-                  <span className="ml-auto text-sm font-semibold text-aksan">{k.hizLimiti}/dk</span>
+      <div className="mb-6 grid gap-5 lg:grid-cols-[1.1fr_1fr]">
+        <Kart baslik="Canlı durum" aciklama="Seçili anahtarın penceresi, sunucudan okunur" sag={<AnahtarSecici secili={anahtar} onSec={setAnahtar} className="w-[220px]" />}>
+          {!anahtar ? <p className="flex items-center gap-2.5 py-6 text-[13.5px] text-white/60"><Gauge className="h-4 w-4" />Ölçmek için bir anahtar seç.</p> : (
+            <>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="flex items-baseline gap-1.5">
+                    <motion.span key={olcum?.kalan ?? "y"} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-[46px] font-semibold leading-none tabular-nums tracking-[-0.04em] text-white">{olcum ? olcum.kalan : "…"}</motion.span>
+                    <span className="text-[16px] tabular-nums text-white/50">/ {olcum?.limit ?? anahtar.hizLimiti}</span>
+                  </p>
+                  <p className="mt-1.5 text-[13px] text-white/60">bu dakika kalan istek</p>
                 </div>
-                <input
-                  type="range"
-                  min={5}
-                  max={limit.rpm}
-                  step={5}
-                  value={Math.min(k.hizLimiti, limit.rpm)}
-                  onChange={(e) => hizLimitAyarla(k.id, Number(e.target.value))}
-                  onMouseUp={() => toast.success("Hız limiti güncellendi", { description: `${k.ad}` })}
-                  aria-label={`${k.ad} hız limiti`}
-                  className="w-full accent-[var(--color-aksan)]"
-                />
-                <div className="mt-1 flex justify-between text-[10px] text-metin-3">
-                  <span>5/dk</span>
-                  <span>plan üst sınırı {limit.rpm}/dk</span>
+                <div className="flex items-center gap-3">
+                  <svg viewBox="0 0 44 44" className="h-12 w-12 -rotate-90" aria-hidden>
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="#55d6fd" strokeWidth="4" strokeLinecap="round" strokeDasharray={113.1} strokeDashoffset={113.1 * (1 - kalanSn / 60)} className="transition-[stroke-dashoffset] duration-1000 ease-linear" />
+                  </svg>
+                  <div className="text-right">
+                    <p className="text-[22px] font-semibold leading-none tabular-nums text-white">{kalanSn}<span className="ml-0.5 text-[13px] font-normal text-white/55">sn</span></p>
+                    <p className="mt-1 text-[12.5px] text-white/60">sıfırlanmaya</p>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="relative mt-5 h-3 overflow-hidden rounded-full bg-white/[0.07]">
+                <motion.div initial={false} animate={{ width: `${olcum ? (olcum.kalan / Math.max(1, olcum.limit)) * 100 : 100}%` }} transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn("h-full rounded-full", olcum && olcum.kalan === 0 ? "bg-rose-400" : "bg-[linear-gradient(90deg,rgba(85,214,253,0.55),#55d6fd)]")} />
+              </div>
+              <div className="mt-2 flex justify-between text-[12px] tabular-nums text-white/50"><span>{kullanilan} kullanıldı</span><span>{olcum?.limit ?? anahtar.hizLimiti} / dk</span></div>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <button onClick={olc} className={ikincil}><Activity className="h-4 w-4" />Yeniden ölç</button>
+                <button onClick={patlama} disabled={test?.calisiyor} className={birincil}>{test?.calisiyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}Limiti dene</button>
+                <span className="text-[12.5px] text-white/55">Limit + 3 eşzamanlı istek gönderir; kredi harcamaz.</span>
+              </div>
+              {test && !test.calisiyor && (
+                <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-3 gap-2">
+                  {[["Kabul edildi", `${test.ok}`, "200", "text-emerald-300"], ["Reddedildi", `${test.red}`, "429", test.red ? "text-rose-300" : "text-white/60"], ["Retry-After", test.retry ? `${test.retry} sn` : "Yok", "başlık", "text-amber-200"]].map(([e, d, k, r]) => (
+                    <div key={e} className="rounded-[14px] bg-white/[0.035] px-3.5 py-2.5 ring-1 ring-white/[0.06]">
+                      <p className="text-[12px] text-white/55">{e} <span className="text-white/35">· {k}</span></p>
+                      <p className={cn("text-[18px] font-semibold tabular-nums", r)}>{d}</p>
+                    </div>
+                  ))}
+                </motion.div>
+              )}
+            </>
+          )}
+        </Kart>
+        <KodEditor dosyaAdi="geri-cekilme.js" dil="js" kod={GERI_CEKILME} maxH={330} />
       </div>
 
-      {/* Plan karşılaştırma */}
-      <div className="mt-5 overflow-x-auto rounded-2xl border border-white/[0.06] bg-yuzey p-5">
-        <h3 className="mb-4 text-base font-semibold text-metin">Plan Karşılaştırma</h3>
-        <table className="w-full min-w-[520px] text-sm">
-          <thead>
-            <tr className="border-b border-white/[0.06] text-left text-[11px] uppercase tracking-[0.14em] text-metin-3">
-              <th className="py-2.5 font-semibold">Plan</th>
-              <th className="py-2.5 font-semibold">İstek / dk</th>
-              <th className="py-2.5 font-semibold">Eşzamanlı</th>
-              <th className="py-2.5 font-semibold">Aylık Çağrı</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(PLAN_LIMIT).map(([id, v]) => (
-              <tr
-                key={id}
-                className={cn(
-                  "border-b border-white/[0.04] last:border-0",
-                  id === plan && "bg-aksan/[0.05]",
-                )}
-              >
-                <td className="py-3 capitalize text-metin">
-                  {id}
-                  {id === plan && (
-                    <span className="ml-2 rounded-full border border-aksan/30 bg-aksan/12 px-2 py-0.5 text-[10px] font-semibold text-aksan">
-                      mevcut
-                    </span>
-                  )}
-                </td>
-                <td className="py-3 text-metin-2">{v.rpm}</td>
-                <td className="py-3 text-metin-2">{v.esZamanli}</td>
-                <td className="py-3 text-metin-2">{v.aylikCagri}</td>
-              </tr>
-            ))}
+      <Kart className="mb-6" baslik="Anahtar başına limit" aciklama="Değişiklik kaydedildiği an sunucuda geçerli olur" govdeSinif="p-0">
+        {anahtarlar.length === 0 ? <p className="py-10 text-center text-[13px] text-metin-2">Önce bir API anahtarı oluştur.</p> : (
+          <ul className="divide-y divide-white/[0.05]">
+            {anahtarlar.map((a) => {
+              const v = taslak[a.id] ?? a.hizLimiti;
+              const degisti = v !== a.hizLimiti;
+              return (
+                <li key={a.id} className="flex flex-wrap items-center gap-x-5 gap-y-3 px-5 py-4">
+                  <div className="flex w-56 min-w-0 items-center gap-3">
+                    <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]", a.ortam === "test" ? "bg-amber-300/12 text-amber-200" : "bg-[#55d6fd]/12 text-[#55d6fd]")}><KeyRound className="h-4 w-4" /></span>
+                    <div className="min-w-0">
+                      <p className="truncate text-[14px] font-medium text-white">{a.ad}</p>
+                      <div className="mt-0.5"><OrtamRozet ortam={a.ortam} /></div>
+                    </div>
+                  </div>
+                  <input type="range" min={1} max={600} value={v} onChange={(e) => setTaslak({ ...taslak, [a.id]: Number(e.target.value) })} aria-label={`${a.ad} hız limiti`}
+                    className="fiyat-kaydirici min-w-[160px] flex-1" style={{ "--dolu": `${(v / 600) * 100}%` } as React.CSSProperties} />
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-10 items-center rounded-full bg-white/[0.05] pl-3 pr-3.5 ring-1 ring-white/[0.09] focus-within:ring-[#55d6fd]/60">
+                      <input type="number" min={1} max={600} value={v} onChange={(e) => setTaslak({ ...taslak, [a.id]: Math.max(1, Math.min(600, Number(e.target.value) || 1)) })} aria-label="İstek/dk"
+                        className="w-12 bg-transparent text-right text-[14px] font-semibold tabular-nums text-white outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" />
+                      <span className="ml-1 text-[12.5px] text-white/55">/ dk</span>
+                    </div>
+                    <AnimatePresence initial={false} mode="popLayout">
+                      {degisti ? (
+                        <motion.button key="k" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.85 }}
+                          onClick={() => { guncelle(a.id, { hizLimiti: v }); const t = { ...taslak }; delete t[a.id]; setTaslak(t); void senkronize().then(() => { if (anahtar?.id === a.id) void olc(); }); toast.success("Hız limiti güncellendi", { description: `${a.ad}: dakikada en çok ${v} istek.` }); }}
+                          className={cn(birincil, "h-10")}>Kaydet</motion.button>
+                      ) : (
+                        <motion.span key="s" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex h-10 items-center gap-1.5 px-2 text-[12.5px] text-white/45"><Check className="h-3.5 w-3.5" />Kayıtlı</motion.span>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Kart>
+
+      <Kart baslik="Diğer sınırlar" govdeSinif="p-0">
+        <table className="w-full text-left text-[13px]">
+          <tbody className="divide-y divide-white/[0.05]">
+            {SINIRLAR.map(([a, b, c]) => <tr key={a} className="transition-colors hover:bg-white/[0.02]"><td className="px-5 py-3.5 text-[13.5px] font-medium text-white">{a}</td><td className="hidden px-3 py-3.5 sm:table-cell"><span className={cn("rounded-[7px] px-2 py-1 text-[12px]", KOD_SUTUN.has(b) ? "bg-white/[0.05] font-mono text-white/70" : "text-white/60")}>{b}</span></td><td className="px-5 py-3.5 text-[13.5px] text-white/75">{c}</td></tr>)}
           </tbody>
         </table>
-      </div>
-
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <div>
-          <h3 className="mb-2.5 text-sm font-semibold uppercase tracking-wider text-metin-2">Yanıt başlıkları</h3>
-          <KodBlok kod={BASLIK_KODU} baslik="HTTP" satirNo={false} />
-        </div>
-        <div>
-          <h3 className="mb-2.5 text-sm font-semibold uppercase tracking-wider text-metin-2">Geri çekilme deseni</h3>
-          <KodBlok kod={GERICEKILME} baslik="Node.js · exponential backoff" />
-        </div>
-      </div>
-    </div>
+      </Kart>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { PLAN_KREDI } from "@/lib/fiyat";
 
 export interface Kullanici {
   ad: string;
@@ -16,6 +17,14 @@ export interface Kullanici {
   bio?: string;
   konum?: string;
   sosyal?: { x?: string; instagram?: string; youtube?: string; tiktok?: string };
+  /** Profil kapak görseli (data URL, 1600×400 WebP). */
+  kapak?: string;
+  /** @kullanıcı adı — profil bağlantısında ve toplulukta görünür. */
+  kullaniciAdi?: string;
+  website?: string;
+  /** Davet bağlantısıyla geldiyse davet edenin kodu ve ilk ödeme indiriminin durumu. */
+  davetEden?: string;
+  davetIndirimi?: "bekliyor" | "kullanildi";
 }
 
 interface AuthState {
@@ -24,12 +33,20 @@ interface AuthState {
   girisYap: (email: string, ad?: string) => void;
   kayitOl: (ad: string, email: string) => void;
   cikisYap: () => void;
+  /** E-posta başına son profil — çıkıp tekrar girince ad, plan, kredi, avatar geri gelir. */
+  profiller: Record<string, Kullanici>;
+  /** Hesabı ve kayıtlı profilini kalıcı olarak siler. */
+  hesapSil: () => void;
+  /** Giriş e-postasını değiştirir; profil yeni adrese taşınır. */
+  epostaDegistir: (yeni: string) => void;
   krediDus: (miktar: number) => boolean;
   krediEkle: (miktar: number) => void;
   /** Satın alınan paket — hem bakiyeyi hem kotayı (halka paydası) artırır. */
   ekKrediEkle: (miktar: number) => void;
   profilGuncelle: (patch: Partial<Kullanici>) => void;
 }
+
+const ePosta = (e: string) => e.trim().toLowerCase();
 
 const varsayilanKullanici = (ad: string, email: string): Kullanici => ({
   ad,
@@ -43,14 +60,26 @@ export const useAuth = create<AuthState>()(
     (set, get) => ({
       kullanici: null,
       girisYapildi: false,
-      girisYap: (email, ad) =>
-        set({
-          kullanici: varsayilanKullanici(ad ?? email.split("@")[0], email),
-          girisYapildi: true,
-        }),
+      profiller: {},
+      girisYap: (email, ad) => {
+        const kayitli = get().profiller[ePosta(email)];
+        set({ kullanici: kayitli ?? varsayilanKullanici(ad ?? email.split("@")[0], email), girisYapildi: true });
+      },
       kayitOl: (ad, email) =>
         set({ kullanici: varsayilanKullanici(ad, email), girisYapildi: true }),
-      cikisYap: () => set({ kullanici: null, girisYapildi: false }),
+      cikisYap: () => {
+        const k = get().kullanici;
+        set((s) => ({ kullanici: null, girisYapildi: false, profiller: k ? { ...s.profiller, [ePosta(k.email)]: k } : s.profiller }));
+      },
+      hesapSil: () => {
+        const k = get().kullanici;
+        set((s) => { const p = { ...s.profiller }; if (k) delete p[ePosta(k.email)]; return { kullanici: null, girisYapildi: false, profiller: p }; });
+      },
+      epostaDegistir: (yeni) => {
+        const k = get().kullanici;
+        if (!k) return;
+        set((s) => { const p = { ...s.profiller }; delete p[ePosta(k.email)]; return { kullanici: { ...k, email: yeni.trim() }, profiller: p }; });
+      },
       krediDus: (miktar) => {
         const k = get().kullanici;
         if (!k || k.krediler < miktar) return false;
@@ -77,17 +106,12 @@ export const useAuth = create<AuthState>()(
   ),
 );
 
-/** Plan başına AYLIK kredi kotası (KrediModal'daki PLANLAR ile aynı). */
-export const PLAN_AYLIK_KREDI: Record<Kullanici["plan"], number> = {
-  baslangic: 300,
-  arti: 1200,
-  ultra: 3000,
-  kurumsal: 12000,
-};
+/** Plan başına AYLIK kredi kotası — tek kaynak: lib/fiyat. */
+export const PLAN_AYLIK_KREDI: Record<Kullanici["plan"], number> = PLAN_KREDI;
 
 export const PLAN_ADI: Record<Kullanici["plan"], string> = {
   baslangic: "Başlangıç",
-  arti: "Plus",
+  arti: "Artı",
   ultra: "Ultra",
   kurumsal: "Kurumsal",
 };

@@ -60,7 +60,7 @@ export function nodeUret(boardId: string, node: CanvasNode): boolean {
 
   const denetim = icerikDenetle(istem);
   if (!denetim.izin) {
-    toast.error("Üretim engellendi", { description: denetim.mesaj });
+    toast.error("Üretim engellendi", { description: denetim.mesaj ?? "İstem içerik kurallarına takıldı. İstemi değiştirip yeniden dene." });
     store.nodeGuncelle(boardId, node.id, { durum: "hata" });
     return false;
   }

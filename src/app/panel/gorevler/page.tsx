@@ -6,8 +6,10 @@
  */
 
 import { useEffect, useMemo } from "react";
+import { KrediJeton } from "@/components/ui/KrediHap";
+import { hareketYaz } from "@/store/useHesap";
 import { motion } from "framer-motion";
-import { Coins, Check, Gift, Sparkles, Users, Rocket, CalendarDays, ChevronLeft } from "lucide-react";
+import { Check, Gift, Sparkles, Users, Rocket, CalendarDays, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/lib/toast";
 import { useGorevler, GOREVLER, type GorevTip } from "@/store/useGorevler";
@@ -39,7 +41,7 @@ export default function GorevlerSayfasi() {
     const g = GOREVLER.find((x) => x.id === id);
     if (!g) return;
     const ok = odulAl(id, (m) => ekKrediEkle(m));
-    if (ok) toast.success(`+${g.odul} kredi kazandın 🎉`, { description: g.baslik });
+    if (ok) { hareketYaz({ tur: "odul", aciklama: `Görev ödülü: ${g.baslik}`, kredi: g.odul }); toast.success(`+${g.odul} kredi kazandın`, { description: `"${g.baslik}" görevinin ödülü bakiyene eklendi.` }); }
   };
 
   return (
@@ -92,7 +94,7 @@ export default function GorevlerSayfasi() {
                       <div className="mb-1.5 flex items-start justify-between gap-2">
                         <span className="text-[14.5px] font-semibold text-metin">{g.baslik}</span>
                         <span className="flex shrink-0 items-center gap-1 rounded-full bg-aksan/15 px-2 py-0.5 text-[12px] font-bold text-aksan">
-                          <Coins className="h-3 w-3" /> {g.odul}
+                          <KrediJeton boyut={12} /> {g.odul}
                         </span>
                       </div>
                       <p className="mb-3 text-[12.5px] leading-relaxed text-metin-2">{g.aciklama}</p>

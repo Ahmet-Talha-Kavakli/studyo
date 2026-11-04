@@ -89,9 +89,9 @@ export function AsistanVera() {
     if (/ses|müzik|seslendirme|konuşma|eleven/.test(s))
       return { rol: "vera", metin: "Ses üretimi için Ses Stüdyosu'nu kullan. ElevenLabs ile gerçek seslendirme, ses klonu, müzik ve efekt üretebilirsin.", eylemler: [{ etiket: "Ses Stüdyosu'na git", href: "/panel/ses" }] };
     if (/kredi|fiyat|ödeme|abonelik|para/.test(s))
-      return { rol: "vera", metin: "Her üretim türüne göre kredi harcanır (ör. görsel ~4, video ~42, 3D ~25). Kredilerini Kredi sayfasından yükleyebilir, kullanımını Ayarlar > Kullanım'dan izleyebilirsin.", eylemler: [{ etiket: "Kredi sayfası", href: "/panel/kredi" }] };
+      return { rol: "vera", metin: "Her üretim türüne göre kredi harcanır (ör. görsel 4, video 42, 3D 25 kredi civarı). Kredilerini Kredi sayfasından yükleyebilir, kullanımını Ayarlar > Kullanım'dan izleyebilirsin.", eylemler: [{ etiket: "Kredi sayfası", href: "/panel/kredi" }] };
     if (/uygulama|araç|app|website|oyun|supercomputer/.test(s))
-      return { rol: "vera", metin: "Prompt'tan çalışan uygulama, web sitesi ya da oyun için Supercomputer'ı dene — ajanlar planlar, kodlar ve test eder.", eylemler: [{ etiket: "Supercomputer'a git", href: "/panel/supercomputer" }] };
+      return { rol: "vera", metin: "Prompt'tan çalışan uygulama, web sitesi ya da oyun için Usta'yı dene — ajanlar planlar, kodlar ve test eder.", eylemler: [{ etiket: "Usta'ya git", href: "/panel/supercomputer" }] };
     return { rol: "vera", metin: "Harika fikir! En hızlısı Oluştur ekranından başlamak — orada görsel, video, ses ve 3D tek yerde. İstersen ilgili stüdyoya da yönlendirebilirim.", eylemler: [{ etiket: "Oluştur'a git", href: "/panel/gorsel" }] };
   };
 
@@ -109,7 +109,7 @@ export function AsistanVera() {
       <motion.button
         initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1, type: "spring" }}
         onClick={() => setAcik((v) => !v)}
-        className="fixed bottom-6 right-6 z-[75] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-glow to-iris-500 shadow-lg shadow-cyan-glow/30 transition-transform hover:scale-105"
+        className="fixed bottom-6 right-6 z-[75] flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-cyan-glow to-iris-500 shadow-cyan-glow/30 transition-transform hover:scale-105"
         aria-label="Vera asistanı"
       >
         {acik ? <X className="h-6 w-6 text-white" /> : <Sparkles className="h-6 w-6 text-white" />}
@@ -122,7 +122,7 @@ export function AsistanVera() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.96 }}
             transition={{ duration: 0.2 }}
-            className="menu-surface fixed bottom-24 right-6 z-[75] flex h-[520px] w-[380px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-3xl shadow-2xl shadow-black/50"
+            className="menu-surface fixed bottom-24 right-6 z-[75] flex h-[520px] w-[380px] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-3xl"
           >
             {/* Başlık */}
             <div className="flex items-center gap-3 border-b border-white/10 p-4">
@@ -158,10 +158,10 @@ export function AsistanVera() {
                         let basarili = 0;
                         for (let k = 0; k < u.adet; k++) {
                           const sonuc = uretimBaslat({ baslik: u.prompt.slice(0, 42) + (u.adet > 1 ? ` (${k + 1})` : ""), tur: u.tur, model: u.model, prompt: u.prompt, kredi: u.kredi, arac: "Vera Asistan" });
-                          if (!sonuc.ok) { if (k === 0) { toast.error("Üretilemedi", { description: sonuc.hata }); return; } break; }
+                          if (!sonuc.ok) { if (k === 0) { toast.error("Üretim başlatılamadı", { description: sonuc.hata }); return; } break; }
                           basarili++;
                         }
-                        toast.success(`Vera ${basarili} üretim başlattı ✨`);
+                        toast.success(`${basarili} üretim başlatıldı`, { description: "Bitince Kitaplık'ta görünür." });
                         setMesajlar((v) => [...v, { rol: "vera", metin: `${basarili} üretimi başlattım! Kitaplığında ve ilgili stüdyoda görüntüleyebilirsin. 🎉`, eylemler: [{ etiket: "Kitaplığa git", href: "/panel/kitaplik" }] }]);
                       }}
                         className="mt-2 flex items-center gap-1.5 rounded-lg bg-cyan-glow px-3 py-1.5 text-xs font-bold text-ink-950 transition-colors hover:brightness-110">

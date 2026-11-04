@@ -29,6 +29,7 @@ import {
   Share2, Link2, ChevronDown, Trash2, Palette, Scaling, RefreshCw, Maximize2,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { cn } from "@/lib/utils";
 import { baglantiyiKopyala } from "@/lib/gercekEylem";
 import { VarlikSeciciModal } from "@/components/panel/StudyoModallari";
@@ -460,11 +461,11 @@ export function ProjeBrief({ brief, ad, onKaydet }: {
         baslangicSekme={varlikSekme}
         elementler={elementler.map((e) => ({ id: e.id, ad: e.ad, kategori: e.tur }))}
         onSec={(url) => {
-          if (uretimIcin) {
-            const tip = varlikSekme === "elementler" ? "element" as const : "uretim" as const;
-            blokGuncelle(uretimIcin, { tip, metin: url });
-            toast.success(tip === "element" ? "Element eklendi" : "Üretim eklendi");
-          }
+          if (uretimIcin) { blokGuncelle(uretimIcin, { tip: "uretim", metin: url }); toast.success("Üretim brife eklendi"); }
+          setUretimIcin(null);
+        }}
+        onElementSec={(ad) => {
+          if (uretimIcin) { blokGuncelle(uretimIcin, { tip: "element", metin: ad }); toast.success(`@${ad} brife eklendi`); }
           setUretimIcin(null);
         }}
       />
@@ -476,7 +477,7 @@ export function ProjeBrief({ brief, ad, onKaydet }: {
             key="brief-element"
             onSec={(ad) => {
               blokGuncelle(elementIcin, { tip: "element", metin: ad });
-              toast.success(`@${ad} eklendi`);
+              toast.success(`@${ad} brife eklendi`);
             }}
             onKapat={() => setElementIcin(null)}
           />
@@ -501,7 +502,7 @@ export function ProjeBrief({ brief, ad, onKaydet }: {
               blokGuncelle(hedef, { tip: "dosya", metin: String(oku.result) });
               toast.success("Dosya eklendi", { description: f.name });
             };
-            oku.onerror = () => toast.error("Dosya okunamadı");
+            oku.onerror = () => mesaj.dosyaOkunamadi();
             oku.readAsDataURL(f);
             return;
           }
@@ -697,7 +698,7 @@ function VarlikKarti({ tip, metin, en, ikon: Ikon, onEn, onDegistir, onSil }: {
           </span>
 
           {/* Hover araç çubuğu — sağ üst */}
-          <span className="absolute right-2 top-2 flex items-center gap-1 rounded-lg border border-white/10 bg-[#26282B]/95 p-0.5 opacity-0 shadow-lg backdrop-blur-sm transition-opacity group-hover/vk:opacity-100">
+          <span className="absolute right-2 top-2 flex items-center gap-1 rounded-lg border border-white/10 bg-[#26282B]/95 p-0.5 opacity-0 backdrop-blur-sm transition-opacity group-hover/vk:opacity-100">
             <span className="relative">
               <button onClick={() => setBoyutAcik((v) => !v)} title="Boyut" aria-label="Boyut"
                 className="flex h-7 w-7 items-center justify-center rounded-md text-metin-3 hover:bg-white/[0.08] hover:text-white">
@@ -706,7 +707,7 @@ function VarlikKarti({ tip, metin, en, ikon: Ikon, onEn, onDegistir, onSil }: {
               {boyutAcik && (
                 <>
                   <button className="fixed inset-0 z-40 cursor-default" aria-label="Kapat" onClick={() => setBoyutAcik(false)} />
-                  <span className="absolute right-0 top-9 z-50 flex gap-0.5 rounded-lg border border-white/10 bg-[#26282B] p-1 shadow-2xl">
+                  <span className="absolute right-0 top-9 z-50 flex gap-0.5 rounded-lg border border-white/10 bg-[#26282B] p-1">
                     {EN_KADEMELERI.map((k) => (
                       <button key={k} onClick={() => { onEn(k); setBoyutAcik(false); }}
                         className={cn("rounded-md px-2 py-1 text-[12px] tabular-nums transition-colors",
@@ -804,7 +805,7 @@ function VarlikRozet({ tip, metin, ikon: Ikon }: {
         <motion.span
           initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
           style={{ position: "fixed", top: konum.top, left: konum.left, width: 208 }}
-          className="pointer-events-none z-[190] overflow-hidden rounded-2xl border border-white/15 bg-[#1c1c1f] shadow-2xl">
+          className="pointer-events-none z-[190] overflow-hidden rounded-2xl border border-white/15 bg-[#1c1c1f]">
           <span className="relative block h-[152px] w-full" style={kaynak.arka ? { background: kaynak.arka } : undefined}>
             {kaynak.url && <img src={kaynak.url} alt="" className="absolute inset-0 h-full w-full object-cover" />}
           </span>
@@ -837,7 +838,7 @@ function Tutamaklar({ onEkle, onSil, onSurukleBasla, onSurukleBitti, renk, onRen
      ile blok kutusunun içine düşüp yazının üstüne biniyordu. Blok satırı
      pl-24 taşır; bu şerit o boşluğa oturur. */
   return (
-    <span className="absolute left-0 top-0 flex h-[26px] items-center gap-0 rounded-lg border border-white/10 bg-[#26282B] px-0.5 opacity-0 shadow-lg transition-opacity group-hover/bl:opacity-100">
+    <span className="absolute left-0 top-0 flex h-[26px] items-center gap-0 rounded-lg border border-white/10 bg-[#26282B] px-0.5 opacity-0 transition-opacity group-hover/bl:opacity-100">
       <button onClick={onEkle} aria-label="Altına blok ekle" title="Altına blok ekle"
         className="flex h-6 w-[22px] items-center justify-center rounded-md text-metin-3 transition-colors hover:bg-white/[0.08] hover:text-white">
         <Plus className="h-4 w-4" />

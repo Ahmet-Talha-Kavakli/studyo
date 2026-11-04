@@ -18,6 +18,7 @@ import { veri } from "@/lib/admin/seed";
 import { referansAgaci, referansMetrik, affiliateler, kFactorSeri, segmentler, abTestOrnekleri } from "@/lib/admin/seed/buyume";
 import { para, kisaPara, kisaSayi, sayi, yuzde, tarihEtiket } from "@/lib/admin/cekirdek";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { cn } from "@/lib/utils";
 
 const SPRING = { type: "spring", stiffness: 320, damping: 30 } as const;
@@ -48,12 +49,12 @@ export default function Buyume() {
 
   /* ── Kupon ── */
   const kuponEkle = async () => {
-    if (!yeniKupon.kod.trim()) { toast.error("Kod gir."); return; }
+    if (!yeniKupon.kod.trim()) { toast.error("Kupon kodu eksik", { description: "Kupona bir kod yazıp yeniden dene." }); return; }
     const ok = await onayIste({ baslik: "Kupon oluştur", aciklama: `${yeniKupon.kod} · ${yeniKupon.tur === "yuzde" ? `%${yeniKupon.deger}` : yeniKupon.deger}`, risk: 0, eylemEtiket: "Oluştur" });
     if (!ok) return;
     kuponStore.ekle({ kod: yeniKupon.kod.toUpperCase(), tur: yeniKupon.tur, deger: yeniKupon.deger, kullanimLimit: 1000, kisiBasiLimit: 1, baslangic: Date.now(), bitis: Date.now() + 30 * 86400000, planlar: "Tümü", yeniKullanici: false, aktif: true });
     denetle(`Kupon oluşturuldu: ${yeniKupon.kod}`, "bilgi");
-    toast.success("Kupon oluşturuldu");
+    toast.success("Kupon oluşturuldu", { description: `${yeniKupon.kod.toUpperCase()} 30 gün geçerli.` });
     setYeniKupon({ kod: "", tur: "yuzde", deger: 25 });
   };
 
@@ -62,7 +63,7 @@ export default function Buyume() {
     if (!ok) return;
     kuponStore.sil(id);
     denetle(`Kupon silindi: ${kod}`, "uyari");
-    toast.success("Kupon silindi");
+    toast.success("Kupon silindi", { description: `${kod} artık kullanılamaz.` });
   };
 
   /* CSV toplu üretim — gerçek Blob indirme. */
@@ -92,7 +93,7 @@ export default function Buyume() {
     a.remove();
     URL.revokeObjectURL(url);
     denetle(`Toplu kupon üretildi: ${N} kod (CSV)`, "bilgi");
-    toast.success(`${N} kod üretildi ve CSV indirildi`);
+    toast.success(`${N} kupon kodu üretildi`, { description: "CSV dosyası indirildi; ilk 10 kod kupon listesine de eklendi." });
   };
 
   /* ── Kampanya durum ── */
@@ -102,7 +103,7 @@ export default function Buyume() {
     if (!ok) return;
     kmpStore.durumDegistir(k.id, "gonderildi");
     denetle(`Kampanya başlatıldı: ${k.ad}`, "uyari");
-    toast.success("Kampanya gönderildi");
+    toast.success("Kampanya gönderildi", { description: `"${k.ad}" · ${k.segment}` });
   };
 
   const kampanyaSil = async (k: Kampanya) => {
@@ -119,7 +120,7 @@ export default function Buyume() {
     if (!ok) return;
     kmpStore.abTestDurdur(t.id, kazanan);
     denetle(`A/B test durduruldu: ${t.ad} (kazanan ${kazanan})`, "uyari");
-    toast.success(`Test durduruldu · Varyant ${kazanan} kazandı`);
+    toast.success("A/B testi durduruldu", { description: `Kazanan: Varyant ${kazanan}.` });
   };
 
   const aktifKampanya = kmpStore.kampanyalar.filter((k) => k.durum !== "taslak").length;
@@ -217,7 +218,7 @@ export default function Buyume() {
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><Ticket className="h-4 w-4" /></span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2"><span className={cn("font-mono text-[14px] font-bold", AD.metin)}>{k.kod}</span><button onClick={() => { navigator.clipboard?.writeText(k.kod); toast.success("Kopyalandı"); }}><Copy className="h-3.5 w-3.5 text-[color:var(--ad-metin-3)]" /></button></div>
+                    <div className="flex items-center gap-2"><span className={cn("font-mono text-[14px] font-bold", AD.metin)}>{k.kod}</span><button onClick={() => { void mesaj.kopyala(k.kod, "Kupon kodu"); }}><Copy className="h-3.5 w-3.5 text-[color:var(--ad-metin-3)]" /></button></div>
                     <div className={cn("text-[11px]", AD.metin3)}>{k.tur === "yuzde" ? `%${k.deger} indirim` : k.tur === "bonus_kredi" ? `${k.deger} bonus kredi` : k.tur === "sabit" ? `${para(k.deger)} indirim` : `${k.deger} gün trial`} · {k.kullanildi}/{k.kullanimLimit} · {k.planlar}</div>
                   </div>
                   <span className={cn("text-[12px] tabular-nums", AD.metin3)}>{kisaPara(k.uretilenGelir)}</span>
@@ -294,7 +295,7 @@ export default function Buyume() {
                   <div className={cn("text-[13px] font-semibold", AD.metin)}>{d.ad}</div>
                   <div className={cn("text-[11px]", AD.metin3)}>tetik: {d.tetik} · {d.adimlar.length} adım</div>
                 </div>
-                <button onClick={() => { kmpStore.dripToggle(d.id); denetle(`Drip ${d.aktif ? "durduruldu" : "başlatıldı"}: ${d.ad}`, "bilgi"); toast.success(d.aktif ? "Akış durduruldu" : "Akış aktif"); }} className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", d.aktif ? "bg-emerald-500" : "bg-white/15")}>
+                <button onClick={() => { kmpStore.dripToggle(d.id); denetle(`Drip ${d.aktif ? "durduruldu" : "başlatıldı"}: ${d.ad}`, "bilgi"); toast.success(d.aktif ? "Akış durduruldu" : "Akış başlatıldı", { description: d.ad }); }} className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", d.aktif ? "bg-emerald-500" : "bg-white/15")}>
                   <span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", d.aktif ? "left-[22px]" : "left-0.5")} />
                 </button>
               </div>
@@ -395,7 +396,7 @@ export default function Buyume() {
         {kmpModal && <KampanyaModal segler={segler} onKapat={() => setKmpModal(false)} onKaydet={(payload, gonder) => {
           kmpStore.kampanyaEkle({ ...payload, durum: gonder ? "gonderildi" : payload.zamanlama ? "zamanlandi" : "taslak" });
           denetle(`Kampanya oluşturuldu: ${payload.ad}${gonder ? " (gönderildi)" : ""}`, "bilgi");
-          toast.success(gonder ? "Kampanya oluşturuldu ve gönderildi" : payload.zamanlama ? "Kampanya zamanlandı" : "Taslak kaydedildi");
+          toast.success(gonder ? "Kampanya gönderildi" : payload.zamanlama ? "Kampanya zamanlandı" : "Kampanya taslağı kaydedildi", { description: payload.ad });
           setKmpModal(false);
         }} />}
       </AnimatePresence>
@@ -405,7 +406,7 @@ export default function Buyume() {
         {abModal && <AbModal ornekler={abOrnek} onKapat={() => setAbModal(false)} onKaydet={(payload) => {
           kmpStore.abTestEkle(payload);
           denetle(`A/B test oluşturuldu: ${payload.ad}`, "bilgi");
-          toast.success("A/B test başlatıldı");
+          toast.success("A/B testi başlatıldı", { description: payload.ad });
           setAbModal(false);
         }} />}
       </AnimatePresence>
@@ -438,7 +439,7 @@ function KampanyaModal({ segler, onKapat, onKaydet }: { segler: { ad: string; ki
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onKapat} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onKapat} className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <motion.div initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={SPRING}
         className="ad-panel relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-[color:var(--ad-kenar)] p-5">
@@ -509,7 +510,7 @@ function AbModal({ ornekler, onKapat, onKaydet }: { ornekler: { id: string; ad: 
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onKapat} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onKapat} className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
       <motion.div initial={{ opacity: 0, scale: 0.94, y: 12 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={SPRING}
         className="ad-panel relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-[color:var(--ad-kenar)] p-5">

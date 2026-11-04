@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { seciciKonumHesapla, seciciStil, type SeciciKonum } from "@/lib/seciciKonum";
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 
    Anatomi (referans ölçüleri):
      kabuk    — rounded-[26px], koyu yarı-saydam, iç gölge
-     satır 1  — istem metni, 17px, ~52px üst boşluk
+     satır 1  — istem metni, 17px, yaklaşık 52px üst boşluk
      satır 2  — ⊕(38px daire) · [✦ Serbest mod ⌄](hap) ······ Sor ⌄ · lime ↑(46px)
 
    Model menüsü (referans):
@@ -202,7 +203,7 @@ export function SCComposer({
     };
     const w = window as unknown as { SpeechRecognition?: SRCtor; webkitSpeechRecognition?: SRCtor };
     const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Ctor) { toast.error("Tarayıcın sesle yazmayı desteklemiyor"); return; }
+    if (!Ctor) { toast.error("Sesle yazma desteklenmiyor", { description: "Bu tarayıcı konuşma tanımayı desteklemiyor. Chrome ya da Edge ile dene." }); return; }
 
     const tanima = new Ctor();
     tanima.lang = "tr-TR";
@@ -214,7 +215,7 @@ export function SCComposer({
       for (let i = 0; i < e.results.length; i++) parca += e.results[i][0].transcript;
       onDegis((basaMetin ? basaMetin + " " : "") + parca.trim());
     };
-    tanima.onerror = () => { setDinliyor(false); toast.error("Ses alınamadı — mikrofon izni gerekli olabilir"); };
+    tanima.onerror = () => { setDinliyor(false); toast.error("Ses alınamadı", { description: "Mikrofon izni kapalı olabilir. Adres çubuğundaki kilit simgesinden izin verip yeniden dene." }); };
     tanima.onend = () => setDinliyor(false);
     tanima.start();
     tanimaRef.current = tanima;
@@ -284,7 +285,7 @@ export function SCComposer({
         {ekChipler}
 
         {/* ── satır 2: kontroller ── */}
-        <div className="mt-2 flex items-center gap-2.5">
+        <div className="mt-2 flex flex-wrap items-center gap-2.5">
           {/* ⊕ ekle */}
           <div className="relative">
             <button
@@ -294,13 +295,10 @@ export function SCComposer({
               <Plus className="h-[18px] w-[18px]" strokeWidth={2} />
             </button>
             <AnimatePresence>
-              {ekleAcik && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setEkleAcik(false)} />
-                  <motion.div
+              <Yuzen acik={!!(ekleAcik)} onKapat={() => setEkleAcik(false)} alt={"tam"} sol={0} bosluk={8}><motion.div
                     initial={{ opacity: 0, y: 6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 6, scale: 0.97 }} transition={{ duration: 0.15 }}
-                    className="sc-menu absolute bottom-full left-0 z-50 mb-2 w-[248px] rounded-2xl p-1.5">
+                    className="sc-menu w-[248px] rounded-2xl p-1.5">
                     {EKLE_SECENEKLERI.map((s) => (
                       <button key={s.ad} onClick={() => setEkleAcik(false)}
                         className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-[14px] text-white/90 transition-colors hover:bg-white/[0.07]">
@@ -315,9 +313,7 @@ export function SCComposer({
                         {s.alt && <ChevronRight className="h-4 w-4 shrink-0 text-white/40" />}
                       </button>
                     ))}
-                  </motion.div>
-                </>
-              )}
+                  </motion.div></Yuzen>
             </AnimatePresence>
           </div>
 
@@ -342,17 +338,12 @@ export function SCComposer({
               <ChevronDown className="h-4 w-4 text-white/45" />
             </button>
             <AnimatePresence>
-              {onayAcik && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setOnayAcik(false)} />
-                  <motion.div
+              <Yuzen acik={!!(onayAcik)} onKapat={() => setOnayAcik(false)} alt={"tam"} sag={0} bosluk={8}><motion.div
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
                     transition={{ duration: 0.14 }}
-                    className="absolute bottom-full right-0 z-50 mb-2">
+                    className="">
                     <SCOnayMenu deger={onayModu} onSec={(m) => { setOnayModu(m); setOnayAcik(false); }} />
-                  </motion.div>
-                </>
-              )}
+                  </motion.div></Yuzen>
             </AnimatePresence>
           </div>
 

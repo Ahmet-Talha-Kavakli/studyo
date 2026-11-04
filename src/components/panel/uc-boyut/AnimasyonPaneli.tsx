@@ -78,7 +78,7 @@ export function AnimasyonPaneli({
             {liste.map((a) => {
               const ekli = eklenenler.includes(a.ad);
               return (
-                <button key={a.ad} onClick={() => { onEkle(a.ad); toast.success(ekli ? `${a.ad} kaldırıldı` : `${a.ad} eklendi`); }}
+                <button key={a.ad} onClick={() => { onEkle(a.ad); toast.success(ekli ? `${a.ad} animasyonu kaldırıldı` : `${a.ad} animasyonu eklendi`); }}
                   className="hf-kart group relative aspect-square overflow-hidden bg-gradient-to-br from-yuzey-2 to-zemin">
                   <PersonStanding className="absolute left-1/2 top-1/2 h-8 w-8 -translate-x-1/2 -translate-y-1/2 text-metin-3" />
                   {ekli && <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-aksan text-zemin"><Check className="h-2.5 w-2.5" /></span>}

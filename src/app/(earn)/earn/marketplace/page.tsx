@@ -1,162 +1,173 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { ShoppingBag, Plus, Trash2, TrendingUp, Sparkles, X, Repeat, Info, Power, ChevronDown } from "lucide-react";
-import { MODELLER } from "@/lib/catalog";
-import { useEarn, tl, ureticiPay, MARKETPLACE_KOMISYON } from "@/store/useEarn";
-import { SayfaBaslik, Kart, MetrikKart, DurumRozet, YesilDugme, GlassIkon, cn } from "@/components/earn/UI";
+/**
+ * Earn › Marketplace — "B · Satıcı paneli" (2026-10-29, kullanıcı seçimi; Gumroad):
+ * tarayıcı çerçeveli panelde üç büyük sayı (kullanım, biriken kredi, cüzdana geçecek) ve kapaklı preset tablosu
+ * (fiyat, sana kalan, kullanım çubuğu, kazanç; satırda Toplulukta gör ve Kaldır), fiyatın nasıl bölündüğü,
+ * yayınlama penceresi (components/earn/para/marketplace.tsx). Yayınlanan preset /panel/presetler › Topluluk'ta görünür.
+ */
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, Plus, Trash2 } from "lucide-react";
+import { usePaylasim, presetMinFiyat, type Paylasim } from "@/store/usePaylasim";
+import { useAuth } from "@/store/useAuth";
+import { KrediJeton } from "@/components/ui/KrediHap";
+import { PRESET_KREDI_TL, sayi, tl } from "@/lib/earn/kampanyalar";
+import { Baslik, Bolum, OrnekRozet, Sayac, birincil, ease, yuzey } from "@/components/earn/para/ui";
+import { PresetFormu } from "@/components/earn/para/marketplace";
 import { toast } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 
-/* Marketplace — SADECE preset satışı, kullanım-başı gelir.
-   Kullanan öder → Vayra %50 komisyon + model maliyeti düşülür → kalan üreticiye. */
+type Satir = Paylasim & { video?: string };
+const PV = (x: string) => ({ gorsel: `/gercek/preset-video/${x}.webp`, video: `/gercek/preset-video/${x}.mp4` });
+const ORNEK: Satir[] = [
+  { id: "o1", tur: "preset", ad: "Aksiyon Figürü", aciklama: "", tohum: "", kategori: "Ürün", yazar: "@sen", benimMi: true, kullanim: 1240, begeni: 0, olusturma: 0, model: "Kling 3.0", minFiyat: 16, ekstraFiyat: 12, kazanc: 7440, ...PV("action-figure") },
+  { id: "o2", tur: "preset", ad: "Dünyadan Yakınlaş", aciklama: "", tohum: "", kategori: "Sahne", yazar: "@sen", benimMi: true, kullanim: 386, begeni: 0, olusturma: 0, model: "Veo 3.1", minFiyat: 17, ekstraFiyat: 10, kazanc: 1930, ...PV("earth-zoom") },
+  { id: "o3", tur: "preset", ad: "Masal Şatosu", aciklama: "", tohum: "", kategori: "Sahne", yazar: "@sen", benimMi: true, kullanim: 92, begeni: 0, olusturma: 0, model: "Seedance 2.0", minFiyat: 19, ekstraFiyat: 8, kazanc: 368, ...PV("fairytale-castle") },
+];
 
-const GORSEL_MODELLER = MODELLER.filter((m) => m.tur === "gorsel");
-const KATEGORILER = ["Portre", "Sahne", "Ürün", "Sanat", "Manzara", "Diğer"];
-
-export default function Marketplace() {
-  const s = useEarn();
-  const [modal, setModal] = useState(false);
-  const [ad, setAd] = useState("");
-  const [aciklama, setAciklama] = useState("");
-  const [modelId, setModelId] = useState(GORSEL_MODELLER[0]?.id ?? "");
-  const [fiyat, setFiyat] = useState("");
-  const [kategori, setKategori] = useState(KATEGORILER[0]);
-
-  const model = GORSEL_MODELLER.find((m) => m.id === modelId);
-  const fiyatSayi = parseInt(fiyat.replace(/\D/g, "")) || 0;
-  const komisyon = Math.round(fiyatSayi * MARKETPLACE_KOMISYON);
-  const maliyet = model?.kredi ?? 0;
-  const pay = ureticiPay(fiyatSayi, maliyet);
-  const gecerli = ad.trim() && fiyatSayi > 0 && pay > 0;
-
-  const ekle = () => {
-    if (!ad.trim()) { toast.error("Preset adı gir."); return; }
-    if (fiyatSayi <= 0) { toast.error("Satış fiyatı gir."); return; }
-    if (pay <= 0) { toast.error(`Fiyat çok düşük — komisyon (${komisyon}) + maliyet (${maliyet}) toplamından yüksek olmalı.`); return; }
-    s.presetEkle({ ad: ad.trim(), aciklama: aciklama.trim(), modelId, modelAd: model?.ad ?? "", modelMaliyet: maliyet, satisFiyati: fiyatSayi, kategori });
-    toast.success("Preset yayına gönderildi — onay sonrası satışa açılır.");
-    setModal(false); setAd(""); setAciklama(""); setFiyat("");
-  };
-
-  const toplamKazanc = s.presetler.reduce((a, p) => a + p.kazanc, 0);
-  const toplamKullanim = s.presetler.reduce((a, p) => a + p.kullanim, 0);
+export default function MarketplaceSayfasi() {
+  const tumu = usePaylasim((s) => s.benimPaylasimlar);
+  const presetler = useMemo(() => tumu.filter((p) => p.tur === "preset"), [tumu]);
+  const kaldir = usePaylasim((s) => s.paylasimKaldir);
+  const ad = useAuth((s) => s.kullanici?.ad);
+  const [form, setForm] = useState(false);
+  const ornek = presetler.length === 0;
+  const liste: Satir[] = ornek ? ORNEK : presetler;
+  const kullanim = liste.reduce((a, p) => a + p.kullanim, 0);
+  const kredi = liste.reduce((a, p) => a + (p.kazanc ?? 0), 0);
+  const kadi = ad?.toLocaleLowerCase("tr-TR").replace(/ı/g, "i").normalize("NFD").replace(/[^a-z0-9]/g, "") || "sen";
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 md:px-8">
-      <SayfaBaslik baslik="Preset Pazarı" ozet="Ürettiğin presetleri sat. Biri her kullandığında kazanırsın."
-        sag={<YesilDugme onClick={() => setModal(true)}><Plus className="mr-1 inline h-4 w-4" /> Preset Yayınla</YesilDugme>} />
+    <div>
+      <Baslik baslik="Preset satışların" alt={`Üretimini preset olarak yayınla. Başkaları kullandıkça belirlediğin ek fiyatın yarısı sana kalır; her kredi ${tl(PRESET_KREDI_TL, true)} olarak cüzdanına geçer.`}
+        sag={<button onClick={() => setForm(true)} className={birincil}><Plus className="h-4 w-4" />Preset yayınla</button>} />
 
-      {/* nasıl kazanıyorum açıklaması */}
-      <Kart className="mb-6 !border-sky-400/20">
-        <div className="flex items-start gap-3">
-          <GlassIkon boyut={40} aktif><Info className="h-4.5 w-4.5" /></GlassIkon>
-          <div className="text-sm text-white/70">
-            <p className="font-semibold text-white">Kullanım başına kazanç</p>
-            <p className="mt-0.5">Biri presetini kullandığında belirlediğin fiyatı öder. Bundan <b className="text-white">Vayra %50 komisyon</b> ve <b className="text-white">model üretim maliyeti</b> düşülür, kalanı sana yatar.</p>
-            <p className="mt-1.5 rounded-lg bg-white/[0.04] px-3 py-1.5 font-mono text-[12px] text-sky-300">senin payın = fiyat − (fiyat × %50) − model maliyeti</p>
-          </div>
+      {/* Satıcı paneli */}
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease }} className="overflow-hidden rounded-[26px] bg-[#0f1013] ring-1 ring-white/[0.08]">
+        <div className="flex items-center gap-1.5 border-b border-white/[0.06] px-5 py-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" /><span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" /><span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
+          <span className="ml-3 min-w-0 truncate text-[12.5px] text-white/40">vayra.ai/presetler/@{kadi}</span>
+          {ornek && <span className="ml-auto shrink-0"><OrnekRozet>Örnek görünüm</OrnekRozet></span>}
         </div>
-      </Kart>
-
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <MetrikKart etiket="Toplam kazanç" deger={tl(toplamKazanc)} alt={`${toplamKazanc.toLocaleString("tr-TR")} kredi`} ikon={<TrendingUp className="h-4 w-4" />} vurgu />
-        <MetrikKart etiket="Toplam kullanım" deger={toplamKullanim.toLocaleString("tr-TR")} ikon={<Repeat className="h-4 w-4" />} />
-        <MetrikKart etiket="Yayında preset" deger={String(s.presetler.filter((p) => p.durum === "aktif").length)} ikon={<Sparkles className="h-4 w-4" />} />
-      </div>
-
-      {s.presetler.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-white/[0.1] py-16 text-center backdrop-blur-xl">
-          <GlassIkon boyut={56}><ShoppingBag className="h-6 w-6" /></GlassIkon>
-          <div className="text-[15px] font-semibold text-white">Henüz preset yayınlamadın</div>
-          <p className="max-w-sm text-sm text-white/45">Vayra'da beğendiğin bir üretimin ayarlarını preset olarak yayınla, her kullanımda pasif gelir kazan.</p>
-          <YesilDugme onClick={() => setModal(true)}>İlk presetini yayınla</YesilDugme>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {s.presetler.map((p) => (
-            <Kart key={p.id}>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <GlassIkon boyut={48}><Sparkles className="h-5 w-5" /></GlassIkon>
-                  <div>
-                    <div className="font-bold text-white">{p.ad}</div>
-                    <div className="text-[11px] text-white/40">{p.kategori} · {p.modelAd}</div>
-                  </div>
-                </div>
-                <DurumRozet durum={p.durum} />
-              </div>
-              {p.aciklama && <p className="mt-2 line-clamp-1 text-xs text-white/45">{p.aciklama}</p>}
-              <div className="mt-3 grid grid-cols-3 gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] p-2.5 text-center">
-                <div><div className="text-sm font-bold text-white">{p.satisFiyati}</div><div className="text-[10px] text-white/40">fiyat/kul.</div></div>
-                <div><div className="text-sm font-bold text-white">{p.kullanim}</div><div className="text-[10px] text-white/40">kullanım</div></div>
-                <div><div className="text-sm font-bold text-sky-300">{ureticiPay(p.satisFiyati, p.modelMaliyet)}</div><div className="text-[10px] text-white/40">senin/kul.</div></div>
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t border-white/[0.06] pt-3">
-                <span className="text-sm text-white/50">Toplam kazanç: <b className="text-sky-300">{p.kazanc.toLocaleString("tr-TR")} kr</b></span>
-                <div className="flex gap-1">
-                  <button onClick={() => { s.presetDurumDegistir(p.id); toast.success(p.durum === "aktif" ? "Satıştan kaldırıldı" : "Tekrar satışa açıldı"); }} title={p.durum === "aktif" ? "Satıştan kaldır" : "Satışa aç"} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:bg-white/[0.06] hover:text-white"><Power className="h-4 w-4" /></button>
-                  <button onClick={() => { s.presetKaldir(p.id); toast.success("Preset silindi"); }} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/40 hover:bg-white/[0.06] hover:text-rose-400"><Trash2 className="h-4 w-4" /></button>
-                </div>
-              </div>
-            </Kart>
+        <div className="grid grid-cols-[minmax(0,1fr)] divide-y divide-white/[0.06] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {[
+            ["Kullanım", kullanim, (n: number) => sayi(Math.round(n)), "başkalarının üretimleri"],
+            ["Biriken kredi", kredi, (n: number) => sayi(Math.round(n)), "kullanım başına payın"],
+            ["Cüzdana geçecek", kredi * PRESET_KREDI_TL, (n: number) => tl(n, true), "her ayın 1'inde"],
+          ].map(([a, v, b, alt]) => (
+            <div key={a as string} className="flex min-w-0 items-baseline justify-between gap-3 px-5 py-3.5 sm:block sm:p-6">
+              <p className="truncate text-[12.5px] text-white/50">{a as string}</p>
+              <p className={cn("truncate text-[22px] font-semibold tabular-nums tracking-[-0.035em] sm:mt-1 sm:text-[36px]", ornek ? "text-white/60" : "text-white")}><Sayac hedef={v as number} bicim={b as (n: number) => string} /></p>
+              <p className="mt-1 hidden truncate text-[12px] text-white/40 sm:block">{alt as string}</p>
+            </div>
           ))}
         </div>
-      )}
+        <Tablo liste={liste} ornek={ornek} kaldir={(p) => { kaldir(p.id); toast.success("Preset yayından kaldırıldı", { description: `${p.ad} artık toplulukta görünmüyor.` }); }} yeni={() => setForm(true)} />
+      </motion.section>
 
-      {/* preset yayınla modal */}
-      {modal && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={() => setModal(false)}>
-          <div className="w-full max-w-md rounded-3xl border border-white/[0.1] bg-[#14151799] p-5 shadow-2xl backdrop-blur-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-bold text-white">Preset Yayınla</h3>
-              <button onClick={() => setModal(false)} className="text-white/50 hover:text-white"><X className="h-5 w-5" /></button>
-            </div>
+      {/* Fiyat bölünmesi */}
+      <Bolum baslik="Fiyatın nasıl bölünür" alt="Her kullanımda kullanıcıdan alınan kredi üçe ayrılır.">
+        <Bolunme />
+      </Bolum>
 
-            <label className="mb-1.5 block text-xs font-semibold text-white/60">Preset adı</label>
-            <input value={ad} onChange={(e) => setAd(e.target.value)} placeholder="örn. Altın Saat Portre" className="mb-3 h-10 w-full rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 text-sm text-white outline-none focus:border-sky-400/40" />
+      <AnimatePresence>{form && <PresetFormu kapat={() => setForm(false)} />}</AnimatePresence>
+    </div>
+  );
+}
 
-            <label className="mb-1.5 block text-xs font-semibold text-white/60">Kısa açıklama</label>
-            <input value={aciklama} onChange={(e) => setAciklama(e.target.value)} placeholder="Preset ne yapıyor?" className="mb-3 h-10 w-full rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 text-sm text-white outline-none focus:border-sky-400/40" />
-
-            <div className="mb-3 grid grid-cols-2 gap-3">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-white/60">Model</label>
-                <div className="relative">
-                  <select value={modelId} onChange={(e) => setModelId(e.target.value)} className="h-10 w-full appearance-none rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 pr-8 text-sm text-white outline-none focus:border-sky-400/40">
-                    {GORSEL_MODELLER.map((m) => <option key={m.id} value={m.id}>{m.ad} ({m.kredi} kr)</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-3 h-4 w-4 text-white/40" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold text-white/60">Kategori</label>
-                <div className="relative">
-                  <select value={kategori} onChange={(e) => setKategori(e.target.value)} className="h-10 w-full appearance-none rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 pr-8 text-sm text-white outline-none focus:border-sky-400/40">
-                    {KATEGORILER.map((k) => <option key={k} value={k}>{k}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-3 h-4 w-4 text-white/40" />
-                </div>
-              </div>
-            </div>
-
-            <label className="mb-1.5 block text-xs font-semibold text-white/60">Kullanım başına satış fiyatı (kredi)</label>
-            <input value={fiyat} onChange={(e) => setFiyat(e.target.value)} placeholder="örn. 40" inputMode="numeric" className="mb-3 h-10 w-full rounded-xl border border-white/[0.1] bg-white/[0.03] px-3 text-sm text-white outline-none focus:border-sky-400/40" />
-
-            {/* canlı kazanç önizleme */}
-            {fiyatSayi > 0 && (
-              <div className="mb-4 space-y-1.5 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3 text-sm">
-                <div className="flex justify-between text-white/50"><span>Satış fiyatı</span><span className="text-white">{fiyatSayi} kr</span></div>
-                <div className="flex justify-between text-white/50"><span>Vayra komisyonu (%50)</span><span className="text-rose-300">−{komisyon} kr</span></div>
-                <div className="flex justify-between text-white/50"><span>Model maliyeti ({model?.ad})</span><span className="text-rose-300">−{maliyet} kr</span></div>
-                <div className="flex justify-between border-t border-white/[0.08] pt-1.5 font-bold"><span className="text-white">Her kullanımda sana</span><span className={pay > 0 ? "text-sky-300" : "text-rose-400"}>{pay > 0 ? "+" : ""}{pay} kr</span></div>
-                {pay <= 0 && <p className="text-[11px] text-rose-400">Fiyatı yükselt — bu fiyatta kazanç kalmıyor.</p>}
-              </div>
-            )}
-
-            <YesilDugme onClick={ekle} disabled={!gecerli} className="w-full">Yayına Gönder</YesilDugme>
-          </div>
+/* ── Preset tablosu ── */
+function Tablo({ liste, ornek, kaldir, yeni }: { liste: Satir[]; ornek: boolean; kaldir: (p: Satir) => void; yeni: () => void }) {
+  const max = Math.max(1, ...liste.map((p) => p.kullanim));
+  const sutun = "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2fr)_120px_minmax(0,1.3fr)_130px_72px]";
+  return (
+    <div className="border-t border-white/[0.06]">
+      <div className={cn("hidden gap-4 px-6 py-3 text-[12px] text-white/40 md:grid", sutun)}><span>Preset</span><span>Fiyat</span><span>Kullanım</span><span className="text-right">Kazanç</span><span /></div>
+      <div className={cn(ornek && "pointer-events-none opacity-55")} aria-hidden={ornek}>
+        <AnimatePresence initial={false}>
+          {liste.map((p, i) => <PresetSatiri key={p.id} p={p} i={i} max={max} sutun={sutun} kaldir={() => kaldir(p)} />)}
+        </AnimatePresence>
+      </div>
+      {ornek ? (
+        <div className="flex flex-col gap-3 border-t border-white/[0.06] px-6 py-5 sm:flex-row sm:items-center">
+          <p className="flex-1 text-[14px] text-white/65">Henüz yayında presetin yok. Kitaplığındaki bir üretimi presete çevir; başkaları kullandıkça burada satır satır kazancını görürsün.</p>
+          <button onClick={yeni} className={cn(birincil, "h-10 shrink-0 px-4 text-[13.5px]")}><Plus className="h-4 w-4" />İlk presetini yayınla</button>
         </div>
+      ) : (
+        <button onClick={yeni} className="flex w-full items-center gap-3 border-t border-white/[0.06] px-6 py-4 text-left text-[14px] font-medium text-white/70 transition hover:bg-white/[0.02] hover:text-white">
+          <span className="flex h-12 w-16 items-center justify-center rounded-[10px] border border-dashed border-white/[0.16] bg-white/[0.03]"><Plus className="h-4 w-4" /></span>Yeni preset yayınla
+        </button>
       )}
+    </div>
+  );
+}
+
+function PresetSatiri({ p, i, max, sutun, kaldir }: { p: Satir; i: number; max: number; sutun: string; kaldir: () => void }) {
+  const [ust, setUst] = useState(false);
+  const pay = Math.floor((p.ekstraFiyat ?? 0) / 2);
+  const fiyat = (p.minFiyat ?? presetMinFiyat(p.model)) + (p.ekstraFiyat ?? 0);
+  return (
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.3, delay: Math.min(i, 8) * 0.04, ease }}
+      onMouseEnter={() => setUst(true)} onMouseLeave={() => setUst(false)}
+      className={cn("group grid items-center gap-4 border-t border-white/[0.05] px-6 py-3.5 transition-colors hover:bg-white/[0.02]", sutun)}>
+      <div className="flex min-w-0 items-center gap-3.5">
+        <span className="relative h-12 w-16 shrink-0 overflow-hidden rounded-[10px] bg-white/[0.04] ring-1 ring-white/[0.08]">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          {p.gorsel && <img src={p.gorsel} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+          {p.video && ust && <video src={p.video} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />}
+        </span>
+        <div className="min-w-0"><p className="truncate text-[14.5px] font-medium text-white">{p.ad}</p><p className="truncate text-[12.5px] text-white/45">{p.model ?? "Model yok"} · {p.kategori}</p></div>
+      </div>
+      <p className="hidden text-[13.5px] tabular-nums text-white/75 md:block"><span className="flex items-center gap-1"><KrediJeton boyut={11} />{fiyat}</span><span className="block text-[11.5px] text-white/40">sana {pay} kredi</span></p>
+      <div className="hidden items-center gap-3 md:flex">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/[0.06]"><motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(2, (p.kullanim / max) * 100)}%` }} transition={{ duration: 0.8, delay: i * 0.06, ease }} className="h-full rounded-full bg-gradient-to-r from-[#55d6fd] to-[#a5ecff]" /></div>
+        <span className="w-14 text-right text-[13px] tabular-nums text-white/70">{sayi(p.kullanim)}</span>
+      </div>
+      <p className="text-right text-[15px] font-semibold tabular-nums text-white">{tl((p.kazanc ?? 0) * PRESET_KREDI_TL, true)}<span className="block text-[11.5px] font-normal text-white/40 md:hidden">{sayi(p.kullanim)} kullanım</span></p>
+      <div className="hidden justify-end gap-1 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 md:flex">
+        <Link href={p.tohum && !p.id.startsWith("o") ? `/panel/presetler?p=${p.tohum.startsWith("ozel-") ? p.tohum : `p-${p.id}`}` : "/panel/presetler?kim=topluluk"} aria-label="Toplulukta gör" title="Toplulukta gör" className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-white/[0.08] hover:text-white"><ArrowUpRight className="h-4 w-4" /></Link>
+        <button onClick={kaldir} aria-label="Yayından kaldır" title="Yayından kaldır" className="flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition hover:bg-rose-500/15 hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>
+      </div>
+      <div className="col-span-2 -mt-1.5 flex gap-2 md:hidden">
+        <Link href={p.tohum && !p.id.startsWith("o") ? `/panel/presetler?p=${p.tohum.startsWith("ozel-") ? p.tohum : `p-${p.id}`}` : "/panel/presetler?kim=topluluk"} className="flex h-8 items-center gap-1 rounded-full px-3 text-[12.5px] text-white/70 ring-1 ring-white/[0.1]">Toplulukta gör<ArrowUpRight className="h-3.5 w-3.5" /></Link>
+        <button onClick={kaldir} className="flex h-8 items-center gap-1 rounded-full px-3 text-[12.5px] text-white/70 ring-1 ring-white/[0.1]"><Trash2 className="h-3.5 w-3.5" />Kaldır</button>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Fiyat bölünmesi: örnek 31 kredilik bir kullanım ── */
+function Bolunme() {
+  const taban = presetMinFiyat("Kling 3.0"), ek = 12, pay = ek / 2;
+  const parca = [
+    { ad: "Taban fiyat", alt: "Modelin üretim maliyeti", d: taban, renk: "bg-white/[0.1] text-white/80" },
+    { ad: "Vayra payı", alt: "Ek fiyatın yarısı", d: ek - pay, renk: "bg-white/[0.18] text-white" },
+    { ad: "Senin payın", alt: `Kredi başı ${tl(PRESET_KREDI_TL, true)}, ayda bir cüzdana`, d: pay, renk: "bg-[#55d6fd] text-[#05222b]" },
+  ];
+  return (
+    <div className={cn(yuzey, "p-6 sm:p-7")}>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <p className="text-[14px] text-white/60">Kling 3.0 ile yapılmış, ek fiyatı {ek} kredi olan bir preset</p>
+        <p className="flex items-center gap-1.5 text-[22px] font-semibold tabular-nums text-white"><KrediJeton boyut={15} />{taban + ek} kredi</p>
+      </div>
+      <div className="mt-5 flex h-12 gap-1 overflow-hidden rounded-[14px]">
+        {parca.map((x, i) => (
+          <motion.div key={x.ad} initial={{ flexGrow: 0.001 }} animate={{ flexGrow: x.d }} transition={{ duration: 0.9, delay: i * 0.12, ease }} className={cn("flex min-w-0 basis-0 items-center justify-center rounded-[8px] px-2 text-[13px] font-semibold tabular-nums", x.renk)}>
+            <span className="truncate">{x.d}</span>
+          </motion.div>
+        ))}
+      </div>
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-3">
+        {parca.map((x) => (
+          <div key={x.ad} className="flex items-start gap-3">
+            <span className={cn("mt-1 h-3 w-3 shrink-0 rounded-[4px]", x.renk.split(" ")[0])} />
+            <div><p className="text-[14.5px] font-semibold text-white">{x.ad} · {x.d} kredi</p><p className="text-[12.5px] text-white/50">{x.alt}</p></div>
+          </div>
+        ))}
+      </div>
+      <p className="mt-5 border-t border-white/[0.06] pt-4 text-[12.5px] leading-relaxed text-white/45">Preset özgün olmalı; kapak, presetin istemiyle Vayra'da üretilmiş gerçek bir çıktıdır. Başkasının işini kopyalayan presetler yayından kaldırılır.</p>
     </div>
   );
 }

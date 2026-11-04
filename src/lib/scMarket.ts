@@ -2,7 +2,7 @@ import { onizlemeArka } from "@/lib/utils";
 import { scArka } from "./gercekVeri";
 
 /* ══════════════════════════════════════════════════════════════════
-   Supercomputer Marketplace — Çalışanlar + Beceriler ORTAK veri katmanı.
+   Usta Marketplace — Çalışanlar + Beceriler ORTAK veri katmanı.
    Higgsfield birebir (F.md 101-114, G.md 115-129, I.md 155-158).
    Liste ve detay sayfaları AYNI kaynaktan besleniyor → slug ile eşleşir.
    Tümü SSR güvenli: Date.now/Math.random YOK, deterministik tohum.

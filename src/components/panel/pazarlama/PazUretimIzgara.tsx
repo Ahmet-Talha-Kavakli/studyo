@@ -9,6 +9,8 @@ import {
   Languages, AudioLines, TrendingUp, RotateCw, PenLine, Check, X, Info, Plus,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
+import { uretimGeriAl } from "../uretimGeriAl";
 import { PazUstKume, PazIzgaraZemin } from "./PazKabuk";
 import { UretimDetay } from "@/components/panel/UretimDetay";
 import { SesSeciciModal, DilSeciciModal } from "@/components/panel/SesSeciciModal";
@@ -95,8 +97,9 @@ export function PazUretimIzgara({
     secimler.every((id) => uretimler.find((u) => u.id === id)?.favori);
 
   const topluSil = () => {
+    const geriAl = uretimGeriAl(secimler);
     secimler.forEach((id) => sil(id));
-    toast.success(`${secimler.length} üretim silindi`);
+    mesaj.silindi(`${secimler.length} üretim`, geriAl);
     setSecimler([]);
   };
 
@@ -105,7 +108,7 @@ export function PazUretimIzgara({
   const topluYayinla = () => {
     if (!secimler.length) return;
     secimler.forEach((id) => guncelle(id, { yayinda: true }));
-    toast.success(`${secimler.length} üretim toplulukta yayınlandı 🌍`, { description: "Keşfet akışında görünecek." });
+    toast.success(`${secimler.length} üretim yayınlandı`, { description: "Keşfet akışında görünecek." });
     setSecimler([]);
   };
 
@@ -152,9 +155,9 @@ export function PazUretimIzgara({
                 /* Görsel sayfasıyla aynı geri bildirim: beğenme sessiz kalmasın. */
                 onFavori={() => {
                   favoriToggle(u.id);
-                  toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi 💗", { description: u.baslik });
+                  toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi", { description: u.baslik });
                 }}
-                onSil={() => { sil(u.id); toast.success("Silindi"); }}
+                onSil={() => { const geriAl = uretimGeriAl([u.id]); sil(u.id); mesaj.silindi("Üretim", geriAl); }}
                 onYeniden={() => router.push("/panel/pazarlama")} />
             ))}
           </div>
@@ -169,7 +172,7 @@ export function PazUretimIzgara({
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             /* m37: composer gizlendiği için seçim çubuğu onun YERİNE alta oturur (218px→28px). */
             className="fixed bottom-7 left-1/2 z-[70] flex h-[62px] -translate-x-1/2 items-center gap-2 rounded-[16px] border border-white/[0.08] bg-[#232323]/95 px-3 backdrop-blur-xl"
-            style={{ boxShadow: "0 20px 60px rgba(0,0,0,.7)" }}>
+            style={{ boxShadow: "none" }}>
             {/* seçilen küçük resim + sayaç */}
             <span className="flex items-center gap-2.5 pl-1 pr-2">
               {(() => {
@@ -186,7 +189,7 @@ export function PazUretimIzgara({
             </span>
 
             <TopluDugme ikon={Download} ad="İndir"
-              onTikla={() => topluIndir(secimler.map((id) => liste.find((x) => x.id === id)).filter(Boolean) as Uretim[], `${secimler.length} pazarlama üretimi`)} />
+              onTikla={() => topluIndir(secimler.map((id) => liste.find((x) => x.id === id)).filter(Boolean) as Uretim[], `${secimler.length} pazarlama üretimi sırayla indiriliyor.`)} />
             <TopluDugme ikon={Upload} ad="Tümünü yayınla" onTikla={topluYayinla} />
             {/* GERÇEK klasöre ekleme (kullanıcı: "fake olan şeyleri düzeltelim").
                 Önce hiçbir koleksiyona yazmadan başarı toast'ı basıyordu. */}
@@ -204,7 +207,7 @@ export function PazUretimIzgara({
               onTikla={() => {
                 const hedef = !topluHepsiFavori;
                 secimler.forEach((id) => guncelle(id, { favori: hedef }));
-                toast.success(hedef ? `${secimler.length} üretim beğenildi 💗` : `${secimler.length} üretim beğeniden çıkarıldı`);
+                toast.success(hedef ? `${secimler.length} üretim beğenildi` : `${secimler.length} üretim beğeniden çıkarıldı`);
                 setSecimler([]);
               }} />
             <TopluIkon ikon={Trash2} etiket="Sil" onTikla={topluSil} />
@@ -228,7 +231,7 @@ export function PazUretimIzgara({
         {klasorSecim && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setKlasorSecim(false)} className="fixed inset-0 z-[240] bg-black/65 backdrop-blur-md" />
+              onClick={() => setKlasorSecim(false)} className="perde fixed inset-0 z-[240] bg-black/65 backdrop-blur-md" />
             <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
               className="fixed left-1/2 top-1/2 z-[241] w-[min(94vw,420px)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-white/10 bg-[#232327] p-4">
               <p className="mb-3 text-[16px] font-semibold text-white">Klasöre ekle</p>
@@ -240,7 +243,7 @@ export function PazUretimIzgara({
                   <button key={k.id}
                     onClick={() => {
                       secimler.forEach((id) => koleksiyonEkle(k.id, id));
-                      toast.success(`${secimler.length} üretim eklendi`, { description: k.ad });
+                      toast.success(`${secimler.length} üretim klasöre eklendi`, { description: `${k.ad} klasörüne eklendi.` });
                       setKlasorSecim(false); setSecimler([]);
                     }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-[14px] text-white transition-colors hover:bg-white/8">
@@ -255,7 +258,7 @@ export function PazUretimIzgara({
                   const ad = `Klasör ${koleksiyonlar.length + 1}`;
                   const kid = koleksiyonOlustur(ad);
                   secimler.forEach((id) => koleksiyonEkle(kid, id));
-                  toast.success("Klasör oluşturuldu", { description: `${ad} — ${secimler.length} varlık` });
+                  toast.success("Klasör oluşturuldu", { description: `${ad} klasörüne ${secimler.length} üretim eklendi.` });
                   setKlasorSecim(false); setSecimler([]);
                 }}
                 className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-white/15 py-2.5 text-[13.5px] font-medium text-aksan transition-colors hover:bg-aksan/10">
@@ -320,7 +323,7 @@ function UretimKart({
   // Görsel sayfasındaki promptuKullan ile birebir aynı köprü.
   const istemiYenidenKullan = () => {
     try { sessionStorage.setItem("vayra-gecis-prompt", u.prompt); } catch { /* yoksay */ }
-    toast.success("İstem taşındı — düzenleyip üret", { description: u.baslik });
+    toast.success("İstem oluşturucuya taşındı", { description: "Düzenleyip yeniden üretebilirsin." });
     router.push("/panel/pazarlama");
   };
 
@@ -405,7 +408,7 @@ function UretimKart({
                   <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.12 }}
                     className="absolute right-0 top-full z-50 mt-1.5 w-[250px] rounded-[12px] bg-[#2E2E2E] p-2"
-                    style={{ boxShadow: "0 20px 50px rgba(0,0,0,.7)" }}>
+                    style={{ boxShadow: "none" }}>
                     {[
                       { ad: "Yeniden üret", ikon: RotateCw, is: onYeniden },
                       { ad: "İstemi yeniden kullan", ikon: PenLine, is: istemiYenidenKullan },
@@ -419,8 +422,8 @@ function UretimKart({
                         ikon: Upload,
                         is: () => {
                           guncelle(u.id, { yayinda: !u.yayinda });
-                          toast.success(u.yayinda ? "Yayından kaldırıldı" : "Keşfet'te yayınlandı 🌍",
-                            { description: u.yayinda ? undefined : "Toplulukta remixlenebilir" });
+                          toast.success(u.yayinda ? "Yayından kaldırıldı" : "Keşfet'te yayınlandı",
+                            { description: u.yayinda ? "Artık Keşfet akışında görünmüyor." : "Topluluk bu üretimi remixleyebilir." });
                         },
                       },
                     ].map((m) => <MenuOge key={m.ad} {...m} onKapat={() => onMenu(false)} />)}
@@ -445,7 +448,7 @@ function UretimKart({
       {/* Seslendir → ses seçici · Çevir → dil seçici (ekranın ortasında) */}
       <AnimatePresence>
         {sesModal && (
-          <SesSeciciModal baslik="SESİ DEĞİŞTİR" seciliAd={u.meta?.ses}
+          <SesSeciciModal baslik="Sesi değiştir" seciliAd={u.meta?.ses}
             onSec={(sec) => {
               const s = uretimBaslat({
                 baslik: `${u.baslik} · ${sec.ad}`.slice(0, 48), tur: u.tur, model: u.model,
@@ -454,7 +457,7 @@ function UretimKart({
                 meta: { ...u.meta, ses: sec.ad },
               });
               if (!s.ok) return uretimHataToast(s);
-              toast.success(`Ses ${sec.ad} olarak değiştiriliyor 🎙`, { description: u.baslik });
+              toast.success(`Ses ${sec.ad} olarak değiştiriliyor`, { description: `${u.baslik}. Bitince bildirim gelir.` });
             }}
             onKapat={() => setSesModal(false)} />
         )}
@@ -467,7 +470,7 @@ function UretimKart({
                 kredi: Math.max(2, Math.round(u.kredi / 2)), arac: u.arac, meta: u.meta,
               });
               if (!s.ok) return uretimHataToast(s);
-              toast.success(`${d.bayrak} ${d.ad} diline çevriliyor`, { description: u.baslik });
+              toast.success(`${d.ad} diline çevriliyor`, { description: `${u.baslik}. Bitince bildirim gelir.` });
             }}
             onKapat={() => setDilModal(false)} />
         )}
@@ -487,7 +490,7 @@ function UretimKart({
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
                   transition={{ duration: 0.13 }}
                   className="absolute bottom-full right-0 z-50 mb-2 w-[212px] rounded-[12px] bg-[#2B2B2B] p-1.5"
-                  style={{ boxShadow: "0 20px 50px rgba(0,0,0,.75)" }}>
+                  style={{ boxShadow: "none" }}>
                   {[
                     { ad: "Çevir", ikon: Languages },
                     { ad: "Sesi Değiştir", ikon: AudioLines },
@@ -502,8 +505,8 @@ function UretimKart({
                           // Viralite: gerçek bir skor üret (deterministik, id tabanlı)
                           let h = 0; for (let i = 0; i < u.id.length; i++) h = (h * 31 + u.id.charCodeAt(i)) >>> 0;
                           const skor = 42 + (h % 55);
-                          toast.success(`Virallik tahmini: %${skor}`, {
-                            description: skor > 75 ? "Güçlü açılış — ilk 3 sn tutuyor." : skor > 58 ? "Ortalama üstü. Kancayı sıkılaştır." : "Kancayı ve ilk kareyi değiştirmeyi dene.",
+                          toast.success(`Virallik tahmini %${skor}`, {
+                            description: `Demo tahmin. ${skor > 75 ? "Açılış güçlü, ilk 3 saniye izleyiciyi tutuyor." : skor > 58 ? "Ortalamanın üstünde. Kancayı sıkılaştır." : "Kancayı ve ilk kareyi değiştirmeyi dene."}`,
                           });
                         }
                       }}
@@ -538,7 +541,7 @@ function MenuOge({
   ad, ikon: Ikon, is, ok, dolu, onKapat,
 }: { ad: string; ikon: typeof Heart; is?: () => void; ok?: boolean; dolu?: boolean; onKapat: () => void }) {
   return (
-    <button onClick={(e) => { e.stopPropagation(); onKapat(); is ? is() : toast(ad); }}
+    <button onClick={(e) => { e.stopPropagation(); onKapat(); is ? is() : toast.info(`${ad} yakında`, { description: "Bu eylem henüz burada çalışmıyor." }); }}
       className="flex w-full items-center gap-2.5 rounded-[8px] px-2.5 py-2 text-left text-[15px] text-white transition-colors hover:bg-[#3F3F3F]">
       {/* `dolu` → beğenilmiş kalp menüde de dolu görünür (görsel sayfası deseni). */}
       <Ikon className={cn("h-[17px] w-[17px]", dolu ? "fill-rose-400 text-rose-400" : "text-white/70")} />

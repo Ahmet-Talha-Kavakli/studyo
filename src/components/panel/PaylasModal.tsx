@@ -6,6 +6,7 @@ import { X, Link2, Globe, Lock, UserPlus, Users, Copy, MessageCircle, Briefcase,
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { kopyala } from "@/lib/gercekEylem";
+import { mesaj } from "@/lib/mesaj";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 
 type Rol = "İzleyici" | "Katkıcı";
@@ -40,7 +41,7 @@ export function PaylasModal({ baslik = "Akış", onKapat }: { baslik?: string; o
       : platform === "pinterest" ? `https://pinterest.com/pin/create/button/?url=${u}&description=${t}`
       : tamLink;
     window.open(url, "_blank", "noopener,noreferrer");
-    toast.success(`${platform === "x" ? "X" : platform.charAt(0).toUpperCase() + platform.slice(1)}'te paylaşılıyor`);
+    toast.success("Paylaşım penceresi açıldı", { description: `${{ x: "X", whatsapp: "WhatsApp", linkedin: "LinkedIn", pinterest: "Pinterest" }[platform] ?? "Paylaşım"} yeni sekmede açıldı.` });
   };
   const sosyaller: { id: string; ad: string; ikon: typeof MessageCircle; renk: string }[] = [
     { id: "x", ad: "X", ikon: X, renk: "text-white" },
@@ -51,11 +52,11 @@ export function PaylasModal({ baslik = "Akış", onKapat }: { baslik?: string; o
 
   const davetEt = () => {
     const e = davetEposta.trim();
-    if (!e.includes("@")) return toast.error("Geçerli bir e-posta gir.");
-    if (uyeler.some((u) => u.eposta === e)) return toast.error("Bu kişi zaten ekli.");
+    if (!e.includes("@")) return toast.error("E-posta adresi geçersiz", { description: "ad@ornek.com biçiminde bir adres yaz." });
+    if (uyeler.some((u) => u.eposta === e)) return toast.error("Bu kişi zaten ekli", { description: `${e} listede var. Rolünü listeden değiştirebilirsin.` });
     setUyeler((v) => [...v, { eposta: e, rol: davetRol }]);
     setDavetEposta("");
-    toast.success(`${e} davet edildi (${davetRol})`);
+    toast.success("Kişi eklendi", { description: `${e} ${davetRol} rolüyle listeye eklendi.` });
   };
 
   return (
@@ -83,7 +84,7 @@ export function PaylasModal({ baslik = "Akış", onKapat }: { baslik?: string; o
               <div className="text-sm font-semibold">{herkese ? "Herkese açık" : "Özel"}</div>
               <div className="text-xs text-white/45">{herkese ? "Linke sahip herkes görüntüleyebilir" : "Yalnızca davet edilenler erişebilir"}</div>
             </div>
-            <button onClick={() => { setHerkese((v) => !v); toast.success(herkese ? "Özel yapıldı" : "Herkese açık yapıldı"); }}
+            <button onClick={() => { setHerkese((v) => !v); toast.success(herkese ? "Paylaşım özel yapıldı" : "Paylaşım herkese açıldı", { description: herkese ? "Yalnızca davet edilenler erişebilir." : "Bağlantıya sahip herkes görüntüleyebilir." }); }}
               className={cn("relative h-6 w-11 rounded-full transition-colors", herkese ? "bg-emerald-400" : "bg-white/15")}>
               <span className={cn("absolute top-1 h-4 w-4 rounded-full bg-white transition-all", herkese ? "left-6" : "left-1")} />
             </button>
@@ -122,7 +123,7 @@ export function PaylasModal({ baslik = "Akış", onKapat }: { baslik?: string; o
                       <option>Katkıcı</option>
                       <option>İzleyici</option>
                     </select>
-                    <button onClick={() => setUyeler((v) => v.filter((x) => x.eposta !== u.eposta))} className="text-white/40 hover:text-rose-400"><X className="h-4 w-4" /></button>
+                    <button onClick={() => { setUyeler((v) => v.filter((x) => x.eposta !== u.eposta)); mesaj.kaldirildi(u.eposta, () => setUyeler((v) => v.some((x) => x.eposta === u.eposta) ? v : [...v, u])); }} className="text-white/40 hover:text-rose-400"><X className="h-4 w-4" /></button>
                   </>
                 )}
               </div>
@@ -133,7 +134,7 @@ export function PaylasModal({ baslik = "Akış", onKapat }: { baslik?: string; o
           <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2 pl-3">
             <Link2 className="h-4 w-4 shrink-0 text-white/40" />
             <span className="flex-1 truncate font-mono text-xs text-white/60">{link}</span>
-            <button onClick={() => { void kopyala(tamLink, "Link kopyalandı"); }}
+            <button onClick={() => { void kopyala(tamLink, "Bağlantı kopyalandı"); }}
               className="flex shrink-0 items-center gap-1 rounded-lg bg-white/8 px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/14">
               <Copy className="h-3.5 w-3.5" /> Kopyala
             </button>

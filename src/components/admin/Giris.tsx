@@ -104,7 +104,7 @@ export function AdminGiris() {
 
         {asama !== "2fa" && (
           <div className="mt-6 border-t border-[color:var(--ad-kenar)] pt-4">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--ad-metin-3)]">Demo hesaplar</p>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[color:var(--ad-metin-3)]">Örnek hesaplar</p>
             <div className="grid grid-cols-2 gap-1.5 text-[11px]">
               {[["super", "vayra2026"], ["finans", "finans2026"], ["moderator", "mod2026"], ["destek", "destek2026"]].map(([k, p]) => (
                 <button key={k} onClick={() => { setKadi(k); setSifre(p); }}

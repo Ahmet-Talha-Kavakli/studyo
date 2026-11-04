@@ -44,7 +44,7 @@ export function StudioShowcase() {
                     Vayra Farkı
                   </span>
                 )}
-                <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${s.renk} shadow-lg`}>
+                <div className={`mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${s.renk}`}>
                   <Ikon className="h-7 w-7 text-white" strokeWidth={2} />
                 </div>
                 <h3 className="flex items-center gap-2 text-xl font-semibold">

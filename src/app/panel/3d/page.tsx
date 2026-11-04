@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect, useMemo, Suspense } from "react";
+import { UcBoyutStudyo } from "@/components/studyo/UcBoyutStudyo";
 import { motion } from "framer-motion";
 import {
   Type, ImageIcon, Palette, PersonStanding, Layers, Search, Upload,
   LayoutGrid, Sparkles, Box, PanelLeftClose, PanelLeft, List, Users,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { StudyoKabuk } from "@/components/panel/StudyoKabuk";
 import { UcBoyutYakinda } from "@/components/panel/uc-boyut/UcBoyutYakinda";
 import { CreatePanel, type UretimAyar } from "@/components/panel/uc-boyut/CreatePanel";
@@ -51,14 +53,10 @@ const modelIdMap: Record<string, string> = {
  * UcBoyutYakinda — içinde kendi motorumuzla üretilmiş GERÇEK bir GLB döner.
  * (YakindaSayfa hâlâ originals/canvas/eklentiler sayfalarında kullanılıyor.)
  */
-export default function UcBoyutStudyo() {
-  return (
-    /* Yakında ekranında sol sidebar gizli — sayfa tam-ekran "Yakında" gösterir. */
-    <StudyoKabuk aktifStudyo="3D Stüdyo" sidebarGizle>
-      <UcBoyutYakinda />
-    </StudyoKabuk>
-  );
+export default function UcBoyutStudyoSayfa() {
+  return <div className="ses-kapsam contents"><Suspense fallback={null}><UcBoyutStudyo /></Suspense></div>;
 }
+void UcBoyutYakinda;
 
 // ⛔ SİLME — 3D Stüdyonun tam çalışan orijinali. Yakında→yayın için yukarıda kullan.
 function UcBoyutStudyoOrijinal() {
@@ -101,6 +99,11 @@ function UcBoyutStudyoOrijinal() {
   });
   // Görsel stüdyosundan "3D sahne oluştur" ile gelen referans: görselden-3D moduna geç
   // ve görseli GERÇEK referans olarak yükle (metin değil — madde 10).
+  // ?mod=gorsel gibi derin bağlantılar ilgili modu açar (navigasyondaki "Görselden 3D" vb.).
+  useEffect(() => {
+    const m = new URLSearchParams(window.location.search).get("mod");
+    if (m && RAY_MODLARI.some((r) => r.id === m)) setMod(m as RayMod);
+  }, []);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ref = sessionStorage.getItem("vayra-3d-ref");
@@ -108,7 +111,7 @@ function UcBoyutStudyoOrijinal() {
       sessionStorage.removeItem("vayra-3d-ref");
       setMod("gorsel");
       setRefGorsel(ref);
-      toast.success("Görsel 3D için hazır 🧊", { description: "Ayarları seç ve 3D modeli üret." });
+      toast.success("Görsel 3D için hazır", { description: "Ayarları seç ve 3D modeli üret." });
     }
   }, []);
 
@@ -168,7 +171,7 @@ function UcBoyutStudyoOrijinal() {
       });
       setAktifId(sonuc.id);
     }
-    toast.success("3D üretim başladı 🧊");
+    toast.success("3D üretim başladı", { description: `${model.ad} · Bitince model galeride görünür.` });
     setPrompt("");
   };
 
@@ -183,7 +186,7 @@ function UcBoyutStudyoOrijinal() {
     const glb = /\.glb$|\.gltf$/i.test(dosya.name);
     const gorsel = /^image\//.test(dosya.type) || /\.(png|jpe?g|webp)$/i.test(dosya.name);
     if (!glb && !gorsel) {
-      return toast.error("Desteklenmeyen dosya", { description: ".glb, .gltf ya da bir görsel (png/jpg/webp) yükle." });
+      return mesaj.desteklenmeyenDosya(".glb, .gltf ya da PNG, JPG, WebP");
     }
     const okuyucu = new FileReader();
     okuyucu.onload = () => {
@@ -203,14 +206,14 @@ function UcBoyutStudyoOrijinal() {
         topoloji: { poligon: 15436, tip: "triangle", pbr: true },
       });
       setAktifId(id);
-      toast.success(glb ? "GLB içe aktarıldı 🧊" : "Görsel yüklendi — 3D'ye hazır", { description: dosya.name });
+      toast.success(glb ? "GLB içe aktarıldı" : "Görsel yüklendi", { description: glb ? dosya.name : `${dosya.name} 3D'ye dönüştürülmeye hazır.` });
     };
-    okuyucu.onerror = () => toast.error("Dosya okunamadı");
+    okuyucu.onerror = () => mesaj.dosyaOkunamadi();
     okuyucu.readAsDataURL(dosya);
   };
 
   const animasyonEkle = (ad: string) => {
-    if (!aktif) return toast.error("Önce bir model seç.");
+    if (!aktif) return toast.error("Model seçilmedi", { description: "Animasyon eklemek için galeriden bir model seç." });
     const mevcut = aktif.animasyonlar ?? [];
     const yeni = mevcut.includes(ad) ? mevcut.filter((x) => x !== ad) : [...mevcut, ad];
     guncelle(aktif.id, { animasyonlar: yeni });
@@ -220,13 +223,13 @@ function UcBoyutStudyoOrijinal() {
   const pozUygula = (poz: string) => {
     if (!aktif) return;
     guncelle(aktif.id, { poz });
-    toast.success(`Poz uygulandı: ${poz}`);
+    toast.success("Poz uygulandı", { description: poz });
   };
 
   // Yeniden adlandır — gerçek: başlığı store'da değiştirir.
   const yenidenAdlandir = (id: string, ad: string) => {
     guncelle(id, { baslik: ad.slice(0, 60) });
-    toast.success("Yeniden adlandırıldı");
+    toast.success("Model yeniden adlandırıldı", { description: ad.slice(0, 60) });
   };
 
   // Etiket ekle — gerçek: etiketi store'daki etiketler dizisine ekler (tekilleştirir).
@@ -234,9 +237,9 @@ function UcBoyutStudyoOrijinal() {
     const u = uretimler.find((x) => x.id === id);
     const mevcut = u?.etiketler ?? [];
     const t = etiket.trim();
-    if (!t || mevcut.includes(t)) return toast.info("Bu etiket zaten var.");
+    if (!t || mevcut.includes(t)) return toast.info(t ? "Etiket zaten ekli" : "Etiket boş", { description: t ? `"${t}" bu modelde zaten var.` : "Eklemek için bir etiket yaz." });
     guncelle(id, { etiketler: [...mevcut, t] });
-    toast.success(`Etiket eklendi: ${t}`);
+    toast.success("Etiket eklendi", { description: t });
   };
 
   // Lisansı değiştir — gerçek: CC BY 4.0 ↔ Özel arasında geçiş (meta.oran'da tutulur).
@@ -244,13 +247,13 @@ function UcBoyutStudyoOrijinal() {
     const u = uretimler.find((x) => x.id === id);
     const yeni = u?.meta?.oran === "cc" ? "ozel" : "cc";
     guncelle(id, { meta: { ...u?.meta, oran: yeni } });
-    toast.success(`Lisans: ${yeni === "cc" ? "CC BY 4.0" : "Özel"}`);
+    toast.success("Lisans değiştirildi", { description: `Yeni lisans: ${yeni === "cc" ? "CC BY 4.0" : "Özel"}.` });
   };
 
   // Topluluğa yayınla — gerçek: yayinda bayrağını açar (Keşfet galerisinde görünür).
   const yayinla = (id: string) => {
     guncelle(id, { yayinda: true });
-    toast.success("Topluluğa yayınlandı 🌍", { description: "Model artık Keşfet'te görünür." });
+    toast.success("Model topluluğa yayınlandı", { description: "Artık Keşfet'te görünüyor." });
   };
 
   // Modeli GLB/OBJ olarak dışa aktar (DCC/Sketchfab/indir ortak yardımcı).
@@ -277,10 +280,10 @@ function UcBoyutStudyoOrijinal() {
     if (!u) return;
     if (kategori === "duzenle") {
       if (oge === "Remesh") {
-        if (!krediDus(5)) return toast.error("Yetersiz kredi (Remesh · 5 kredi).");
+        if (!krediDus(5)) return mesaj.yetersizKredi(5, useAuth.getState().kullanici?.krediler ?? 0);
         const yeniPoli = u.topoloji ? Math.round(u.topoloji.poligon * 0.55) : 8000;
         guncelle(id, { topoloji: { poligon: yeniPoli, tip: "quad", pbr: u.topoloji?.pbr ?? true } });
-        toast.success(`Remesh tamam · ${yeniPoli.toLocaleString("tr")} dörtgen`);
+        toast.success("Remesh tamamlandı", { description: `${yeniPoli.toLocaleString("tr")} dörtgen · 5 kredi düşüldü.` });
       } else if (oge === "Rig & Vinç") {
         setAktifId(id); setMod("canlandir");
       } else if (oge === "Doku düzenle" || oge === "Yeniden dokuma") {
@@ -291,13 +294,13 @@ function UcBoyutStudyoOrijinal() {
     } else if (kategori === "dcc") {
       const hedef = oge.replace(/'a gönder$/, "");
       modelDisaAktar(id, hedef, "gltf");
-      toast.success(`${hedef}'a aktarıldı`);
+      toast.success(`${hedef} için dışa aktarıldı`, { description: "GLTF dosyası indirildi; uygulamada içe aktarabilirsin." });
     } else if (kategori === "paylas") {
       if (oge === "Bağlantı paylaş") {
         void baglantiyiKopyala(`/panel/kitaplik?model=${id}`);
       } else if (oge === "Sketchfab'da yayınla") {
         modelDisaAktar(id, "Sketchfab", "gltf");
-        toast.success("Sketchfab için GLTF hazırlandı");
+        toast.success("Sketchfab için GLTF hazırlandı", { description: "Dosya indirildi; Sketchfab'a yükleyebilirsin." });
       }
     }
   };
@@ -409,7 +412,7 @@ function UcBoyutStudyoOrijinal() {
           className="flex w-full items-center justify-between rounded-[10px] bg-yuzey-2 px-3 py-3 text-left">
           <span><span className="text-[14px] font-medium text-white">Otomatik Bölme</span><span className="block text-[12px] text-metin-3">Parçalara ayır (+10 kredi)</span></span>
           <span className={cn("relative h-5 w-9 shrink-0 rounded-full transition-colors", mOtoBol ? "bg-aksan" : "bg-white/20")}>
-            <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", mOtoBol ? "left-4.5" : "left-0.5")} />
+            <span className={cn("absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white transition-all", mOtoBol ? "left-4.5" : "left-0.5")} />
           </span>
         </button>
         {/* Lisans */}
@@ -527,7 +530,7 @@ function UcBoyutStudyoOrijinal() {
                 <div className="ml-auto flex items-center gap-1.5">
                   <button onClick={() => setGorunum("list")} className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", gorunum === "list" ? "glass-cip-aktif text-metin" : "text-metin-3 hover:text-metin")} aria-label="Liste"><List className="h-4 w-4" /></button>
                   <button onClick={() => setGorunum("grid")} className={cn("flex h-8 w-8 items-center justify-center rounded-lg transition-colors", gorunum === "grid" ? "glass-cip-aktif text-metin" : "text-metin-3 hover:text-metin")} aria-label="Izgara"><LayoutGrid className="h-4 w-4" /></button>
-                  <button onClick={() => aktif ? altAksiyon(aktif.id, "paylas", "Bağlantı paylaş") : toast("Önce bir model seç.")} className="ml-1 flex items-center gap-1.5 rounded-full bg-aksan px-3 py-1.5 text-[13px] font-bold text-zemin transition-transform hover:scale-[1.03]"><Users className="h-3.5 w-3.5" /> Paylaş</button>
+                  <button onClick={() => aktif ? altAksiyon(aktif.id, "paylas", "Bağlantı paylaş") : toast.warning("Model seçilmedi", { description: "Paylaşmak için galeriden bir model seç." })} className="ml-1 flex items-center gap-1.5 rounded-full bg-aksan px-3 py-1.5 text-[13px] font-bold text-zemin transition-transform hover:scale-[1.03]"><Users className="h-3.5 w-3.5" /> Paylaş</button>
                 </div>
               </div>
 
@@ -552,9 +555,9 @@ function UcBoyutStudyoOrijinal() {
                     onDoku={() => setMod("doku")}
                     onIndir={() => setIndirModal(true)}
                     onPoz={pozUygula}
-                    onYenidenUret={() => { setPrompt(aktif.prompt.split(" · ")[0]); setMod("metin"); toast("İstem yüklendi — tekrar üret"); }}
+                    onYenidenUret={() => { setPrompt(aktif.prompt.split(" · ")[0]); setMod("metin"); toast("İstem yüklendi", { description: "Düzenleyip yeniden üretebilirsin." }); }}
                     onRemesh={() => altAksiyon(aktif.id, "duzenle", "Remesh")}
-                    onUV={() => { if (!krediDus(5)) return toast.error("Yetersiz kredi (UV'leri Aç · 5 kredi)."); toast.success("UV atlası açıldı · 5 kredi"); }}
+                    onUV={() => { if (!krediDus(5)) return mesaj.yetersizKredi(5, useAuth.getState().kullanici?.krediler ?? 0); toast.success("UV atlası açıldı", { description: "5 kredi düşüldü." }); }}
                     onDCC={(hedef) => altAksiyon(aktif.id, "dcc", `${hedef}'a gönder`)}
                     onBaglantiPaylas={() => altAksiyon(aktif.id, "paylas", "Bağlantı paylaş")}
                     onYayinla={() => yayinla(aktif.id)} />
@@ -581,8 +584,8 @@ function UcBoyutStudyoOrijinal() {
                                   onSec={() => { setAktifId(u.id); setAnimasyon((u.animasyonlar?.length ?? 0) > 0); }}
                                   onAnimasyon={() => { setAktifId(u.id); setMod("canlandir"); }}
                                   onIndir={() => { setAktifId(u.id); setIndirModal(true); }}
-                                  onSil={() => { sil(u.id); if (u.id === aktifId) setAktifId(null); toast.success("Model silindi"); }}
-                                  onYenidenUret={() => { setPrompt(u.prompt.split(" · ")[0]); setMod("metin"); toast("İstem yüklendi — tekrar üret"); }}
+                                  onSil={() => { sil(u.id); if (u.id === aktifId) setAktifId(null); toast.success("Model silindi", { description: u.baslik }); }}
+                                  onYenidenUret={() => { setPrompt(u.prompt.split(" · ")[0]); setMod("metin"); toast("İstem yüklendi", { description: "Düzenleyip yeniden üretebilirsin." }); }}
                                   onYenidenAdlandir={() => setGirdiModal({ tip: "ad", id: u.id })}
                                   onEtiket={() => setGirdiModal({ tip: "etiket", id: u.id })}
                                   onLisans={() => lisansDegistir(u.id)}

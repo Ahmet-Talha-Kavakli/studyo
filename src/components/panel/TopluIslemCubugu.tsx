@@ -3,6 +3,8 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, Globe, FolderPlus, Heart, Trash2, X } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
+import { uretimGeriAl } from "./uretimGeriAl";
 import { useProjeler } from "@/store/useProjeler";
 import { useSecim } from "@/store/useSecim";
 import { gorseliIndir } from "@/lib/utils";
@@ -27,25 +29,25 @@ export function TopluIslemCubugu() {
       const gercek = u.gercek && u.gorselUrl && (u.gorselUrl.startsWith("data:") || u.gorselUrl.startsWith("http")) ? u.gorselUrl : undefined;
       gorseliIndir(u.prompt + u.model, u.baslik, gercek);
     });
-    toast.success(`${secilenler.length} üretim indiriliyor ✓`);
+    toast.success(`${secilenler.length} üretim indiriliyor`, { description: "Dosyalar indirilenler klasörüne düşer." });
   };
 
   const hepsiniYayinla = () => {
     secilenler.forEach((u) => guncelle(u.id, { yayinda: true }));
-    toast.success(`${secilenler.length} üretim Keşfet'te yayınlandı 🌍`);
+    toast.success(`${secilenler.length} üretim Keşfet'te yayınlandı`);
     temizle();
   };
 
   const hepsiniBegen = () => {
     secilenler.filter((u) => !u.favori).forEach((u) => favoriToggle(u.id));
-    toast.success(`${secilenler.length} üretim beğenildi ♥`);
+    toast.success(`${secilenler.length} üretim beğenildi`);
   };
 
   const hepsiniSil = () => {
-    const n = secilenler.length;
+    const n = secilenler.length, geriAl = uretimGeriAl(secilenler.map((u) => u.id));
     secilenler.forEach((u) => sil(u.id));
     temizle();
-    toast.success(`${n} üretim silindi`);
+    mesaj.silindi(`${n} üretim`, geriAl);
   };
 
   return (
@@ -56,7 +58,7 @@ export function TopluIslemCubugu() {
         exit={{ opacity: 0, y: 20 }}
         className="pointer-events-none fixed inset-x-0 bottom-6 z-[55] flex justify-center px-4"
       >
-        <div className="menu-surface pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5 shadow-2xl shadow-black/60">
+        <div className="menu-surface pointer-events-auto flex items-center gap-1 rounded-2xl p-1.5">
           <span className="px-3 text-sm font-semibold text-white">
             {secililer.length} seçili
           </span>
@@ -68,7 +70,7 @@ export function TopluIslemCubugu() {
           <button onClick={hepsiniYayinla} className={btn}>
             <Globe className="h-4 w-4" /> Yayınla
           </button>
-          <button onClick={() => { toast.success(`${secililer.length} üretim koleksiyona eklendi`); temizle(); }} className={btn}>
+          <button onClick={() => { toast.info("Koleksiyona toplu ekleme yakında", { description: "Şimdilik üretimleri tek tek kartın menüsünden klasöre ekleyebilirsin." }); temizle(); }} className={btn}>
             <FolderPlus className="h-4 w-4" /> Koleksiyon
           </button>
           <button onClick={hepsiniBegen} className={btn}>

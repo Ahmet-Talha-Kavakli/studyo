@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -94,13 +95,13 @@ export function CvPaylas({ acik, onKapat, ad, gizlilik, onGizlilik }: {
   const davetEt = () => {
     const e = davetEposta.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      toast.error("Geçerli bir e-posta gir");
+      toast.error("E-posta adresi geçersiz", { description: "ad@ornek.com biçiminde bir adres yaz." });
       return;
     }
     void kopyala(
       `${typeof window !== "undefined" ? window.location.href : ""}${typeof window !== "undefined" && window.location.href.includes("?") ? "&" : "?"}davet=${encodeURIComponent(e)}&rol=${rol}`,
       "Davet bağlantısı kopyalandı",
-      `${e} · ${rol === "ortak" ? "Ortak" : "İzleyici"} — bağlantıyı kendin iletebilirsin.`,
+      `${e} · ${rol === "ortak" ? "Ortak" : "İzleyici"}. Bağlantıyı kişiye kendin ilet.`,
     ).then((ok) => { if (ok) setDavetEposta(""); });
   };
   const [izinAcik, setIzinAcik] = useState(false);
@@ -189,13 +190,10 @@ export function CvPaylas({ acik, onKapat, ad, gizlilik, onGizlilik }: {
                           {rolAd} <ChevronDown className="h-3.5 w-3.5 opacity-70" />
                         </button>
                         <AnimatePresence>
-                          {rolAcik && (
-                            <>
-                              <span className="fixed inset-0 z-40" onClick={() => setRolAcik(false)} />
-                              <motion.div
+                          <Yuzen acik={!!(rolAcik)} onKapat={() => setRolAcik(false)} sag={0} ust={46} bosluk={0}><motion.div
                                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                                className="absolute right-0 top-[46px] z-50 w-[290px] overflow-hidden rounded-[12px] p-1.5"
-                                style={{ background: CV.panel, border: `1px solid ${CV.barKenar}`, boxShadow: "0 16px 44px rgba(0,0,0,0.55)" }}>
+                                className="w-[290px] overflow-hidden rounded-[12px] p-1.5"
+                                style={{ background: CV.panel, border: `1px solid ${CV.barKenar}`, boxShadow: "none" }}>
                                 {ROLLER.map((r) => (
                                   <button key={r.k} onClick={() => { setRol(r.k); setRolAcik(false); }}
                                     className="flex w-full items-start gap-2.5 rounded-[8px] p-2.5 text-left transition-colors hover:bg-white/[0.06]">
@@ -209,9 +207,7 @@ export function CvPaylas({ acik, onKapat, ad, gizlilik, onGizlilik }: {
                                     {rol === r.k && <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: CV_LIME }} />}
                                   </button>
                                 ))}
-                              </motion.div>
-                            </>
-                          )}
+                              </motion.div></Yuzen>
                         </AnimatePresence>
                       </div>
 
@@ -367,7 +363,7 @@ export function CvEkipSohbet({ acik, onKapat, ad }: { acik: boolean; onKapat: ()
       metin: "kredi istedi", saat: saatSimdi(),
     }]);
     setEkMenu(false);
-    toast.success("Kredi isteği gönderildi");
+    toast.success("Kredi isteği gönderildi", { description: "İstek sohbete eklendi." });
   };
 
   const dosyaSec = (f: File | undefined) => {
@@ -386,7 +382,7 @@ export function CvEkipSohbet({ acik, onKapat, ad }: { acik: boolean; onKapat: ()
           transition={{ duration: 0.18 }}
           onMouseDown={(e) => e.stopPropagation()}
           className="absolute right-3 top-[64px] z-50 flex w-[360px] flex-col overflow-hidden rounded-[14px]"
-          style={{ height: 480, background: CV.bar, border: `1px solid ${CV.barKenar}`, boxShadow: "0 20px 60px rgba(0,0,0,0.55)" }}>
+          style={{ height: 480, background: CV.bar, border: `1px solid ${CV.barKenar}`, boxShadow: "none" }}>
           <div className="flex items-center justify-between px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-[15px] font-medium text-white">{ad}</p>
@@ -466,14 +462,11 @@ export function CvEkipSohbet({ acik, onKapat, ad }: { acik: boolean; onKapat: ()
           <div className="relative p-3">
             {/* ── "+" MENÜSÜ ── */}
             <AnimatePresence>
-              {ekMenu && (
-                <>
-                  <span className="fixed inset-0 z-40" onClick={() => setEkMenu(false)} />
-                  <motion.div
+              <Yuzen acik={!!(ekMenu)} onKapat={() => setEkMenu(false)} alt={62} sol={12} bosluk={0}><motion.div
                     initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute bottom-[62px] left-3 z-50 w-[212px] overflow-hidden rounded-[14px] p-1.5"
-                    style={{ background: "#2C2E30", border: `1px solid ${CV.barKenar}`, boxShadow: "0 16px 40px rgba(0,0,0,0.55)" }}>
+                    className="w-[212px] overflow-hidden rounded-[14px] p-1.5"
+                    style={{ background: "#2C2E30", border: `1px solid ${CV.barKenar}`, boxShadow: "none" }}>
                     <button onClick={() => dosyaRef.current?.click()}
                       className="flex h-10 w-full items-center gap-2.5 rounded-[8px] px-2.5 text-left text-[14px] text-white transition-colors hover:bg-white/[0.06]">
                       <ImageIcon className="h-[17px] w-[17px]" style={{ color: "#C8CACC" }} />
@@ -484,9 +477,7 @@ export function CvEkipSohbet({ acik, onKapat, ad }: { acik: boolean; onKapat: ()
                       <Sparkles className="h-[17px] w-[17px]" style={{ color: "#C8CACC" }} />
                       Kredi iste
                     </button>
-                  </motion.div>
-                </>
-              )}
+                  </motion.div></Yuzen>
             </AnimatePresence>
 
             <input ref={dosyaRef} type="file" accept="image/*" className="hidden"
@@ -564,7 +555,7 @@ export function CvAsistan({ acik, onKapat, onOneri }: {
           transition={{ duration: 0.16 }}
           onMouseDown={(e) => e.stopPropagation()}
           className="absolute bottom-[92px] right-3 z-50 flex flex-col overflow-hidden rounded-[14px]"
-          style={{ width: 380, height: 472, background: CV.panel, border: `1px solid ${CV.barKenar}`, boxShadow: "0 20px 60px rgba(0,0,0,0.55)" }}>
+          style={{ width: 380, height: 472, background: CV.panel, border: `1px solid ${CV.barKenar}`, boxShadow: "none" }}>
           <div className="flex items-center gap-2.5 px-4 py-3">
             <span className="flex h-8 w-8 items-center justify-center rounded-full text-[15px]"
               style={{ background: "#0F1113" }}>✦</span>

@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Heart, Download, Trash2, Play, Pause, Box, AudioLines, ImageIcon, Video, Music, FolderPlus, Check, Plus, MoreHorizontal, RotateCw, Wand2, AtSign, Globe, Share2, Copy, Maximize2, Languages, Eye, ChevronRight, Link2, MessageCircle, Briefcase, Pin, BrainCircuit, Mic, AtSign as XIkon, FileImage, FileType2, FileArchive, FileVideo, Pencil } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
+import { uretimGeriAl } from "./uretimGeriAl";
 import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { useSecim } from "@/store/useSecim";
 import { useKoleksiyon } from "@/store/useKoleksiyon";
@@ -143,20 +145,20 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       baslik: `${u.baslik} (video)`.slice(0, 42), tur: "video", model: "Seedance 2.0",
       prompt: u.prompt, kredi: 42, arac: "Videoya Çevir", meta: { oran: u.meta?.oran },
     });
-    if (!s.ok) return toast.error("Olmadı", { description: s.hata });
-    toast.success("Videoya çevriliyor 🎬", { description: u.baslik });
+    if (!s.ok) return toast.error("Video başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success("Videoya çevriliyor", { description: "Seedance 2.0 · 42 kredi. Bitince bildirim gelir." });
   };
 
   // Higgsfield "..." bağlam menüsü eylemleri — hepsi gerçek.
   const yenidenUret = () => {
     const s = uretimBaslat({ baslik: u.baslik, tur: u.tur, model: u.model, prompt: u.prompt, kredi: u.kredi, arac: u.arac });
-    if (!s.ok) return toast.error("Olmadı", { description: s.hata });
-    toast.success("Yeniden üretiliyor 🔄", { description: u.baslik });
+    if (!s.ok) return toast.error("Yeniden üretim başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success("Yeniden üretiliyor", { description: `${u.model} · ${u.kredi} kredi. Bitince bildirim gelir.` });
     setDahaMenu(false);
   };
   const promptuKullan = () => {
     try { sessionStorage.setItem("vayra-gecis-prompt", u.prompt); } catch { /* yoksay */ }
-    toast.success("Prompt taşındı — düzenleyip üret", { description: u.baslik });
+    toast.success("İstem Görsel stüdyosuna taşındı", { description: "Düzenleyip yeniden üretebilirsin." });
     router.push("/panel/gorsel");
     setDahaMenu(false);
   };
@@ -175,7 +177,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
   };
   const yayinToggle = () => {
     guncelle(u.id, { yayinda: !u.yayinda });
-    toast.success(u.yayinda ? "Yayından kaldırıldı" : "Keşfet'te yayınlandı 🌍", { description: u.yayinda ? undefined : "Toplulukta remixlenebilir" });
+    toast.success(u.yayinda ? "Yayından kaldırıldı" : "Keşfet'te yayınlandı", { description: u.yayinda ? "Artık Keşfet akışında görünmüyor." : "Topluluk bu üretimi remixleyebilir." });
     setDahaMenu(false);
   };
   /* ÇEVİR — eskiden hedef dili sormadan sabit "İngilizce"ye çeviriyordu.
@@ -187,8 +189,8 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       kredi: Math.max(2, Math.round(u.kredi / 2)), arac: u.arac,
       meta: { ...u.meta, hamIstem: u.meta?.hamIstem ?? u.prompt },
     });
-    if (!s.ok) return toast.error("Çevrilemedi", { description: s.hata });
-    toast.success(`${dil.bayrak} ${dil.ad} diline çevriliyor`, { description: `${u.baslik} · dublaj + altyazı` });
+    if (!s.ok) return toast.error("Çeviri başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success(`${dil.ad} diline çevriliyor`, { description: "Dublaj ve altyazı hazırlanıyor. Bitince bildirim gelir." });
   };
 
   /* SESİ DEĞİŞTİR — eskiden yalnız toast basıyordu. Artık /panel/ses'teki
@@ -200,8 +202,8 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       kredi: Math.max(2, Math.round(u.kredi / 2)), arac: "Sesi Değiştir",
       meta: { ...u.meta, ses: ses.ad, hamIstem: u.meta?.hamIstem ?? u.prompt },
     });
-    if (!s.ok) return toast.error("Ses değiştirilemedi", { description: s.hata });
-    toast.success(`Ses ${ses.ad} olarak değiştiriliyor 🎙`, { description: u.baslik });
+    if (!s.ok) return toast.error("Ses değişimi başlatılamadı", { description: s.hata ?? "Yeniden dene." });
+    toast.success(`Ses ${ses.ad} olarak değiştiriliyor`, { description: `${u.baslik}. Bitince bildirim gelir.` });
   };
 
   /* KLASÖRE EKLE — gerçek koleksiyon listesi (görsel sayfasıyla aynı desen).
@@ -212,14 +214,14 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
   );
   const klasoreEkle = (kid: string) => {
     uretimEkle(kid, u.id);
-    toast.success("Klasöre eklendi", { description: koleksiyonlar.find((k) => k.id === kid)?.ad });
+    toast.success("Klasöre eklendi", { description: `${koleksiyonlar.find((k) => k.id === kid)?.ad ?? "Klasör"} klasörüne eklendi.` });
   };
   const yeniKlasorKaydet = (ad: string) => {
     const temiz = ad.trim();
     if (!temiz) return;
     const kid = olustur(temiz);
     uretimEkle(kid, u.id);
-    toast.success("Klasör oluşturuldu", { description: `${temiz} — 1 varlık` });
+    toast.success("Klasör oluşturuldu", { description: `Üretim ${temiz} klasörüne eklendi.` });
   };
 
   /* AD — indirme dosya adı da bu olur (görsel sayfasındaki davranış). */
@@ -227,7 +229,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
     const temiz = yeni.trim();
     if (!temiz || temiz === u.baslik) return;
     guncelle(u.id, { baslik: temiz });
-    toast.success("Ad güncellendi", { description: `${temiz}.${u.tur === "video" ? "mp4" : u.tur === "ses" ? "mp3" : "png"} olarak inecek` });
+    toast.success("Ad güncellendi", { description: `Dosya ${temiz}.${u.tur === "video" ? "mp4" : u.tur === "ses" ? "mp3" : "png"} adıyla iner.` });
   };
 
   /** Dosya adı — kullanıcının verdiği ad, dosya-sistemi güvenli hâlde. */
@@ -250,8 +252,8 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
     const kaynak = u.gorselUrl && /^(data:|https?:|\/)/.test(u.gorselUrl) ? u.gorselUrl : saltUrl(u.gorselUrl);
     if (!kaynak) { indir(); return; }
     void gorseliFormatlaIndir(kaynak, dosyaAdi(), format).then(
-      () => toast.success(`${format.toUpperCase()} indirildi ✓`, { description: `${dosyaAdi()}.${format}` }),
-      () => toast.error("İndirilemedi"),
+      () => toast.success(`${format.toUpperCase()} indirildi`, { description: `${dosyaAdi()}.${format}` }),
+      () => mesaj.indirilemedi(`Görsel ${format.toUpperCase()} biçimine çevrilemedi.`),
     );
   };
   const [detayId, setDetayIdRaw] = useState<string | null>(null);
@@ -275,7 +277,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
   const oynatDurdur = () => {
     if (gercekSes && sesRef.current) {
       if (oynatiliyor) sesRef.current.pause();
-      else sesRef.current.play().catch(() => toast.error("Ses oynatılamadı."));
+      else sesRef.current.play().catch(() => toast.error("Ses oynatılamadı", { description: "Tarayıcı oynatmayı engelledi ya da dosyaya ulaşılamadı. Yeniden dene." }));
     }
     setOynatiliyor((v) => !v);
   };
@@ -288,7 +290,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       document.body.appendChild(a);
       a.click();
       a.remove();
-      toast.success("Ses indiriliyor 🎧");
+      toast.success("Ses indiriliyor", { description: a.download });
       return;
     }
     // Gerçek API görsel/video çıktısı (data-uri veya http) varsa onu indir; yoksa gradient.
@@ -296,7 +298,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       ? u.gorselUrl
       : undefined;
     gorseliIndir(u.prompt + u.model, u.baslik, gercekGorsel);
-    toast.success("İndirildi ✓", { description: u.baslik });
+    toast.success("İndirildi", { description: u.baslik });
   };
 
   // Higgsfield birebir: görsel edge-to-edge, altında bilgi kutusu YOK.
@@ -437,7 +439,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                   {/* VİDEO — Higgsfield birebir üst blok: Virality Predictor · Translate · Change Voice */}
                   {u.tur === "video" && (
                     <>
-                      <button onClick={() => { toast.success("Virallik tahmini hesaplanıyor 🧠", { description: "Bu videonun viral olma potansiyeli analiz ediliyor." }); setDahaMenu(false); }}
+                      <button onClick={() => { toast.info("Virallik tahmini yakında", { description: "Bu özellik henüz hazır değil. Hazır olunca bu menüde çalışacak." }); setDahaMenu(false); }}
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                         <BrainCircuit className="h-4 w-4 text-white/60" />
                         <span className="flex-1">Virallik Tahmini</span>
@@ -470,7 +472,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                   <button onClick={elementOlustur} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                     <AtSign className="h-4 w-4 text-cyan-glow" /> Element oluştur
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); favoriToggle(u.id); toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi 💗"); setDahaMenu(false); }}
+                  <button onClick={(e) => { e.stopPropagation(); favoriToggle(u.id); toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi", { description: u.baslik }); setDahaMenu(false); }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                     <Heart className={cn("h-4 w-4", u.favori ? "fill-rose-400 text-rose-400" : "text-white/60")} /> Beğen
                   </button>
@@ -515,7 +517,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                     </button>
                   </div>
                   <div className="my-1 h-px bg-white/8" />
-                  <button onClick={() => { sil(u.id); toast("Üretim silindi"); setDahaMenu(false); }}
+                  <button onClick={() => { const geriAl = uretimGeriAl([u.id]); sil(u.id); mesaj.silindi("Üretim", geriAl); setDahaMenu(false); }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm text-rose-400 transition-colors hover:bg-rose-500/12">
                     <Trash2 className="h-4 w-4" /> Sil
                   </button>
@@ -589,7 +591,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       {/* Video play (►) overlay — Higgsfield birebir: video thumbnaillerinde ortada daire (madde 16) */}
       {u.tur === "video" && u.durum === "tamam" && !sonBakilan && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full glass-ikon  transition-all group-hover:scale-110">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full glass-ikon transition-all group-hover:scale-110">
             <Play className="h-5 w-5 translate-x-0.5 fill-white text-white" />
           </span>
         </div>
@@ -598,7 +600,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       {/* "Son bakılan" rozeti — Higgsfield birebir (ortada, göz ikonlu) */}
       {sonBakilan && u.durum === "tamam" && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink-950/35 transition-opacity group-hover:opacity-0">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-white drop-shadow">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-white">
             <Eye className="h-4 w-4" /> Son bakılan
           </span>
         </div>
@@ -626,19 +628,19 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
         <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
           <Tooltip label="Bu görselden yeni görsel" side="left">
             <button onClick={(e) => { e.stopPropagation(); promptuKullan(); }}
-              className="flex h-8 w-8 items-center justify-center rounded-lg glass-ikon text-white/85  transition-colors" aria-label="Bu görselden yeni görsel üret">
+              className="flex h-8 w-8 items-center justify-center rounded-lg glass-ikon text-white/85 transition-colors" aria-label="Bu görselden yeni görsel üret">
               <ImageIcon className="h-4 w-4" />
             </button>
           </Tooltip>
           <Tooltip label="Videoya çevir" side="left">
             <button onClick={(e) => { e.stopPropagation(); videoyaCevir(); }}
-              className="flex h-8 w-8 items-center justify-center rounded-lg glass-ikon text-white/85  transition-colors" aria-label="Videoya çevir">
+              className="flex h-8 w-8 items-center justify-center rounded-lg glass-ikon text-white/85 transition-colors" aria-label="Videoya çevir">
               <Video className="h-4 w-4" />
             </button>
           </Tooltip>
           <Tooltip label="Element oluştur" side="left">
             <button onClick={(e) => { e.stopPropagation(); elementOlustur(); }}
-              className="flex h-8 w-8 items-center justify-center rounded-lg glass-ikon text-white/85  transition-colors" aria-label="Element oluştur">
+              className="flex h-8 w-8 items-center justify-center rounded-lg glass-ikon text-white/85 transition-colors" aria-label="Element oluştur">
               <AtSign className="h-4 w-4" />
             </button>
           </Tooltip>
@@ -680,7 +682,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
         {sesModal && (
           <SesSeciciModal
             seciliAd={u.meta?.ses}
-            baslik="SESİ DEĞİŞTİR"
+            baslik="Sesi değiştir"
             onSec={sesiDegistir}
             onKapat={() => setSesModal(false)}
           />

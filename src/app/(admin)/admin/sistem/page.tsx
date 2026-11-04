@@ -39,7 +39,7 @@ export default function Sistem() {
     if (!ok) return;
     sis.bakimToggle();
     denetle(`Bakım modu ${sis.bakimModu ? "kapatıldı" : "AÇILDI"}`, "kritik");
-    toast.success("Bakım modu güncellendi");
+    toast.success(sis.bakimModu ? "Bakım modu kapatıldı" : "Bakım modu açıldı", { description: sis.bakimModu ? "Site herkese yeniden açık." : "Yalnız izin listesindeki IP'ler erişebilir." });
   };
 
   const kayitToggle = async () => {
@@ -48,11 +48,11 @@ export default function Sistem() {
     if (!ok) return;
     sis.kayitToggle();
     denetle(`Kayıtlar ${sis.kayitAcik ? "KAPATILDI" : "açıldı"}`, "kritik");
-    toast.success("Kayıt durumu güncellendi");
+    toast.success(sis.kayitAcik ? "Kayıtlar kapatıldı" : "Kayıtlar açıldı");
   };
 
-  const flagToggle = (id: string, ad: string, durum: "acik" | "kapali" | "kismi") => { sis.flagDurum(id, durum); denetle(`Feature flag: ${ad} → ${durum}`, "uyari"); toast.success("Flag güncellendi"); };
-  const cronTetikle = (ad: string) => { denetle(`Cron manuel tetiklendi: ${ad}`, "uyari"); toast.success(`${ad} tetiklendi`); };
+  const flagToggle = (id: string, ad: string, durum: "acik" | "kapali" | "kismi") => { sis.flagDurum(id, durum); denetle(`Feature flag: ${ad} → ${durum}`, "uyari"); toast.success("Özellik bayrağı güncellendi", { description: `${ad} → ${durum}` }); };
+  const cronTetikle = (ad: string) => { denetle(`Cron manuel tetiklendi: ${ad}`, "uyari"); toast.success("Zamanlanmış görev tetiklendi", { description: ad }); };
   const webhookYeniden = (id: string) => { denetle("Webhook yeniden gönderildi", "bilgi"); toast.success("Webhook yeniden gönderildi"); void id; };
 
   const saglikliSay = servis.filter((s) => s.durum === "saglikli").length;
@@ -144,7 +144,7 @@ export default function Sistem() {
               </div>
               <div className="flex items-center justify-between rounded-xl border border-[color:var(--ad-kenar)] p-3">
                 <div><div className={cn("text-[13px] font-medium", AD.metin)}>Davetiye modu</div><div className={cn("text-[11px]", AD.metin3)}>Sadece davetliler</div></div>
-                <button onClick={() => { sis.davetToggle(); toast.success("Güncellendi"); }} className={cn("relative h-6 w-11 rounded-full transition-colors", sis.davetModu ? "bg-emerald-500" : "bg-white/15")}><span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", sis.davetModu ? "left-[22px]" : "left-0.5")} /></button>
+                <button onClick={() => { sis.davetToggle(); toast.success(sis.davetModu ? "Davet modu kapatıldı" : "Davet modu açıldı"); }} className={cn("relative h-6 w-11 rounded-full transition-colors", sis.davetModu ? "bg-emerald-500" : "bg-white/15")}><span className={cn("absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all", sis.davetModu ? "left-[22px]" : "left-0.5")} /></button>
               </div>
             </div>
           </Kart>

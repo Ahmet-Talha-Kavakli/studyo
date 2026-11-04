@@ -64,8 +64,8 @@ function KomutBlogu({ icerik }: { icerik: string }) {
   return (
     <div className="overflow-hidden rounded-lg border border-[var(--sc-kenar)] bg-[#171717]">
       <div className="flex items-center justify-between px-3 py-1.5">
-        <span className="font-mono text-[11.5px] uppercase tracking-wide text-white/40">terminal</span>
-        <button onClick={() => void kopyala(icerik, "Kopyalandı")} aria-label="Kopyala"
+        <span className="text-[12px] font-medium text-white/40">terminal</span>
+        <button onClick={() => void kopyala(icerik, "Komut kopyalandı")} aria-label="Kopyala"
           className="text-white/45 transition-colors hover:text-white">
           <Copy className="h-3.5 w-3.5" />
         </button>

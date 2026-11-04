@@ -31,14 +31,14 @@ export interface PazUretIstek {
 export function pazUret(istek: PazUretIstek): boolean {
   const metin = istek.istem.trim();
   if (metin.length < 3) {
-    toast.error("Önce reklamda ne olacağını anlat");
+    toast.error("İstem çok kısa", { description: "Reklamda ne olacağını en az birkaç kelimeyle anlat." });
     return false;
   }
 
   // İçerik politikası — reddedilirse kredi hiç düşmez.
   const denetim = icerikDenetle(metin);
   if (!denetim.izin) {
-    toast.error("Üretim engellendi", { description: denetim.mesaj });
+    toast.error("Üretim engellendi", { description: denetim.mesaj ?? "İstem içerik kurallarına takıldı. İstemi değiştirip yeniden dene." });
     return false;
   }
 
@@ -65,6 +65,6 @@ export function pazUret(istek: PazUretIstek): boolean {
     return false;
   }
 
-  toast.success("Reklam üretimi başladı", { description: "Üretimler ekranında izleyebilirsin." });
+  toast.success("Reklam üretimi başladı", { description: "İlerlemeyi Üretimler ekranında izleyebilirsin." });
   return true;
 }

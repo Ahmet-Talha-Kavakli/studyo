@@ -12,7 +12,7 @@ import { CV } from "@/lib/canvasTema";
      · SV alanı (saturation-value karesi) — seçili hue'ya göre gradyan
      · Satır: damlalık · mevcut renk dairesi · hue slider (gökkuşağı)
      · 3 sayı girişi (R/G/B) + altında etiketler + format değiştirici
-   Ölçü: ~233×250, radius 10, zemin #2A2C2E
+   Ölçü: yaklaşık 233×250, radius 10, zemin #2A2C2E
    ============================================================ */
 
 /* ── renk dönüşümleri ── */
@@ -131,7 +131,7 @@ export function CvRenkSecici({
       style={{
         width: 233, background: "#2A2C2E",
         border: `1px solid ${CV.barKenar}`,
-        boxShadow: "0 18px 50px rgba(0,0,0,0.6)",
+        boxShadow: "none",
         ...stil,
       }}>
 

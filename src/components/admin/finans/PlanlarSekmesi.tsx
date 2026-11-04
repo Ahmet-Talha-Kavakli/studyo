@@ -26,7 +26,7 @@ export function PlanlarSekmesi() {
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
         {[...store.planlar].sort((a, b) => a.sira - b.sira).map((p) => (
-          <motion.div key={p.id} layout className="ad-glass ad-glass-hover p-4">
+          <motion.div key={p.id} className="ad-glass ad-glass-hover p-4">
             <div className="mb-3 flex items-start justify-between">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><Package className="h-4 w-4" /></span>
@@ -85,7 +85,7 @@ function PlanDuzenleModal({ plan, kapat }: { plan: PlanTanim | null; kapat: () =
     <AnimatePresence>
       {plan && (
         <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={kapat} className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={kapat} className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <motion.div initial={{ opacity: 0, scale: 0.96, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
             className="ad-panel ad-ince-scroll relative max-h-[85vh] w-full max-w-lg overflow-y-auto p-5">
             <div className="mb-4 flex items-center justify-between">
@@ -173,7 +173,7 @@ function Toggle({ e, v, onChange }: { e: string; v: boolean; onChange: (v: boole
     <button onClick={() => onChange(!v)} className="flex items-center justify-between rounded-lg border border-[color:var(--ad-kenar)] px-3 py-2 text-[13px]">
       <span className={AD.metin2}>{e}</span>
       <span className={cn("relative h-5 w-9 rounded-full transition-colors", v ? "bg-[color:var(--ad-aksan)]" : "bg-white/10")}>
-        <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all", v ? "left-4.5" : "left-0.5")} style={{ left: v ? 18 : 2 }} />
+        <span className={cn("absolute left-0 top-0.5 h-4 w-4 rounded-full bg-white transition-all", v ? "left-4.5" : "left-0.5")} style={{ left: v ? 18 : 2 }} />
       </span>
     </button>
   );

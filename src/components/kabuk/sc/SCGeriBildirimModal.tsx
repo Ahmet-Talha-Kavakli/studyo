@@ -79,7 +79,7 @@ export function SCGeriBildirimModal({
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onKapat}
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+        className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
       <motion.div
         ref={kutuRef}
@@ -90,7 +90,7 @@ export function SCGeriBildirimModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96 }}
         transition={{ type: "spring", stiffness: 380, damping: 30 }}
-        className="relative w-full max-w-[520px] rounded-[18px] border border-[var(--sc-kenar)] bg-[var(--sc-kart)] p-6 shadow-[0_24px_60px_-18px_rgba(0,0,0,0.6)]">
+        className="relative w-full max-w-[520px] rounded-[18px] border border-[var(--sc-kenar)] bg-[var(--sc-kart)] p-6">
 
         <h2 id="gb-baslik" className="text-[19px] font-semibold tracking-[-0.01em] text-[var(--sc-metin)]">
           {olumlu ? "Olumlu geri bildirim ver" : "Olumsuz geri bildirim ver"}

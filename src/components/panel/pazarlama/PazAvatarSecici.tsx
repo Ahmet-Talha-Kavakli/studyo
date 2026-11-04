@@ -86,7 +86,7 @@ export function PazAvatarSecici({
 
   const sabitle = (id: string) => {
     sabitToggleStore(id);
-    toast.success(sabitler.includes(id) ? "Sabitlemeden çıkarıldı" : "Sabitlendi 📌");
+    toast.success(sabitler.includes(id) ? "Avatar sabitlemeden çıkarıldı" : "Avatar sabitlendi");
   };
 
   const avatarEkle = (a: PazAvatar) => {
@@ -101,7 +101,7 @@ export function PazAvatarSecici({
         {acik && (
           <div className="fixed inset-0 z-[240] flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={onKapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+              onClick={onKapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.97, y: 14 }} animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -280,7 +280,7 @@ function YeniAvatar({
 
   /** 1. AŞAMA — istemden 4 aday karakter üret. */
   const uret = () => {
-    if (istem.trim().length < 3) { toast.error("Önce avatarı tarif et"); return; }
+    if (istem.trim().length < 3) { toast.error("Avatar tarifi çok kısa", { description: "Avatarı birkaç kelimeyle tarif et, sonra yeniden dene." }); return; }
     setUretiliyor(true);
     setSeciliAday(null);
     /* Adaylar GERÇEK portre havuzundan seçilir. Uydurma tohum (`av-<istem>-i`)
@@ -305,13 +305,13 @@ function YeniAvatar({
   /** 2. AŞAMA — seçilen adayı NİHAİ avatar olarak ekle (yüksek kalite). */
   const adayOnayla = () => {
     const aday = adaylar.find((a) => a.id === seciliAday);
-    if (!aday) { toast.error("Önce bir aday seç"); return; }
+    if (!aday) { toast.error("Aday seçilmedi", { description: "Devam etmek için dört adaydan birini seç." }); return; }
     const id = yeniAvatarId();
     onOlustur({
       id, ad: istem.trim().slice(0, 18), cinsiyet: "kadin",
       tohum: aday.tohum, benim: true,
     });
-    toast.success("Avatar oluşturuldu ✦", { description: `Yüksek kalitede üretildi · ${AVATAR_KREDI} kredi` });
+    toast.success("Avatar oluşturuldu", { description: "Seçtiğin aday avatarlarına eklendi, kredi düşmedi." });
     kapat();
   };
 
@@ -332,7 +332,7 @@ function YeniAvatar({
       {acik && (
         <div className="fixed inset-0 z-[250] flex items-center justify-center p-6">
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={kapat} className="absolute inset-0 bg-black/65 backdrop-blur-md" />
+            onClick={kapat} className="perde absolute inset-0 bg-black/65 backdrop-blur-md" />
 
           <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
@@ -395,7 +395,7 @@ function YeniAvatar({
                         top: i === 0 ? 36 : i === 2 ? 8 : 22,
                         transform: i === 0 ? undefined : `rotate(${(i - 2) * 5}deg)`,
                         background: pazArka(t, "portre"),
-                        boxShadow: "0 12px 32px rgba(0,0,0,.45)",
+                        boxShadow: "none",
                       }} />
                   ))}
                 </div>
@@ -502,7 +502,7 @@ function YeniAvatar({
                     onClick={() => {
                       const id = yeniAvatarId();
                       onOlustur({ id, ad: ad.trim(), cinsiyet: "kadin", tohum: `av-yukleme-${id}`, benim: true });
-                      toast.success("Avatar oluşturuldu ✦", { description: `${gorseller.length} referanstan öğrenildi` });
+                      toast.success("Avatar oluşturuldu", { description: `${gorseller.length} referans görselle avatarlarına eklendi, gerçek eğitim yapılmadı.` });
                       kapat();
                     }}
                     className="mt-auto h-[62px] w-full rounded-[10px] text-[19px] font-semibold transition-all disabled:bg-[#333537] disabled:text-[#7E827D]"

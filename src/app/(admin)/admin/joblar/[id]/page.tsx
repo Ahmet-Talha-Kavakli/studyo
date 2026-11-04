@@ -57,7 +57,7 @@ export default function JobDetay({ params }: { params: Promise<{ id: string }> }
     if (opts.yeniDurum) jobStore.durumDegistir(id, opts.yeniDurum);
     jobStore.islemEkle({ jobId: id, tur, yapan: admin, detay: baslik });
     denetle(baslik, opts.onem ?? "bilgi");
-    toast.success(opts.toast ?? "İşlem uygulandı");
+    toast.success(opts.toast ?? "Job güncellendi", { description: `${j.modelAd} · ${j.id}` });
   };
   const oncelikVer = async () => {
     const ok = await onayIste({ baslik: "Öncelik ver (10/10)", aciklama: `${j.id} kuyrukta en öne alınır.`, risk: 0, eylemEtiket: "Öncele" });
@@ -65,7 +65,7 @@ export default function JobDetay({ params }: { params: Promise<{ id: string }> }
     jobStore.oncelikVer(id, 10);
     jobStore.islemEkle({ jobId: id, tur: "oncelik", yapan: admin, detay: "Öncelik 10/10" });
     denetle("Öncelik verildi (10/10)", "bilgi");
-    toast.success("Öncelik verildi");
+    toast.success("Öncelik verildi", { description: `${j.id} kuyrukta en öne alındı.` });
   };
 
   return (

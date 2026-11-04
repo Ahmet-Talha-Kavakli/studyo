@@ -31,7 +31,7 @@ import { pazArka } from "@/lib/gercekVeri";
 
    Sağ küme: ÜRÜN kutusu · AVATAR kutusu · lime ÜRET(üstü çizili indirim)
 
-   Mekanikler (Supercomputer'dan birebir taşındı):
+   Mekanikler (Usta'dan birebir taşındı):
      · üstteki lime TUTAMAK ile kutu büyüt/küçült (çift tık sıfırlar)
      · metin uzadıkça textarea aşağı doğru büyür (260px'te durur)
      · ayar açılırı portal + fixed → kesilme yok; sayfa kayınca kapanır,
@@ -156,7 +156,7 @@ export function PazComposer({
 
           {/* ══ Kabuk ══ */}
           <div className="relative rounded-[28px] border border-white/[0.07] bg-[#1E1E22]/95 p-[14px] backdrop-blur-[24px]"
-            style={{ boxShadow: "0 20px 60px rgba(0,0,0,.55)" }}>
+            style={{ boxShadow: "none" }}>
             {/* lime tutamak — sürükleyerek kutuyu büyüt/küçült */}
             <div onPointerDown={promptSurukle} onDoubleClick={() => setPromptYuk(null)}
               title="Sürükleyerek kutuyu büyüt/küçült"
@@ -384,7 +384,7 @@ function TokenCipi({
             initial={{ opacity: 0, y: 8, scale: 0.94 }} animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.94 }} transition={{ duration: 0.16 }}
             className="pointer-events-none absolute bottom-full left-0 z-30 mb-3 block h-[150px] w-[150px] overflow-hidden rounded-[20px]"
-            style={{ background: arka, boxShadow: "0 24px 60px rgba(0,0,0,.75)" }}>
+            style={{ background: arka, boxShadow: "none" }}>
             {url && <img src={url} alt="" className="h-full w-full object-cover" />}
           </motion.span>
         )}
@@ -512,7 +512,7 @@ function CihazCipi({ deger, onSec }: { deger: string; onSec: (c: string) => void
                 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
                 transition={{ duration: 0.15 }}
                 className="z-[121] w-[560px] max-w-[92vw] rounded-[22px] bg-[#141618] p-3.5"
-                style={{ ...seciciStil(konum), boxShadow: "0 24px 70px rgba(0,0,0,.7)" }}>
+                style={{ ...seciciStil(konum), boxShadow: "none" }}>
                 {CIHAZLAR.map((c) => (
                   <button key={c.ad} onClick={() => { onSec(c.ad); setAcik(false); }}
                     className={cn(
@@ -647,7 +647,7 @@ function AyarCipi({
                 style={{
                   ...seciciStil(konum),
                   background: "rgba(14,52,66,0.78)",
-                  boxShadow: "0 12px 40px rgba(0,0,0,0.5)",
+                  boxShadow: "none",
                 }}
                 className="z-[121] flex w-[260px] flex-col gap-1 rounded-[20px] p-2 backdrop-blur-[24px]">
                 <AyarSatir ikon={RectangleHorizontal} etiket="En-boy oranı" deger={deger.oran}
@@ -713,7 +713,7 @@ function AltMenu({
       initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -8 }}
       transition={{ duration: 0.14 }}
       className="absolute left-full top-0 ml-2 w-[240px] rounded-[20px] p-2 backdrop-blur-[24px]"
-      style={{ background: "rgba(14,52,66,0.86)", boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}>
+      style={{ background: "rgba(14,52,66,0.86)", boxShadow: "none" }}>
       <p className="px-2 pb-1.5 pt-1 text-[12px] font-semibold uppercase tracking-[0.06em] text-white/45">
         {baslik}
       </p>

@@ -21,7 +21,7 @@ export function Funnel({ adimlar }: { adimlar: { asama: string; sayi: number; or
               <span className="flex items-center gap-2">
                 <span className={cn("tabular-nums", AD.metin)}>{kisaSayi(a.sayi)}</span>
                 <span className={cn("tabular-nums text-[11px]", AD.metin3)}>%{a.oran.toFixed(1)}</span>
-                {dususOran > 0 && <span className="tabular-nums text-[11px] text-rose-400">−%{dususOran.toFixed(0)}</span>}
+                {dususOran > 0 && <span className="tabular-nums text-[11px] text-rose-400">%{dususOran.toFixed(0)} düşüş</span>}
               </span>
             </div>
             <div className="h-7 overflow-hidden rounded-lg bg-white/[0.03]">

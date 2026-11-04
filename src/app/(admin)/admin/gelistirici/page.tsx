@@ -18,6 +18,7 @@ import {
 import { endpointStatlari, sdkDagilim, apiMetrik, uretApiLoglar, type ApiLog } from "@/lib/admin/seed/gelistirici";
 import { kisaSayi, sayi, yuzde, goreceZaman, tarihSaat } from "@/lib/admin/cekirdek";
 import { toast } from "@/lib/toast";
+import { mesaj } from "@/lib/mesaj";
 import { cn } from "@/lib/utils";
 
 const SCOPE_ETIKET: Record<ApiScope, string> = { read: "Okuma", write: "Yazma", admin: "Yönetim" };
@@ -57,18 +58,18 @@ export default function Gelistirici() {
     setYeniScope((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
 
   const keyOlustur = () => {
-    if (!yeniAd.trim()) { toast.error("Anahtar adı gir"); return; }
+    if (!yeniAd.trim()) { toast.error("Anahtar adı eksik", { description: "Anahtarı tanıyabilmek için bir ad yaz." }); return; }
     const { tam } = store.keyOlustur(yeniAd, yeniScope);
     denetle(`API anahtarı oluşturuldu: ${yeniAd}`);
     setUretilenTam(tam);
     setKopyalandi(false);
-    toast.success("API anahtarı oluşturuldu");
+    toast.success("API anahtarı oluşturuldu", { description: "Anahtarı şimdi kopyala; bir daha tam hâli gösterilmez." });
   };
 
   const kopyala = async (metin: string) => {
-    try { await navigator.clipboard.writeText(metin); } catch { /* clipboard yoksa sessiz */ }
+    try { await navigator.clipboard.writeText(metin); } catch { mesaj.kopyalanamadi(); return; }
     setKopyalandi(true);
-    toast.success("Kopyalandı");
+    mesaj.kopyalandi("Anahtar");
     setTimeout(() => setKopyalandi(false), 1500);
   };
 
@@ -79,14 +80,14 @@ export default function Gelistirici() {
   const iptalEt = async (id: string, ad: string) => {
     const ok = await onayIste({ baslik: "Anahtarı iptal et", aciklama: `“${ad}” kalıcı olarak silinir. Bu anahtarla yapılan tüm istekler anında 401 döner.`, risk: 2, eylemEtiket: "İptal et" });
     if (!ok) return;
-    store.keyIptal(id); denetle(`API anahtarı iptal edildi: ${ad}`, "kritik"); toast.success("Anahtar iptal edildi");
+    store.keyIptal(id); denetle(`API anahtarı iptal edildi: ${ad}`, "kritik"); toast.success("Anahtar iptal edildi", { description: `${ad} ile yapılan istekler artık 401 döner.` });
   };
 
   const rotate = async (id: string, ad: string) => {
     const ok = await onayIste({ baslik: "Anahtarı yenile (rotate)", aciklama: `“${ad}” için yeni anahtar üretilir, eski anahtar anında geçersiz olur. İstek sayacı korunur.`, risk: 1, eylemEtiket: "Yenile" });
     if (!ok) return;
     const tam = store.keyRotate(id);
-    if (tam) { setRotateGoster({ ad, tam }); denetle(`API anahtarı yenilendi: ${ad}`); toast.success("Anahtar yenilendi"); }
+    if (tam) { setRotateGoster({ ad, tam }); denetle(`API anahtarı yenilendi: ${ad}`); toast.success("Anahtar yenilendi", { description: "Eski anahtar geçersiz oldu. Yenisini entegrasyonlara gir." }); }
   };
 
   /* ── Webhook ekleme ── */
@@ -97,17 +98,17 @@ export default function Gelistirici() {
     setWhOlaylar((p) => (p.includes(o) ? p.filter((x) => x !== o) : [...p, o]));
 
   const whEkle = () => {
-    if (!/^https?:\/\/.+/.test(whUrl.trim())) { toast.error("Geçerli bir URL gir (https://...)"); return; }
-    if (!whOlaylar.length) { toast.error("En az bir olay seç"); return; }
+    if (!/^https?:\/\/.+/.test(whUrl.trim())) { toast.error("Adres geçersiz", { description: "https:// ile başlayan tam bir adres gir." }); return; }
+    if (!whOlaylar.length) { toast.error("Olay seçilmedi", { description: "Webhook için en az bir olay seç." }); return; }
     store.webhookEkle(whUrl, whOlaylar); denetle(`Webhook eklendi: ${whUrl}`);
     toast.success("Webhook eklendi");
     setWhModal(false); setWhUrl(""); setWhOlaylar(["job.completed"]);
   };
-  const whTest = (id: string, url: string) => { store.webhookTest(id); denetle(`Webhook test edildi: ${url}`, "bilgi"); toast.success("Test olayı gönderildi (200 OK)"); };
+  const whTest = (id: string, url: string) => { store.webhookTest(id); denetle(`Webhook test edildi: ${url}`, "bilgi"); toast.success("Test olayı gönderildi", { description: `${url} adresinden 200 OK döndü sayıldı.` }); };
   const whSil = async (id: string, url: string) => {
     const ok = await onayIste({ baslik: "Webhook sil", aciklama: `${url} silinecek. Bu adrese artık olay gönderilmez.`, risk: 1, eylemEtiket: "Sil" });
     if (!ok) return;
-    store.webhookSil(id); denetle(`Webhook silindi: ${url}`); toast.success("Webhook silindi");
+    store.webhookSil(id); denetle(`Webhook silindi: ${url}`); toast.success("Webhook silindi", { description: `${url} adresine artık olay gönderilmez.` });
   };
 
   /* ── Rate limit düzenleme ── */
@@ -312,7 +313,7 @@ export default function Gelistirici() {
                 );
               })}
             </div>
-            <Dugme boyut="sm" className="mt-3" onClick={() => { denetle("Rate limit tierleri güncellendi"); toast.success("Rate limitler kaydedildi"); setTierDzn(null); }}>Değişiklikleri kaydet</Dugme>
+            <Dugme boyut="sm" className="mt-3" onClick={() => { denetle("Rate limit tierleri güncellendi"); toast.success("Hız limitleri kaydedildi"); setTierDzn(null); }}>Değişiklikleri kaydet</Dugme>
           </Kart>
           <Kart>
             <h3 className={cn("mb-4 text-sm font-bold", AD.metin)}>Endpoint bazlı çağrı hacmi</h3>

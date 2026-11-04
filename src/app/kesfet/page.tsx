@@ -145,7 +145,7 @@ export default function KesfetPage() {
       sessionStorage.setItem("vayra-gecis-prompt", `${baslik} tarzında, kendi yorumumla`);
       sessionStorage.setItem("vayra-remix-kaynak", baslik);
     } catch { /* yoksay */ }
-    toast.success("Remix için hazır 🎨", { description: baslik });
+    toast.success("Remix hazırlandı", { description: `"${baslik}" istemi görsel stüdyosuna aktarılıyor.` });
     router.push(girisYapildi ? "/panel/gorsel" : "/kayit?geri=/panel/gorsel");
   };
 
@@ -318,7 +318,7 @@ export default function KesfetPage() {
                     <Ikon className="h-3 w-3" /> {g.tur}
                   </span>
                   {benim && (
-                    <span className="absolute left-3 top-11 rounded-full bg-cyan-glow px-2 py-0.5 text-[10px] font-bold text-ink-950 shadow-lg">
+                    <span className="absolute left-3 top-11 rounded-full bg-cyan-glow px-2 py-0.5 text-[10px] font-bold text-ink-950">
                       Senin
                     </span>
                   )}
@@ -333,7 +333,7 @@ export default function KesfetPage() {
                   ) : null}
                   {/* Remixle — kendi versiyonunu üret */}
                   <button onClick={() => remixle(g.baslik, g.tur)}
-                    className="absolute right-3 top-11 z-20 flex items-center gap-1.5 rounded-lg bg-cyan-glow px-2.5 py-1.5 text-xs font-bold text-ink-950 opacity-0 shadow-lg transition-all hover:scale-105 group-hover:opacity-100">
+                    className="absolute right-3 top-11 z-20 flex items-center gap-1.5 rounded-lg bg-cyan-glow px-2.5 py-1.5 text-xs font-bold text-ink-950 opacity-0 transition-all hover:scale-105 group-hover:opacity-100">
                     <Shuffle className="h-3.5 w-3.5" /> Remixle
                   </button>
                   <div className="absolute bottom-3 left-3 right-3">
@@ -353,7 +353,7 @@ export default function KesfetPage() {
                             className={cn("flex items-center gap-1 text-xs transition-colors", begendim ? "text-rose-400" : "text-white/60 hover:text-rose-300")}
                             aria-label="Beğen"
                           >
-                            <Heart className={cn("h-3 w-3 transition-transform", begendim && "scale-110 fill-rose-400")} /> {kisaSayi(g.begeni + (begendim ? 1 : 0))}
+                            <Heart className={cn("h-3 w-3 transition-transform", begendim && "scale-110 fill-rose-400 text-rose-400")} /> {kisaSayi(g.begeni + (begendim ? 1 : 0))}
                           </button>
                         );
                       })()}

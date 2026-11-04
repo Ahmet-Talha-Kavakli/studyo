@@ -65,7 +65,7 @@ export function CvBicimCubugu({
         style={{
           height: 44, background: "#232527",
           border: `1px solid ${CV.barKenar}`, borderRadius: 22,
-          boxShadow: "0 12px 30px rgba(0,0,0,0.5)",
+          boxShadow: "none",
         }}>
 
         {/* sticky: DOLGU rengi */}
@@ -253,7 +253,7 @@ function Kabuk({ genislik, children }: { genislik: number; children: React.React
       style={{
         width: genislik, background: CV.panelAlt,
         border: `1px solid ${CV.barKenar}`,
-        boxShadow: "0 16px 44px rgba(0,0,0,0.6)",
+        boxShadow: "none",
       }}>
       {children}
     </motion.div>
@@ -283,7 +283,7 @@ function RenkMenu({ renkler, secili, onSec }: {
       className="absolute bottom-[52px] left-1/2 grid -translate-x-1/2 grid-cols-5 gap-1.5 rounded-[12px] p-2"
       style={{
         background: CV.panelAlt, border: `1px solid ${CV.barKenar}`,
-        boxShadow: "0 16px 44px rgba(0,0,0,0.6)",
+        boxShadow: "none",
       }}>
       {renkler.map((r) => (
         <button key={r} onClick={() => onSec(r)} aria-label={`Renk ${r}`}

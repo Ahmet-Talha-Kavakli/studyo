@@ -116,7 +116,7 @@ export function CanvasYakindaEkran() {
   const haberVer = () => {
     setHaberVerildi(true);
     if (typeof window !== "undefined") localStorage.setItem(ANAHTAR, "1");
-    toast.success("Kaydedildi", { description: "Canvas yayına girince ilk sen haberdar olacaksın." });
+    toast.success("Haber listesine eklendin", { description: "Canvas yayına girince ilk sen haberdar olacaksın." });
   };
 
   return (

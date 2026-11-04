@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTercih } from "@/store/useTercih";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Keyboard } from "lucide-react";
 import { toast } from "@/lib/toast";
 
 // Tuş → hedef eşlemesi (tek tuş, input dışında).
-const gecisler: { tus: string; ad: string; href: string }[] = [
+export const gecisler: { tus: string; ad: string; href: string }[] = [
   { tus: "o", ad: "Oluştur", href: "/panel/gorsel" },
   { tus: "s", ad: "Sinema", href: "/panel/sinema" },
   { tus: "p", ad: "Pazarlama", href: "/panel/pazarlama" },
@@ -31,11 +32,14 @@ export function Kisayollar() {
       const hedef = e.target as HTMLElement;
       if (hedef && (hedef.tagName === "INPUT" || hedef.tagName === "TEXTAREA" || hedef.isContentEditable)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!useTercih.getState().kisayollar) return;
+      // Kendi tek tuşlu kısayolları olan sayfalar (Canvas editörü) genel geçişleri devre dışı bırakır.
+      if (e.defaultPrevented || document.querySelector("[data-kendi-kisayol]")) return;
 
       if (e.key === "?") { setYardim((v) => !v); return; }
       if (e.key === "Escape") { setYardim(false); return; }
       const g = gecisler.find((x) => x.tus === e.key.toLowerCase());
-      if (g) { e.preventDefault(); router.push(g.href); toast.success(`→ ${g.ad}`, { duration: 900 }); }
+      if (g) { e.preventDefault(); router.push(g.href); toast.success(`${g.ad} açıldı`, { duration: 900 }); }
     };
     document.addEventListener("keydown", tus);
     return () => document.removeEventListener("keydown", tus);

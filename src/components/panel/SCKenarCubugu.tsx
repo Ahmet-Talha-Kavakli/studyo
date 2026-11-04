@@ -1,5 +1,6 @@
 "use client";
 
+import { Yuzen } from "@/components/ui/Yuzen";
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useSupercomputer } from "@/store/useSupercomputer";
 
 /**
- * Supercomputer kenar çubuğu — Higgsfield birebir.
+ * Usta kenar çubuğu — Higgsfield birebir.
  * Yeni sohbet + Ara + Ürünler (Uygulamalar/Web Siteleri/Oyunlar) +
  * Özelleştir (AI Çalışanlar/Yetenekler/Bağlayıcılar/Hafıza) + Sohbetler + Fiyatlandırma.
  */
@@ -39,7 +40,7 @@ export function SCKenarCubugu({
      `sabit` alanını GERÇEKTEN toggle eder ve mesaj duruma göre değişir. */
   const sabitToggle = (id: string, suAnSabit: boolean) => {
     sohbetGuncelle(id, { sabit: !suAnSabit });
-    toast.success(suAnSabit ? "Sabitleme kaldırıldı" : "Sohbet sabitlendi 📌");
+    toast.success(suAnSabit ? "Sohbet sabitlemeden çıkarıldı" : "Sohbet sabitlendi");
     setMenuId(null);
   };
 
@@ -51,7 +52,7 @@ export function SCKenarCubugu({
   const duzenlemeKaydet = () => {
     if (duzenlenenId && duzenAd.trim()) {
       sohbetYenidenAdlandir(duzenlenenId, duzenAd.trim());
-      toast.success("Sohbet yeniden adlandırıldı");
+      toast.success("Sohbet adı güncellendi", { description: `Yeni ad: ${duzenAd.trim()}.` });
     }
     setDuzenlenenId(null);
   };
@@ -67,7 +68,7 @@ export function SCKenarCubugu({
   // m33: "Hafıza" KALDIRILDI — hafıza artık otomatik (kullanıcıya bir ayar sayfası
   // sunmuyoruz); ajan bağlamı arka planda kendiliğinden yönetilir.
   const ozellestir: { ad: string; ikon: typeof Users; href?: string; hedef?: string }[] = [
-    { ad: "AI Çalışanlar", ikon: Users, href: "/panel/calisanlar" },
+    { ad: "AI Çalışanlar", ikon: Users, href: "/panel/supercomputer/ayarlar/calisanlar" },
     { ad: "Yetenekler", ikon: Zap, hedef: "sc-yetenekler" },
     { ad: "Bağlayıcılar", ikon: Plug, hedef: "sc-baglayicilar" },
   ];
@@ -75,7 +76,7 @@ export function SCKenarCubugu({
   const boluneGit = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-    else toast("Bu bölüm bu sayfada değil");
+    else toast.info("Bölüm bu sayfada yok", { description: "Usta ana sayfasını açıp yeniden dene." });
   };
 
   // Referansta sidebar listesi süzülmez — arama ayrı bir modalda yapılır.
@@ -109,7 +110,7 @@ export function SCKenarCubugu({
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-iris-400 to-purple-600">
             <Cpu className="h-4 w-4 text-white" />
           </span>
-          <span className="flex-1 truncate text-sm font-semibold">Supercomputer</span>
+          <span className="flex-1 truncate text-sm font-semibold">Usta</span>
           <button onClick={() => setAcik(false)} title="Daralt"
             className="flex h-7 w-7 items-center justify-center rounded-lg text-white/45 transition-colors hover:bg-white/8 hover:text-white">
             <PanelLeft className="h-4 w-4" />
@@ -207,10 +208,7 @@ export function SCKenarCubugu({
                       aria-label="Sohbet menüsü">
                       <MoreVertical className="h-3.5 w-3.5" />
                     </button>
-                    {menuId === s.id && (
-                      <>
-                        <div className="fixed inset-0 z-40" onClick={() => setMenuId(null)} />
-                        <div className="menu-surface absolute left-full top-0 z-50 ml-1 w-40 rounded-xl p-1.5">
+                    <Yuzen acik={!!(menuId === s.id)} onKapat={() => setMenuId(null)} sol={"tam"} ust={0} bosluk={4} className="menu-surface w-40 rounded-xl p-1.5">
                           <button onClick={() => duzenlemeBaslat(s.id, s.baslik)}
                             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                             <Pencil className="h-4 w-4 text-white/55" /> Yeniden adlandır
@@ -220,13 +218,11 @@ export function SCKenarCubugu({
                             <Pin className={cn("h-4 w-4", s.sabit ? "fill-current text-aksan" : "text-white/55")} /> {s.sabit ? "Sabitlemeyi kaldır" : "Sabitle"}
                           </button>
                           <div className="my-1 h-px bg-white/10" />
-                          <button onClick={() => { onSohbetSil(s.id); setMenuId(null); toast.success("Silindi"); }}
+                          <button onClick={() => { onSohbetSil(s.id); setMenuId(null); toast.success("Sohbet silindi"); }}
                             className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm text-rose-400 transition-colors hover:bg-rose-500/12">
                             <Trash2 className="h-4 w-4" /> Sil
                           </button>
-                        </div>
-                      </>
-                    )}
+                        </Yuzen>
                   </div>
                 ))}
               </div>

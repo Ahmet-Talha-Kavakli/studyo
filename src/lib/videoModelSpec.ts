@@ -167,7 +167,7 @@ const MOD_EF = ["Elements", "Frames"];
 export const VIDEO_MODELLERI: VideoModelSpec[] = [
   /* ═══ Sinema Stüdyo — sayfanın kendi imza modelleri ═══
      Referans: modeller/video/cinema-studio-{2.5,3.0,3.5}
-     3.5 → Tür/Stil/Kamera çark seçicileri, 4sn, ~96→80 kredi
+     3.5 → Tür/Stil/Kamera çark seçicileri, 4sn, yaklaşık 96→80 kredi
      3.0 → Yönetmen Paneli + Tür + Kamera Hareketi + Hız Rampası, 8sn, 492→160
      2.5 → Yönetmen Paneli (karakter yuvaları + hız eğrisi), 12sn, 48, kare kutuları */
   {
