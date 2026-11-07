@@ -1,6 +1,7 @@
 "use client";
 
 import { upscaleAdresi } from "@/lib/upscaleVeri";
+import { gorselDepola } from "@/components/studyo/gorsel/RuhModallari";
 import { KrediYildiz } from "@/components/ui/KrediHap";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -9,7 +10,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Copy, Check, Download, Heart, Video, Wand2, MessageCircle, Info,
-  Palette, Maximize2, Sparkles, Sun, Layers, RotateCw, Send, ArrowRight, TrendingUp, Loader2,
+  Palette, Maximize2, Sparkles, Sun, Layers, RotateCw, Send, ArrowRight,
   ChevronDown, ChevronRight, ChevronLeft, Share2, Globe, Trash2,
   Pencil, FileImage, FileType2, FileArchive, FileVideo, AudioLines,
 } from "lucide-react";
@@ -21,13 +22,16 @@ import { useYorumlar, goreliZaman } from "@/store/useYorumlar";
 import { useReferansKopru } from "@/store/useReferansKopru";
 import { useAyarKopru } from "@/store/useAyarKopru";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
-import { uretimBaslat } from "@/lib/uretimMotoru";
+import { uretimBaslat, uretimHataToast } from "@/lib/uretimMotoru";
 import { cn, gorseliIndir, saltUrl, istemTemizle, gorseliFormatlaIndir } from "@/lib/utils";
 import { kopyala as panoyaKopyala, baglantiyiKopyala } from "@/lib/gercekEylem";
 import { SesOynatici } from "./SesOynatici";
 import { ModelGoruntuleyici } from "./ModelGoruntuleyici";
 import { VideoOynatici } from "./VideoOynatici";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { Star } from "lucide-react";
 
 // Her araç, üretimi gerçek bir yeni işe dönüştürür (ek prompt + kredi + arac etiketi).
 // Higgsfield birebir: her aracın ">" oku GERÇEK bir parametre paneli açar (seçenekler).
@@ -89,43 +93,11 @@ const araclar: Arac[] = [
 const reframeOranlar = ["16:9", "9:16", "1:1", "4:5", "21:9"];
 
 // ── VİDEO araçları — Higgsfield "EDIT VIDEO" birebir (higg-video-detay analizi) ──
+/* Video için yalnız gerçek karşılığı olan araçlar: çerçeveleme (Luma Ray Reframe) ve büyütme ilgili sayfada çalışır.
+   "Videoyu düzenle", "Arka planı kaldır", "Sahne ve ışık" istem sonuna not ekleyip metinden yeni video üretiyordu; kaldırıldı. */
 const videoAraclari: Arac[] = [
-  {
-    ad: "Videoyu düzenle", ikon: Wand2, ekPrompt: "video düzenleme, seçili bölge yeniden çizildi", kredi: 8, arac: "Videoyu düzenle",
-    parametreler: [
-      { etiket: "En-boy oranı", secenekler: ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9"], varsayilan: "9:16" },
-      { etiket: "Çözünürlük", secenekler: ["480p", "720p", "1080p", "4K"], varsayilan: "1080p" },
-      { etiket: "Süre", secenekler: ["Auto", "5sn", "10sn"], varsayilan: "Auto" },
-    ],
-  },
-  {
-    ad: "Yeniden çerçevele", ikon: Layers, ekPrompt: "yeni en-boy oranına outpaint ile genişletme", kredi: 6, arac: "Yeniden çerçevele",
-    parametreler: [
-      { etiket: "En-boy oranı", secenekler: ["16:9", "4:3", "3:4", "1:1", "21:9"], varsayilan: "16:9" },
-      { etiket: "Çözünürlük", secenekler: ["480p", "720p", "1080p", "4K"], varsayilan: "720p" },
-    ],
-  },
-  {
-    ad: "Yükselt", ikon: Maximize2, ekPrompt: "yüksek çözünürlük, keskin detay", kredi: 8, arac: "Yükselt",
-    parametreler: [
-      { etiket: "Model", secenekler: ["ByteDance Upscale", "Topaz Video"], varsayilan: "ByteDance Upscale" },
-      { etiket: "Ölçek", secenekler: ["1080p", "4K"], varsayilan: "4K" },
-      { etiket: "Detay", secenekler: ["İnce", "Belirgin"], varsayilan: "İnce" },
-      { etiket: "Kare enterpolasyonu", secenekler: ["Kapalı", "Açık"], varsayilan: "Kapalı" },
-    ],
-  },
-  {
-    ad: "Arka planı kaldır", ikon: Sparkles, ekPrompt: "özneyi ayır, arka planı şeffaflaştır", kredi: 6, arac: "Arka planı kaldır",
-    parametreler: [],
-  },
-  {
-    ad: "Sahne & ışık değiştir", ikon: Sun, ekPrompt: "sahne ve ışık yeniden düzenlendi", kredi: 6, arac: "Sahne & ışık",
-    parametreler: [
-      { etiket: "Işık", secenekler: ["Mor", "Arka ışık", "Gökkuşağı", "Altın saat", "Paparazzi flaş", "Spot ışık"], varsayilan: "Mor" },
-      { etiket: "Hava", secenekler: ["Duman", "Rüzgarlı", "Fırtına", "Sis", "Kar", "Yağmur", "Güneşli", "Kapalı hava"], varsayilan: "Duman" },
-      { etiket: "Zaman", secenekler: ["Ay ışığı", "Şehir ışıkları", "Mavi saat", "Altın saat", "Öğle", "Sabah erken"], varsayilan: "Ay ışığı" },
-    ],
-  },
+  { ad: "Yeniden çerçevele", ikon: Layers, ekPrompt: "", kredi: 0, arac: "Yeniden çerçevele", parametreler: [] },
+  { ad: "Yükselt", ikon: Maximize2, ekPrompt: "", kredi: 0, arac: "Yükselt", parametreler: [] },
 ];
 
 function turEtiket(t: string) {
@@ -135,7 +107,7 @@ function turEtiket(t: string) {
 /**
  * m8: Toplulukta yayınla modalı — Higgsfield "Publish to Community" akışı.
  * Başlık, açıklama, etiketler, yeniden-oluşturma izni; onaylayınca üretim
- * gerçekten `yayinda:true` + etiketlerle güncellenir ve Keşfet'te görünür.
+ * `yayinda:true` + etiketlerle güncellenir; Keşfet bunu yalnız bu hesabın tarayıcısında gösterir (sunucu tarafı akış yok).
  */
 function YayinModal({ u, onKapat, onYayinla }: {
   u: Uretim;
@@ -173,7 +145,7 @@ function YayinModal({ u, onKapat, onYayinla }: {
             <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-aksan/15 text-aksan"><Globe className="h-5 w-5" /></span>
             <div>
               <p className="text-[16px] font-bold text-white">Toplulukta yayınla</p>
-              <p className="text-[12px] text-white/45">Keşfet akışında herkese görünür olsun</p>
+              <p className="text-[12px] text-white/45">Keşfet'te senin hesabında görünür</p>
             </div>
           </div>
           <button onClick={onKapat} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/8 text-white/60 hover:bg-white/12 hover:text-white"><X className="h-4 w-4" /></button>
@@ -339,7 +311,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       return;
     }
     const kaynak = u.gorselUrl && /^(data:|https?:|\/)/.test(u.gorselUrl) ? u.gorselUrl : saltUrl(u.gorselUrl);
-    if (!kaynak) { gorseliIndir(u.prompt + u.model, dosyaAdi()); toast.success("PNG indirildi", { description: `${dosyaAdi()}.png` }); return; }
+    if (!kaynak) return void toast.error("İndirilemedi", { description: "Bu üretimin indirilebilir bir dosyası yok." });
     void gorseliFormatlaIndir(kaynak, dosyaAdi(), format).then(
       () => toast.success(`${format.toUpperCase()} indirildi`, { description: `${dosyaAdi()}.${format}` }),
       () => mesaj.indirilemedi(`Görsel ${format.toUpperCase()} biçimine çevrilemedi.`),
@@ -364,36 +336,6 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
   const [hareketAcik, setHareketAcik] = useState(false);
   // m8: topluluk yayın modalı (başlık/açıklama/etiket/izinler → Keşfet'e ekle)
   const [yayinModal, setYayinModal] = useState(false);
-  const [viralSkor, setViralSkor] = useState<number | null>(null);
-  const [viralDetay, setViralDetay] = useState<{ hook: number; retention: number; sustain: number; metrikler: { ad: string; deger: number }[] } | null>(null);
-  const [viralIsleniyor, setViralIsleniyor] = useState(false);
-
-  // Virallik Tahmini — hook gücü, retention riski, sustain + alt-metrik dağılımı (Higgsfield "Hook Predictor").
-  const viralTahmin = () => {
-    setViralIsleniyor(true);
-    setViralSkor(null);
-    setViralDetay(null);
-    setTimeout(() => {
-      let h = 0; const t = u.prompt + u.model;
-      for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) >>> 0;
-      const skor = 52 + (h % 46); // 52-97
-      setViralSkor(skor);
-      // Deterministik alt metrikler — skordan türetilir, gerçekçi dağılım.
-      setViralDetay({
-        hook: Math.min(99, 45 + (h % 55)),
-        retention: Math.min(99, 40 + ((h >> 3) % 58)),
-        sustain: Math.min(99, 60 + ((h >> 5) % 40)),
-        metrikler: [
-          { ad: "Görsel etki", deger: 40 + ((h >> 2) % 55) },
-          { ad: "Hafıza izi", deger: 40 + ((h >> 4) % 55) },
-          { ad: "Ses/ritim", deger: 40 + ((h >> 6) % 55) },
-          { ad: "Duygu bağı", deger: 40 + ((h >> 8) % 55) },
-        ],
-      });
-      setViralIsleniyor(false);
-    }, 1400);
-  };
-
   // Recast Motion Control — statik görseli canlandırırken hareket stili seç.
   const hareketler = [
     { ad: "Yavaş yakınlaş", prompt: "yavaş zoom-in, hafif kamera yaklaşması" },
@@ -404,9 +346,12 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
     { ad: "Sinematik kaydırma", prompt: "yatay sinematik dolly kaydırma" },
   ];
   const hareketleVideoya = (h: { ad: string; prompt: string }) => {
+    // Görsel başlangıç karesi olarak gider; dosyası yoksa metinden video diye kredi harcanmaz.
+    const kare = saltUrl(u.gorselUrl);
+    if (!kare) return void toast.error("Canlandırma başlatılamadı", { description: "Bu üretimin görsel dosyası yok. Kredi düşmedi." });
     const s = uretimBaslat({
       baslik: `${u.baslik} · ${h.ad}`.slice(0, 42), tur: "video", model: "Seedance 2.0",
-      prompt: `${u.prompt} · canlandırma: ${h.prompt}`, kredi: 42, arac: "Videoya Çevir", meta: { oran: u.meta?.oran },
+      prompt: `${u.prompt} · canlandırma: ${h.prompt}`, kredi: 42, arac: "Videoya Çevir", meta: { oran: u.meta?.oran, gorselUrl: kare, kaynakId: u.id },
     });
     if (!s.ok) return toast.error("Canlandırma başlatılamadı", { description: s.hata ?? "Yeniden dene." });
     toast.success(`${h.ad} ile canlandırılıyor`, { description: `Seedance 2.0 · 42 kredi. Bitince bildirim gelir.` });
@@ -416,33 +361,37 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
   const referansGonder = useReferansKopru((s) => s.gonder);
   const ayarGonder = useAyarKopru((s) => s.gonder);
 
-  // Araçla düzenle — gerçek yeni üretim başlat. SEÇİLEN PARAMETRELER prompt'a geçer
-  // (yoksa panel dekoratif olurdu: kullanıcı "8× ölçek" seçer, hiçbir etkisi olmaz).
+  // Araçla düzenle: kaynak görsel sağlayıcıya gider (düzenleme modeli), seçilen ayarlar talimata yazılır.
+  // Eskiden istemin sonuna not ekleyip aynı modelle metinden yeni görsel üretiyordu: düzenleme yapılmıyordu.
   const aracUygula = (a: Arac) => {
+    const kaynak = saltUrl(u.gorselUrl);
+    if (u.tur !== "gorsel" || !kaynak) return void toast.error(`${a.ad} başlatılamadı`, { description: "Bu üretimin görsel dosyası yok. Kredi düşmedi." });
     const secimler = a.parametreler
-      .map((p) => `${p.etiket.toLowerCase()}: ${aracAyar[a.ad]?.[p.etiket] ?? p.varsayilan}`)
+      .map((p) => `${p.etiket.toLocaleLowerCase("tr-TR")}: ${aracAyar[a.ad]?.[p.etiket] ?? p.varsayilan}`)
       .join(", ");
-    const s = uretimBaslat({
-      baslik: `${u.baslik} · ${a.ad}`, tur: u.tur, model: u.model,
-      prompt: `${u.prompt} · ${a.ekPrompt} (${secimler})`, kredi: a.kredi, arac: a.arac,
-      meta: u.meta,
-    });
-    if (!s.ok) return toast.error(`${a.ad} başlatılamadı`, { description: s.hata ?? "Yeniden dene." });
-    toast.success(`${a.ad} uygulanıyor`, { description: `${secimler} · ${a.kredi} kredi. Bitince bildirim gelir.` });
+    const not = `${a.ekPrompt} uygula (${secimler}). Görseldeki özneyi, kompozisyonu ve içeriği koru; yalnız bu değişikliği yap.`;
+    void (async () => {
+      let gorselUrl = kaynak;
+      try { if (kaynak.startsWith("data:")) gorselUrl = await gorselDepola(kaynak); }
+      catch { return void toast.error(`${a.ad} başlatılamadı`, { description: "Görsel yüklenemedi. Kredi düşmedi, yeniden dene." }); }
+      const s = uretimBaslat({
+        baslik: `${u.baslik} · ${a.ad}`, tur: "gorsel", model: a.arac, prompt: not, kredi: a.kredi, arac: a.arac,
+        meta: { islem: "duzenle", oran: u.meta?.oran, gorselUrl, hamIstem: not, kaynakId: u.id },
+      });
+      if (!s.ok) return void uretimHataToast(s, `${a.ad} başlatılamadı`);
+      toast.success(`${a.ad} başladı`, { description: "Bitince bildirim gelir." });
+    })();
     onClose();
   };
 
-  // Reframe — görseli yeni en-boy oranına outpaint ile genişlet.
-  const reframeUygula = (oran: string) => {
-    const s = uretimBaslat({
-      baslik: `${u.baslik} · ${oran}`, tur: u.tur, model: u.model,
-      prompt: `${u.prompt} · ${oran} orana genişletildi (outpaint/reframe), kenarlar doğal doldurma`,
-      kredi: 4, arac: "Reframe", meta: { oran },
-    });
-    if (!s.ok) return toast.error("Genişletme başlatılamadı", { description: s.hata ?? "Yeniden dene." });
-    toast.success(`${oran} oranına genişletiliyor`, { description: "Kenarlar dolduruluyor · 4 kredi. Bitince bildirim gelir." });
+  // Kaynağı kendi sayfasında açan araçlar (büyütme, çerçeveleme, bölgesel düzenleme): kitaplıktaki dosyayla gelir.
+  const sayfadaAc = (yol: string) => {
+    const url = u.tur === "video" ? u.videoUrl : saltUrl(u.gorselUrl);
+    if (!url) return void toast.error("Dosya yok", { description: "Bu üretimin açılabilir bir dosyası bulunmuyor." });
     onClose();
+    router.push(`${yol}?kaynak=${encodeURIComponent(url)}&uretim=${encodeURIComponent(u.id)}`);
   };
+  const reframeUygula = (oran: string) => { void oran; sayfadaAc("/panel/reframe"); };
 
   /** Salt panoya kopyalama — ikincil eylem (küçük ikon buton). */
   const kopyala = () => {
@@ -505,11 +454,9 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
       toast.success("Ses indiriliyor", { description: a.download });
       return;
     }
-    const gercekGorsel = u.gercek && u.gorselUrl && (u.gorselUrl.startsWith("data:") || u.gorselUrl.startsWith("http"))
-      ? u.gorselUrl
-      : undefined;
-    gorseliIndir(u.prompt + u.model, u.baslik, gercekGorsel);
-    toast.success("İndirildi", { description: u.baslik });
+    const gercekGorsel = (() => { const g = saltUrl(u.gorselUrl) ?? (u.gorselUrl && /^(data:|https?:)/.test(u.gorselUrl) ? u.gorselUrl : undefined); return g && /^(data:|https?:|\/)/.test(g) ? g : undefined; })();
+    if (gorseliIndir(u.prompt + u.model, u.baslik, gercekGorsel)) toast.success("İndiriliyor", { description: u.baslik });
+    else toast.error("İndirilemedi", { description: "Bu üretimin indirilebilir bir dosyası yok." });
   };
 
   const videoyaCevir = () => {
@@ -732,32 +679,8 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                 <Pencil className="h-3.5 w-3.5 shrink-0 text-metin-3 transition-colors group-hover/ad:text-aksan" />
               </button>
             )}
-            {/* İNDİR — format alt-menüsüyle (görsel sayfasındaki desen). */}
-            <div className="relative shrink-0"
-              onMouseEnter={() => setIndirAcik(true)} onMouseLeave={() => setIndirAcik(false)}>
-              <Tooltip label="İndir" side="left">
-                <button onClick={() => formatIndir(formatListesi[0].ad)} aria-label="İndir"
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/8 hover:text-white">
-                  <Download className="h-4 w-4" />
-                </button>
-              </Tooltip>
-              <AnimatePresence>
-                <Yuzen acik={!!(indirAcik)} onKapat={() => setIndirAcik(false)} sag={0} ust={"tam"} bosluk={4}><motion.div initial={{ opacity: 0, scale: 0.97, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
-                    className="menu-surface w-56 rounded-2xl p-1.5">
-                    {formatListesi.map((f, i) => (
-                      <button key={f.ad} onClick={() => { formatIndir(f.ad); setIndirAcik(false); }}
-                        className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-left transition-colors hover:bg-white/8">
-                        <f.ikon className="h-[18px] w-[18px] shrink-0 text-white/70" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-[15px] font-medium text-white">{f.ad.toUpperCase()}</span>
-                          <span className="block text-[11px] text-white/40">{f.not}</span>
-                        </span>
-                        {i === 0 && <Check className="h-3.5 w-3.5 shrink-0 text-aksan" />}
-                      </button>
-                    ))}
-                  </motion.div></Yuzen>
-              </AnimatePresence>
-            </div>
+            {/* İNDİR — ortak indirme menüsü (biçim, önce ve sonra şablonu, filigran). */}
+            <IndirDugmesi u={u} side="left" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/8 hover:text-white" />
             <button onClick={(e) => { e.stopPropagation(); onClose(); }} className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full text-white/50 transition-colors hover:bg-white/8 hover:text-white md:flex" aria-label="Kapat"><X className="h-5 w-5" /></button>
           </div>
 
@@ -795,7 +718,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                   <div className="mb-2 flex items-center justify-between">
                     {/* "İstem" + Wand2 — /panel/gorsel ile aynı etiket ve ikon
                         (orada "Prompt"/Sparkles değil, "İstem"/Wand2 kullanılıyor). */}
-                    <span className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-metin-3">
+                    <span className="flex items-center gap-1.5 text-[12.5px] font-medium text-metin-2">
                       <Wand2 className="h-3.5 w-3.5" /> İstem
                     </span>
                     {/* ANA EYLEM: "Bu ayarlarla üret" — üretimin model/oran/
@@ -828,7 +751,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                 {/* DETAILS — accordion, satırlar panel-ic kutuda */}
                 <div>
                   {/* Başlık /panel/gorsel ile aynı: Info ikonu + sağa yaslı ok. */}
-                  <button onClick={() => setDetayAcik((v) => !v)} className="mb-2 flex w-full items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-metin-3">
+                  <button onClick={() => setDetayAcik((v) => !v)} className="mb-2 flex w-full items-center gap-1.5 text-[12.5px] font-medium text-metin-2">
                     <Info className="h-3.5 w-3.5" /> Detaylar
                     <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", detayAcik && "rotate-180")} />
                   </button>
@@ -863,17 +786,18 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
               <div className="space-y-5">
                 {/* DÜZENLE — Higgsfield birebir liste. Video için "EDIT VIDEO" araçları (V5b) */}
                 <div>
-                  <p className="mb-1 flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-white/40">
+                  <p className="mb-1 flex items-center gap-1.5 px-1 text-[12.5px] font-medium text-metin-2">
                     <Wand2 className="h-3.5 w-3.5" /> {u.tur === "video" ? "Videoyu düzenle" : "Görseli düzenle"}
                   </p>
-                  {(u.tur === "video" ? videoAraclari : araclar
-                    .filter((a) => u.tur === "gorsel" || a.ad === "Yükselt (4K)" || a.ad === "İyileştir"))
+                  {(u.tur === "video" ? videoAraclari : u.tur === "gorsel" ? araclar : [])
                     .map((a) => {
                       const acikMi = acikArac === a.ad;
                       return (
                         <div key={a.ad}>
                           {/* Higgsfield birebir: ">" GERÇEK parametre panelini açar (eskiden yalan söylüyordu) */}
                           <button onClick={() => {
+                            if (a.arac === "Yeniden çerçevele") return sayfadaAc("/panel/reframe");
+                            if (a.arac === "Inpaint") return sayfadaAc("/panel/inpaint");
                             if (a.arac === "Yükselt") {
                               const url = u.tur === "video" ? u.videoUrl : u.gorselUrl;
                               if (url && /^(\/|https:\/\/|data:image\/)/.test(url)) { onClose(); router.push(upscaleAdresi(url, u.id)); }
@@ -886,7 +810,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                               acikMi && "bg-white/[0.06]")}>
                             <a.ikon className={cn("h-4.5 w-4.5 shrink-0", acikMi ? "text-aksan" : "text-white/70")} />
                             <span className="flex-1 text-[15px] text-white/90">{a.ad}</span>
-                            {a.rozet && <span className="shrink-0 rounded-md bg-aksan px-1.5 py-0.5 text-[10px] font-bold uppercase text-ink-950">{a.rozet}</span>}
+                            {a.rozet && <span className="shrink-0 rounded-md bg-aksan px-1.5 py-0.5 text-[10.5px] font-semibold text-ink-950">{a.rozet}</span>}
                             <ChevronRight className={cn("h-4 w-4 shrink-0 text-white/30 transition-transform", acikMi && "rotate-90")} />
                           </button>
 
@@ -958,7 +882,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                 {/* Stüdyolar arası geliştir — aynı liste dili */}
                 {gecisHedefleri[u.tur] && (
                   <div>
-                    <p className="mb-1 flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-white/40">
+                    <p className="mb-1 flex items-center gap-1.5 px-1 text-[12.5px] font-medium text-metin-2">
                       <ArrowRight className="h-3.5 w-3.5" /> Başka stüdyoda geliştir
                     </p>
                     {gecisHedefleri[u.tur].map((h) => (
@@ -971,43 +895,6 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
                     ))}
                   </div>
                 )}
-
-                {/* Virallik Tahmini — en altta, sade satır; ölçünce açılır */}
-                <div>
-                  <p className="mb-1 flex items-center gap-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-white/40">
-                    <TrendingUp className="h-3.5 w-3.5" /> Analiz
-                  </p>
-                  <button onClick={viralTahmin} disabled={viralIsleniyor}
-                    className="flex w-full items-center gap-3 rounded-xl px-2 py-2.5 text-left transition-colors hover:bg-white/[0.06] disabled:opacity-60">
-                    {viralIsleniyor ? <Loader2 className="h-4.5 w-4.5 shrink-0 animate-spin text-white/70" /> : <TrendingUp className="h-4.5 w-4.5 shrink-0 text-white/70" />}
-                    <span className="flex-1 text-[15px] text-white/90">{viralIsleniyor ? "Analiz ediliyor…" : "Viral potansiyeli ölç"}</span>
-                    <span className="shrink-0 rounded-md bg-emerald-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-400">Ücretsiz</span>
-                  </button>
-
-                  {viralSkor !== null && (
-                    <div className="mt-2 rounded-xl bg-white/[0.04] p-3">
-                      <div className="flex items-end justify-between">
-                        <span className="text-3xl font-bold">{viralSkor}<span className="text-sm text-white/40">/100</span></span>
-                        <span className={cn("text-xs font-semibold", viralSkor >= 80 ? "text-emerald-400" : viralSkor >= 65 ? "text-amber-glow" : "text-white/50")}>
-                          {viralSkor >= 80 ? "Yüksek potansiyel 🔥" : viralSkor >= 65 ? "İyi · geliştirilebilir" : "Orta · kancayı güçlendir"}
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                        <div className={cn("h-full rounded-full", viralSkor >= 80 ? "bg-emerald-400" : viralSkor >= 65 ? "bg-amber-glow" : "bg-aksan")} style={{ width: `${viralSkor}%` }} />
-                      </div>
-                      {viralDetay && (
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          {[["Kanca", viralDetay.hook], ["Tutundurma", viralDetay.retention], ["Süreklilik", viralDetay.sustain]].map(([ad, d]) => (
-                            <div key={ad as string} className="rounded-lg bg-white/[0.04] p-2 text-center">
-                              <div className={cn("text-lg font-bold", (d as number) >= 70 ? "text-emerald-400" : (d as number) >= 50 ? "text-amber-glow" : "text-rose-300")}>%{d as number}</div>
-                              <div className="text-[10px] text-white/45">{ad as string}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               </div>
             )}
 
@@ -1160,18 +1047,21 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
 
             {/* İndir (tam genişlik) + ikon satırı (Favori/Paylaş/Yayınla/Sil eşit dağılım) — Higgsfield alt aksiyonlar */}
             <div className="flex flex-col gap-2">
-              <button onClick={indir}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/15 py-2.5 text-sm transition-colors hover:bg-white/8">
+              <div className="[&>span]:flex [&>span]:w-full [&>span>span]:flex [&>span>span]:w-full">
+              <IndirDugmesi u={u} side="top" yerlesim="ust-sol" className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-white/15 py-2.5 text-sm transition-colors hover:bg-white/8">
                 <Download className="h-4 w-4" /> İndir
-              </button>
+              </IndirDugmesi>
+              </div>
               {/* m11/m17: tooltip'ler artık native title yerine Tooltip (side="top" =
                   ikonun üstünde AYRI balon, portal ile — ikonu örtmez, okunur). */}
               <div className="flex items-center gap-2 [&>span]:flex-1">
-                <Tooltip label={u.favori ? "Favoriden çıkar" : "Favori"} side="top"><button onClick={() => { favoriToggle(u.id); toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi", { description: u.baslik }); }}
-                  className={cn("flex h-10 w-full items-center justify-center rounded-xl border border-white/15 transition-colors hover:bg-white/8", u.favori && "border-rose-400/40 text-rose-400")}
-                  aria-label="Favori">
-                  <Heart className={cn("h-4 w-4", u.favori && "fill-current")} />
+                <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><button onClick={() => { favoriToggle(u.id); toast(u.favori ? "Favorilerden çıkarıldı" : "Favorilere eklendi", { description: u.baslik }); }}
+                  className={cn("flex h-10 w-full items-center justify-center rounded-xl border border-white/15 transition-colors hover:bg-white/8", u.favori && "border-aksan/40 text-aksan")}
+                  aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"}>
+                  <Star className={cn("h-4 w-4", u.favori && "fill-current")} />
                 </button></Tooltip>
+                <Tooltip label="Klasöre taşı" side="top" className="flex flex-1 [&>div]:w-full"><KlasoreTasiDugmesi uretimIdler={[u.id]} etiketSinif="sr-only" yerlesim="ust-orta"
+                  className="flex h-10 w-full items-center justify-center rounded-xl border border-white/15 transition-colors hover:bg-white/8" /></Tooltip>
                 <Tooltip label="Paylaş" side="top"><button onClick={() => void baglantiyiKopyala(`/panel/kitaplik?u=${u.id}`, "Paylaşım bağlantısı kopyalandı")}
                   className="flex h-10 w-full items-center justify-center rounded-xl border border-white/15 transition-colors hover:bg-white/8" aria-label="Paylaş">
                   <Share2 className="h-4 w-4" />
@@ -1210,7 +1100,7 @@ export function UretimDetay({ u, onClose, onOnceki, onSonraki, onReferans, onTop
             onYayinla={(veri) => {
               guncelle(u.id, { yayinda: true, baslik: veri.baslik, etiketler: veri.etiketler });
               setYayinModal(false);
-              toast.success("Keşfet'te yayınlandı", { description: `"${veri.baslik}" artık toplulukta görünüyor.` });
+              toast.success("Yayında olarak işaretlendi", { description: `"${veri.baslik}". Keşfet'te senin hesabında görünür; başka kullanıcılarla henüz paylaşılmaz.` });
             }}
           />
         )}

@@ -91,6 +91,11 @@ const KURALLAR: Kural[] = [
   },
 ];
 
+/** Kural özeti (yönetim paneli): kategori ve kalıp sayısı; kalıpların kendisi dönmez. */
+export function kuralOzeti(): { kategori: IhlalKategori; kalip: number; mesaj: string }[] {
+  return KURALLAR.map((k) => ({ kategori: k.kategori, kalip: k.kaliplar.length, mesaj: k.mesaj }));
+}
+
 /**
  * İstemi denetler. İzin verilirse `{ izin: true }`, aksi halde
  * ihlal kategorisi + kullanıcıya gösterilecek mesajla döner.
@@ -100,6 +105,10 @@ export function icerikDenetle(istem: string): DenetimSonuc {
   const metin = (istem ?? "").toLocaleLowerCase("tr");
   for (const kural of KURALLAR) {
     if (kural.kaliplar.some((k) => k.test(metin))) {
+      // Sunucuda engellenen istem yönetim paneline (Moderasyon) kaydedilir; kayıt işlevi lib/admin/moderasyonKaydi ile kurulur.
+      if (typeof window === "undefined") {
+        try { (globalThis as unknown as { __vayraModerasyonKaydi?: (k: IhlalKategori, istem: string) => void }).__vayraModerasyonKaydi?.(kural.kategori, istem); } catch { /* kayıt akışı bozmaz */ }
+      }
       return {
         izin: false,
         kategori: kural.kategori,

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Uygulamalar (yakında) — ana sayfanın dilinde: akan gerçek üretim duvarı, dönen kelimeli dev başlık,
+ * Uygulamalar (geliştiriliyor) — ana sayfanın dilinde: akan gerçek üretim duvarı, dönen kelimeli dev başlık,
  * kenarında ışık dönen haber kutusu; altta ana sayfadaki "Ne yapmak istiyorsun?" kalıbında platform
  * listesi + sabit cihaz sahnesi, çıkış yolu, bento özellikler, bugün kurma, SSS ve görselli kapanış.
  */
@@ -14,6 +14,7 @@ import {
   MousePointerClick, Plus, Share, Square, SquarePlus, Upload, X, Zap,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
+import { haberListesineEkle } from "@/lib/haberListesi";
 import { useKurulum } from "@/lib/scKurulum";
 import { cn } from "@/lib/utils";
 import { AndroidIcon, AppleIcon, GooglePlayIcon, WindowsIcon } from "./Logolar";
@@ -28,25 +29,25 @@ const PLATFORMLAR: {
   aciklama: string; gereksinim: [string, string][]; ozellikler: [React.ElementType, string][];
 }[] = [
   {
-    id: "mac", ad: "macOS", kelime: "Mac'te", cihaz: "Mac için", logo: AppleIcon, masaustu: true, asama: "Kapalı beta", durum: "İlk davetler listedekilere",
+    id: "mac", ad: "macOS", kelime: "Mac için", cihaz: "Mac için", logo: AppleIcon, masaustu: true, asama: "Kapalı beta", durum: "İlk davetler listedekilere",
     aciklama: "Menü çubuğundan açılan istem kutusu, Finder'dan sürükle bırak ve Apple silicon'da akıcı önizleme.",
     gereksinim: [["Sistem", "macOS 13 ve sonrası"], ["İşlemci", "Apple silicon ve Intel"], ["Boyut", "Yaklaşık 400 MB"]],
     ozellikler: [[Command, "Kısayolla her yerden üret"], [MousePointerClick, "Finder'dan sürükle bırak"], [Cpu, "Yerel önizleme"]],
   },
   {
-    id: "windows", ad: "Windows", kelime: "Windows'ta", cihaz: "Windows bilgisayarlar için", logo: WindowsIcon, masaustu: true, asama: "Geliştiriliyor", durum: "macOS betasından sonra",
+    id: "windows", ad: "Windows", kelime: "Windows için", cihaz: "Windows bilgisayarlar için", logo: WindowsIcon, masaustu: true, asama: "Geliştiriliyor", durum: "macOS betasından sonra",
     aciklama: "Hangi uygulamadaysan açılan genel kısayol, izlenen klasörler ve uzun işler bitince sistem bildirimi.",
     gereksinim: [["Sistem", "Windows 10 ve 11, 64 bit"], ["İşlemci", "x64 ve ARM64"], ["Boyut", "Yaklaşık 450 MB"]],
     ozellikler: [[Keyboard, "Genel kısayol"], [FolderSync, "Klasör izleme"], [BellRing, "Sistem bildirimi"]],
   },
   {
-    id: "ios", ad: "iOS", kelime: "iPhone'da", cihaz: "iPhone ve iPad için", logo: AppleIcon, masaustu: false, asama: "Tasarlanıyor", durum: "Masaüstünden sonra",
+    id: "ios", ad: "iOS", kelime: "iPhone için", cihaz: "iPhone ve iPad için", logo: AppleIcon, masaustu: false, asama: "Tasarlanıyor", durum: "Masaüstünden sonra",
     aciklama: "Kameradan başla, Fotoğraflar'dan paylaş menüsüyle gönder, son üretimlerini ana ekran araç takımında gör.",
     gereksinim: [["Sistem", "iOS 17 ve sonrası"], ["Cihaz", "iPhone ve iPad"], ["Mağaza", "App Store"]],
     ozellikler: [[Camera, "Kameradan referans"], [Share, "Paylaş menüsü"], [LayoutGrid, "Ana ekran araç takımı"]],
   },
   {
-    id: "android", ad: "Android", kelime: "Android'de", cihaz: "Telefon ve tabletler için", logo: AndroidIcon, masaustu: false, asama: "Tasarlanıyor", durum: "iOS ile birlikte",
+    id: "android", ad: "Android", kelime: "Android için", cihaz: "Telefon ve tabletler için", logo: AndroidIcon, masaustu: false, asama: "Tasarlanıyor", durum: "iOS ile birlikte",
     aciklama: "Konuşarak istem yaz, galeriden doğrudan gönder, üretim bitince anlık bildirim al.",
     gereksinim: [["Sistem", "Android 10 ve sonrası"], ["Cihaz", "Telefon ve tablet"], ["Mağaza", "Google Play"]],
     ozellikler: [[Mic, "Sesle istem"], [Share, "Paylaşım hedefi"], [BellRing, "Anlık bildirim"]],
@@ -86,9 +87,12 @@ function useHaberListesi() {
     if (!secili.length) return void toast.error("En az bir platform seç", { description: "Hangi uygulama çıkınca haber vereceğimizi bilelim." });
     if (!gecerli) return void toast.error("E-posta adresini kontrol et", { description: "Örnek: ad@alanadi.com" });
     const k: Kayit = { eposta: eposta.trim().toLowerCase(), platformlar: secili, tarih: Date.now() };
-    try { localStorage.setItem(LISTE_ANAHTAR, JSON.stringify(k)); } catch { /* depolama yok */ }
-    setKayit(k);
-    toast.success("Haber listesindesin", { description: `${secili.map((p) => pBul(p).ad).join(", ")} çıkınca ${k.eposta} adresine yazacağız.` });
+    void haberListesineEkle({ ozellik: `Uygulama: ${secili.map((p) => pBul(p).ad).join(", ")}`, email: k.eposta }).then((r) => {
+      if (!r.ok) return void toast.error("Kaydedilemedi", { description: r.hata });
+      try { localStorage.setItem(LISTE_ANAHTAR, JSON.stringify(k)); } catch { /* depolama yok */ }
+      setKayit(k);
+      toast.success("Haber listesindesin", { description: `${secili.map((p) => pBul(p).ad).join(", ")} çıkınca ${k.eposta} adresine yazacağız.` });
+    });
   };
   const ayril = () => { try { localStorage.removeItem(LISTE_ANAHTAR); } catch { /* depolama yok */ } setKayit(null); toast("Haber listesinden çıktın", { description: "Fikrini değiştirirsen yeniden ekleyebilirsin." }); };
   const duzenle = () => { if (!kayit) return; setSecili(kayit.platformlar); setEposta(kayit.eposta); setKayit(null); };
@@ -323,7 +327,7 @@ export function IndirSayfa() {
             <a href="#platformlar" className="kredi-isilti group inline-flex rounded-full p-px transition-transform duration-300 hover:scale-[1.02] active:scale-[0.98]">
               <span className="flex h-11 items-center gap-2.5 rounded-full bg-[#141416] pl-1.5 pr-1.5">
                 <span className="flex h-8 items-center gap-2 rounded-full bg-[#55d6fd]/[0.14] px-3 text-[13px] font-semibold text-[#8be6ff]">
-                  <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#55d6fd] opacity-75" /><span className="relative h-1.5 w-1.5 rounded-full bg-[#55d6fd]" /></span>Yakında
+                  <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#55d6fd] opacity-75" /><span className="relative h-1.5 w-1.5 rounded-full bg-[#55d6fd]" /></span>Geliştiriliyor
                 </span>
                 <span className="flex items-center gap-1.5 max-[420px]:hidden">{PLATFORMLAR.map((p) => <p.logo key={p.id} className="h-4 w-4 text-white" />)}</span>
                 <span className="whitespace-nowrap text-[15px] font-medium tracking-[-0.01em] text-white">Vayra uygulamaları</span>
@@ -332,7 +336,7 @@ export function IndirSayfa() {
             </a>
           </motion.div>
           <h1 className="mt-7 text-[40px] font-semibold leading-[1.04] tracking-[-0.045em] text-white min-[400px]:text-[44px] sm:text-[80px] sm:leading-[1.02]">
-            <motion.span className="inline-block" initial={{ opacity: 0, y: 26, filter: "blur(12px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.9, delay: 0.1, ease }}>Vayra yakında</motion.span>
+            <motion.span className="inline-block" initial={{ opacity: 0, y: 26, filter: "blur(12px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.9, delay: 0.1, ease }}>Vayra uygulaması</motion.span>
             <br />
             <motion.span className="inline-block" initial={{ opacity: 0, y: 26, filter: "blur(12px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.9, delay: 0.28, ease }}>
               <DonenKelime metin={PLATFORMLAR[kelimeI].kelime} />

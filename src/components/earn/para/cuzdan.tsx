@@ -146,7 +146,8 @@ export function KimlikFormu() {
     if (!r.ok) return setHata(r.hata ?? "Doğrulama yapılamadı.");
     if (r.gercek && !r.dogru) return setHata("Bilgiler Nüfus ve Vatandaşlık İşleri kayıtlarıyla eşleşmedi. Ad, soyad ve doğum yılını kimliğindeki gibi yaz.");
     kaydet({ ad: ad.trim(), soyad: soyad.trim(), tckn, dogumYili: yilN, gercek: !!r.gercek, tarih: Date.now() });
-    toast.success("Kimliğin doğrulandı", { description: r.gercek ? "Bilgilerin nüfus kayıtlarıyla eşleşti." : "Biçim doğru; ilk çekimde ekibimiz ayrıca kontrol edecek." });
+    if (r.gercek) toast.success("Kimliğin doğrulandı", { description: "Bilgilerin nüfus kayıtlarıyla eşleşti." });
+    else toast("Bilgilerin kaydedildi", { description: "Nüfus kaydı sorgusu bu sunucuda bağlı değil; yalnız biçim kontrol edildi. Kimliğin henüz doğrulanmadı." });
   };
 
   const satir = (etiket: string, ic: React.ReactNode, ok?: boolean) => (
@@ -205,20 +206,23 @@ export function CekimFormu({ cekilebilir, ucret, hakMetni, kimlik, onerilen, yon
       toast.error("Çekim talebi oluşturulamadı", { description: r.hata ?? "Ödeme sağlayıcısı yanıt vermedi. Biraz sonra yeniden dene." });
       return;
     }
-    const id = cekimEkle({ tutar: tutarN, ucret, yontemId: secili.id, yontemAd: secili.ad, referans: r.referans ?? referans, gercek: !!r.gercek });
-    if (r.gercek) {
-      // Papara: sonuç anında belli
-      cekimGuncelle(id, { durum: "odendi" });
-      useEarn.getState().bildirildi(`${id}:odendi`); // gözcü aynı olayı tekrar bildirmesin
-      bildir({ kategori: "hesap", tur: "basari", baslik: `${tl(tutarN, true)} Papara hesabına gönderildi`, mesaj: `${secili.ad} · Referans ${r.referans ?? referans}`, link: "/earn/cuzdan" });
+    // Ödeme sağlayıcısı gerçekten ödemediyse çekim kaydı açılmaz: sahte "gönderildi" yok.
+    if (!r.gercek) {
+      setBekle(false);
+      toast.error("Çekim yapılamadı", { description: "Ödeme sağlayıcısı bu işlemi onaylamadı. Bakiyen olduğu gibi duruyor." });
+      return;
     }
+    const id = cekimEkle({ tutar: tutarN, ucret, yontemId: secili.id, yontemAd: secili.ad, referans: r.referans ?? referans, gercek: true });
+    cekimGuncelle(id, { durum: "odendi" });
+    useEarn.getState().bildirildi(`${id}:odendi`); // gözcü aynı olayı tekrar bildirmesin
+    bildir({ kategori: "hesap", tur: "basari", baslik: `${tl(tutarN, true)} ${secili.ad} hesabına gönderildi`, mesaj: `Referans ${r.referans ?? referans}`, link: "/earn/cuzdan" });
     setBekle(false); setTutar("");
-    toast.success("Çekim talebin alındı", { description: r.gercek ? `${tl(tutarN, true)} ${secili.ad} hesabına gönderildi.` : `${tl(tutarN, true)} 1 iş günü içinde ${secili.ad} hesabına geçecek.` });
+    toast.success("Çekim tamamlandı", { description: `${tl(tutarN, true)} ${secili.ad} hesabına gönderildi.` });
   };
 
   return (
     <div>
-      <p className="flex items-center gap-1.5 text-[12.5px] text-white/55"><BadgeCheck className="h-3.5 w-3.5 text-[#8fe6ff]" />{kimlik.ad} {kimlik.soyad} adına doğrulandı</p>
+      <p className="flex items-center gap-1.5 text-[12.5px] text-white/55"><BadgeCheck className="h-3.5 w-3.5 text-[#8fe6ff]" />{kimlik.ad} {kimlik.soyad} {kimlik.gercek ? "adına doğrulandı" : "adına kaydedildi, nüfus kaydıyla doğrulanmadı"}</p>
       {/* Dev rakamlı tutar */}
       <div className={cn("mt-3 rounded-[20px] bg-black/25 px-5 pb-4 pt-3 ring-1 transition focus-within:ring-white/25", hata ? "ring-rose-400/40" : "ring-white/[0.08]")}>
         <div className="flex items-center justify-between text-[12.5px] text-white/50"><span>Tutar</span>

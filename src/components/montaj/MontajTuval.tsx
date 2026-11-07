@@ -117,7 +117,7 @@ export function MontajTuval({ proje, havuz, W, H, gw, gh }: { proje: MontajProje
           </span>
           {islem && (
             <span className="pointer-events-none absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-black/80 px-1.5 py-0.5 text-[10.5px] tabular-nums text-white">
-              {islem.mod === "olcek" ? `%${Math.round(kfAnlikDeger(secili, "olcek", playhead - secili.baslangic))}` : islem.mod === "dondur" ? `${Math.round(kfAnlikDeger(secili, "donme", playhead - secili.baslangic))}°` : `${Math.round(kfAnlikDeger(secili, "x", playhead - secili.baslangic))}, ${Math.round(kfAnlikDeger(secili, "y", playhead - secili.baslangic))}`}
+              {islem.mod === "olcek" ? `yüzde ${Math.round(kfAnlikDeger(secili, "olcek", playhead - secili.baslangic))}` : islem.mod === "dondur" ? `${Math.round(kfAnlikDeger(secili, "donme", playhead - secili.baslangic))}°` : `${Math.round(kfAnlikDeger(secili, "x", playhead - secili.baslangic))}, ${Math.round(kfAnlikDeger(secili, "y", playhead - secili.baslangic))}`}
             </span>
           )}
         </div>

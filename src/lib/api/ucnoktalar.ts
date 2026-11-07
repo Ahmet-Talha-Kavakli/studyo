@@ -66,7 +66,7 @@ export const UC_NOKTALAR: UcNokta[] = [
   },
   {
     id: "uretim-getir", grup: "Üretimler", yontem: "GET", yol: "/generations/{id}", ad: "Üretimi getir",
-    ozet: "Üretimin güncel durumunu ve tamamlandıysa çıktı adreslerini döndürür. Durum: queued → processing → succeeded | failed | canceled.",
+    ozet: "Üretimin güncel durumunu ve tamamlandıysa çıktı adreslerini döndürür. Durum sırasıyla queued, processing, ardından succeeded, failed ya da canceled olur.",
     kapsam: "read", yolParam: [ID], ornekYanit: GEN_ORNEK, yanitKodu: 200, hatalar: ["resource_not_found"],
     notlar: ["Sorgulamayı 1–2 saniye aralıkla yap; uzun işlerde webhook daha verimli.", "Üretim kayıtları 24 saat saklanır. Çıktıları kendi depolamana kopyala."],
   },

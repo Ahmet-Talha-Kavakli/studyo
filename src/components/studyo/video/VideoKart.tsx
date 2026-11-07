@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { KrediYildiz } from "@/components/ui/KrediHap";
-import { Download, FastForward, Heart, Play, RotateCcw, Trash2, Wand2, XCircle, Maximize2 } from "lucide-react";
+import { FastForward, Play, Quote, RotateCcw, Star, Trash2, XCircle, Maximize2, ArrowUpRight, RefreshCw } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KartDahaMenusu } from "@/components/galeri/KartEylemleri";
 import { cn, saltUrl } from "@/lib/utils";
 import type { Uretim } from "@/store/useProjeler";
 import { uretimIptal, uretimSirasi } from "@/lib/uretimMotoru";
@@ -16,8 +18,10 @@ import { hareketAdi, oranDegeri } from "./veri";
  * (kredi iadesi, tekrar dene, sil) ve hazır (poster; fareyle üzerine gelince sessiz oynar).
  * Bütün eylemler gerçek düğmedir; klavye odağında da görünür.
  */
-export function VideoKart({ u, secili, secimModu, onAc, onSecim, onBegen, onIndir, onAyar, onBuyut, onDevam, onSonHal, sonHalKredi, onYenidenDene, onSil, demoGizle }: {
+export function VideoKart({ u, secili, secimModu, onAc, onSecim, onBegen, onIndir, onAyar, onBuyut, onDevam, onSonHal, sonHalKredi, onYenidenDene, onSil, demoGizle, oran }: {
   u: Uretim; secili: boolean; secimModu: boolean;
+  /** Görünüm ayarının kart oranı (verilmezse videonun kendi oranı). */
+  oran?: number;
   /** Demo rozetini gizle (demo bilgisi sayfada tek yerde gösteriliyorsa). */
   demoGizle?: boolean;
   onAc: () => void; onSecim: () => void; onBegen: () => void; onIndir: () => void; onAyar: () => void;
@@ -39,7 +43,7 @@ export function VideoKart({ u, secili, secimModu, onAc, onSecim, onBegen, onIndi
   const taslak = !!u.meta?.taslak;
 
   return (
-    <div className="group/kart relative overflow-hidden rounded-[16px] bg-[#111113] ring-1 ring-inset ring-white/[0.06]" style={{ aspectRatio: String(oranDegeri(u.meta?.oran)) }}
+    <div className="group/kart relative overflow-hidden rounded-[16px] bg-[#111113] ring-1 ring-inset ring-white/[0.06]" style={{ aspectRatio: String(oran ?? oranDegeri(u.meta?.oran)) }}
       onPointerEnter={(e) => { if (e.pointerType === "mouse") setOynat(true); }} onPointerLeave={() => setOynat(false)}>
       {suruyor && (
         <>
@@ -103,18 +107,18 @@ export function VideoKart({ u, secili, secimModu, onAc, onSecim, onBegen, onIndi
           </button>
           {/* Hızlı eylemler */}
           <span className="absolute right-2 top-2 z-10 flex items-center gap-1.5">
-            <span className="flex items-center gap-1.5 opacity-0 transition-opacity group-focus-within/kart:opacity-100 group-hover/kart:opacity-100">
-              <Tooltip label="Bu ayarlarla üret" side="bottom"><button onClick={onAyar} className={ikonBtn} aria-label="Bu ayarlarla üret"><Wand2 className="h-3.5 w-3.5" /></button></Tooltip>
-              {onDevam && <Tooltip label="Son kareden devam" side="bottom"><button onClick={onDevam} className={ikonBtn} aria-label="Son kareden devam"><FastForward className="h-3.5 w-3.5" /></button></Tooltip>}
-              {onBuyut && <Tooltip label="Büyüt" side="bottom"><button onClick={onBuyut} className={ikonBtn} aria-label="Büyüt"><Maximize2 className="h-3.5 w-3.5" /></button></Tooltip>}
-              <Tooltip label="İndir" side="bottom"><button onClick={onIndir} className={ikonBtn} aria-label="İndir"><Download className="h-3.5 w-3.5" /></button></Tooltip>
-            </span>
-            <Tooltip label={u.favori ? "Beğeniyi kaldır" : "Beğen"} side="bottom">
-              <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"}
+            <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="bottom">
+              <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"}
                 className={cn(ikonBtn, !u.favori && "opacity-0 focus-visible:opacity-100 group-hover/kart:opacity-100")}>
-                <Heart className={cn("h-3.5 w-3.5", u.favori && "fill-rose-400 text-rose-400")} />
+                <Star className={cn("h-3.5 w-3.5", u.favori && "fill-aksan text-aksan")} />
               </button>
             </Tooltip>
+            <span className="flex items-center gap-1.5 opacity-0 transition-opacity group-focus-within/kart:opacity-100 group-hover/kart:opacity-100">
+              <IndirDugmesi u={u} side="bottom" className={ikonBtn} ikonSinif="h-3.5 w-3.5" />
+              <Tooltip label="Yeniden kullan" side="bottom"><button onClick={onAyar} className={ikonBtn} aria-label="Yeniden kullan"><Quote className="h-3.5 w-3.5" /></button></Tooltip>
+              <KartDahaMenusu u={u} side="bottom" className={ikonBtn} boyut="kucuk" onSil={onSil}
+                eylemler={[{ ad: "Aç", ikon: ArrowUpRight, fn: onAc }, { ad: "Bu ayarlarla yeniden üret", ikon: RefreshCw, fn: onYenidenDene }, ...(onDevam ? [{ ad: "Son kareden devam", ikon: FastForward, fn: onDevam }] : []), ...(onBuyut ? [{ ad: "Büyüt", ikon: Maximize2, fn: onBuyut }] : [])]} />
+            </span>
           </span>
         </>
       )}

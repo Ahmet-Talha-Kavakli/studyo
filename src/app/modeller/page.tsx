@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 
 const TUR_IKON: Record<KatalogTur, React.ElementType> = { video: Video, gorsel: ImageIcon, ses: AudioLines, muzik: Music, "3d": Box };
 const sade = (s: string) => s.toLocaleLowerCase("tr-TR").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ı/g, "i");
-const ROZET: Record<string, string> = { Yeni: "bg-[#55d6fd]/15 text-[#a8ecff]", Hızlı: "bg-amber-400/15 text-amber-200", Yakında: "bg-white/[0.08] text-white/65", Kapandı: "bg-rose-500/15 text-rose-300" };
+const ROZET: Record<string, string> = { Yeni: "bg-[#55d6fd]/15 text-[#a8ecff]", Hızlı: "bg-amber-400/15 text-amber-200", "Bağlı değil": "bg-white/[0.08] text-white/65", Kapandı: "bg-rose-500/15 text-rose-300" };
 const yay = { type: "spring", stiffness: 420, damping: 34 } as const;
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -41,7 +41,7 @@ const SAY = Object.fromEntries(TUR_SIRASI.map((t) => [t, KATALOG.filter((m) => m
 const krediMetni = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 const aralik = (a: Aile) => (a.min === a.max ? krediMetni(a.min) : `${krediMetni(a.min)}–${krediMetni(a.max)}`);
 const aramaMetni = (a: Aile) => sade(`${a.aile} ${a.saglayici} ${a.modeller.map((m) => `${m.ad} ${m.ozet} ${m.etiketler.join(" ")}`).join(" ")}`);
-const kapali = (m: KatalogModel) => m.rozet === "Kapandı" || m.rozet === "Yakında";
+const kapali = (m: KatalogModel) => m.rozet === "Kapandı" || m.rozet === "Bağlı değil";
 
 function Logo({ ad, k = 32, className }: { ad: string; k?: number; className?: string }) {
   return (

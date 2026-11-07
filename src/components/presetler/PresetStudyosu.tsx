@@ -279,14 +279,15 @@ export function PresetStudyosu() {
     const s = kaydiGaranti();
     const kapak = f.kapak ?? (tamamTest[0] ? kapakUrl(tamamTest[0]) ?? tamamTest[0].gorselUrl : undefined);
     const aciklama = f.aciklama.trim() || (elleMi ? (f.yapi.elle ?? "") : f.yapi.eylem).trim().slice(0, 140);
-    const ek = f.kaynak || f.gorunurluk === "ozel" ? 0 : f.ekKredi;
+    // Satış kaydı sunucuda yok: ek fiyat konmaz.
+    const ek = 0;
     guncelle(s, { ad: f.ad.trim(), kategori: f.kategori, aciklama, tarif, yapi: f.yapi, kapak, kapakVideo: f.kapakVideo, kaynak: f.kaynak, durum: "yayinda", gorunurluk: f.gorunurluk, ekKredi: ek, istemGorunur: f.istemGorunur });
     /* Earn > Marketplace: toplulukta ya da bağlantıyla paylaşılan preset satış panelinde görünür. */
     const pay = usePaylasim.getState();
     const onceki = pay.benimPaylasimlar.find((x) => x.tur === "preset" && x.tohum === s);
     if (onceki) pay.paylasimKaldir(onceki.id);
     if (f.gorunurluk !== "ozel") pay.paylas({ tur: "preset", ad: f.ad.trim(), aciklama, tohum: s, kategori: KATEGORI_AD[f.kategori] ?? f.kategori, yazar: tutamac(kullaniciAd), prompt: tarif, model: "Kling 3.0", minFiyat: OZEL_KREDI, ekstraFiyat: ek, kazanc: onceki?.kazanc ?? 0, gorsel: kapak });
-    toast.success(yayinda ? "Preset güncellendi" : "Preset yayınlandı", { description: f.gorunurluk === "topluluk" ? "Toplulukta görünüyor; kazancını Earn panelinden izleyebilirsin." : f.gorunurluk === "baglanti" ? "Yalnız bağlantısı olanlar görebilir." : "Yalnız sen görebilirsin." });
+    toast.success(yayinda ? "Preset güncellendi" : "Preset yayınlandı", { description: f.gorunurluk === "topluluk" ? "Preset galerinde bu tarayıcıda görünür; başka kullanıcılarla paylaşılmaz." : "Yalnız sen görebilirsin." });
     router.push(`/panel/presetler/${s}`);
   };
 
@@ -950,7 +951,7 @@ function TestSahnesi({ u, foto, oran }: { u: Uretim | null; foto: string; oran: 
         {calisiyor && u && (
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-7 w-7 animate-spin text-white" />
-            <span className="text-[13px] font-medium text-white/90">Üretiliyor · %{u.ilerleme}</span>
+            <span className="text-[13px] font-medium text-white/90">Üretiliyor · yüzde {u.ilerleme}</span>
             <span className="h-1 w-36 overflow-hidden rounded-full bg-white/15"><span className="block h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${u.ilerleme}%` }} /></span>
           </span>
         )}
@@ -975,7 +976,7 @@ function TestKarti({ u, secili, kapak, onSec, onKapak }: { u: Uretim; secili: bo
         {g && <img src={g} alt="" className={cn("h-full w-full object-cover transition-transform duration-500 group-hover:scale-105", calisiyor && "opacity-35")} />}
         <span className={cn("absolute inset-0 rounded-[14px] outline outline-2 -outline-offset-2 transition", secili ? "outline-white" : "outline-transparent")} />
         {u.meta?.gorselUrl && (/* eslint-disable-next-line @next/next/no-img-element */ <img src={u.meta.gorselUrl} alt="" className="absolute left-1.5 top-1.5 h-9 w-7 rounded-[8px] object-cover ring-1 ring-white/50" />)}
-        {calisiyor && <span className="absolute inset-0 flex items-center justify-center text-[12px] font-medium text-white"><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />%{u.ilerleme}</span>}
+        {calisiyor && <span className="absolute inset-0 flex items-center justify-center text-[12px] font-medium text-white"><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />yüzde {u.ilerleme}</span>}
         {u.durum === "hata" && <span className="absolute inset-0 flex items-center justify-center bg-black/60 text-[11.5px] text-rose-300">Başarısız</span>}
       </button>
       {u.durum === "tamam" && (
@@ -1044,22 +1045,21 @@ function CogaltKart({ p, secili, onSec }: { p: KatalogPreset; secili: boolean; o
 /** Yayın adımı: kim görebilir, istem görünürlüğü, ek fiyat (yarısı yaratıcıya) ve özgünlük onayı. */
 function PaylasimBolumu({ f, ayarla }: { f: Form; ayarla: <K extends keyof Form>(k: K, v: Form[K]) => void }) {
   const kopya = !!f.kaynak;
-  const ek = kopya || f.gorunurluk === "ozel" ? 0 : f.ekKredi;
+  void kopya;
   const SECENEK: [Gorunurluk, string, string, React.ElementType][] = [
-    ["topluluk", "Toplulukta", "Herkes keşfeder; kazanç açık", Globe],
-    ["baglanti", "Bağlantıyla", "Yalnız bağlantıyı paylaştıkların", Link2],
-    ["ozel", "Yalnız ben", "Kendi kullanımın için", Lock],
+    ["topluluk", "Galeride", "Preset galerinde, Vayra presetlerinin yanında", Globe],
+    ["ozel", "Yalnız ben", "Yalnız Benim presetlerim sekmesinde", Lock],
   ];
   return (
     <section className="overflow-hidden rounded-[26px] bg-[#111214] ring-1 ring-inset ring-white/[0.08]">
       <header className="border-b border-white/[0.06] px-5 py-4">
-        <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-white">Paylaşım ve kazanç</h2>
-        <p className="mt-0.5 text-[13px] text-white/50">Kim görebileceğini ve her kullanımda ne kazanacağını seç.</p>
+        <h2 className="text-[17px] font-semibold tracking-[-0.01em] text-white">Görünürlük</h2>
+        <p className="mt-0.5 text-[13px] text-white/50">Presetlerin şimdilik yalnız senin hesabında ve bu tarayıcıda görünür; başka kullanıcılarla paylaşılmaz.</p>
       </header>
       <div className="space-y-6 p-4 sm:p-5">
         <div>
           <p className="mb-2 text-[13.5px] font-semibold text-white">Kim görebilir</p>
-          <div className="grid gap-1.5 sm:grid-cols-3">
+          <div className="grid gap-1.5 sm:grid-cols-2">
             {SECENEK.map(([k, ad, alt, I]) => (
               <button key={k} onClick={() => ayarla("gorunurluk", k)} aria-pressed={f.gorunurluk === k}
                 className={cn("flex items-center gap-2.5 rounded-[16px] p-2.5 text-left ring-1 ring-inset transition active:scale-[0.98]", f.gorunurluk === k ? "bg-white/[0.09] ring-white/50" : "bg-white/[0.03] ring-white/[0.07] hover:bg-white/[0.06]")}>
@@ -1072,32 +1072,6 @@ function PaylasimBolumu({ f, ayarla }: { f: Form; ayarla: <K extends keyof Form>
 
         {f.gorunurluk !== "ozel" && (
           <>
-            <div>
-              <p className="mb-2 flex items-baseline justify-between text-[13.5px] font-semibold text-white">Ek fiyat<span className="text-[12px] font-normal text-white/45">Taban {OZEL_KREDI} kredi</span></p>
-              {kopya ? (
-                <p className="rounded-[14px] bg-white/[0.04] px-3.5 py-3 text-[12.5px] leading-snug text-white/60">Bu preset bir Vayra efektinden çoğaltıldı; ek fiyat konamaz. Kendi tarifinle sıfırdan kurduğun presetlerde kazanç açılır.</p>
-              ) : (
-                <>
-                  <LayoutGroup id="ek-fiyat">
-                    <div className="grid grid-cols-4 gap-0.5 rounded-full bg-white/[0.05] p-1">
-                      {EK_PAYLAR.map((x) => (
-                        <button key={x.k} onClick={() => ayarla("ekKredi", x.k)} aria-pressed={f.ekKredi === x.k} className="relative h-9 rounded-full text-[12.5px] font-medium">
-                          {f.ekKredi === x.k && <motion.span layoutId="ek-fiyat-z" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 480, damping: 38 }} />}
-                          <span className={cn("relative tabular-nums", f.ekKredi === x.k ? "text-black" : "text-white/65")}>{x.k ? `+${x.k}` : x.ad}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </LayoutGroup>
-                  <div className="mt-2.5 grid grid-cols-3 divide-x divide-white/[0.06] overflow-hidden rounded-[14px] bg-white/[0.03] text-center ring-1 ring-inset ring-white/[0.06]">
-                    <div className="px-2 py-2.5"><p className="text-[11.5px] text-white/45">Kullanıcı öder</p><p className="mt-0.5 flex items-center justify-center gap-1 text-[14px] font-semibold tabular-nums text-white"><KrediJeton boyut={12} />{OZEL_KREDI + ek}</p></div>
-                    <div className="px-2 py-2.5"><p className="text-[11.5px] text-white/45">Her kullanımda sana</p><p className="mt-0.5 flex items-center justify-center gap-1 text-[14px] font-semibold tabular-nums text-white"><KrediJeton boyut={12} />{yaraticiPayi(ek)}</p></div>
-                    <div className="px-2 py-2.5"><p className="text-[11.5px] text-white/45">1.000 kullanımda</p><p className="mt-0.5 text-[14px] font-semibold tabular-nums text-emerald-300">{tl(yaraticiPayi(ek) * 1000 * PRESET_KREDI_TL, true)}</p></div>
-                  </div>
-                  <p className="mt-2 text-[12px] leading-snug text-white/45">Ek fiyatın yarısı sana, yarısı Vayra'ya. Kendi kullanımın kazanç sayılmaz; kazanç Earn cüzdanına aktarılır.</p>
-                </>
-              )}
-            </div>
-
             <button role="switch" aria-checked={f.istemGorunur} onClick={() => ayarla("istemGorunur", !f.istemGorunur)}
               className="flex w-full items-center gap-3 rounded-[16px] bg-white/[0.03] p-3 text-left ring-1 ring-inset ring-white/[0.07] transition hover:bg-white/[0.05]">
               <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]", f.istemGorunur ? "bg-white text-black" : "bg-white/[0.06] text-white/65")}>{f.istemGorunur ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</span>

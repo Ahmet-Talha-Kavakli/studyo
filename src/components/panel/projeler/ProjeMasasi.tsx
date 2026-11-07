@@ -397,7 +397,7 @@ function SiraMenusu({ sira, setSira }: { sira: string; setSira: (s: string) => v
         <ArrowDownWideNarrow className="h-4 w-4 text-white/55" /><span className="max-sm:hidden">{SIRALAR.find((s) => s.id === sira)!.ad}</span><ChevronDown className={cn("h-3.5 w-3.5 text-white/50 transition-transform", acik && "rotate-180")} />
       </button>
       <Yuzen acik={acik} onKapat={() => setAcik(false)} yerlesim="alt-sag" bosluk={6} etiket="Sırala" className={cn(MENU, "w-[210px]")}>
-        {SIRALAR.map((s) => <button key={s.id} onClick={() => { setSira(s.id); setAcik(false); }} className={cn(MSATIR, "justify-between")}>{s.ad}{sira === s.id && <Check className="h-4 w-4" />}</button>)}
+        {SIRALAR.map((s) => <button key={s.id} onClick={() => { setSira(s.id); setAcik(false); }} aria-pressed={sira === s.id} className={cn(MSATIR, "justify-between", sira === s.id && "bg-white/[0.08] ring-1 ring-inset ring-white/40")}>{s.ad}</button>)}
       </Yuzen>
     </div>
   );

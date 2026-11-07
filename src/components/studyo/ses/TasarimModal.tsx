@@ -8,6 +8,8 @@ import { toast } from "@/lib/toast";
 import { neden } from "@/components/studyo/bildirim";
 import { mesaj } from "@/lib/mesaj";
 import { useAuth } from "@/store/useAuth";
+import { krediliIstek } from "@/lib/krediIstek";
+import { SABIT_KREDI } from "@/lib/krediTarife";
 import { useOzelSesler } from "@/store/useOzelSesler";
 import { yerelDepo } from "@/lib/yerelDepo";
 import { sesCalici, useCalici, sureYaz } from "@/lib/sesCalici";
@@ -16,7 +18,8 @@ import { HapKaydirici, KartBolum } from "@/components/studyo/hf";
 import { useOdakTuzagi } from "@/hooks/useOdakTuzagi";
 
 /** Bir tasarım turu (3 önizleme) bedeli; yalnız önizlemeler gerçekten gelince düşer. Kaydetmek ücretsizdir. */
-export const TASARIM_KREDI = 5;
+/** Ses tasarımı ve remiks bedeli: tek kaynak lib/krediTarife (sunucu da bunu keser). */
+export const TASARIM_KREDI = SABIT_KREDI.sesTasarim;
 const MIN_TARIF = 20;
 const ORNEK_TARIFLER = [
   { ad: "Bilge anlatıcı", tarif: "Derin ve tok sesli, yaşlı bir erkek anlatıcı; sakin, sıcak ve bilge." },
@@ -79,16 +82,18 @@ export function TasarimModal({ onKapat, gercek, onKaydedildi, remixSesId }: {
     setUretiliyor(true);
     try {
       const tohumSayi = tohum.trim() ? Number(tohum) : undefined;
-      const j = (await (await fetch(remixSesId ? "/api/ses/remix" : "/api/ses/tasarim", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // Kredi sunucuda kesilir; önizleme üretilemezse sunucuda iade edilir. Ekrandaki bakiye yanıtla eşitlenir.
+      const s = await krediliIstek<{ onizlemeler?: Onizleme[]; metin?: string }>(remixSesId ? "/api/ses/remix" : "/api/ses/tasarim", {
+        kredi: TASARIM_KREDI,
+        json: {
           ...(remixSesId ? { sesId: remixSesId } : {}),
           aciklama: tarif.trim(), metin: ozelMetin ? metin.trim() : undefined, gelistir,
           loudness: yukseklik, guidanceScale: rehber, ...(Number.isFinite(tohumSayi) ? { seed: tohumSayi } : {}),
-        }),
-      })).json()) as { ok: boolean; hata?: string; onizlemeler?: Onizleme[]; metin?: string };
-      if (!j.ok || !j.onizlemeler?.length) throw new Error(j.hata ?? "Önizleme üretilemedi.");
-      useAuth.getState().krediDus(TASARIM_KREDI);
+        },
+      });
+      if (s.durum === 401 || s.durum === 402) return;
+      const j = s.j;
+      if (!j?.ok || !j.onizlemeler?.length) throw new Error(j?.hata ?? "Önizleme üretilemedi.");
       sesCalici.durdur();
       setOnizlemeler(j.onizlemeler); setOkunan(j.metin ?? ""); setSecilen(null); setDinlenen(new Set()); setAdim(2);
       toast.success(`${j.onizlemeler.length} önizleme hazırlandı`, { description: `Dinle, birini seç ve kaydet. ${TASARIM_KREDI} kredi düştü.` });

@@ -66,7 +66,7 @@ export const MESAFELI: YasalBolum[] = [
     kisaca: "Anında ifa edilen dijital hizmetlerde, açık onayınla birlikte cayma hakkı sona erer; gönüllü iade koşullarımız geçerlidir.",
     bloklar: [
       { t: "p", m: "Mesafeli Sözleşmeler Yönetmeliği md. 15/1-ğ uyarınca elektronik ortamda anında ifa edilen hizmetlerde cayma hakkı kullanılamaz. Alıcı, ödeme ekranında hizmetin derhâl ifasına başlanmasını onayladığını ve bu nedenle cayma hakkını kaybedeceğini kabul eder." },
-      { t: "p", m: <>Bununla birlikte Satıcı, <Link href="/iade">İade ve İptal Politikası</Link>&apos;nda belirtilen gönüllü iade haklarını tanır (ilk 7 günde %10&apos;dan az kullanımda tam iade, kullanılmamış kredi paketlerinde 14 gün içinde iade).</> },
+      { t: "p", m: <>Bununla birlikte Satıcı, <Link href="/iade">İade ve İptal Politikası</Link>&apos;nda belirtilen gönüllü iade haklarını tanır (ilk 7 günde yüzde 10&apos;dan az kullanımda tam iade, kullanılmamış kredi paketlerinde 14 gün içinde iade).</> },
     ],
   },
   {

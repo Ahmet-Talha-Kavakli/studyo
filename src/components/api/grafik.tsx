@@ -114,7 +114,7 @@ export function SiraCubuklari({ satirlar, birim, bos = "Veri yok", renk = "#55d6
         <li key={s.ad}>
           <div className="mb-1.5 flex items-center justify-between gap-3 text-[13px]">
             <span className="flex min-w-0 items-center gap-2.5 font-medium text-white">{s.onEk}<span className="truncate">{s.ad}</span></span>
-            <span className="shrink-0 whitespace-nowrap tabular-nums text-white/60"><span className="font-semibold text-white">{s.deger.toLocaleString("tr-TR")}</span> {birim}{toplam > 0 && <span className="text-white/45"> · %{Math.round((s.deger / toplam) * 100)}</span>}{s.alt && <span> · {s.alt}</span>}</span>
+            <span className="shrink-0 whitespace-nowrap tabular-nums text-white/60"><span className="font-semibold text-white">{s.deger.toLocaleString("tr-TR")}</span> {birim}{toplam > 0 && <span className="text-white/45"> · yüzde {Math.round((s.deger / toplam) * 100)}</span>}{s.alt && <span> · {s.alt}</span>}</span>
           </div>
           <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
             <motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(2, (s.deger / tepe) * 100)}%` }} transition={{ delay: i * 0.05, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}

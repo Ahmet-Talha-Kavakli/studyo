@@ -2,269 +2,131 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  LifeBuoy, Clock, CheckCheck, Zap, MessageSquare, HelpCircle, Send, Coins, UserCheck,
-} from "lucide-react";
+import { LifeBuoy, Inbox, MailWarning, Send, StickyNote, Loader2, Paperclip } from "lucide-react";
 import { RotaGuard } from "@/components/admin/RotaGuard";
-import { BolumBaslik, MetrikKart, Kart, Sekmeler, Rozet, Dugme, AramaKutu, FiltreCip, AD } from "@/components/admin/ui/temel";
 import { Cekmece } from "@/components/admin/ui/tablo";
-import { useOnay } from "@/components/admin/ui/Onay";
-import { useAdminOturum } from "@/store/admin/useAdminOturum";
-import { useAdminDestek } from "@/store/admin/useAdminDestek";
-import { veri, kullaniciBul } from "@/lib/admin/seed";
-import { ticketlar, ticketMesajlari, MAKROLAR, SSS_YONETIM, destekMetrik, type Ticket } from "@/lib/admin/seed/moderasyon";
-import { PLAN_ADI } from "@/store/useAuth";
-import { sayi, goreceZaman, tarihSaat } from "@/lib/admin/cekirdek";
+import { AD, AramaKutu, BilgiSatir, BolumBaslik, Bos, FiltreCip, HataKutusu, MetrikKart, Rozet, Yukleniyor } from "@/components/admin/ui/temel";
+import { BasitTablo, hucre, satirSinif } from "@/components/admin/ui/BasitTablo";
+import { useAdminVeri, adminIslem, sayi, tarihSaat, gorece, bayt } from "@/lib/admin/istemci";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-const ONCELIK_TON = { düşük: "notr", orta: "aksan", yüksek: "uyari", acil: "tehlike" } as const;
-const DURUM_TON = { acik: "uyari", yanitlandi: "aksan", beklemede: "mor", kapandi: "notr" } as const;
-const DURUMLAR: Ticket["durum"][] = ["acik", "yanitlandi", "beklemede", "kapandi"];
-const ATANANLAR = ["destek", "moderator", "super"];
+type Durum = "acik" | "yanitlandi" | "kapandi";
+interface Ozet { referans: string; ad: string; email: string; konu: string; mesaj: string; zaman: number; durum: Durum; guncelleme: number; notSayisi: number; yanitSayisi: number; sonYanit: number | null; ekler: { ad: string; boyut: number; tur: string }[] }
+interface Talep extends Omit<Ozet, "notSayisi" | "yanitSayisi" | "sonYanit"> { detay: Record<string, string>; notlar: { zaman: number; admin: string; metin: string }[]; yanitlar: { zaman: number; admin: string; metin: string; gonderildi: boolean; hata?: string }[] }
+const DURUM: Record<Durum, { ad: string; ton: "aksan" | "basari" | "notr" }> = { acik: { ad: "Açık", ton: "aksan" }, yanitlandi: { ad: "Yanıtlandı", ton: "basari" }, kapandi: { ad: "Kapandı", ton: "notr" } };
 
-/* Makro -> uygulandığında ticket thread'ine düşecek sistem yanıtı. */
-const MAKRO_YANIT: Record<string, string> = {
-  "Kredi iade + özür": "Yaşadığınız sorun için özür dileriz. İlgili kredileri hesabınıza iade ettik ve bilgilendirme e-postası gönderdik.",
-  "Job yeniden + bilgilendir": "Üretiminizi sizin adınıza yeniden başlattık. Tamamlandığında bilgilendirileceksiniz.",
-  "Plan yükseltme rehberi": "Plan yükseltme adımlarını e-posta ile ilettik. Ayarlar > Plan üzerinden birkaç tıkla tamamlayabilirsiniz.",
-  "Şifre sıfırlama": "Şifre sıfırlama bağlantısını kayıtlı e-posta adresinize gönderdik.",
-  "Fatura gönder": "Son faturanızın PDF'ini e-posta ekinde gönderdik.",
-};
+function TalepPaneli({ referans, eposta, kapat, degisti }: { referans: string; eposta: boolean; kapat: () => void; degisti: () => void }) {
+  const { veri, hata, yenile } = useAdminVeri<{ talep: Talep; uid: string | null }>(`/api/admin/destek/${referans}`);
+  const [yanit, setYanit] = useState("");
+  const [not, setNot] = useState("");
+  const [calisiyor, setCalisiyor] = useState<string | null>(null);
+  const islem = async (govde: Record<string, unknown>, ad: string) => {
+    setCalisiyor(ad);
+    const r = await adminIslem(`/api/admin/destek/${referans}`, govde);
+    setCalisiyor(null);
+    if (!r.ok) { toast.error(r.hata); return; }
+    if (govde.islem === "yanit") { setYanit(""); if (r.veri.gonderildi) toast.success("Yanıt e-postayla gönderildi"); else toast.error(String(r.veri.hata ?? "Yanıt kaydedildi, gönderilemedi")); }
+    if (govde.islem === "not") setNot("");
+    yenile(); degisti();
+  };
+  if (hata) return <HataKutusu hata={hata} yenile={yenile} />;
+  if (!veri) return <Yukleniyor satir={2} />;
+  const t = veri.talep;
+  const giris = "w-full rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] px-3 py-2 text-sm text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50";
+  return (
+    <div className="space-y-5">
+      <div>
+        <div className="mb-2 flex flex-wrap items-center gap-2"><Rozet ton={DURUM[t.durum].ton}>{DURUM[t.durum].ad}</Rozet><span className={cn("text-[12px]", AD.metin3)}>{t.konu} · {tarihSaat(t.zaman)}</span></div>
+        <BilgiSatir etiket="Gönderen">{t.ad}, {t.email}</BilgiSatir>
+        {veri.uid && <BilgiSatir etiket="Hesap"><Link href={`/admin/kullanicilar/${veri.uid}`} className="text-[color:var(--ad-aksan)] hover:underline" onClick={kapat}>Hesabı aç</Link></BilgiSatir>}
+        {Object.entries(t.detay).map(([k, v]) => <BilgiSatir key={k} etiket={k}>{v}</BilgiSatir>)}
+      </div>
+      <div className="whitespace-pre-wrap rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.02] p-3 text-[13px] leading-relaxed text-[color:var(--ad-metin)]">{t.mesaj}</div>
+      {t.ekler.length > 0 && <div className={cn("flex flex-wrap gap-2 text-[12px]", AD.metin3)}>{t.ekler.map((e) => <span key={e.ad} className="inline-flex items-center gap-1 rounded-lg border border-[color:var(--ad-kenar)] px-2 py-1"><Paperclip className="h-3 w-3" />{e.ad}, {bayt(e.boyut)}</span>)}<span>Ek dosyaların kendisi saklanmaz.</span></div>}
+
+      {(t.yanitlar.length > 0 || t.notlar.length > 0) && (
+        <div className="space-y-2">
+          {[...t.yanitlar.map((y) => ({ ...y, tur: "yanit" as const })), ...t.notlar.map((n) => ({ ...n, tur: "not" as const, gonderildi: true, hata: undefined }))].sort((a, b) => a.zaman - b.zaman).map((x, i) => (
+            <div key={i} className={cn("rounded-xl border px-3 py-2 text-[13px]", x.tur === "not" ? "border-amber-400/20 bg-amber-500/[0.04]" : "border-[color:var(--ad-aksan)]/20 bg-[color:var(--ad-aksan)]/[0.04]")}>
+              <div className={cn("mb-1 text-[11px]", AD.metin3)}>{x.tur === "not" ? "İç not" : x.gonderildi ? "E-postayla yanıt" : "Gönderilemeyen yanıt"} · {x.admin} · {tarihSaat(x.zaman)}</div>
+              <div className={cn("whitespace-pre-wrap", AD.metin)}>{x.metin}</div>
+              {x.hata && <div className="mt-1 text-[11px] text-rose-300">{x.hata}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="d-yanit" className={cn("mb-1.5 block text-[13px] font-semibold", AD.metin2)}>E-postayla yanıt</label>
+        {!eposta && <p className="mb-2 flex items-center gap-1.5 text-[12px] text-amber-300"><MailWarning className="h-3.5 w-3.5" /> E-posta servisi kurulu değil; yanıt kaydedilir ama gönderilmez.</p>}
+        <textarea id="d-yanit" value={yanit} onChange={(e) => setYanit(e.target.value)} rows={5} className={giris} placeholder={`Merhaba ${t.ad.split(" ")[0]},`} />
+        <button onClick={() => islem({ islem: "yanit", metin: yanit }, "yanit")} disabled={yanit.trim().length < 5 || !!calisiyor} className="ad-btn-aksan mt-2 inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold disabled:opacity-40">
+          {calisiyor === "yanit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Gönder
+        </button>
+      </div>
+      <div>
+        <label htmlFor="d-not" className={cn("mb-1.5 block text-[13px] font-semibold", AD.metin2)}>İç not (kullanıcı görmez)</label>
+        <textarea id="d-not" value={not} onChange={(e) => setNot(e.target.value)} rows={2} className={giris} />
+        <button onClick={() => islem({ islem: "not", metin: not }, "not")} disabled={not.trim().length < 2 || !!calisiyor} className="ad-btn-glass mt-2 inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold disabled:opacity-40"><StickyNote className="h-4 w-4" /> Not ekle</button>
+      </div>
+      <div className="flex flex-wrap gap-2 border-t border-[color:var(--ad-kenar)] pt-4">
+        {(Object.keys(DURUM) as Durum[]).filter((d) => d !== t.durum).map((d) => (
+          <button key={d} onClick={() => islem({ islem: "durum", durum: d }, d)} disabled={!!calisiyor} className="ad-btn-glass h-9 rounded-xl px-3 text-[13px] font-semibold disabled:opacity-40">{d === "kapandi" ? "Kapat" : d === "acik" ? "Yeniden aç" : "Yanıtlandı say"}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Destek() {
-  const { onayIste } = useOnay();
-  const oturum = useAdminOturum();
-  const st = useAdminDestek();
-  const evren = veri();
-  const [sekme, setSekme] = useState("ticket");
-  const [ara, setAra] = useState("");
-  const [durum, setDurum] = useState("hepsi");
-  const [acikTicket, setAcikTicket] = useState<Ticket | null>(null);
-  const [yanit, setYanit] = useState("");
-
-  const tumTicket = useMemo(() => ticketlar(evren), [evren]);
-  const metrik = destekMetrik();
-
-  const liste = useMemo(() => {
-    const q = ara.trim().toLowerCase();
-    return tumTicket.filter((t) => {
-      const d = st.ticketDurum(t);
-      return (durum === "hepsi" || d === durum) && (!q || t.konu.toLowerCase().includes(q) || t.kullanici.toLowerCase().includes(q) || t.id.toLowerCase().includes(q));
-    });
-  }, [tumTicket, ara, durum, st]);
-
-  const denetle = (eylem: string, onem: "bilgi" | "uyari" | "kritik", hedef?: string) =>
-    oturum.denetle({ admin: oturum.aktifAdmin ?? "admin", rol: oturum.aktifRol!, eylem, hedef, onem, arac: "manuel" });
-
-  const admin = oturum.aktifAdmin ?? "admin";
-
-  // Açık ticket için birleşik thread (seed + store yanıtları)
-  const thread = useMemo(() => {
-    if (!acikTicket) return [];
-    const seed = ticketMesajlari(acikTicket.id, acikTicket.konu);
-    const ek = st.ticketYanitlari(acikTicket.id).map((y) => ({ id: y.id, kim: y.kim, metin: y.metin, zaman: y.zaman }));
-    return [...seed, ...ek].sort((a, b) => a.zaman - b.zaman);
-  }, [acikTicket, st]);
-
-  const yanitla = () => {
-    if (!yanit.trim() || !acikTicket) return;
-    st.yanitla(acikTicket.id, yanit.trim(), admin);
-    denetle("Ticket yanıtlandı", "bilgi", acikTicket.id);
-    toast.success("Yanıt gönderildi");
-    setYanit("");
-  };
-
-  const makroUygula = async (makroAd: string, aksiyon: string) => {
-    if (!acikTicket) { toast.error("Ticket seçilmedi", { description: "Makro uygulamak için soldan bir ticket aç." }); return; }
-    const ok = await onayIste({ baslik: makroAd, aciklama: aksiyon, risk: 0, eylemEtiket: "Uygula" });
-    if (!ok) return;
-    const sistemMetni = MAKRO_YANIT[makroAd] ?? aksiyon;
-    st.makroUygula(acikTicket.id, makroAd, sistemMetni, admin);
-    denetle(`Makro uygulandı: ${makroAd}`, "bilgi", acikTicket.id);
-    toast.success("Makro uygulandı", { description: `${makroAd} yanıtı ticket geçmişine eklendi.` });
-  };
-
-  const durumDegistir = (d: Ticket["durum"]) => {
-    if (!acikTicket) return;
-    st.durumDegistir(acikTicket.id, d);
-    denetle(`Ticket durumu: ${d}`, "bilgi", acikTicket.id);
-    toast.success("Ticket durumu güncellendi");
-  };
-
-  const ata = (kime: string) => {
-    if (!acikTicket) return;
-    st.ata(acikTicket.id, kime);
-    denetle(`Ticket atandı: ${kime}`, "bilgi", acikTicket.id);
-    toast.success("Ticket atandı", { description: `Sorumlu: ${kime}.` });
-  };
-
-  const kul = acikTicket ? kullaniciBul(acikTicket.kullaniciId) : null;
-  const aktifDurum = acikTicket ? st.ticketDurum(acikTicket) : "acik";
-  const aktifAtama = acikTicket ? st.ticketAtama(acikTicket) : undefined;
-
-  const sekmeler = [
-    { id: "ticket", ad: "Ticketlar", sayi: tumTicket.filter((t) => st.ticketDurum(t) !== "kapandi").length },
-    { id: "makro", ad: "Makrolar", sayi: MAKROLAR.length },
-    { id: "sss", ad: "SSS Yönetimi", sayi: SSS_YONETIM.length },
-    { id: "metrik", ad: "Metrikler" },
-  ];
+  const { veri: r, hata, yenile } = useAdminVeri<{ talepler: Ozet[]; eposta: boolean }>("/api/admin/destek", 60_000);
+  const [durum, setDurum] = useState<Durum | "hepsi">("acik");
+  const [q, setQ] = useState("");
+  const [secili, setSecili] = useState<string | null>(null);
+  const l = useMemo(() => {
+    if (!r) return [];
+    const s = q.trim().toLocaleLowerCase("tr");
+    return r.talepler.filter((t) => (durum === "hepsi" || t.durum === durum) && (!s || t.email.includes(s) || t.ad.toLocaleLowerCase("tr").includes(s) || t.referans.toLowerCase().includes(s) || t.mesaj.toLocaleLowerCase("tr").includes(s)));
+  }, [r, durum, q]);
+  const say = (d: Durum) => r?.talepler.filter((t) => t.durum === d).length ?? 0;
 
   return (
     <RotaGuard modul="destek">
-      <BolumBaslik baslik="Destek" ozet="Ticket, makro ve SSS yönetimi" ikon={LifeBuoy} />
-
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetrikKart etiket="Açık ticket" deger={sayi(metrik.acikTicket)} ikon={MessageSquare} renk="uyari" />
-        <MetrikKart etiket="İlk yanıt süresi" deger={metrik.ilkYanit} ikon={Clock} renk="aksan" />
-        <MetrikKart etiket="Çözüm süresi" deger={metrik.cozumSure} ikon={CheckCheck} renk="mor" />
-        <MetrikKart etiket="Memnuniyet" deger={metrik.memnuniyet + "/5"} ikon={Zap} renk="basari" />
-      </div>
-
-      <div className="mb-3"><Sekmeler sekmeler={sekmeler} aktif={sekme} sec={setSekme} /></div>
-
-      {/* Ticketlar */}
-      {sekme === "ticket" && (
-        <div>
-          <div className="mb-3 flex flex-wrap items-center gap-3">
-            <AramaKutu deger={ara} degis={setAra} yer="Konu, kullanıcı veya ID ara…" className="w-full sm:w-72" />
-            <div className="flex flex-wrap gap-1.5">
-              {["hepsi", "acik", "yanitlandi", "beklemede", "kapandi"].map((d) => <FiltreCip key={d} aktif={durum === d} onClick={() => setDurum(d)}>{d === "hepsi" ? "Hepsi" : d}</FiltreCip>)}
-            </div>
+      <BolumBaslik baslik="Destek" ozet="İletişim formundan gelen talepler. Yanıt e-postayla gider, iç notlar yalnız yöneticilere görünür." ikon={LifeBuoy} />
+      {hata && <HataKutusu hata={hata} yenile={yenile} />}
+      {!r && !hata && <Yukleniyor satir={3} />}
+      {r && (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetrikKart etiket="Açık" deger={sayi(say("acik"))} ikon={Inbox} />
+            <MetrikKart etiket="Yanıtlandı" deger={sayi(say("yanitlandi"))} ikon={Send} />
+            <MetrikKart etiket="Kapandı" deger={sayi(say("kapandi"))} ikon={LifeBuoy} />
+            <MetrikKart etiket="E-posta servisi" deger={r.eposta ? "Kurulu" : "Kurulu değil"} ikon={MailWarning} alt={r.eposta ? "yanıtlar gönderilir" : "yanıtlar yalnız kaydedilir"} />
           </div>
-          <div className="space-y-2">
-            {liste.slice(0, 40).map((t) => {
-              const d = st.ticketDurum(t);
-              return (
-                <Kart key={t.id} hover tikla={() => setAcikTicket(t)} className="!p-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className={cn("font-mono text-[11px]", AD.metin3)}>{t.id}</span>
-                    <div className="min-w-0 flex-1"><div className={cn("text-[13px] font-medium", AD.metin)}>{t.konu}</div><div className={cn("text-[11px]", AD.metin3)}>{t.kullanici} · {t.kategori} · {goreceZaman(t.sonMesaj)}</div></div>
-                    <Rozet ton={ONCELIK_TON[t.oncelik]}>{t.oncelik}</Rozet>
-                    <Rozet ton={DURUM_TON[d]}>{d}</Rozet>
-                    <span className={cn("text-[11px] tabular-nums", t.slaKalan < 0 ? "text-rose-400" : t.slaKalan < 4 ? "text-amber-400" : AD.metin3)}>SLA {t.slaKalan < 0 ? `${-t.slaKalan}sa geçti` : `${t.slaKalan}sa`}</span>
-                  </div>
-                </Kart>
-              );
-            })}
+          <div className="mb-4 mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+            <div className="flex gap-2 overflow-x-auto pb-1 ad-ince-scroll">
+              {([["acik", "Açık"], ["yanitlandi", "Yanıtlandı"], ["kapandi", "Kapandı"], ["hepsi", "Hepsi"]] as const).map(([k, a]) => <FiltreCip key={k} aktif={durum === k} onClick={() => setDurum(k)}>{a}</FiltreCip>)}
+            </div>
+            <AramaKutu deger={q} degis={setQ} yer="E-posta, ad, numara ya da mesaj ara" className="lg:ml-auto lg:w-80" />
           </div>
-        </div>
+          {l.length === 0 ? <Bos ikon={Inbox} baslik={r.talepler.length ? "Bu süzgeçle talep yok" : "Henüz destek talebi yok"} ozet="İletişim sayfasındaki formdan gelen mesajlar burada görünür." /> : (
+            <BasitTablo baslik={["Talep", "Gönderen", "Konu", "Durum", "Son hareket"]} enAz={780}>
+              {l.map((t) => (
+                <tr key={t.referans} className={cn(satirSinif, "cursor-pointer hover:bg-white/[0.03]")} onClick={() => setSecili(t.referans)}>
+                  <td className={hucre}><div className={cn("font-mono text-[12px]", AD.metin2)}>{t.referans}</div><div className={cn("max-w-[300px] truncate", AD.metin)}>{t.mesaj}</div></td>
+                  <td className={hucre}><div className={AD.metin}>{t.ad}</div><div className={cn("text-[12px]", AD.metin3)}>{t.email}</div></td>
+                  <td className={cn(hucre, AD.metin2)}>{t.konu}</td>
+                  <td className={hucre}><Rozet ton={DURUM[t.durum].ton}>{DURUM[t.durum].ad}</Rozet>{t.yanitSayisi + t.notSayisi > 0 && <div className={cn("mt-0.5 text-[11px]", AD.metin3)}>{t.yanitSayisi} yanıt, {t.notSayisi} not</div>}</td>
+                  <td className={cn(hucre, "whitespace-nowrap", AD.metin2)}>{gorece(t.guncelleme)}</td>
+                </tr>
+              ))}
+            </BasitTablo>
+          )}
+        </>
       )}
-
-      {/* Makrolar */}
-      {sekme === "makro" && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {MAKROLAR.map((m) => (
-            <Kart key={m.id} className="flex flex-col">
-              <span className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><Zap className="h-4 w-4" /></span>
-              <h3 className={cn("text-[14px] font-semibold", AD.metin)}>{m.ad}</h3>
-              <p className={cn("mt-1 flex-1 text-[12px]", AD.metin3)}>{m.aksiyon}</p>
-              <p className={cn("mt-2 text-[11px]", AD.metin3)}>Makrolar bir ticket açıkken uygulanır.</p>
-            </Kart>
-          ))}
-        </div>
-      )}
-
-      {/* SSS */}
-      {sekme === "sss" && (
-        <div className="space-y-2">
-          <div className="mb-1 flex justify-end"><Dugme boyut="sm" onClick={() => toast.info("SSS düzenleyici hazır değil", { description: "SSS ekleme henüz kaydedilmiyor." })}>SSS ekle</Dugme></div>
-          {SSS_YONETIM.map((s) => (
-            <Kart key={s.id} className="!p-3">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><HelpCircle className="h-4 w-4" /></span>
-                <div className="min-w-0 flex-1"><div className={cn("text-[13px] font-medium", AD.metin)}>{s.soru}</div><div className={cn("text-[11px]", AD.metin3)}>{s.kategori}</div></div>
-                <span className={cn("text-[12px] tabular-nums", AD.metin3)}>{sayi(s.gorunum)} görüntülenme</span>
-              </div>
-            </Kart>
-          ))}
-        </div>
-      )}
-
-      {/* Metrikler */}
-      {sekme === "metrik" && (
-        <Kart className="max-w-2xl">
-          <h3 className={cn("mb-4 text-sm font-bold", AD.metin)}>Destek performansı</h3>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {[["İlk yanıt", metrik.ilkYanit], ["Çözüm süresi", metrik.cozumSure], ["Açık ticket", String(metrik.acikTicket)], ["Memnuniyet", metrik.memnuniyet + "/5"], ["Günlük hacim", String(metrik.gunlukHacim)], ["Çözüm oranı", "%94"]].map(([e, d]) => (
-              <div key={e} className="rounded-xl border border-[color:var(--ad-kenar)] p-3 text-center"><div className={cn("text-lg font-bold tabular-nums", AD.metin)}>{d}</div><div className={cn("text-[11px]", AD.metin3)}>{e}</div></div>
-            ))}
-          </div>
-        </Kart>
-      )}
-
-      {/* Ticket detay çekmecesi — mesaj thread + gerçek yanıt/makro/atama */}
-      <Cekmece acik={!!acikTicket} kapat={() => setAcikTicket(null)} baslik={acikTicket?.id} genislik="max-w-lg">
-        {acikTicket && (
-          <div className="space-y-4">
-            <div>
-              <h3 className={cn("text-lg font-bold", AD.metin)}>{acikTicket.konu}</h3>
-              <div className="mt-1.5 flex flex-wrap gap-2"><Rozet ton={ONCELIK_TON[acikTicket.oncelik]}>{acikTicket.oncelik}</Rozet><Rozet ton={DURUM_TON[aktifDurum]}>{aktifDurum}</Rozet><Rozet ton="notr">{acikTicket.kategori}</Rozet></div>
-            </div>
-
-            {/* Kullanıcı bağlamı */}
-            {kul && (
-              <Link href={`/admin/kullanicilar/${kul.id}`}>
-                <div className="ad-glass ad-glass-hover !p-3">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#7de0ff] to-[#1ea8d6] text-[11px] font-bold text-[#04222c]">{kul.ad.split(" ").map((x) => x[0]).join("").slice(0, 2)}</div>
-                    <div className="min-w-0 flex-1"><div className={cn("text-[13px] font-semibold", AD.metin)}>{kul.ad}</div><div className={cn("text-[11px]", AD.metin3)}>{PLAN_ADI[kul.plan as keyof typeof PLAN_ADI]} · {sayi(kul.krediBakiye)} kredi · {kul.jobSayisi} üretim</div></div>
-                  </div>
-                </div>
-              </Link>
-            )}
-
-            {/* Durum + atama */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className={cn("mb-1.5 text-[11px] font-semibold uppercase tracking-wider", AD.metin3)}>Durum</p>
-                <select value={aktifDurum} onChange={(e) => durumDegistir(e.target.value as Ticket["durum"])} className="h-9 w-full rounded-xl border border-[color:var(--ad-kenar)] bg-[color:var(--ad-yuzey-2)] px-2.5 text-[13px] text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50">
-                  {DURUMLAR.map((d) => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <p className={cn("mb-1.5 text-[11px] font-semibold uppercase tracking-wider", AD.metin3)}>Atanan</p>
-                <select value={aktifAtama ?? ""} onChange={(e) => ata(e.target.value)} className="h-9 w-full rounded-xl border border-[color:var(--ad-kenar)] bg-[color:var(--ad-yuzey-2)] px-2.5 text-[13px] text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50">
-                  <option value="" disabled>Ata…</option>
-                  {ATANANLAR.map((a) => <option key={a} value={a}>{a}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {/* Mesaj thread */}
-            <div>
-              <p className={cn("mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider", AD.metin3)}><MessageSquare className="h-3.5 w-3.5" /> Konuşma ({thread.length})</p>
-              <div className="ad-ince-scroll max-h-[320px] space-y-2 overflow-y-auto rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.02] p-3">
-                {thread.map((m) => (
-                  <div key={m.id} className={cn("flex", m.kim === "destek" ? "justify-end" : "justify-start")}>
-                    <div className={cn("max-w-[80%] rounded-2xl px-3 py-2", m.kim === "destek" ? "rounded-br-sm bg-[color:var(--ad-aksan)]/15 text-[color:var(--ad-metin)]" : "rounded-bl-sm bg-white/[0.05] text-[color:var(--ad-metin)]")}>
-                      <div className={cn("mb-0.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide", m.kim === "destek" ? "text-[color:var(--ad-aksan)]" : AD.metin3)}>
-                        {m.kim === "destek" ? <><UserCheck className="h-3 w-3" /> Destek</> : "Kullanıcı"}
-                      </div>
-                      <p className="text-[13px] leading-relaxed">{m.metin}</p>
-                      <div className={cn("mt-1 text-right text-[10px]", AD.metin3)}>{tarihSaat(m.zaman)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Makro hızlı aksiyonlar */}
-            <div>
-              <p className={cn("mb-2 text-[11px] font-semibold uppercase tracking-wider", AD.metin3)}>Hızlı aksiyonlar (makro)</p>
-              <div className="flex flex-wrap gap-1.5">
-                {MAKROLAR.slice(0, 3).map((m) => <Dugme key={m.id} boyut="sm" tur="glass" ikon={m.ad.includes("Kredi") ? Coins : Zap} onClick={() => makroUygula(m.ad, m.aksiyon)}>{m.ad}</Dugme>)}
-              </div>
-            </div>
-
-            {/* Yanıt */}
-            <div>
-              <p className={cn("mb-2 text-[11px] font-semibold uppercase tracking-wider", AD.metin3)}>Yanıtla</p>
-              <textarea value={yanit} onChange={(e) => setYanit(e.target.value)} rows={4} placeholder="Yanıtını yaz…" className="w-full resize-none rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] p-3 text-sm text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50" />
-              <Dugme className="mt-2 w-full" ikon={Send} disabled={!yanit.trim()} onClick={yanitla}>Yanıtı gönder</Dugme>
-            </div>
-          </div>
-        )}
+      <Cekmece acik={!!secili} kapat={() => setSecili(null)} baslik={secili ?? ""} genislik="max-w-xl">
+        {secili && r && <TalepPaneli referans={secili} eposta={r.eposta} kapat={() => setSecili(null)} degisti={yenile} />}
       </Cekmece>
     </RotaGuard>
   );

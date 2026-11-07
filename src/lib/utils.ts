@@ -62,9 +62,26 @@ export function gradientOnizleme(tohum: string): string {
   return `linear-gradient(135deg, hsl(${a} 75% 55%), hsl(${b} 70% 45%) 55%, hsl(${c} 65% 30%))`;
 }
 
+/* ══════════════ FİLİGRAN KÖPRÜSÜ ══════════════
+   Plan hakkı olmayan kullanıcının indirdiği görsele Vayra işareti basılır (lib/galeri/indir).
+   utils her yerden içe aktarıldığı için galeri modülünü doğrudan çağırmaz (döngü olmasın):
+   galeri/indir yüklenince buraya kendini kaydeder; kayıt yoksa eski davranış sürer. */
+type FiligranKoprusu = { gerekli: () => boolean; indir: (url: string, ad: string, bicim?: string) => Promise<boolean> };
+let filigranKoprusu: FiligranKoprusu | null = null;
+export function filigranKoprusuKur(k: FiligranKoprusu) { filigranKoprusu = k; }
+/** Adres bir görsel dosyası mı (filigran yalnız görsellere basılır). */
+export const gorselAdresiMi = (u: string) => /^data:image\//.test(u) || /\.(png|jpe?g|webp|avif|gif)(\?|$)/i.test(u) || /\/api\/dosya\/(gorsel|upscale|element)\//.test(u) || /^\/(stok|gercek)\//.test(u);
+/** Filigran gerekiyorsa indirmeyi köprüye devreder ve true döner. */
+export function filigranliIndirildi(url: string, ad: string, bicim?: string): boolean {
+  if (!filigranKoprusu || !gorselAdresiMi(url) || !filigranKoprusu.gerekli()) return false;
+  void filigranKoprusu.indir(url, ad, bicim);
+  return true;
+}
+
 /** Üretim önizlemesini gerçek bir PNG olarak indirir (canvas ile). */
-export function gorseliIndir(tohum: string, dosyaAdi: string, gercekUrl?: string) {
-  if (typeof document === "undefined") return;
+export function gorseliIndir(tohum: string, dosyaAdi: string, gercekUrl?: string): boolean {
+  if (typeof document === "undefined") return false;
+  if (gercekUrl && filigranliIndirildi(gercekUrl, dosyaAdi)) return true;
   const adTemiz = dosyaAdi.replace(/[^\w-]/g, "_").slice(0, 40) || "vayra";
   // Gerçek API çıktısı (data:image/... veya http URL) varsa onu doğrudan indir.
   if (gercekUrl) {
@@ -80,29 +97,11 @@ export function gorseliIndir(tohum: string, dosyaAdi: string, gercekUrl?: string
     document.body.appendChild(link);
     link.click();
     link.remove();
-    return;
+    return true;
   }
-  let h = 0;
-  for (let i = 0; i < tohum.length; i++) h = (h * 31 + tohum.charCodeAt(i)) >>> 0;
-  const a = h % 360, b = (a + 60 + (h % 120)) % 360, c = (a + 200) % 360;
-  const canvas = document.createElement("canvas");
-  canvas.width = 1280; canvas.height = 720;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const g = ctx.createLinearGradient(0, 0, 1280, 720);
-  g.addColorStop(0, `hsl(${a} 75% 55%)`);
-  g.addColorStop(0.55, `hsl(${b} 70% 45%)`);
-  g.addColorStop(1, `hsl(${c} 65% 30%)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, 1280, 720);
-  // Vayra filigranı
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "bold 34px Inter, sans-serif";
-  ctx.fillText("Vayra", 40, 680);
-  const link = document.createElement("a");
-  link.download = `${dosyaAdi.replace(/[^\w-]/g, "_").slice(0, 40)}.png`;
-  link.href = canvas.toDataURL("image/png");
-  link.click();
+  // Dosyası olmayan üretimde uydurma bir gradyan PNG indirilmez: çağıran "dosya yok" der.
+  void tohum;
+  return false;
 }
 
 /* ══════════════ FORMAT SEÇEREK İNDİRME ══════════════
@@ -134,6 +133,7 @@ export async function gorseliFormatlaIndir(
   format: string = INDIRME_FORMATLARI[0],
 ): Promise<void> {
   if (typeof document === "undefined" || !url) return;
+  if (filigranKoprusu?.gerekli()) { await filigranKoprusu.indir(url, dosyaAdi, format); return; }
   const adTemiz = (dosyaAdi || "vayra").replace(/[^\w-]/g, "_").slice(0, 60) || "vayra";
   const mime = MIME[format] ?? MIME.png;
 

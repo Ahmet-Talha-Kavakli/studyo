@@ -39,7 +39,7 @@ const GRUPLAR: { ad: string; ogeler: Oge[] }[] = [
     { ad: "Dosya ya da CSV ekle", tus: [{ m: "Tuvale sürükle bırak" }] },
   ] },
   { ad: "Düzen", ogeler: [
-    { ad: "Taşı", tus: [["←"], ["→"], ["↑"], ["↓"], { m: "hızlı:" }, ["Shift"]] },
+    { ad: "Taşı", tus: [["Sol"], ["Sağ"], ["Yukarı"], ["Aşağı"], { m: "hızlı:" }, ["Shift"]] },
     { ad: "Grupla", tus: [["Ctrl", "G"]] },
     { ad: "Grubu çöz", tus: [["Ctrl", "Shift", "G"]] },
     { ad: "Otomatik düzenle", tus: [["Shift", "L"]] },

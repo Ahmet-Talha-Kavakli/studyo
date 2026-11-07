@@ -7,6 +7,9 @@ import { ANIMASYONLAR, ANIMASYON_KATEGORILERI } from "@/lib/uc-boyut";
 export type GirdiMod = "metin" | "gorsel" | "coklu";
 export type Arac = "doku" | "remesh" | "rig" | "baski" | "indir";
 
+/** Araç işlemlerinin bedeli (sunucu da bunu keser: lib/krediTarife). Sağlayıcı bağlı değilse işlem çalışmaz. */
+export const ARAC_KREDI_3D = { doku: 10, remesh: 5, rig: 20, baski: 5 } as const;
+
 /** Üretim modelleri — taslak (4 aday, dokusuz) ve detaylandırma maliyeti ayrı. */
 export const MODELLER_3D = [
   { id: "vayra-3d-6", ad: "Vayra 3D 6", kisa: "Vayra 3D 6", alt: "En yüksek detay, keskin geometri", sure: "yaklaşık 60 sn", taslak: 20, detay: 10, hiz: 2, detayPuan: 5, kapak: "/gercek/3d/savasci-poster.png", rozet: "Yeni" },

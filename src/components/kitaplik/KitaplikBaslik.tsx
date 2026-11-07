@@ -8,7 +8,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Clock, FolderPlus, Heart, LayoutGrid, Loader2, Sparkles, Trash2, Upload, type LucideIcon } from "lucide-react";
+import { ArrowRight, Clock, FolderPlus, Star, LayoutGrid, Loader2, Sparkles, Trash2, Upload, type LucideIcon } from "lucide-react";
 import { MacKlasor } from "@/components/panel/proje/calisma/ortak";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import type { Uretim } from "@/store/useProjeler";
@@ -32,7 +32,7 @@ export function KitaplikBaslik({ ad, ikon, proje, liste, aktifIs, copModu, yukle
   const kredi = liste.reduce((t, u) => t + (u.kredi ?? 0), 0);
   const son = liste.reduce<Uretim | undefined>((a, u) => (!a || u.olusturma > a.olusturma ? u : a), undefined);
   const kapaklar = liste.map(kapakUrl).filter(Boolean).slice(0, 4) as string[];
-  const I: LucideIcon = typeof ikon === "string" ? ({ tumu: LayoutGrid, favori: Heart, son7: Clock, akilli: Sparkles, cop: Trash2 } as const)[ikon] : ikon;
+  const I: LucideIcon = typeof ikon === "string" ? ({ tumu: LayoutGrid, favori: Star, son7: Clock, akilli: Sparkles, cop: Trash2 } as const)[ikon] : ikon;
 
   return (
     <motion.header key={ad} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}

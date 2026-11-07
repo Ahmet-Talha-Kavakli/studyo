@@ -31,6 +31,12 @@ import { Yuzen } from "@/components/ui/Yuzen";
 import { Segment } from "@/components/montaj/ui";
 import { dosyaYukle } from "@/components/montaj/ortak";
 import { AVATARLAR, DILLER } from "@/components/speak/speakVeri";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, FavoriRozeti, KartDahaMenusu, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { istemTemizlensinMi, kartOrani, sutunSayisi as gorunumSutun, type Gorunum as GaleriGorunum } from "@/lib/galeri/gorunum";
+import { urlIndir } from "@/lib/gercekEylem";
 
 const ARAC_ADI = "UGC Fabrikası";
 const KARE_KREDI = 5;
@@ -233,6 +239,7 @@ export function UgcStudyo() {
     }
     setMesgul(false);
     if (!ok) return;
+    if (istemTemizlensinMi("ugc")) { setGovde(""); setGovdeElle(false); }
     toast.success(`${ok} ${mod === "video" || kare ? "video" : "kare"} üretiliyor`, { description: demo ? "Bittikçe panoda görünür. Kredi düşmez." : "Bittikçe panoda görünür." });
   };
 
@@ -684,7 +691,7 @@ export function UgcStudyo() {
         </button>
         <span className="flex h-12 items-center gap-2.5 rounded-full bg-white/[0.08] pl-1.5 pr-4">
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.1] text-white/85"><LayoutGrid className="h-4 w-4" /></span>
-          <span className="leading-tight"><span className="block text-[11px] text-white/55">Plan</span><span className="block text-[13.5px] font-medium tabular-nums text-metin">{seciliAktor.length} oyuncu × {aktifKanca.length} kanca = {varyant} reklam</span></span>
+          <span className="leading-tight"><span className="block text-[11px] text-white/55">Plan</span><span className="block text-[13.5px] font-medium tabular-nums text-metin">{seciliAktor.length} oyuncu × {aktifKanca.length} kanca, toplam {varyant} reklam</span></span>
         </span>
         {V0 && <span className="ml-auto flex h-12 items-center gap-2.5 rounded-full bg-white/[0.08] pl-1.5 pr-4 max-sm:hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -710,17 +717,22 @@ export function UgcStudyo() {
   );
 
   /* ═════════ REKLAMLARIM ═════════ */
+  const [ugcGor] = useGorunum("ugc");
   const gruplar = useMemo(() => {
     const m = new Map<string, Uretim[]>();
     for (const u of sonuclar) { const g = u.meta?.grupId ?? u.id; m.set(g, [...(m.get(g) ?? []), u]); }
-    return [...m.values()].map((l) => l.sort((a, b) => (a.meta?.sira ?? 0) - (b.meta?.sira ?? 0)));
-  }, [sonuclar]);
+    const enYeni = (l: Uretim[]) => Math.max(...l.map((x) => x.olusturma));
+    return [...m.values()].map((l) => l.sort((a, b) => (a.meta?.sira ?? 0) - (b.meta?.sira ?? 0))).sort((a, b) => (ugcGor.siralama === "eski" ? 1 : -1) * (enYeni(a) - enYeni(b)));
+  }, [sonuclar, ugcGor.siralama]);
   const calisan = sonuclar.filter((u) => u.durum !== "tamam" && u.durum !== "hata").length;
   const hatali = sonuclar.filter((u) => u.durum === "hata");
   const reklamlar = gruplar.length ? (
     <div className="space-y-4">
+      <div className="flex items-center justify-end gap-2">
       {hatali.length > 0 && <button onClick={() => { const { sil } = useProjeler.getState(); for (const u of hatali) sil(u.id); }} className="flex h-9 items-center gap-1.5 rounded-full bg-white/[0.06] px-3.5 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.1] hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" />{hatali.length} başarısızı temizle</button>}
-      {gruplar.map((g, i) => <Grup key={g[0].meta?.grupId ?? g[0].id} sira={i} g={g} model={model} onAc={setAcik} onVideo={(u) => uret(undefined, undefined, u)} />)}
+      <span className="flex-1" /><GorunumAyari sayfa="ugc" />
+      </div>
+      {gruplar.map((g, i) => <Grup key={g[0].meta?.grupId ?? g[0].id} sira={i} g={g} gor={ugcGor} model={model} onAc={setAcik} onVideo={(u) => uret(undefined, undefined, u)} />)}
     </div>
   ) : (
     <Kart ikon={Film} baslik="Henüz reklam yok" alt="Varyant planından üret; kareler ve videolar burada ürün ürün gruplanır"
@@ -840,9 +852,9 @@ function Kart({ ikon: I, baslik, alt, sag, children }: { ikon: typeof Film; basl
 const SayiRozet = ({ n }: { n: number }) => <span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin-2">{n}</span>;
 
 /** Reklam kartının ortak görünümü: 9:16, kanca altyazısı, ürün rozeti (demo/plan). */
-function ReklamKart({ kapak, urun, harf, kanca, ad, ust, soluk, secili, sira = 0, children }: { kapak: string; urun?: string; harf?: string; kanca: string; ad?: string; ust?: React.ReactNode; soluk?: boolean; secili?: boolean; sira?: number; children?: React.ReactNode }) {
+function ReklamKart({ kapak, urun, harf, kanca, ad, ust, soluk, secili, sira = 0, children, oran }: { kapak: string; urun?: string; harf?: string; kanca: string; ad?: string; ust?: React.ReactNode; soluk?: boolean; secili?: boolean; sira?: number; children?: React.ReactNode; oran?: number }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }} transition={{ ...YAY, delay: Math.min(sira, 8) * 0.04 }} whileHover={{ y: -3 }}
+    <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }} transition={{ ...YAY, delay: Math.min(sira, 8) * 0.04 }} whileHover={{ y: -3 }} style={oran ? { aspectRatio: String(oran) } : undefined}
       className="group relative aspect-[9/16] overflow-hidden rounded-[14px] bg-black">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={kapak} alt="" className={cn("absolute inset-0 h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]", soluk && "opacity-40 blur-[2px]")} />
@@ -875,7 +887,7 @@ function Hucre({ a, k, harf, sira, urunGorsel, birim, mod, mesgul, u, secili, on
     <div role="button" tabIndex={0} onClick={onSec} onKeyDown={(e) => { if (e.key === "Enter") onSec?.(); }} className="cursor-pointer outline-none">
       <ReklamKart sira={sira} kapak={kapak} urun={!u || u.gercek === false ? urunGorsel : undefined} harf={harf} kanca={k.metin} ad={a.ad} soluk={calisiyor} secili={secili}
         ust={u && bitti ? <Rozet tur={u.tur} /> : u?.durum === "hata" ? <span className="flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] text-rose-200"><AlertTriangle className="h-3 w-3" />Başarısız</span> : undefined}>
-        {calisiyor && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white"><Loader2 className="h-5 w-5 animate-spin" />%{Math.round(u!.ilerleme ?? 0)}</span>}
+        {calisiyor && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white"><Loader2 className="h-5 w-5 animate-spin" />yüzde {Math.round(u!.ilerleme ?? 0)}</span>}
         {u && bitti ? (
           <button onClick={(e) => { e.stopPropagation(); onAc(u); }} aria-label="Büyük izle" className="absolute left-1/2 top-[38%] flex h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full bg-white/90 text-[#0b0c0e] opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
             <Play className="h-4 w-4 translate-x-px fill-current" />
@@ -901,7 +913,8 @@ function BilgiHap({ ikon, et, v }: { ikon: React.ReactNode; et: string; v: strin
 }
 
 /** Reklamlarım: bir üretim turu (aynı ürün, aynı anda gönderilen varyantlar). */
-function Grup({ g, sira, model, onAc, onVideo }: { g: Uretim[]; sira: number; model: string; onAc: (u: Uretim) => void; onVideo: (u: Uretim) => void }) {
+function Grup({ g, sira, model, onAc, onVideo, gor }: { g: Uretim[]; sira: number; model: string; onAc: (u: Uretim) => void; onVideo: (u: Uretim) => void; gor: GaleriGorunum }) {
+  const [alanRef, alanEn] = useAlanGenisligi<HTMLDivElement>(1000);
   const [urunAd] = g[0].baslik.split(" · ");
   const urunG = g.map((u) => u.meta?.urunGorsel ?? u.meta?.referanslar?.[0]).find(Boolean) ?? ORNEK_URUNLER.find((o) => o.ad === g[0].baslik.split(" · ")[0])?.gorsel;
   const hazir = g.filter((u) => u.durum === "tamam").length, video = g[0].tur === "video";
@@ -909,7 +922,7 @@ function Grup({ g, sira, model, onAc, onVideo }: { g: Uretim[]; sira: number; mo
     let n = 0;
     for (const u of g.filter((x) => x.durum === "tamam")) {
       const url = video ? u.videoUrl : saltUrl(u.gorselUrl); if (!url) continue;
-      const a = document.createElement("a"); a.href = url; a.download = `${u.baslik.replace(/[\\/:*?"<>|]+/g, "-")}.${video ? "mp4" : "png"}`; a.click();
+      urlIndir(url, `${u.baslik.replace(/[\\/:*?"<>|]+/g, "-")}.${video ? "mp4" : "png"}`);
       n++;
     }
     if (n) toast.success(n > 1 ? `${n} dosya indiriliyor` : video ? "Video indiriliyor" : "Görsel indiriliyor", { description: "Dosyalar indirilenler klasörüne kaydedilir." });
@@ -945,28 +958,35 @@ function Grup({ g, sira, model, onAc, onVideo }: { g: Uretim[]; sira: number; mo
           </Tooltip>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-2.5 p-3.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        {g.map((u, i) => <SonucKart key={u.id} sira={i} u={u} model={model} onAc={() => onAc(u)} onVideo={() => onVideo(u)} />)}
+      <div ref={alanRef} className="grid gap-2.5 p-3.5" style={{ gridTemplateColumns: `repeat(${gorunumSutun(alanEn, gor, { enCok: 8 })}, minmax(0, 1fr))` }}>
+        {g.map((u, i) => <SonucKart key={u.id} sira={i} u={u} model={model} oran={gor.yerlesim === "ozgun" ? undefined : kartOrani(gor, 1)} onAc={() => onAc(u)} onVideo={() => onVideo(u)} />)}
       </div>
     </motion.section>
   );
 }
 
-function SonucKart({ u, sira, model, onAc, onVideo }: { u: Uretim; sira: number; model: string; onAc: () => void; onVideo: () => void }) {
+function SonucKart({ u, sira, model, onAc, onVideo, oran }: { u: Uretim; sira: number; model: string; onAc: () => void; onVideo: () => void; oran?: number }) {
   const bitti = u.durum === "tamam", demoU = u.gercek === false;
   const aktorG = u.tur === "gorsel" ? u.meta?.referanslar?.[1] : u.meta?.gorselUrl, urunG = u.meta?.urunGorsel ?? (u.tur === "gorsel" ? u.meta?.referanslar?.[0] : undefined);
   const kapak = ((demoU || !bitti) && aktorG ? aktorG : saltUrl(u.gorselUrl) ?? u.meta?.gorselUrl) ?? "";
   const aktorAd = u.baslik.split(" · ")[1];
   return (
     <div className="min-w-0">
-      <ReklamKart sira={sira} kapak={kapak} urun={demoU && bitti ? urunG : undefined} kanca={u.meta?.hamIstem ?? u.baslik} ad={aktorAd} soluk={!bitti}
-        ust={bitti ? <Rozet tur={u.tur} demo={demoU} /> : undefined}>
+      <ReklamKart oran={oran} sira={sira} kapak={kapak} urun={demoU && bitti ? urunG : undefined} kanca={u.meta?.hamIstem ?? u.baslik} ad={aktorAd} soluk={!bitti}
+        ust={bitti ? <span className="flex gap-1 transition-opacity group-hover:opacity-0 [@media(hover:none)]:hidden">{u.favori && <FavoriRozeti boyut="kucuk" className="!relative" />}<Rozet tur={u.tur} demo={demoU} /></span> : undefined}>
         {bitti && u.tur === "video" && u.videoUrl && <video src={u.videoUrl} muted loop playsInline preload="none" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-hover:opacity-100" onMouseEnter={(e) => void e.currentTarget.play().catch(() => {})} onMouseLeave={(e) => e.currentTarget.pause()} />}
-        {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `%${Math.round(u.ilerleme ?? 0)}`}</span>}
+        {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `yüzde ${Math.round(u.ilerleme ?? 0)}`}</span>}
         {bitti && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/45 opacity-0 transition-opacity group-hover:opacity-100">
             <button onClick={onAc} className="flex h-9 items-center gap-1.5 rounded-full bg-white px-4 text-[12.5px] font-semibold text-[#0b0c0e] transition active:scale-95"><Play className="h-3.5 w-3.5 fill-current" />Büyük izle</button>
             {u.tur === "gorsel" && <button onClick={onVideo} title={`Bu kareyi ${model} ile videoya çevir`} className="flex h-9 items-center gap-1.5 rounded-full bg-white/[0.16] px-4 text-[12.5px] font-semibold text-white ring-1 ring-inset ring-white/25 backdrop-blur-xl transition hover:bg-white/[0.24] active:scale-95"><Film className="h-3.5 w-3.5" />Videoya çevir<span className="flex items-center gap-0.5 rounded-full bg-black/25 px-1.5 text-[11.5px] tabular-nums"><KrediYildiz className="h-2.5 w-2.5" />{videoKrediHesap(model)}</span></button>}
+          </div>
+        )}
+        {bitti && (
+          <div onClick={(e) => e.stopPropagation()} className="pointer-events-none absolute right-2 top-2 z-30 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+            <FavoriDugmesi favori={!!u.favori} onClick={() => useProjeler.getState().favoriToggle(u.id)} boyut="kucuk" side="left" />
+            <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="left" />
+            <KartDahaMenusu u={u} boyut="kucuk" side="left" onSil={() => useProjeler.getState().sil(u.id)} eylemler={[{ ad: "Büyük izle", ikon: Play, fn: onAc }, ...(u.tur === "gorsel" ? [{ ad: "Videoya çevir", ikon: Film, fn: onVideo }] : [])]} />
           </div>
         )}
       </ReklamKart>

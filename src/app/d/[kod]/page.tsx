@@ -8,7 +8,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { kod } = await params;
   return {
     title: `@${kod} seni Vayra'ya davet etti`,
-    description: "Görsel, video, ses ve müzik üretiminde tek platform. Davetle katıl, ilk plan ödemende %15 indirim kazan.",
+    description: "Görsel, video, ses ve müzik üretiminde tek platform. Davetle katıl, ilk plan ödemende yüzde 15 indirim kazan.",
     robots: { index: false },
   };
 }

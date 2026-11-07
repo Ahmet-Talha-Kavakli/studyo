@@ -35,6 +35,11 @@ import {
 import { dosyaYukle } from "@/components/montaj/ortak";
 import { CizimTuval, type TuvalTutamak } from "./CizimTuval";
 import { CizimSonuc } from "./CizimSonuc";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, FavoriRozeti, KartDahaMenusu, YenidenKullanDugmesi, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { istemTemizlensinMi, kartOrani, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 
 const ARAC_ADI = "Çizim Stüdyosu";
 
@@ -159,7 +164,8 @@ export function CizimStudyo() {
   const [adet, setAdet] = useState(1);
   const [ozelStil, setOzelStil] = useState("");
   const uretimler = useProjeler((s) => s.uretimler);
-  const sonuclar = useMemo(() => uretimler.filter((u) => u.arac === ARAC_ADI), [uretimler]);
+  const [gor] = useGorunum("draw");
+  const sonuclar = useMemo(() => zamanaGoreSirala(uretimler.filter((u) => u.arac === ARAC_ADI), gor.siralama), [uretimler, gor.siralama]);
   const calisan = sonuclar.filter((u) => u.durum !== "tamam" && u.durum !== "hata").length;
   const cipAc = (id: string) => (v: boolean) => setCip(v ? id : null);
 
@@ -267,6 +273,7 @@ export function CizimStudyo() {
         ok++;
       }
       if (!ok) return;
+      if (istemTemizlensinMi("draw")) useCizim.getState().istemAyarla("");
       if (masaustu) setCekmece("sonuc"); else setMobilSekme("sonuc");
       toast.success(mod === "video" ? (ok > 1 ? `${ok} video üretiliyor` : "Video üretiliyor") : mod === "eskiz" ? (ok > 1 ? `${ok} eskiz görsele dönüşüyor` : "Eskiz görsele dönüşüyor") : (ok > 1 ? `${ok} düzenleme uygulanıyor` : "Düzenleme uygulanıyor"), { description: `${mod === "video" ? vModel.ad : gModel.ad} · ${demo ? "Kredi düşmez." : `${birim * ok} kredi.`} Sonuçlar sağ panelde.` });
     } catch (e) { toast.error("Kare hazırlanamadı", { description: e instanceof Error ? e.message : "Tuval görsele dönüştürülemedi. Yeniden dene." }); }
@@ -336,7 +343,7 @@ export function CizimStudyo() {
   const zoom = (
     <div className={cn("pointer-events-auto inline-flex items-center gap-0.5 p-1", PANEL)}>
       <button onClick={() => tuval.current?.yakinlas(1 / 1.2)} aria-label="Uzaklaş" className={cn(IKON_BTN, "h-8 w-8")}><ZoomOut className="h-4 w-4" /></button>
-      <span className="w-11 text-center text-[12.5px] font-medium tabular-nums text-metin-2">{zoomYuzde}%</span>
+      <span className="min-w-11 whitespace-nowrap px-1 text-center text-[12.5px] font-medium tabular-nums text-metin-2">yüzde {zoomYuzde}</span>
       <button onClick={() => tuval.current?.yakinlas(1.2)} aria-label="Yakınlaş" className={cn(IKON_BTN, "h-8 w-8")}><ZoomIn className="h-4 w-4" /></button>
       <Tooltip label="Sığdır · F"><button onClick={() => tuval.current?.sigdir()} aria-label="Sığdır" className={cn(IKON_BTN, "h-8 w-8")}><Maximize className="h-4 w-4" /></button></Tooltip>
       <div className="relative">
@@ -635,22 +642,31 @@ export function CizimStudyo() {
   );
 
   const sonucListe = sonuclar.length ? (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${gor.boyut === "kucuk" ? 3 : gor.boyut === "buyuk" ? 1 : gor.boyut === "ozel" ? Math.min(4, Math.max(1, gor.sutun - 2)) : 2}, minmax(0, 1fr))` }}>
       {sonuclar.map((u, sira) => {
         const bitti = u.durum === "tamam";
         const kapak = saltUrl(u.gorselUrl) ?? u.meta?.gorselUrl;
+        const ilk = sira === 0 && gor.boyut === "orta";
         return (
-          <button key={u.id} onClick={() => setAcik(u)} className={cn("group min-w-0 text-left", sira === 0 && "col-span-2")}>
-            <span className={cn("relative block overflow-hidden rounded-[12px] bg-black outline outline-1 -outline-offset-1 outline-white/[0.08] group-hover:outline-white/25", sira === 0 ? "aspect-[4/3]" : "aspect-square")}>
+          <div key={u.id} role="button" tabIndex={0} onClick={() => setAcik(u)} onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) setAcik(u); }} className={cn("group relative min-w-0 cursor-pointer text-left", ilk && "col-span-2")}>
+            <span className="relative block overflow-hidden rounded-[12px] bg-black outline outline-1 -outline-offset-1 outline-white/[0.08] group-hover:outline-white/25" style={{ aspectRatio: String(kartOrani(gor, ilk ? 4 / 3 : 1)) }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {kapak && <img src={bitti ? kapak : u.meta?.gorselUrl ?? kapak} alt="" className={cn("absolute inset-0 -z-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105", !bitti && "opacity-40 blur-[2px]")} />}
-              {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `%${Math.round(u.ilerleme ?? 0)}`}</span>}
+              {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `yüzde ${Math.round(u.ilerleme ?? 0)}`}</span>}
               <span className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60">{u.tur === "video" ? <Film className="h-3.5 w-3.5 text-white" /> : <ImageIcon className="h-3.5 w-3.5 text-white" />}</span>
-              
+              {bitti && u.favori && <FavoriRozeti boyut="kucuk" className="right-1.5 top-1.5" />}
             </span>
+            {bitti && (
+              <span onClick={(e) => e.stopPropagation()} className="absolute right-1.5 top-1.5 z-20 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+                <FavoriDugmesi favori={!!u.favori} onClick={() => useProjeler.getState().favoriToggle(u.id)} boyut="kucuk" side="bottom" />
+                <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="bottom" />
+                <YenidenKullanDugmesi boyut="kucuk" side="bottom" onClick={() => useCizim.getState().istemAyarla(String(u.meta?.hamIstem ?? ""))} />
+                <KartDahaMenusu u={u} boyut="kucuk" side="bottom" onSil={() => useProjeler.getState().sil(u.id)} eylemler={[{ ad: "Aç", ikon: ImageIcon, fn: () => setAcik(u) }]} />
+              </span>
+            )}
             <span className="mt-1 block truncate text-[12.5px] font-medium text-metin-2">{u.baslik}</span>
             <span className="block truncate text-[11.5px] text-metin-3">{u.model}{u.meta?.sure ? ` · ${String(u.meta.sure).replace("sn", " sn")}` : ""}</span>
-          </button>
+          </div>
         );
       })}
     </div>
@@ -716,7 +732,7 @@ export function CizimStudyo() {
         </div>
         )}
         <div>{komut}</div>
-        <div className="flex">{sekmeler(mobilSekme, setMobilSekme)}</div>
+        <div className="flex items-center gap-2">{sekmeler(mobilSekme, setMobilSekme)}{mobilSekme === "sonuc" && sonuclar.length > 0 && <GorunumAyari sayfa="draw" />}</div>
         <div className="px-1">{mobilSekme === "isaret" ? isaretListe : sonucListe}</div>
         {dosyaGirdi}
         {modallar}
@@ -774,6 +790,7 @@ export function CizimStudyo() {
             <KenarTutamac en={cekmeceEn} anahtar="cizim-cekmece" varsayilan={340} min={280} max={600} etiket="Panelin genişliği" />
             <div className="flex shrink-0 items-center gap-2 p-3">
               {sekmeler(cekmece, setCekmece)}
+              {cekmece === "sonuc" && sonuclar.length > 0 && <GorunumAyari sayfa="draw" />}
               <Tooltip label="Paneli kapat"><button onClick={() => setCekmece(null)} aria-label="Paneli kapat" className={IKON_BTN}><PanelRightClose className="h-4 w-4" /></button></Tooltip>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">{cekmece === "isaret" ? isaretListe : sonucListe}</div>

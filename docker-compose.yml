@@ -1,0 +1,18 @@
+# Tek sunucuda yayın: docker compose up -d --build
+# Gizli anahtarlar .env.production dosyasına yazılır (.env.example'daki adlarla); /veri birimi kalıcıdır, yedeklenmelidir.
+services:
+  vayra:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      VAYRA_VERI_DIZINI: /veri
+    volumes:
+      - vayra-veri:/veri
+
+volumes:
+  vayra-veri:

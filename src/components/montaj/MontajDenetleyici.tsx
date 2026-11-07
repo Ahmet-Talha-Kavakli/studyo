@@ -188,11 +188,11 @@ function KlipSekme({ proje, k, g }: { proje: MontajProje; k: MontajKlip; g: G })
 }
 
 const KF: { oz: KfOzellik; ad: string; min: number; max: number; adim: number; yaz: (n: number) => string }[] = [
-  { oz: "olcek", ad: "Ölçek", min: 20, max: 300, adim: 1, yaz: (n) => `%${Math.round(n)}` },
+  { oz: "olcek", ad: "Ölçek", min: 20, max: 300, adim: 1, yaz: (n) => `yüzde ${Math.round(n)}` },
   { oz: "x", ad: "Yatay konum", min: -100, max: 100, adim: 1, yaz: (n) => `${Math.round(n)}` },
   { oz: "y", ad: "Dikey konum", min: -100, max: 100, adim: 1, yaz: (n) => `${Math.round(n)}` },
   { oz: "donme", ad: "Döndürme", min: -180, max: 180, adim: 1, yaz: (n) => `${Math.round(n)}°` },
-  { oz: "opaklik", ad: "Opaklık", min: 0, max: 100, adim: 1, yaz: (n) => `%${Math.round(n)}` },
+  { oz: "opaklik", ad: "Opaklık", min: 0, max: 100, adim: 1, yaz: (n) => `yüzde ${Math.round(n)}` },
 ];
 const TABAN: Record<KfOzellik, keyof MontajKlip> = { olcek: "olcek", x: "konumX", y: "konumY", donme: "donme", opaklik: "opaklik" };
 const VARSAYILAN: Record<KfOzellik, number> = { olcek: 100, x: 0, y: 0, donme: 0, opaklik: 100 };
@@ -281,7 +281,7 @@ function GoruntuPro({ k, g }: { k: MontajKlip; g: G }) {
           {KIRP_ORAN.map(([ad, o]) => <button key={ad} onClick={() => oranKirp(o)} className={kucukBtn}>{ad}</button>)}
         </div>
         {([["l", "Sol"], ["r", "Sağ"], ["t", "Üst"], ["b", "Alt"]] as const).map(([oz, ad]) => (
-          <Kaydirici key={oz} ad={ad} deger={kp[oz]} min={0} max={45} adim={0.5} varsayilan={0} onDegis={(v) => g({ kirp: { ...kp, [oz]: v } })} yaz={(n) => `%${n.toFixed(n % 1 ? 1 : 0)}`} />
+          <Kaydirici key={oz} ad={ad} deger={kp[oz]} min={0} max={45} adim={0.5} varsayilan={0} onDegis={(v) => g({ kirp: { ...kp, [oz]: v } })} yaz={(n) => `yüzde ${n.toFixed(n % 1 ? 1 : 0)}`} />
         ))}
       </Bolum>
       <Bolum baslik="Maske">
@@ -362,7 +362,7 @@ function SesSekme({ k, g }: { k: MontajKlip; g: G }) {
   return (
     <>
       <Bolum baslik="Ses">
-        <Kaydirici ad="Ses düzeyi" deger={k.sesDuzey} min={0} max={100} adim={1} varsayilan={100} onDegis={(v) => g({ sesDuzey: v })} yaz={(n) => `%${Math.round(n)}`} />
+        <Kaydirici ad="Ses düzeyi" deger={k.sesDuzey} min={0} max={100} adim={1} varsayilan={100} onDegis={(v) => g({ sesDuzey: v })} yaz={(n) => `yüzde ${Math.round(n)}`} />
         <Kaydirici ad="Yavaşça gir" deger={k.sesGiris ?? 0} min={0} max={Math.min(5, klipSure(k) / 2)} adim={0.1} varsayilan={0} onDegis={(v) => g({ sesGiris: v })} yaz={(n) => (n ? `${n.toFixed(1)} sn` : "Yok")} />
         <Kaydirici ad="Yavaşça çık" deger={k.sesCikis ?? 0} min={0} max={Math.min(5, klipSure(k) / 2)} adim={0.1} varsayilan={0} onDegis={(v) => g({ sesCikis: v })} yaz={(n) => (n ? `${n.toFixed(1)} sn` : "Yok")} />
       </Bolum>
@@ -415,7 +415,7 @@ function OgeSekme({ k, g }: { k: MontajKlip; g: G }) {
       )}
       {o.sekil === "dikdortgen" && (
         <Bolum baslik="Köşeler">
-          <Kaydirici ad="Yuvarlaklık" deger={o.koseler ?? 12} min={0} max={50} adim={1} onDegis={(v) => og({ koseler: v })} yaz={(n) => `%${Math.round(n)}`} />
+          <Kaydirici ad="Yuvarlaklık" deger={o.koseler ?? 12} min={0} max={50} adim={1} onDegis={(v) => og({ koseler: v })} yaz={(n) => `yüzde ${Math.round(n)}`} />
         </Bolum>
       )}
       {o.tip === "ilerleme" && (

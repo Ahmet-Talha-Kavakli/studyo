@@ -6,6 +6,8 @@ import { X, Download, PencilLine, Clapperboard, Columns2, Loader2, AlertTriangle
 import { KenarTutamac, useKenarGenisligi } from "@/components/ui/KenarTutamac";
 import { useProjeler } from "@/store/useProjeler";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { Star } from "lucide-react";
 import { kareYakala } from "@/components/studyo/VideoGoruntuleyici";
 import { cn, saltUrl } from "@/lib/utils";
 import { useEscKapat, useScrollKilit } from "@/hooks/useScrollKilit";
@@ -61,7 +63,7 @@ export function CizimSonuc({ u, onKapat, onTuvale, onVideoya }: { u: Uretim; onK
             <div className="flex flex-col items-center gap-3 text-center">
               {u.durum === "hata" ? <AlertTriangle className="h-8 w-8 text-rose-300" /> : <Loader2 className="h-8 w-8 animate-spin text-white" />}
               <p className="text-[15px] font-semibold text-white">{u.durum === "hata" ? "Üretim başarısız" : "Üretiliyor"}</p>
-              <p className="max-w-sm text-[13px] text-white/60">{u.durum === "hata" ? u.hata ?? "Bilinmeyen hata, kredi iade edildi" : `%${Math.round(u.ilerleme ?? 0)}; bitince burada açılır`}</p>
+              <p className="max-w-sm text-[13px] text-white/60">{u.durum === "hata" ? u.hata ?? "Bilinmeyen hata, kredi iade edildi" : `yüzde ${Math.round(u.ilerleme ?? 0)}; bitince burada açılır`}</p>
               {u.durum !== "hata" && <span className="h-1 w-48 overflow-hidden rounded-full bg-white/15"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${Math.max(3, u.ilerleme ?? 0)}%` }} /></span>}
             </div>
           ) : video ? (
@@ -128,8 +130,8 @@ export function CizimSonuc({ u, onKapat, onTuvale, onVideoya }: { u: Uretim; onK
           {bitti && sonuc && (
             <div className="space-y-2 border-t border-white/[0.06] p-3">
               <div className="flex gap-2">
-                <button onClick={indir} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-white text-[14px] font-semibold text-black transition active:scale-[0.98]"><Download className="h-4 w-4" />İndir</button>
-                <Tooltip label={favori ? "Beğeniyi kaldır" : "Beğen"}><button onClick={() => favoriToggle(u.id)} aria-label="Beğen" aria-pressed={favori} className={cn("flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] transition hover:bg-white/[0.14]", favori ? "text-rose-400" : "text-metin-2 hover:text-metin")}><Heart className={cn("h-4 w-4", favori && "fill-current")} /></button></Tooltip>
+                <span className="flex flex-1 [&>span]:flex-1"><IndirDugmesi u={u} side="top" yerlesim="ust-sol" etiket="İndir ya da önce ve sonra" className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-[14px] font-semibold text-black transition active:scale-[0.98]"><Download className="h-4 w-4" />İndir</IndirDugmesi></span>
+                <Tooltip label={favori ? "Favorilerden çıkar" : "Favorilere ekle"}><button onClick={() => favoriToggle(u.id)} aria-label={favori ? "Favorilerden çıkar" : "Favorilere ekle"} aria-pressed={favori} className={cn("flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] transition hover:bg-white/[0.14]", favori ? "text-aksan" : "text-metin-2 hover:text-metin")}><Star className={cn("h-4 w-4", favori && "fill-current")} /></button></Tooltip>
                 <Tooltip label="Sil"><button onClick={() => { sil(u.id); onKapat(); toast.success("Sonuç silindi"); }} aria-label="Sil" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] text-metin-2 transition hover:bg-rose-500/15 hover:text-rose-300"><Trash2 className="h-4 w-4" /></button></Tooltip>
               </div>
               {video && (

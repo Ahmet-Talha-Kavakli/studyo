@@ -20,6 +20,7 @@ import { useScrollKilit } from "@/hooks/useScrollKilit";
 import { useMasaustu } from "@/hooks/useMasaustu";
 import { icerikDenetle, kategoriEtiket } from "@/lib/moderasyon";
 import { useAuth } from "@/store/useAuth";
+import { krediliHata, krediliIstek } from "@/lib/krediIstek";
 import { useProjeler } from "@/store/useProjeler";
 import { useMuzik, sureBicim, soyAgaci, besteAyari, type Parca } from "@/store/useMuzik";
 import { parcaWavIndir } from "@/lib/muzikMotoru";
@@ -39,6 +40,9 @@ import { ParcaSatiri, modelKisa } from "./muzik/ParcaSatiri";
 import { MuzikCubugu } from "./muzik/MuzikCubugu";
 import { MuzikGoruntuleyici } from "./muzik/MuzikGoruntuleyici";
 import { ParcaPaneli, kanalBilgi } from "./muzik/ParcaPaneli";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 
 /**
  * Müzik Stüdyosu — Şarkı · Bölümler · Stem · Videodan müzik.
@@ -192,6 +196,7 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
   const videoMb = videolar.reduce((n, v) => n + v.mb, 0);
   // Akış
   const [filtre, setFiltre] = useState<"tumu" | "begeni" | "gercek">("tumu");
+  const [gorunum] = useGorunum("muzik");
   const [ara, setAra] = useState("");
   const [seciliId, setSeciliId] = useState<string | null>(null);
   const [odakId, setOdakId] = useState<string | null>(null);
@@ -218,6 +223,9 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
   useEffect(() => {
     const m = aramaParam.get("model");
     if (m && MUZIK_MODELLERI.some((x) => x.ad === m)) setModel(m);
+    /* ?mod=sarki|bolum|video|stem: üst çubuktaki vitrin ve komut paleti doğrudan o moda açar. */
+    const md = aramaParam.get("mod");
+    if (md && MODLAR.some((x) => x.id === md)) setMod(md as Mod);
     try {
       const ses = sessionStorage.getItem("vayra-ses-kullan");
       if (ses) {
@@ -259,9 +267,9 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
   /* ── Kütüphane ── */
   const gorunen = useMemo(() => {
     const q = ara.trim().toLocaleLowerCase("tr");
-    return parcalar.filter((p) => (filtre === "tumu" || (filtre === "begeni" ? p.begeni === 1 : !!p.sesUrl))
-      && (!q || [p.ad, p.istem, ...(p.stiller ?? [])].join(" ").toLocaleLowerCase("tr").includes(q)));
-  }, [parcalar, filtre, ara]);
+    return zamanaGoreSirala(parcalar.filter((p) => (filtre === "tumu" || (filtre === "begeni" ? p.begeni === 1 : !!p.sesUrl))
+      && (!q || [p.ad, p.istem, ...(p.stiller ?? [])].join(" ").toLocaleLowerCase("tr").includes(q))), gorunum.siralama);
+  }, [parcalar, filtre, ara, gorunum.siralama]);
   const gruplar = useMemo(() => {
     const g: { etiket: string; oge: Parca[] }[] = [];
     for (const p of gorunen) {
@@ -325,16 +333,16 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
         setTimeout(() => { bitir(id); parcaGuncelle(id, { durum: "tamam", ilerleme: 100, sure: Math.min(240, sureTahmin) }); }, 2600 + v * 400);
         continue;
       }
-      useAuth.getState().krediDus(kredi);
+      // Kredi sunucuda kesilir (/api/muzik/uret); ekranda iyimser düşer, yanıttaki bakiyeye eşitlenir.
       ilerlet(id, Math.max(20, sureTahmin * 0.35));
       void (async () => {
         try {
-          const yanit = await fetch("/api/muzik/uret", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: a.model, istem: a.istem, sozler: a.enstrumantal ? "" : a.sozler, stiller: a.stiller, haric: a.haric, enstrumantal: a.enstrumantal, sureSn: a.sureSn, plan: a.plan, tohum: a.plan ? tohumV : undefined, bicim: a.bicim, c2pa: a.c2pa }),
+          const s = await krediliIstek<{ sesUrl?: string; plan?: MuzikPlan; baslik?: string; turler?: string[]; sozler?: string; sarkiId?: string; aciklama?: string }>("/api/muzik/uret", {
+            kredi, json: { model: a.model, istem: a.istem, sozler: a.enstrumantal ? "" : a.sozler, stiller: a.stiller, haric: a.haric, enstrumantal: a.enstrumantal, sureSn: a.sureSn, plan: a.plan, tohum: a.plan ? tohumV : undefined, bicim: a.bicim, c2pa: a.c2pa, kredi },
           });
-          const j = (await yanit.json()) as { ok: boolean; hata?: string; sesUrl?: string; plan?: MuzikPlan; baslik?: string; turler?: string[]; sozler?: string; sarkiId?: string; aciklama?: string };
-          if (!j.ok || !j.sesUrl) throw new Error(j.hata ?? "Üretim başarısız.");
+          const j = s.j;
+          if (s.durum === 401 || s.durum === 402) { bitir(id); parcaGuncelle(id, { durum: "hata", ilerleme: 0, kredi: 0, hata: krediliHata(s, "") }); return; }
+          if (!j?.ok || !j.sesUrl) throw new Error(j?.hata ?? "Üretim başarısız.");
           const sn = await medyaSuresi(j.sesUrl);
           const yeniAd = a.baslik?.trim() || (!kaynak && j.baslik) || undefined;
           bitir(id);
@@ -344,16 +352,16 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
           });
           const p = useMuzik.getState().parcalar.find((x) => x.id === id);
           const uid = useProjeler.getState().ekle({
-            baslik: p?.ad ?? ad, tur: "muzik", model: a.model, prompt: a.istem || a.stiller.join(", ") || ad, durum: "tamam", ilerleme: 100, kredi,
+            baslik: p?.ad ?? ad, tur: "muzik", model: a.model, prompt: a.istem || a.stiller.join(", ") || ad, durum: "tamam", ilerleme: 100, kredi: s.kesilen || kredi,
             arac: "Müzik Stüdyosu", saglayici: t.saglayici, gercek: true, sesUrl: j.sesUrl,
             muzik: { sozler: a.sozler, sure: sn ? Math.round(sn) : sureTahmin, kapak: p?.kapak },
           });
           parcaGuncelle(id, { uretimId: uid });
         } catch (e) {
+          // Kesinti sunucuda iade edildi; ekrandaki bakiye yanıtla eşitlendi.
           bitir(id);
-          useAuth.getState().krediEkle(kredi);
           parcaGuncelle(id, { durum: "hata", ilerleme: 0, hata: (e instanceof Error ? e.message : "Üretim başarısız").slice(0, 160) });
-          toast.error("Parça üretilemedi", { description: `${neden(e, "Sağlayıcı yanıt vermedi.")} ${kredi} kredi iade edildi, yeniden deneyebilirsin.` });
+          toast.error("Parça üretilemedi", { description: `${neden(e, "Sağlayıcı yanıt vermedi.")} Kredi düşmedi, yeniden deneyebilirsin.` });
         }
       })();
     }
@@ -372,8 +380,11 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
     const vokalStil = enstrumantal || vokal === "oto" ? [] : [{ kadin: "female vocals", erkek: "male vocals", duet: "duet" }[vokal]];
     const muzikal = [...(tempo ? [`${tempo} bpm`] : []), ...(ton ? [ton] : [])];
     const stilListe = [...new Set([...(duzen === "ozel" ? stiller : []), ...vokalStil, ...muzikal])];
+    const onceki = useMuzik.getState().parcalar.length;
     baslat({ istem: istem.trim(), sozler: duzen === "ozel" && !enstrumantal ? sozler.trim() : "", enstrumantal, stiller: stilListe, haric: duzen === "ozel" ? haric : [],
       model, sureSn: etkinSure, bicim, c2pa, baslik: duzen === "ozel" ? baslik : undefined }, varyant);
+    // Görünüm ayarı: gönderim başladıysa (yeni parça eklendiyse) istem kutusunu boşalt.
+    if (useMuzik.getState().parcalar.length > onceki && istemTemizlensinMi("muzik")) setIstem("");
   };
 
   const yenidenKullan = (p: Parca) => {
@@ -415,7 +426,7 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
     } : undefined);
   };
   const eylemler = (p: Parca) => ({
-    onAc: () => (genis && !gomulu ? setOdakId(p.id) : setSeciliId(p.id)), onBegen: () => { parcaGuncelle(p.id, { begeni: p.begeni === 1 ? undefined : 1 }); toast.success(p.begeni === 1 ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); }, onIndir: () => indir(p),
+    onAc: () => (genis && !gomulu ? setOdakId(p.id) : setSeciliId(p.id)), onBegen: () => { parcaGuncelle(p.id, { begeni: p.begeni === 1 ? undefined : 1 }); if (p.uretimId) useProjeler.getState().guncelle(p.uretimId, { favori: p.begeni !== 1 }); toast.success(p.begeni === 1 ? "Favorilerden çıkarıldı" : "Favorilere eklendi"); }, onIndir: () => indir(p),
     onYenidenKullan: () => yenidenKullan(p), onPlan: modelBul(p.model).plan ? () => bolumleriDuzenle(p) : undefined, onVaryasyon: () => varyasyon(p),
     onStem: p.sesUrl ? () => stemeGonder(p) : undefined, onSil: () => sil(p),
     onYenidenDene: p.durum === "hata" ? () => { parcaSil(p.id); varyasyon({ ...p, kokId: p.kokId }); } : undefined,
@@ -440,17 +451,19 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
     const kredi = toplamKredi;
     if ((useAuth.getState().kullanici?.krediler ?? 0) < kredi) return void mesaj.yetersizKredi(kredi, useAuth.getState().kullanici?.krediler ?? 0);
     setStemCalisiyor(true);
-    useAuth.getState().krediDus(kredi);
     try {
-      const j = (await (await fetch("/api/muzik/stem", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(stemKaynak.tur === "parca" ? { url: stemKaynak.p.sesUrl } : { kaynak: stemKaynak.dataUrl, ad: stemKaynak.ad }) })).json()) as { ok: boolean; hata?: string; stemler?: { ad: string; url: string }[] };
-      if (!j.ok || !j.stemler) throw new Error(j.hata);
+      const sn = stemKaynak.tur === "parca" ? stemKaynak.p.sure : stemKaynak.sn;
+      const s = await krediliIstek<{ stemler?: { ad: string; url: string }[] }>("/api/muzik/stem", {
+        kredi, json: { ...(stemKaynak.tur === "parca" ? { url: stemKaynak.p.sesUrl } : { kaynak: stemKaynak.dataUrl, ad: stemKaynak.ad }), sureSn: sn, kredi },
+      });
+      if (s.durum === 401 || s.durum === 402) return;
+      const j = s.j;
+      if (!j?.ok || !j.stemler) throw new Error(j?.hata);
       if (stemKaynak.tur === "parca") parcaGuncelle(stemKaynak.p.id, { stemler: j.stemler });
       setStemSonuc((l) => [{ ad: stemKaynak.tur === "parca" ? stemKaynak.p.ad : stemKaynak.ad, stemler: j.stemler! }, ...l]);
-      toast.success(`${j.stemler.length} kanal ayrıldı`, { description: `${kredi} kredi düştü.` });
+      toast.success(`${j.stemler.length} kanal ayrıldı`, { description: `${s.kesilen || kredi} kredi düştü.` });
     } catch (e) {
-      useAuth.getState().krediEkle(kredi);
-      toast.error("Kanallar ayrılamadı", { description: `${neden(e, "Sağlayıcı yanıt vermedi.")} ${kredi} kredi iade edildi, yeniden deneyebilirsin.` });
+      toast.error("Kanallar ayrılamadı", { description: `${neden(e, "Sağlayıcı yanıt vermedi.")} Kredi düşmedi, yeniden deneyebilirsin.` });
     } finally { setStemCalisiyor(false); }
   };
   /* ── Videodan müzik ── */
@@ -490,28 +503,29 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
     form.append("aciklama", videoAciklama.trim()); form.append("etiketler", JSON.stringify(videoEtiket)); form.append("model", model);
     form.append("efekt", String(videoEfekt)); form.append("ayriKanal", String(videoAyri)); form.append("sesReferans", String(videoSesRef));
     form.append("c2pa", String(c2pa)); form.append("bicim", bicim);
-    useAuth.getState().krediDus(kredi);
+    form.append("sureSn", String(sure)); form.append("kredi", String(kredi));
     ilerlet(id, Math.max(30, sure * 0.5));
     setVideoGonderiliyor(true);
     if (!gomulu) setFiltre("tumu");
     try {
-      const j = (await (await fetch("/api/muzik/video", { method: "POST", body: form })).json()) as { ok: boolean; hata?: string; sesUrl?: string; kanallar?: { ad: string; url: string }[] };
-      if (!j.ok || !j.sesUrl) throw new Error(j.hata ?? "Üretim başarısız.");
+      const s = await krediliIstek<{ sesUrl?: string; kanallar?: { ad: string; url: string }[] }>("/api/muzik/video", { kredi, form });
+      if (s.durum === 401 || s.durum === 402) { bitir(id); parcaGuncelle(id, { durum: "hata", ilerleme: 0, kredi: 0, hata: krediliHata(s, "") }); return; }
+      const j = s.j;
+      if (!j?.ok || !j.sesUrl) throw new Error(j?.hata ?? "Üretim başarısız.");
       const sn = await medyaSuresi(j.sesUrl);
       bitir(id);
       parcaGuncelle(id, { durum: "tamam", ilerleme: 100, sesUrl: j.sesUrl, ...(j.kanallar && j.kanallar.length > 1 ? { stemler: j.kanallar } : {}), ...(sn ? { sure: Math.round(sn) } : {}) });
       const p = useMuzik.getState().parcalar.find((x) => x.id === id);
       const uid = useProjeler.getState().ekle({
-        baslik: ad, tur: "muzik", model, prompt: videoAciklama.trim() || videoEtiket.join(", ") || ad, durum: "tamam", ilerleme: 100, kredi,
+        baslik: ad, tur: "muzik", model, prompt: videoAciklama.trim() || videoEtiket.join(", ") || ad, durum: "tamam", ilerleme: 100, kredi: s.kesilen || kredi,
         arac: "Müzik Stüdyosu", saglayici: "eleven", gercek: true, sesUrl: j.sesUrl, muzik: { sozler: "", sure: sn ? Math.round(sn) : sure, kapak: p?.kapak },
       });
       parcaGuncelle(id, { uretimId: uid });
       toast.success("Video müziği üretildi", { description: j.kanallar && j.kanallar.length > 1 ? `${j.kanallar.length} ayrı kanal hazır. ${kredi} kredi düştü.` : `${kredi} kredi düştü.` });
     } catch (e) {
       bitir(id);
-      useAuth.getState().krediEkle(kredi);
       parcaGuncelle(id, { durum: "hata", ilerleme: 0, hata: (e instanceof Error ? e.message : "Üretim başarısız").slice(0, 160) });
-      toast.error("Video müziği üretilemedi", { description: `${neden(e, "Sağlayıcı yanıt vermedi.")} ${kredi} kredi iade edildi, yeniden deneyebilirsin.` });
+      toast.error("Video müziği üretilemedi", { description: `${neden(e, "Sağlayıcı yanıt vermedi.")} Kredi düşmedi, yeniden deneyebilirsin.` });
     } finally { setVideoGonderiliyor(false); }
   };
 
@@ -1267,7 +1281,8 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
             <Search className="h-3.5 w-3.5 text-metin-2" />
             <input value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Şarkı ara" aria-label="Şarkı ara" spellCheck={false} className="w-28 bg-transparent text-[13px] text-metin outline-none placeholder:text-metin-2 lg:w-36" />
           </label>
-          <div className="w-[190px]"><Segment deger={filtre === "gercek" ? "tumu" : filtre} onDegis={setFiltre} etiket="Süzgeç" secenekler={[["tumu", "Tümü"], ["begeni", "Beğenilen"]]} /></div>
+          <div className="w-[190px]"><Segment deger={filtre === "gercek" ? "tumu" : filtre} onDegis={setFiltre} etiket="Süzgeç" secenekler={[["tumu", "Tümü"], ["begeni", "Favoriler"]]} /></div>
+          <GorunumAyari sayfa="muzik" yerlesimVar={false} boyutVar={false} dugmeSinif="h-8 w-8" />
         </>
       ) : <span className="flex-1" />}
       {demoRozet}
@@ -1406,7 +1421,7 @@ export function MuzikStudyo({ gomulu }: StudyoGomuluProps = {}) {
       )}
     </AnimatePresence>
   );
-  const cubuk = <MuzikCubugu liste={calinabilir} onAc={(id) => (genis && !gomulu ? setOdakId(id) : setSeciliId(id))} onIndir={indir} onBegen={(p) => parcaGuncelle(p.id, { begeni: p.begeni === 1 ? undefined : 1 })} tekrar={tekrar} onTekrar={() => setTekrar((v) => !v)} />;
+  const cubuk = <MuzikCubugu liste={calinabilir} onAc={(id) => (genis && !gomulu ? setOdakId(id) : setSeciliId(id))} onIndir={indir} onBegen={(p) => { parcaGuncelle(p.id, { begeni: p.begeni === 1 ? undefined : 1 }); if (p.uretimId) useProjeler.getState().guncelle(p.uretimId, { favori: p.begeni !== 1 }); }} tekrar={tekrar} onTekrar={() => setTekrar((v) => !v)} />;
   const dosyaGirdisi = (
     <>
       <input ref={stemDosyaRef} type="file" accept="audio/*" hidden onChange={(e) => { void stemDosyaSec(e.target.files?.[0]); e.target.value = ""; }} />

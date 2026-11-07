@@ -4,7 +4,7 @@ import { useRef, useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Download, Trash2, Play, Pause, Box, AudioLines, ImageIcon, Video, Music, FolderPlus, Check, Plus, MoreHorizontal, RotateCw, Wand2, AtSign, Globe, Share2, Copy, Maximize2, Languages, Eye, ChevronRight, Link2, MessageCircle, Briefcase, Pin, BrainCircuit, Mic, AtSign as XIkon, FileImage, FileType2, FileArchive, FileVideo, Pencil } from "lucide-react";
+import { Heart, Download, Trash2, Play, Pause, Box, AudioLines, ImageIcon, Video, Music, FolderPlus, Check, Plus, MoreHorizontal, RotateCw, Wand2, AtSign, Globe, Share2, Copy, Maximize2, Languages, Eye, ChevronRight, Link2, MessageCircle, Briefcase, Pin, Mic, AtSign as XIkon, FileImage, FileType2, FileArchive, FileVideo, Pencil } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { uretimGeriAl } from "./uretimGeriAl";
@@ -16,11 +16,12 @@ import { ElementDuzenleModal } from "@/components/panel/element/ElementDuzenleMo
 import { uretimBaslat } from "@/lib/uretimMotoru";
 import { UretimDetay } from "./UretimDetay";
 import { PaylasModal } from "./PaylasModal";
-import { SesSeciciModal, DilSeciciModal } from "./SesSeciciModal";
 import { GirdiModal } from "./uc-boyut/GirdiModal";
 import { cn, gorseliIndir, saltUrl, gorseliFormatlaIndir, INDIRME_FORMATLARI } from "@/lib/utils";
 import { baglantiyiKopyala } from "@/lib/gercekEylem";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { Quote, Star } from "lucide-react";
 
 const turIkon = { video: Video, gorsel: ImageIcon, "3d": Box, ses: AudioLines, muzik: Music };
 const turEtiket = { video: "Video", gorsel: "Görsel", "3d": "3D Model", ses: "Ses" };
@@ -78,12 +79,8 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
   const [paylasModal, setPaylasModal] = useState(false);
   const [elementModal, setElementModal] = useState(false);
   /* Kart menüsündeki GERÇEK ekranlar (kullanıcı: "fake şuanda"):
-     · sesModal  → /panel/ses'teki ses seçme ekranı, ortada popup
-     · dilModal  → "Çevir" için dil seçici, ortada popup
      · yeniKlasor→ klasör adı soran gerçek girdi ekranı
      · adModal   → üretimin adını değiştirme (indirme dosya adı da bu olur) */
-  const [sesModal, setSesModal] = useState(false);
-  const [dilModal, setDilModal] = useState(false);
   const [yeniKlasor, setYeniKlasor] = useState(false);
   const [adModal, setAdModal] = useState(false);
   const [klasorAlt, setKlasorAlt] = useState(false);
@@ -141,9 +138,12 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
 
   // Kart üstü hızlı dönüştürme — görseli videoya çevir (Higgsfield sağ-alt çubuğu).
   const videoyaCevir = () => {
+    // Görsel başlangıç karesi olarak gider (görselden video). Görselin dosyası yoksa metinden video diye kredi harcanmaz.
+    const kare = saltUrl(u.gorselUrl);
+    if (!kare) return toast.error("Video başlatılamadı", { description: "Bu üretimin görsel dosyası yok. Kredi düşmedi." });
     const s = uretimBaslat({
       baslik: `${u.baslik} (video)`.slice(0, 42), tur: "video", model: "Seedance 2.0",
-      prompt: u.prompt, kredi: 42, arac: "Videoya Çevir", meta: { oran: u.meta?.oran },
+      prompt: u.prompt, kredi: 42, arac: "Videoya Çevir", meta: { oran: u.meta?.oran, gorselUrl: kare, hamIstem: u.meta?.hamIstem ?? u.prompt, kaynakId: u.id },
     });
     if (!s.ok) return toast.error("Video başlatılamadı", { description: s.hata ?? "Yeniden dene." });
     toast.success("Videoya çevriliyor", { description: "Seedance 2.0 · 42 kredi. Bitince bildirim gelir." });
@@ -177,33 +177,19 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
   };
   const yayinToggle = () => {
     guncelle(u.id, { yayinda: !u.yayinda });
-    toast.success(u.yayinda ? "Yayından kaldırıldı" : "Keşfet'te yayınlandı", { description: u.yayinda ? "Artık Keşfet akışında görünmüyor." : "Topluluk bu üretimi remixleyebilir." });
+    toast.success(u.yayinda ? "Yayından kaldırıldı" : "Yayında olarak işaretlendi", { description: u.yayinda ? "Artık Keşfet'te görünmüyor." : "Keşfet'te senin hesabında görünür; başka kullanıcılarla henüz paylaşılmaz." });
     setDahaMenu(false);
   };
-  /* ÇEVİR — eskiden hedef dili sormadan sabit "İngilizce"ye çeviriyordu.
-     Artık ekranın ortasında dil seçici açılır; seçilen dille üretim başlar. */
-  const cevirDile = (dil: { ad: string; bayrak: string }) => {
-    const s = uretimBaslat({
-      baslik: `${u.baslik} · ${dil.ad}`.slice(0, 48), tur: u.tur, model: u.model,
-      prompt: `${u.prompt} · ${dil.ad} dilinde dublaj ve altyazı`,
-      kredi: Math.max(2, Math.round(u.kredi / 2)), arac: u.arac,
-      meta: { ...u.meta, hamIstem: u.meta?.hamIstem ?? u.prompt },
-    });
-    if (!s.ok) return toast.error("Çeviri başlatılamadı", { description: s.hata ?? "Yeniden dene." });
-    toast.success(`${dil.ad} diline çevriliyor`, { description: "Dublaj ve altyazı hazırlanıyor. Bitince bildirim gelir." });
+  /* ÇEVİR ve SESİ DEĞİŞTİR — gerçek iş Ses Stüdyosu'nda (dublaj ve ses dönüştürme kaynak medyayla çalışır).
+     Eskiden istemin sonuna "… dilinde dublaj" yazıp aynı modelle yeniden üretiyor ve kredi harcıyordu. */
+  const cevir = () => {
+    const kaynak = u.videoUrl && /^https:[/][/]/.test(u.videoUrl) ? u.videoUrl : null;
+    router.push(`/panel/ses?mod=ceviri${kaynak ? `&kaynak=${encodeURIComponent(kaynak)}` : ""}`);
+    toast(kaynak ? "Video çeviri için hazır" : "Çeviri Ses Stüdyosu'nda", { description: kaynak ? "Hedef dilleri seçip başlat." : "Video dosyasını yükleyip hedef dilleri seç." });
   };
-
-  /* SESİ DEĞİŞTİR — eskiden yalnız toast basıyordu. Artık /panel/ses'teki
-     ses seçme ekranı ortada açılır; seçilen sesle gerçek üretim başlar. */
-  const sesiDegistir = (ses: { ad: string; cinsiyet: string }) => {
-    const s = uretimBaslat({
-      baslik: `${u.baslik} · ${ses.ad}`.slice(0, 48), tur: u.tur, model: u.model,
-      prompt: `${u.prompt} · ${ses.ad} sesiyle seslendirildi`,
-      kredi: Math.max(2, Math.round(u.kredi / 2)), arac: "Sesi Değiştir",
-      meta: { ...u.meta, ses: ses.ad, hamIstem: u.meta?.hamIstem ?? u.prompt },
-    });
-    if (!s.ok) return toast.error("Ses değişimi başlatılamadı", { description: s.hata ?? "Yeniden dene." });
-    toast.success(`Ses ${ses.ad} olarak değiştiriliyor`, { description: `${u.baslik}. Bitince bildirim gelir.` });
+  const sesiDegistir = () => {
+    router.push("/panel/ses?mod=sesdegistir");
+    toast("Ses değiştirme Ses Stüdyosu'nda", { description: "Videonun sesini yükleyip yeni sesi seç." });
   };
 
   /* KLASÖRE EKLE — gerçek koleksiyon listesi (görsel sayfasıyla aynı desen).
@@ -214,7 +200,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
   );
   const klasoreEkle = (kid: string) => {
     uretimEkle(kid, u.id);
-    toast.success("Klasöre eklendi", { description: `${koleksiyonlar.find((k) => k.id === kid)?.ad ?? "Klasör"} klasörüne eklendi.` });
+    toast.success("Klasöre taşındı", { description: `${koleksiyonlar.find((k) => k.id === kid)?.ad ?? "Klasör"} klasörüne taşındı.` });
   };
   const yeniKlasorKaydet = (ad: string) => {
     const temiz = ad.trim();
@@ -293,12 +279,10 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
       toast.success("Ses indiriliyor", { description: a.download });
       return;
     }
-    // Gerçek API görsel/video çıktısı (data-uri veya http) varsa onu indir; yoksa gradient.
-    const gercekGorsel = u.gercek && u.gorselUrl && (u.gorselUrl.startsWith("data:") || u.gorselUrl.startsWith("http"))
-      ? u.gorselUrl
-      : undefined;
-    gorseliIndir(u.prompt + u.model, u.baslik, gercekGorsel);
-    toast.success("İndirildi", { description: u.baslik });
+    // Üretimin görsel dosyası varsa onu indir; yoksa uydurma dosya üretilmez.
+    const gercekGorsel = (() => { const g = saltUrl(u.gorselUrl) ?? (u.gorselUrl && /^(data:|https?:)/.test(u.gorselUrl) ? u.gorselUrl : undefined); return g && /^(data:|https?:|\/)/.test(g) ? g : undefined; })();
+    if (gorseliIndir(u.prompt + u.model, u.baslik, gercekGorsel)) toast.success("İndiriliyor", { description: u.baslik });
+    else toast.error("İndirilemedi", { description: "Bu üretimin indirilebilir bir dosyası yok." });
   };
 
   // Higgsfield birebir: görsel edge-to-edge, altında bilgi kutusu YOK.
@@ -363,7 +347,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-ink-900/70 px-4 backdrop-blur-sm">
           <div className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-cyan-glow" />
           <span className="text-xs font-medium text-white/75">
-            {u.durum === "kuyrukta" ? "Kuyrukta…" : `Üretiliyor · %${u.ilerleme}`}
+            {u.durum === "kuyrukta" ? "Kuyrukta…" : `Üretiliyor · yüzde ${u.ilerleme}`}
           </span>
           <div className="mt-0.5 h-1 w-28 overflow-hidden rounded-full bg-white/10">
             <motion.div className="h-full rounded-full bg-cyan-glow" animate={{ width: `${u.ilerleme}%` }} transition={{ ease: "easeOut", duration: 0.4 }} />
@@ -394,7 +378,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
         <span aria-hidden
           className={cn("kart-begeni pointer-events-none absolute z-20 flex items-center justify-center rounded-full transition-opacity group-hover:opacity-0",
             rayKenar, kutuBoyut === "kucuk" ? "h-[30px] w-[30px]" : "h-10 w-10")}>
-          <Heart className={cn("fill-rose-400 text-rose-400", kutuBoyut === "kucuk" ? "h-4 w-4" : "h-[21px] w-[21px]")} />
+          <Star className={cn("fill-aksan text-aksan", kutuBoyut === "kucuk" ? "h-4 w-4" : "h-[21px] w-[21px]")} />
         </span>
       )}
 
@@ -409,20 +393,16 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
               </button>
             </Tooltip>
           )}
-          <Tooltip label={u.favori ? "Favoriden çıkar" : "Favori"} side="left">
+          <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="left">
             <button onClick={(e) => { e.stopPropagation(); favoriToggle(u.id); }}
-              className={cn(rayBtn, u.favori && "text-rose-400")} aria-label="Favori">
-              <Heart className={cn(rayIk, u.favori && "fill-current")} />
+              className={cn(rayBtn, u.favori && "text-aksan")} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"}>
+              <Star className={cn(rayIk, u.favori && "fill-current")} />
             </button>
           </Tooltip>
-          <Tooltip label="İndir" side="left">
-            <button onClick={(e) => { e.stopPropagation(); indir(); }} className={rayBtn} aria-label="İndir">
-              <Download className={rayIk} />
-            </button>
-          </Tooltip>
-          <Tooltip label="Prompt'u kullan" side="left">
-            <button onClick={(e) => { e.stopPropagation(); promptuKullan(); }} className={rayBtn} aria-label="Prompt'u kopyala">
-              <Copy className={rayIk} />
+          <IndirDugmesi u={u} className={rayBtn} ikonSinif={rayIk} side="left" />
+          <Tooltip label="Yeniden kullan" side="left">
+            <button onClick={(e) => { e.stopPropagation(); promptuKullan(); }} className={rayBtn} aria-label="Yeniden kullan">
+              <Quote className={rayIk} />
             </button>
           </Tooltip>
           <div className="relative">
@@ -439,19 +419,13 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                   {/* VİDEO — Higgsfield birebir üst blok: Virality Predictor · Translate · Change Voice */}
                   {u.tur === "video" && (
                     <>
-                      <button onClick={() => { toast.info("Virallik tahmini yakında", { description: "Bu özellik henüz hazır değil. Hazır olunca bu menüde çalışacak." }); setDahaMenu(false); }}
-                        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
-                        <BrainCircuit className="h-4 w-4 text-white/60" />
-                        <span className="flex-1">Virallik Tahmini</span>
-                        <span className="rounded bg-cyan-glow/90 px-1 py-0.5 text-[9px] font-bold text-ink-950">YENİ</span>
-                      </button>
                       {/* Çevir / Sesi Değiştir — GERÇEK ekranlar (kullanıcı isteği
                           2026-07-31): eskiden ikisi de yalnız toast basıyordu. */}
-                      <button onClick={() => { setDahaMenu(false); setDilModal(true); }}
+                      <button onClick={() => { setDahaMenu(false); cevir(); }}
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                         <Globe className="h-4 w-4 text-white/60" /> Çevir
                       </button>
-                      <button onClick={() => { setDahaMenu(false); setSesModal(true); }}
+                      <button onClick={() => { setDahaMenu(false); sesiDegistir(); }}
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                         <Mic className="h-4 w-4 text-white/60" /> Sesi Değiştir
                       </button>
@@ -467,14 +441,14 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                     <RotateCw className="h-4 w-4 text-white/60" /> Yeniden üret
                   </button>
                   <button onClick={promptuKullan} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
-                    <Copy className="h-4 w-4 text-white/60" /> Yeniden kullan
+                    <Quote className="h-4 w-4 text-white/60" /> Yeniden kullan
                   </button>
                   <button onClick={elementOlustur} className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                     <AtSign className="h-4 w-4 text-cyan-glow" /> Element oluştur
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); favoriToggle(u.id); toast(u.favori ? "Beğeniden çıkarıldı" : "Beğenildi", { description: u.baslik }); setDahaMenu(false); }}
+                  <button onClick={(e) => { e.stopPropagation(); favoriToggle(u.id); toast(u.favori ? "Favorilerden çıkarıldı" : "Favorilere eklendi", { description: u.baslik }); setDahaMenu(false); }}
                     className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
-                    <Heart className={cn("h-4 w-4", u.favori ? "fill-rose-400 text-rose-400" : "text-white/60")} /> Beğen
+                    <Star className={cn("h-4 w-4", u.favori ? "fill-aksan text-aksan" : "text-white/60")} /> {u.favori ? "Favorilerden çıkar" : "Favorilere ekle"}
                   </button>
                   {/* Paylaş — Higgsfield birebir uçan alt-menü */}
                   <div ref={paylasSatirRef}
@@ -492,7 +466,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                     onMouseLeave={() => setKlasorAlt(false)}>
                     <button className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                       <FolderPlus className="h-4 w-4 text-white/60" />
-                      <span className="flex-1">Klasöre ekle</span>
+                      <span className="flex-1">Klasöre taşı</span>
                       <ChevronRight className="h-3.5 w-3.5 text-white/40" />
                     </button>
                   </div>
@@ -536,9 +510,7 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
                         className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-white/8">
                         <FolderPlus className="h-4 w-4 shrink-0 text-white/60" />
                         <span className="min-w-0 flex-1 truncate">{k.ad}</span>
-                        {k.ekli
-                          ? <Check className="h-3.5 w-3.5 shrink-0 text-aksan" />
-                          : <span className="shrink-0 text-[11.5px] tabular-nums text-white/35">{k.adet}</span>}
+                        <span className="shrink-0 text-[11.5px] tabular-nums text-white/35">{k.ekli ? "Burada" : k.adet}</span>
                       </button>
                     ))}
                     <div className="my-1 h-px bg-white/8" />
@@ -677,19 +649,6 @@ export function UretimKarti({ u, gorselOran, sonBakilan, kutuBoyut = "orta" }: {
             onKapat={() => setElementModal(false)}
             onOlustu={() => { /* modal kendi başarı toast'ını basar */ }}
           />
-        )}
-        {/* Sesi Değiştir → /panel/ses'teki ses seçme ekranı, ekranın ortasında */}
-        {sesModal && (
-          <SesSeciciModal
-            seciliAd={u.meta?.ses}
-            baslik="Sesi değiştir"
-            onSec={sesiDegistir}
-            onKapat={() => setSesModal(false)}
-          />
-        )}
-        {/* Çevir → hedef dil seçici, ekranın ortasında */}
-        {dilModal && (
-          <DilSeciciModal onSec={cevirDile} onKapat={() => setDilModal(false)} />
         )}
       </AnimatePresence>
 

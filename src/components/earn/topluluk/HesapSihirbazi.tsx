@@ -169,9 +169,9 @@ function KodAdimi({ hesap }: { hesap: BagliHesap }) {
     const r = await hesapDogrulaIstek(p, hesap.kadi, hesap.kod);
     if (!r.ok) { hesapGuncelle(p, { durum: "bekliyor", hata: r.hata ?? "Doğrulama yapılamadı. Biraz sonra tekrar dene." }); return; }
     if (!r.gercek) {
-      // Bu platform için otomatik doğrulama kapalı: hesap, kreatör ekibinin elle kontrolüne kadar bağlı sayılır.
+      // Bu platform için otomatik doğrulama kapalı: hesap eklenir ama doğrulanmış gösterilmez (gercek: false).
       hesapGuncelle(p, { durum: "dogrulandi", gercek: false, takipci: 0 });
-      toast.success(`${ad} hesabın bağlandı`, { description: "Bio kodun ilk incelemede ekip tarafından kontrol edilecek." });
+      toast(`${ad} hesabın eklendi`, { description: "Bu platform için otomatik doğrulama bağlı değil; bio kodun kontrol edilmedi, hesap henüz doğrulanmış sayılmaz." });
       return;
     }
     if (!r.bulundu) { hesapGuncelle(p, { durum: "bekliyor", hata: r.hata ?? `@${hesap.kadi} adında bir ${ad} hesabı bulunamadı.` }); return; }

@@ -24,7 +24,6 @@ export const EARN_MENU = [
   ] },
   { grup: "Ek gelir", ogeler: [
     { ad: "Davet & Ortaklık", kisa: "Davet", href: "/earn/davet", ikon: Gift },
-    { ad: "Marketplace", kisa: "Market", href: "/earn/marketplace", ikon: Store },
   ] },
   { grup: "Hesap", ogeler: [
     { ad: "Cüzdan", kisa: "Cüzdan", href: "/earn/cuzdan", ikon: Wallet },
@@ -391,7 +390,7 @@ function MisafirKarsilama() {
       <NasilKazanilir adimlar={[
         { ad: "Kampanyaya katıl", alt: "Brief'i oku, üretim kitini aç." },
         { ad: "Vayra'da üret, paylaş", alt: "Instagram, TikTok, YouTube ya da X'te yayınla." },
-        { ad: "Bağlantını gönder", alt: `${KURALLAR.incelemeSaat} saatte incelenir; onayda sabit ödeme.` },
+        { ad: "Bağlantını gönder", alt: "Vayra ekibi inceler; karar bildirim olarak gelir." },
         { ad: "İzlendikçe kazan", alt: `${KURALLAR.kazanmaGun} gün boyunca her 1.000 görüntülenme ödenir.` },
       ]} />
 
@@ -403,13 +402,46 @@ function MisafirKarsilama() {
   );
 }
 
+/**
+ * Yükleme iskeleti: Genel sayfasında kampanya vitrininin birebir izdüşümü (aynı kart, aynı başlık, beş kartlık
+ * akış, künye ve üç değer); diğer sayfalarda başlık ve içerik kartı. Sabit metinler gerçek, veriler parıltılı.
+ */
 function IcerikIskeleti() {
+  const path = usePathname();
+  if (path === "/earn") {
+    const kartlar = [-2, -1, 0, 1, 2];
+    return (
+      <div aria-busy="true" aria-label="Yükleniyor">
+        <section className="relative overflow-hidden rounded-[34px] bg-[#08090b] pb-7 pt-9 ring-1 ring-white/[0.08] sm:pt-11">
+          <div className="relative flex flex-col items-center px-5 text-center">
+            <Iskelet className="h-3.5 w-28 rounded-full" />
+            <h1 className="mt-2 text-[30px] font-semibold leading-[1.1] tracking-[-0.04em] text-white sm:text-[44px]">Bugün ne üretip <span className="bg-gradient-to-r from-[#55d6fd] to-[#a5ecff] bg-clip-text text-transparent">kazanacaksın?</span></h1>
+          </div>
+          <div className="relative mt-8 h-[340px] [perspective:1600px] sm:mt-10 sm:h-[400px]">
+            {kartlar.map((d) => (
+              <span key={d} aria-hidden className="iskelet-parca absolute left-1/2 top-0 aspect-[3/4] h-full rounded-[28px] ring-1 ring-white/[0.1] [--akis-ara:150px] sm:[--akis-ara:250px]"
+                style={{ transform: `translateX(calc(-50% + ${d} * var(--akis-ara))) translateZ(${-Math.abs(d) * 90}px) rotateY(${d * -20}deg)`, opacity: d === 0 ? 1 : Math.abs(d) === 1 ? 0.62 : 0.28, zIndex: 10 - Math.abs(d) }} />
+            ))}
+          </div>
+          <div className="relative mx-auto mt-8 flex max-w-[680px] flex-col items-center px-5">
+            <Iskelet className="h-7 w-80 max-w-full rounded-full" />
+            <Iskelet className="mt-3 h-3.5 w-[420px] max-w-full rounded-full" />
+            <Iskelet className="mt-2 h-3.5 w-72 max-w-full rounded-full" />
+            <dl className="mt-6 grid w-full max-w-[560px] grid-cols-3 divide-x divide-white/[0.09] text-center">
+              {["Ödeme", "Bitiş", "Katılımcı"].map((a) => (
+                <div key={a} className="flex flex-col items-center px-2"><dt className="text-[12.5px] text-white/50">{a}</dt><dd><Iskelet className="mt-2 h-7 w-20 rounded-lg" /></dd><dd><Iskelet className="mt-2 h-2.5 w-16 rounded-full" /></dd></div>
+              ))}
+            </dl>
+          </div>
+        </section>
+      </div>
+    );
+  }
   return (
-    <div aria-busy="true">
-      <Iskelet className="h-9 w-64" />
-      <Iskelet className="mt-3 h-4 w-96 max-w-full" />
-      <Iskelet className="mt-8 h-28 rounded-[22px]" />
-      <Iskelet className="mt-6 h-64 rounded-[22px]" />
+    <div aria-busy="true" aria-label="Yükleniyor">
+      <Iskelet className="h-9 w-64 rounded-xl" />
+      <Iskelet className="mt-3 h-4 w-96 max-w-full rounded-full" />
+      <Iskelet className="mt-8 h-[420px] rounded-[28px]" />
     </div>
   );
 }

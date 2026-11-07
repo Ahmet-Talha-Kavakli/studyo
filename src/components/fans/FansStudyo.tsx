@@ -37,6 +37,12 @@ import { Segment } from "@/components/montaj/ui";
 import { DILLER } from "@/components/speak/speakVeri";
 import { konuAnlamli } from "@/components/shorts/konuSenaryo";
 import { FansVitrin } from "./FansVitrin";
+import { urlIndir } from "@/lib/gercekEylem";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, FavoriRozeti, KartDahaMenusu, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { istemTemizlensinMi, kartOrani, type Gorunum as GaleriGorunum } from "@/lib/galeri/gorunum";
 import { CINSIYET, YAS, KOKEN, SAC_STIL, SAC_RENK, GOZ, VUCUT, TARZ, TEN_DETAY, AKSESUAR, type Secenek } from "@/components/influencer/veri";
 
 const ARAC_ADI = "Fans Stüdyosu";
@@ -164,7 +170,7 @@ const ARAC = "flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-f
 
 type FMeta = { fansTur?: Tur; fansEtiket?: string; fansDil?: string; karakterId?: string; karakterKapak?: string; karakterAd?: string; fansMetin?: string; grupId?: string; sira?: number; hamIstem?: string; gorselUrl?: string; oran?: string };
 const fm = (u: Uretim) => (u.meta ?? {}) as FMeta;
-const grupTur = (u: Uretim): Tur => fm(u).fansTur ?? (u.tur === "gorsel" ? "foto" : u.baslik.includes(" → ") ? "mesaj" : u.meta?.hareket ? "trend" : "konus");
+const grupTur = (u: Uretim): Tur => fm(u).fansTur ?? (u.tur === "gorsel" ? "foto" : (u.baslik.includes(" → ") || u.baslik.includes(" için mesaj")) ? "mesaj" : u.meta?.hareket ? "trend" : "konus");
 /** Kart etiketi: dil, hayran adı, kare adı ya da akım (eski kayıtlarda hamIstem). */
 const etiketAl = (u: Uretim) => fm(u).fansEtiket ?? fm(u).hamIstem;
 /** Tur başlığı: tür adı + o tura özgü bilgi (tekrar etmeden). */
@@ -213,6 +219,7 @@ export function FansStudyo() {
   const cipAc = (id: string) => (v: boolean) => setCip(v ? id : null);
 
   const metin = metinler[tur];
+  const [fansGor] = useGorunum("fans");
   const setMetin = (v: string | ((m: string) => string)) => setMetinler((o) => ({ ...o, [tur]: typeof v === "function" ? v(o[tur]) : v }));
   const videoTur = tur !== "foto";
   const birim = videoTur ? videoKrediHesap(model) : FOTO_MODELLER.find((x) => x.deger === fotoModel)?.kredi ?? 5;
@@ -291,7 +298,7 @@ export function FansStudyo() {
     } else if (tur === "mesaj") {
       for (const isim of isimler) {
         const satir = metin.trim().replaceAll("{isim}", isim);
-        isler.push({ baslik: `@${karakter.ad} → ${isim}`, etiket: isim, ozet: satir, tur: "video", prompt: `@${karakter.ad} ${sahne}. Records a personal ${D.en} video message to a fan named ${isim}, looking into the camera and saying: "${satir}". Says the name ${isim} clearly. Accurate lip-sync, natural voice.`, ek: { demoKlip: KONUSAN_DEMO } });
+        isler.push({ baslik: `@${karakter.ad}, ${isim} için mesaj`, etiket: isim, ozet: satir, tur: "video", prompt: `@${karakter.ad} ${sahne}. Records a personal ${D.en} video message to a fan named ${isim}, looking into the camera and saying: "${satir}". Says the name ${isim} clearly. Accurate lip-sync, natural voice.`, ek: { demoKlip: KONUSAN_DEMO } });
       }
     } else if (tur === "trend") {
       isler.push({ baslik: `@${karakter.ad} · ${Tr.ad}`, etiket: Tr.ad, ozet: `${Tr.ad} akımı${metin.trim() ? `, ${metin.trim()}` : ""}`, tur: "video", prompt: `@${karakter.ad} ${M.en ? `${M.en}, ` : ""}performs the viral "${Tr.ad}" (${trend === "ozel" ? Tr.ad : trend.replace("-", " ")}) trend move with ${D.en} energy${metin.trim() ? `. ${metin.trim()}` : ""}. Keep the character's face and outfit identical.`, ek: { hareket: Tr.ad, demoKlip: { video: trendVideo(trendGorsel), poster: trendKapak(trendGorsel) } } });
@@ -317,6 +324,7 @@ export function FansStudyo() {
     }
     setMesgul(false);
     if (!ok) return;
+    if (istemTemizlensinMi("fans")) setMetin("");
     setGorunum("studyo");
     toast.success(`${ok} ${videoTur ? "video" : "kare"} üretiliyor`, { description: `@${karakter.ad}, ${T.ad.toLocaleLowerCase("tr")}. ${demo ? "Kredi düşmez." : `${birim * ok} kredi.`}` });
   };
@@ -751,7 +759,7 @@ export function FansStudyo() {
             {ana.durum !== "tamam" && (
               <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-[13px] font-medium text-white">
                 {ana.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}
-                {ana.durum === "hata" ? "Başarısız" : `%${ilerleme}`}
+                {ana.durum === "hata" ? "Başarısız" : `yüzde ${ilerleme}`}
                 {ana.durum !== "hata" && <span className="h-1 w-28 overflow-hidden rounded-full bg-white/15"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${Math.max(3, ilerleme)}%` }} transition={{ duration: 0.4 }} /></span>}
               </span>
             )}
@@ -960,7 +968,7 @@ export function FansStudyo() {
       {kSonuc.length > 0 && (
         <Kart ikon={Film} baslik="İçerikleri" alt={`@${karakter.ad} ile ürettiklerin`} sag={<span className="flex items-center gap-2"><button onClick={() => setGorunum("icerik")} className="flex h-8 items-center rounded-full bg-white/[0.07] px-3 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.12] hover:text-metin">Tümü</button></span>}>
           <div className="grid grid-cols-3 gap-2.5 p-3.5 sm:grid-cols-5 xl:grid-cols-8">
-            {kSonuc.slice(0, 16).map((u, i) => <SonucKart key={u.id} u={u} sira={i} onAc={() => setAcik(u)} />)}
+            {kSonuc.slice(0, 16).map((u, i) => <SonucKart key={u.id} u={u} sira={i} gor={fansGor} onAc={() => setAcik(u)} onKullan={() => ayarlariKullan([u])} />)}
           </div>
         </Kart>
       )}
@@ -1085,7 +1093,7 @@ function indir(g: Uretim[]) {
   let n = 0;
   for (const u of g.filter((x) => x.durum === "tamam")) {
     const video = u.tur === "video", url = video ? u.videoUrl : saltUrl(u.gorselUrl); if (!url) continue;
-    const a = document.createElement("a"); a.href = url; a.download = `${u.baslik.replace(/[\\/:*?"<>|]+/g, "-")}.${video ? "mp4" : "png"}`; a.click();
+    urlIndir(url, `${u.baslik.replace(/[\\/:*?"<>|]+/g, "-")}.${video ? "mp4" : "png"}`);
     n++;
   }
   if (n) toast.success(n > 1 ? `${n} dosya indiriliyor` : "Dosya indiriliyor", { description: "Dosyalar indirilenler klasörüne kaydedilir." });
@@ -1144,6 +1152,7 @@ function GorselSec({ sec, ad, alt, kapak, video, onClick, oran = "aspect-[4/3]",
 /** İçeriklerim: tür süzgeci + üretim turları (her tur: başlık şeridi, karakter, eylemler, kareler). */
 function IcerikPanel({ gruplar, onAc, onKullan, onIndir, onTur }: { gruplar: Uretim[][]; onAc: (u: Uretim) => void; onKullan: (g: Uretim[]) => void; onIndir: (g: Uretim[]) => void; onTur: (t: Tur) => void }) {
   const [f, setF] = useState<"tumu" | Tur>("tumu");
+  const [gor] = useGorunum("fans");
   if (!gruplar.length) return (
     <Kart ikon={Film} baslik="Henüz içerik yok" alt="Bir tür seç; komut kutusu ona göre hazırlanır">
       <div className="grid grid-cols-2 gap-3 p-3.5 lg:grid-cols-4">
@@ -1155,11 +1164,12 @@ function IcerikPanel({ gruplar, onAc, onKullan, onIndir, onTur }: { gruplar: Ure
       </div>
     </Kart>
   );
-  const liste = gruplar.filter((g) => f === "tumu" || grupTur(g[0]) === f);
+  const liste = gruplar.filter((g) => f === "tumu" || grupTur(g[0]) === f).sort((a, b) => (gor.siralama === "eski" ? 1 : -1) * (a[0].olusturma - b[0].olusturma));
   const sayi = (t: Tur) => gruplar.filter((g) => grupTur(g[0]) === t).reduce((a, g) => a + g.length, 0);
   return (
     <Kart ikon={Film} baslik="İçeriklerim" alt="Her üretim turu ayrı; kareye tıkla, büyük açılsın"
       sag={
+        <div className="flex min-w-0 items-center gap-2 max-sm:w-full"><GorunumAyari sayfa="fans" />
         <div role="tablist" aria-label="Tür süzgeci" className="isolate flex max-w-full gap-0.5 overflow-x-auto rounded-full p-[3px] ring-1 ring-inset ring-white/[0.08] [scrollbar-width:none] max-sm:w-full" style={{ background: "rgba(255,255,255,0.04)" }}>
           {([["tumu", "Tümü", Film, gruplar.reduce((a, g) => a + g.length, 0)], ...TURLER.map((t) => [t.id, t.ad, t.ikon, sayi(t.id)] as const)] as const).map(([id, ad, I, n]) => (
             <button key={id} role="tab" aria-selected={f === id} onClick={() => setF(id)} className={cn("relative flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[12.5px] font-medium transition-colors", f === id ? "text-black" : "text-metin-2 hover:text-metin")}>
@@ -1167,10 +1177,10 @@ function IcerikPanel({ gruplar, onAc, onKullan, onIndir, onTur }: { gruplar: Ure
               <I className="h-3.5 w-3.5" />{ad}{n > 0 && <span className={cn("rounded-full px-1.5 text-[11px] tabular-nums", f === id ? "bg-black/10" : "bg-white/[0.08]")}>{n}</span>}
             </button>
           ))}
-        </div>}>
+        </div></div>}>
       <div className="space-y-3 p-3.5">
         <AnimatePresence mode="popLayout" initial={false}>
-          {liste.length ? liste.map((g, i) => <Grup key={fm(g[0]).grupId ?? g[0].id} g={g} sira={i} onAc={onAc} onKullan={() => onKullan(g)} onIndir={() => onIndir(g)} />)
+          {liste.length ? liste.map((g, i) => <Grup key={fm(g[0]).grupId ?? g[0].id} gor={gor} g={g} sira={i} onAc={onAc} onKullan={() => onKullan(g)} onIndir={() => onIndir(g)} />)
             : <motion.div key="bos" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center justify-between gap-3 rounded-[16px] px-4 py-3 ring-1 ring-inset ring-white/[0.07]">
                 <span className="text-[13.5px] text-metin-2">Bu türde içerik yok.</span>
                 {f !== "tumu" && <button onClick={() => onTur(f)} className="flex h-9 items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-semibold text-black transition active:scale-95"><Sparkles className="h-3.5 w-3.5" />{TURLER.find((t) => t.id === f)!.ad} üret</button>}
@@ -1182,7 +1192,8 @@ function IcerikPanel({ gruplar, onAc, onKullan, onIndir, onTur }: { gruplar: Ure
 }
 
 /** Bir üretim turu: solda kareler (yatay kayar), sağda metin ve künye; başlık şeridinde eylemler. */
-function Grup({ g, sira, onAc, onKullan, onIndir }: { g: Uretim[]; sira: number; onAc: (u: Uretim) => void; onKullan: () => void; onIndir: () => void }) {
+function Grup({ g, sira, onAc, onKullan, onIndir, gor }: { g: Uretim[]; sira: number; onAc: (u: Uretim) => void; onKullan: () => void; onIndir: () => void; gor: GaleriGorunum }) {
+  const genis = gor.boyut === "kucuk" ? 104 : gor.boyut === "buyuk" ? 190 : gor.boyut === "ozel" ? Math.round(80 + gor.sutun * 18) : 132;
   const t = TURLER.find((x) => x.id === grupTur(g[0])) ?? TURLER[0];
   const m = fm(g[0]);
   const hazir = g.filter((u) => u.durum === "tamam").length, tek = g.length === 1;
@@ -1221,14 +1232,14 @@ function Grup({ g, sira, onAc, onKullan, onIndir }: { g: Uretim[]; sira: number;
       className="overflow-hidden rounded-[18px] bg-white/[0.02] p-3 ring-1 ring-inset ring-white/[0.07]">
       {tek ? (
         <div className="flex gap-4 max-sm:flex-col">
-          <div className="w-[132px] shrink-0 max-sm:w-[150px]"><SonucKart u={g[0]} sira={0} onAc={() => onAc(g[0])} /></div>
+          <div className="shrink-0" style={{ width: genis }}><SonucKart u={g[0]} sira={0} gor={gor} onAc={() => onAc(g[0])} onKullan={onKullan} /></div>
           {bilgi}
         </div>
       ) : (
         <div className="space-y-3">
           {bilgi}
           <div className="flex gap-2 overflow-x-auto pb-0.5 [scrollbar-width:thin]">
-            {g.map((u, i) => <div key={u.id} className="w-[132px] shrink-0 max-sm:w-[118px]"><SonucKart u={u} sira={i} onAc={() => onAc(u)} /></div>)}
+            {g.map((u, i) => <div key={u.id} className="shrink-0" style={{ width: genis }}><SonucKart u={u} sira={i} gor={gor} onAc={() => onAc(u)} onKullan={onKullan} /></div>)}
           </div>
         </div>
       )}
@@ -1236,20 +1247,31 @@ function Grup({ g, sira, onAc, onKullan, onIndir }: { g: Uretim[]; sira: number;
   );
 }
 
-function SonucKart({ u, sira, onAc }: { u: Uretim; sira: number; onAc: () => void }) {
+function SonucKart({ u, sira, onAc, gor, onKullan }: { u: Uretim; sira: number; onAc: () => void; gor: GaleriGorunum; onKullan: () => void }) {
   const bitti = u.durum === "tamam";
   const kapak = kapakAl(u);
   const etiket = etiketAl(u);
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
   return (
-    <motion.button initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...YAY, delay: Math.min(sira, 8) * 0.04 }} whileHover={{ y: -3 }} onClick={() => bitti && onAc()}
-      className="group relative block aspect-[3/4] w-full overflow-hidden rounded-[14px] bg-black text-left ring-1 ring-inset ring-white/[0.08] hover:ring-white/30">
+    <motion.div initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ ...YAY, delay: Math.min(sira, 8) * 0.04 }} whileHover={{ y: -3 }} className="group relative">
+    <button onClick={() => bitti && onAc()} style={{ aspectRatio: String(kartOrani(gor, 3 / 4)) }}
+      className="relative block w-full overflow-hidden rounded-[14px] bg-black text-left ring-1 ring-inset ring-white/[0.08] hover:ring-white/30">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {kapak && <img src={kapak} alt="" className={cn("absolute inset-0 h-full w-full object-cover object-top", !bitti && "opacity-40 blur-[2px]")} />}
       {bitti && u.tur === "video" && u.videoUrl && <video src={u.videoUrl} muted loop playsInline preload="none" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-hover:opacity-100" onMouseEnter={(e) => void e.currentTarget.play().catch(() => {})} onMouseLeave={(e) => e.currentTarget.pause()} />}
-      {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `%${Math.round(u.ilerleme ?? 0)}`}</span>}
+      {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `yüzde ${Math.round(u.ilerleme ?? 0)}`}</span>}
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
       {bitti && u.tur === "video" && <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"><Play className="h-3 w-3 translate-x-px fill-current" /></span>}
       {etiket && <span className="absolute inset-x-2.5 bottom-2.5 line-clamp-2 text-[12.5px] font-semibold leading-snug text-white [text-shadow:0_1px_3px_rgba(0,0,0,0.8)]">{etiket}</span>}
-    </motion.button>
+    </button>
+      {bitti && u.favori && <FavoriRozeti boyut="kucuk" className="right-1.5 top-1.5" />}
+      {bitti && (
+        <div onClick={(e) => e.stopPropagation()} className="pointer-events-none absolute right-1.5 top-1.5 z-20 flex flex-col gap-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+          <FavoriDugmesi favori={!!u.favori} onClick={() => favoriToggle(u.id)} boyut="kucuk" side="left" />
+          <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="left" />
+          <KartDahaMenusu u={u} boyut="kucuk" side="left" onSil={() => useProjeler.getState().sil(u.id)} eylemler={[{ ad: "Büyük gör", ikon: Maximize, fn: onAc }, { ad: "Bu ayarlarla yeniden", ikon: RotateCcw, fn: onKullan }]} />
+        </div>
+      )}
+    </motion.div>
   );
 }

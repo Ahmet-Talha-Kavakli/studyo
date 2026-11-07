@@ -282,7 +282,7 @@ export function CreatePanel({
       {/* Footer: maliyet + Üret */}
       <div className="shrink-0 border-t border-white/[0.06] p-3">
         <div className="mb-2 flex items-center justify-center gap-1.5 text-[11px] text-metin-3">
-          <span>~{modelTuru === "akilli" ? "15 sn" : "1 dk"}</span>
+          <span>yaklaşık {modelTuru === "akilli" ? "15 sn" : "1 dk"}</span>
           <span className="text-amber-glow">🪙 {kredi + (otomatikBol ? 10 : 0)}</span>
         </div>
         <button onClick={uret}

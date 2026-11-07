@@ -74,7 +74,7 @@ export function kitapligaYansit(id: string) {
   const m = i.model === "yerel" ? null : upscaleModel(i.model);
   const uid = useProjeler.getState().ekle({
     baslik: i.ad, tur: i.tur, model: m ? m.ad : "Yerel büyütme",
-    prompt: `${i.olcek ? `${i.olcek}× ` : ""}büyütme · ${i.kaynakW}×${i.kaynakH} → ${i.sonucW ?? "?"}×${i.sonucH ?? "?"}`,
+    prompt: `${i.olcek ? `${i.olcek}× ` : ""}büyütme · ${i.kaynakW}×${i.kaynakH} kaynaktan ${i.sonucW ?? "?"}×${i.sonucH ?? "?"} boyuta`,
     durum: "tamam", ilerleme: 100, kredi: i.kredi, arac: "Yükselt", saglayici: m ? "fal" : "yerel", gercek: i.gercek,
     ...(i.tur === "video" ? { videoUrl: i.sonucUrl } : { gorselUrl: i.sonucUrl }),
     meta: { cozunurluk: i.sonucW && i.sonucH ? `${i.sonucW}×${i.sonucH}` : undefined, gorselUrl: i.kaynakUrl, kaynakId: i.kaynakUretimId },
@@ -96,7 +96,7 @@ export async function isiIzle(id: string) {
       if (!i || !i.jeton || i.durum === "tamam" || i.durum === "hata") return;
       await bekle(aralik);
       const r = await fetch(`/api/upscale?jeton=${encodeURIComponent(i.jeton)}`).then((x) => x.json()).catch(() => null) as
-        | { durum: "kuyrukta"; sira?: number } | { durum: "isleniyor" } | { durum: "tamam"; url: string; genislik?: number; yukseklik?: number } | { durum: "hata"; hata: string } | null;
+        | { durum: "kuyrukta"; sira?: number } | { durum: "isleniyor" } | { durum: "tamam"; url: string; genislik?: number; yukseklik?: number } | { durum: "hata"; hata: string; kredi?: { iade?: boolean; bakiye?: number } } | null;
       if (!r) continue; // geçici ağ hatası — tekrar dene
       if (r.durum === "kuyrukta") guncelle(id, { durum: "kuyrukta", sira: r.sira });
       else if (r.durum === "isleniyor") guncelle(id, { durum: "isleniyor", sira: undefined });
@@ -107,22 +107,29 @@ export async function isiIzle(id: string) {
         toast.success("Görsel büyütüldü", { description: `${i.ad}${boyut ? ` · ${boyut.w}×${boyut.h}` : ""}` });
         return;
       } else {
-        basarisiz(id, r.hata);
+        // Sunucu kesintiyi iade etti (yanıt yeni bakiyeyi taşır).
+        basarisiz(id, r.hata, r.kredi?.iade ? { bakiye: r.kredi.bakiye } : "bilinmiyor");
         return;
       }
     }
-    basarisiz(id, "Zaman aşımı — iş sağlayıcıda çok uzun sürdü.");
+    basarisiz(id, "Zaman aşımı: iş sağlayıcıda çok uzun sürdü.", "bilinmiyor");
   } finally {
     izlenen.delete(id);
   }
 }
 
-export function basarisiz(id: string, hata: string) {
+/**
+ * İş başarısız. Kredi sunucuda kesilir ve sunucuda iade edilir; istemci iade bildirmez.
+ * iade: { bakiye } sunucu iade etti; "yok" hiç kesilmedi; "bilinmiyor" bakiye sunucudan yeniden okunur.
+ */
+export function basarisiz(id: string, hata: string, iade: { bakiye?: number } | "yok" | "bilinmiyor" = "bilinmiyor") {
   const i = useUpscale.getState().isler.find((x) => x.id === id);
   if (!i) return;
-  if (i.kredi > 0) useAuth.getState().krediEkle(i.kredi);
+  if (typeof iade === "object" && typeof iade.bakiye === "number") useAuth.getState().krediEsitle(iade.bakiye);
+  else if (i.kredi > 0) void useAuth.getState().esitle();
   useUpscale.getState().guncelle(id, { durum: "hata", hata: hata.slice(0, 200), jeton: undefined, bitis: Date.now() });
-  toast.error("Büyütülemedi", { description: `${hata.slice(0, 120)}${i.kredi > 0 ? ` ${i.kredi} kredi bakiyene iade edildi.` : ""} Yeniden dene.` });
+  const not = !(i.kredi > 0) || iade === "yok" ? " Kredi düşmedi." : typeof iade === "object" ? ` ${i.kredi} kredi bakiyene iade edildi.` : " Kesilen kredi sunucuda iade edilir; bakiyen birazdan güncellenir.";
+  toast.error("Büyütülemedi", { description: `${hata.slice(0, 120)}${not} Yeniden dene.` });
 }
 
 /** Sayfa açıldığında yarıda kalan işleri sürdürür; jetonsuz kalanları (sekme kapandı) iptal eder. */
@@ -131,7 +138,7 @@ export function isleriSurdur() {
     if (i.durum !== "kuyrukta" && i.durum !== "isleniyor") continue;
     if (i.jeton) void isiIzle(i.id);
     else if (i.model === "yerel") useUpscale.getState().guncelle(i.id, { durum: "hata", hata: "Sekme kapandığı için yerel işlem yarıda kaldı." });
-    else if (Date.now() - i.olusturma > 60_000) basarisiz(i.id, "İş başlatılamadan sayfa kapandı.");
+    else if (Date.now() - i.olusturma > 60_000) basarisiz(i.id, "İş başlatılamadan sayfa kapandı.", "bilinmiyor");
   }
 }
 

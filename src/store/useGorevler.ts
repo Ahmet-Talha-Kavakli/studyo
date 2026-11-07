@@ -28,12 +28,8 @@ export interface Gorev {
 export const GOREVLER: Gorev[] = [
   { id: "ilk-uretim", tip: "baslangic", baslik: "İlk üretimini yap", aciklama: "Herhangi bir stüdyoda ilk içeriğini oluştur.", odul: 50, hedef: 1 },
   { id: "profil-tamamla", tip: "baslangic", baslik: "Profilini tamamla", aciklama: "Ad, avatar ve biyografini ekle.", odul: 30, hedef: 1 },
-  { id: "element-olustur", tip: "baslangic", baslik: "İlk elementini oluştur", aciklama: "Bir karakter, stil veya obje elementi kaydet.", odul: 40, hedef: 1 },
   { id: "gunluk-uretim", tip: "gunluk", baslik: "Günlük 3 üretim", aciklama: "Bugün 3 içerik üret.", odul: 25, hedef: 3 },
   { id: "gunluk-giris", tip: "gunluk", baslik: "Günlük giriş", aciklama: "Her gün uğra, bonusunu al.", odul: 10, hedef: 1 },
-  { id: "toplulukta-yayinla", tip: "sosyal", baslik: "Toplulukta yayınla", aciklama: "Bir üretimini Keşfet'te yayınla.", odul: 35, hedef: 1 },
-  { id: "davet-et", tip: "sosyal", baslik: "Bir arkadaşını davet et", aciklama: "Davet bağlantınla katılan ilk kişi.", odul: 100, hedef: 1 },
-  { id: "5-yorum", tip: "sosyal", baslik: "5 yorum yap", aciklama: "Topluluk içeriklerine 5 yorum ekle.", odul: 20, hedef: 5 },
   { id: "10-uretim", tip: "uretim", baslik: "10 üretime ulaş", aciklama: "Toplam 10 içerik üret.", odul: 60, hedef: 10 },
   { id: "3-studyo", tip: "uretim", baslik: "3 farklı stüdyo dene", aciklama: "Görsel, video, ses… 3 farklı stüdyoda üret.", odul: 45, hedef: 3 },
 ];

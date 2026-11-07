@@ -3,7 +3,7 @@
 import { type ReactNode } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
-import { Search } from "lucide-react";
+import { Search, AlertTriangle, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SPRING, useSayac } from "@/lib/admin/animasyon";
 
@@ -81,7 +81,7 @@ export function MetrikKart({
         <div className="mt-2 flex items-center gap-2 text-[12px]">
           {delta !== undefined && (
             <span style={{ color: delta >= 0 ? "var(--ad-basari)" : "var(--ad-tehlike)" }} className="font-semibold tabular-nums">
-              {delta >= 0 ? "▲" : "▼"} {Math.abs(delta).toFixed(1).replace(".", ",")}%
+              {delta >= 0 ? "artış" : "düşüş"} yüzde {Math.abs(delta).toFixed(1).replace(".", ",").replace(/,0$/, "")}
             </span>
           )}
           {alt && <span className={AD.metin3}>{alt}</span>}
@@ -198,6 +198,46 @@ export function Bos({ ikon: Ikon, baslik, ozet }: { ikon?: LucideIcon; baslik: s
       {Ikon && <AdIkon ikon={Ikon} boyut={48} />}
       <div className={cn("text-[15px] font-semibold", AD.metin)}>{baslik}</div>
       {ozet && <p className={cn("max-w-sm text-sm", AD.metin3)}>{ozet}</p>}
+    </div>
+  );
+}
+
+/** Yükleniyor iskeleti. */
+export function Yukleniyor({ satir = 3, className }: { satir?: number; className?: string }) {
+  return (
+    <div className={cn("space-y-3", className)} aria-busy="true" aria-label="Yükleniyor">
+      {Array.from({ length: satir }, (_, i) => <div key={i} className="h-24 animate-pulse rounded-2xl border border-[color:var(--ad-kenar)] bg-white/[0.025]" />)}
+    </div>
+  );
+}
+
+/** Veri okunamadı kutusu (yeniden dene düğmeli). */
+export function HataKutusu({ hata, yenile }: { hata: string; yenile?: () => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-rose-400/25 bg-rose-500/[0.06] px-4 py-3">
+      <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-rose-300" />
+      <span className={cn("min-w-0 flex-1 text-sm", AD.metin2)}>{hata}</span>
+      {yenile && <button onClick={yenile} className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--ad-kenar)] px-2.5 py-1.5 text-[13px] text-[color:var(--ad-metin)] hover:bg-white/[0.05]"><RotateCw className="h-3.5 w-3.5" /> Yeniden dene</button>}
+    </div>
+  );
+}
+
+/** Küçük bilgi satırı: etiket solda, değer sağda. */
+export function BilgiSatir({ etiket, children }: { etiket: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-b border-[color:var(--ad-kenar)] py-2 text-[13px] last:border-0">
+      <span className={cn("shrink-0", AD.metin3)}>{etiket}</span>
+      <span className={cn("min-w-0 break-words text-right", AD.metin)}>{children}</span>
+    </div>
+  );
+}
+
+/** Kart başlığı. */
+export function KartBaslik({ children, sag, ikon: Ikon }: { children: ReactNode; sag?: ReactNode; ikon?: LucideIcon }) {
+  return (
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <h3 className={cn("flex min-w-0 items-center gap-2 text-sm font-bold", AD.metin)}>{Ikon && <Ikon className="h-4 w-4 shrink-0 text-[color:var(--ad-aksan)]" />}<span className="truncate">{children}</span></h3>
+      {sag}
     </div>
   );
 }

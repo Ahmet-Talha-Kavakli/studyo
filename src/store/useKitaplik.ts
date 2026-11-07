@@ -10,7 +10,7 @@ import { persist } from "zustand/middleware";
  */
 export type Kapsam = string; // "tumu" | "favori" | "yukleme" | "cop" | "tur:<tur>" | "arac:<arac>" | "proje:<id>" | "akilli:<id>"
 export type Zaman = "tumu" | "bugun" | "hafta" | "ay" | "yil";
-export type Siralama = "yeni" | "eski" | "ad" | "kredi";
+export type Siralama = "yeni" | "eski" | "ad" | "kredi" | "tur" | "model";
 
 export interface Suzgec {
   q: string;

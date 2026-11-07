@@ -560,7 +560,7 @@ function Kaydirici({ ad, deger, onDeger }: { ad: string; deger: number; onDeger:
   return (
     <label className="relative flex h-9 items-center overflow-hidden rounded-[10px] bg-black/25 px-3 ring-1 ring-inset ring-white/[0.07]">
       <span className="absolute inset-y-0 left-0 bg-white/[0.1]" style={{ width: `${deger}%` }} />
-      <span className="relative flex-1 text-[12.5px] text-metin-2">{ad}</span><span className="relative text-[12.5px] font-semibold tabular-nums text-metin">{deger}%</span>
+      <span className="relative flex-1 text-[12.5px] text-metin-2">{ad}</span><span className="relative text-[12.5px] font-semibold tabular-nums text-metin">yüzde {deger}</span>
       <input type="range" min={0} max={100} value={deger} onChange={(e) => onDeger(Number(e.target.value))} aria-label={ad} className="absolute inset-0 cursor-ew-resize opacity-0" />
     </label>
   );

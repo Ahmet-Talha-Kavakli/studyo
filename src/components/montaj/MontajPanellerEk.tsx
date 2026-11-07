@@ -10,7 +10,7 @@ import { cn, saltUrl } from "@/lib/utils";
 import { useMasaustu } from "@/hooks/useMasaustu";
 import { toast } from "@/lib/toast";
 import { HapKaydirici, MarkaKare, Rozet } from "@/components/studyo/hf";
-import { useAuth } from "@/store/useAuth";
+import { krediliIstek } from "@/lib/krediIstek";
 import { useProjeler } from "@/store/useProjeler";
 import { useSaglayicilar } from "@/hooks/useSaglayicilar";
 import { uretimBaslat, uretimHataToast } from "@/lib/uretimMotoru";
@@ -138,9 +138,11 @@ export function UretPanel({ proje }: { proje: MontajProje }) {
         const kat = katmanBul(proje.id, "ses", [konum, konum + muzikSn]); if (!kat) return;
         let url: string, gercek = false;
         if (elevenBagli) {
-          if (!useAuth.getState().krediDus(mKredi)) throw new Error(`Yetersiz kredi (${mKredi})`);
-          const r = (await (await fetch("/api/muzik/uret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: "Eleven Music v2.5", istem: istem.trim(), sozler: "", stiller: [], haric: [], enstrumantal: true, sureSn: muzikSn }) })).json()) as { ok: boolean; sesUrl?: string; hata?: string };
-          if (!r.ok || !r.sesUrl) { useAuth.getState().krediEkle(mKredi); throw new Error(r.hata ?? "Müzik üretilemedi"); }
+          // Kredi sunucuda kesilir, hata olursa sunucuda iade edilir; ekrandaki bakiye yanıtla eşitlenir.
+          const s = await krediliIstek<{ sesUrl?: string }>("/api/muzik/uret", { kredi: mKredi, json: { model: "Eleven Music v2.5", istem: istem.trim(), sozler: "", stiller: [], haric: [], enstrumantal: true, sureSn: muzikSn, kredi: mKredi } });
+          if (s.durum === 401 || s.durum === 402) return;
+          const r = s.j;
+          if (!r?.ok || !r.sesUrl) throw new Error(`${r?.hata ?? "Müzik üretilemedi"}. Kredi düşmedi.`);
           url = r.sesUrl; gercek = true;
         } else {
           // Demo: tarayıcıda gerçek bir enstrümantal sentezlenir (kredi düşmez)
@@ -240,7 +242,7 @@ export function UretPanel({ proje }: { proje: MontajProje }) {
               const u = uretimler.find((x) => x.id === b.id);
               return (
                 <div key={b.id} className="rounded-[12px] p-2">
-                  <span className="flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-white" /><span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-metin">{b.ad}</span><span className="text-[11.5px] tabular-nums text-metin-2">%{u?.ilerleme ?? 0}</span></span>
+                  <span className="flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-white" /><span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-metin">{b.ad}</span><span className="text-[11.5px] tabular-nums text-metin-2">yüzde {u?.ilerleme ?? 0}</span></span>
                   <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-white/[0.1]"><span className="block h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${u?.ilerleme ?? 0}%` }} /></span>
                   <span className="mt-1 block text-[11px] tabular-nums text-metin-3">{zamanKodu(b.konum, proje.fps)} konumuna eklenecek</span>
                 </div>
@@ -493,7 +495,7 @@ export type Sablon = {
 };
 export const SABLONLAR: Sablon[] = [
   { id: "reel", ad: "Hızlı Reel", alt: "9:16 · 6 kesim · TikTok yazı", oran: "9:16", kapak: "skate-cruise", klipler: ["skate-cruise", "snowboard-carve", "fpv-dive", "whip-pan", "crash-zoom", "viral-spin"], sure: 1.6, gecis: "yakinlas", efekt: ["grade-sinematik"], baslik: { metin: "Hafta sonu modu", stil: "tiktok", boyut: 80 }, ilerleme: true },
-  { id: "urun", ad: "Ürün tanıtımı", alt: "1:1 · etiket · alt yazı", oran: "1:1", kapak: "orbit-left", klipler: ["orbit-left", "orbit-right", "dolly-in", "push-to-glass"], sure: 3, gecis: "fade", efekt: ["keskinlik"], baslik: { metin: "Yeni sezon", stil: "baslik", boyut: 96 }, kose: "%30 indirim" },
+  { id: "urun", ad: "Ürün tanıtımı", alt: "1:1 · etiket · alt yazı", oran: "1:1", kapak: "orbit-left", klipler: ["orbit-left", "orbit-right", "dolly-in", "push-to-glass"], sure: 3, gecis: "fade", efekt: ["keskinlik"], baslik: { metin: "Yeni sezon", stil: "baslik", boyut: 96 }, kose: "Yüzde 30 indirim" },
   { id: "seyahat", ad: "Seyahat vlogu", alt: "16:9 · sıcak ton · yumuşak geçiş", oran: "16:9", kapak: "drone-orbit", klipler: ["drone-orbit", "jib-up", "tilt-up", "zoom-out", "dolly-out"], sure: 3, gecis: "fade", efekt: ["grade-sicak"], baslik: { metin: "Alplerde 5 gün", stil: "sinematik", boyut: 64 } },
   { id: "fragman", ad: "Sinematik fragman", alt: "16:9 · gren · vinyet · flaş geçiş", oran: "16:9", kapak: "dutch-angle", klipler: ["dutch-angle", "slow-motion", "bullet-time", "emotion-zoom"], sure: 2.4, gecis: "beyazparla", efekt: ["grade-sinematik", "vinyet", "grenli"], baslik: { metin: "Yakında", stil: "sinematik", boyut: 72 } },
   { id: "roportaj", ad: "Röportaj", alt: "16:9 · alt bant · karaoke altyazı", oran: "16:9", kapak: "focus-pull", klipler: ["focus-pull", "handheld"], sure: 5, gecis: "kesme", altbant: true, altyazi: ["Bu proje bizim için", "bir dönüm noktası oldu."] },

@@ -203,26 +203,32 @@ function Vitrin({ liste, katilimlar, simdi }: { liste: Kampanya[]; katilimlar: s
 function KisiselSerit({ c }: { c: ReturnType<typeof cuzdan> }) {
   const hesaplar = useEarn((s) => s.hesaplar);
   const bagli = new Map(hesaplar.filter((h) => h.durum === "dogrulandi").map((h) => [h.platform, h]));
-  const oran = c.sonraki ? Math.min(1, (c.seviyeKazanc - c.seviye.minKazanc) / (c.sonraki.minKazanc - c.seviye.minKazanc)) : 1;
-  const cekebilir = c.cekilebilir >= KURALLAR.minCekim;
+  void c;
+  // Sayılar sunucudaki başvuru durumlarından; kazanç defteri olmadığı için para tutarı gösterilmez.
+  const gonderiler = useEarn((s) => s.gonderiler);
+  const katilimlar = useEarn((s) => s.katilimlar);
+  const simdi = Date.now();
+  const durumlar = gonderiler.map((g) => gonderiHesap(g, simdi).durum);
+  const incelemede = durumlar.filter((d) => d === "inceleme" || d === "degerlendirme").length;
+  const onaylanan = durumlar.filter((d) => d === "onaylandi").length;
   const hucre = "group bg-[#0e0f12] p-5 transition-colors hover:bg-[#121317]";
   return (
     <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.45, ease }}
       className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[26px] bg-white/[0.06] ring-1 ring-white/[0.08] lg:grid-cols-[1.15fr_1fr_1.25fr_1.1fr]">
-      <Link href="/earn/cuzdan" className={hucre}>
-        <p className="flex items-center gap-1.5 text-[13px] text-white/55"><Wallet className="h-3.5 w-3.5" />Çekilebilir</p>
-        <p className="mt-1.5 text-[26px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white"><Sayac hedef={c.cekilebilir} bicim={(v) => tl(v, true)} /></p>
-        <p className={cn("mt-2 flex items-center gap-1 text-[12.5px]", cekebilir ? "text-[#8fe6ff]" : "text-white/45")}>{cekebilir ? "Para çek" : `${tl(KURALLAR.minCekim)} olunca çekilir`}<ChevronRight className="h-3 w-3 transition group-hover:translate-x-0.5" /></p>
+      <Link href="/earn/gonderiler" className={hucre}>
+        <p className="text-[13px] text-white/55">İncelemede</p>
+        <p className="mt-1.5 text-[26px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white">{incelemede}</p>
+        <p className="mt-2 flex items-center gap-1 text-[12.5px] text-white/45">Vayra ekibinin kararını bekliyor<ChevronRight className="h-3 w-3 transition group-hover:translate-x-0.5" /></p>
       </Link>
       <Link href="/earn/gonderiler" className={hucre}>
-        <p className="text-[13px] text-white/55">Bekleyen</p>
-        <p className="mt-1.5 text-[26px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white"><Sayac hedef={c.bekleyen} bicim={(v) => tl(v)} /></p>
-        <p className="mt-2 text-[12.5px] text-white/45">Toplam {tl(c.toplam)}</p>
+        <p className="text-[13px] text-white/55">Onaylanan</p>
+        <p className="mt-1.5 text-[26px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white">{onaylanan}</p>
+        <p className="mt-2 text-[12.5px] text-white/45">Toplam {gonderiler.length} gönderi</p>
       </Link>
-      <Link href="/earn/yardim#seviyeler" className={hucre}>
-        <p className="flex items-center justify-between gap-2 text-[13px] text-white/55">Seviye<span className="font-medium text-white">{c.seviye.ad}{c.seviye.bonus > 0 && <span className="ml-1 text-[#8fe6ff]">+%{Math.round(c.seviye.bonus * 100)}</span>}</span></p>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]"><motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(3, oran * 100)}%` }} transition={{ duration: 1, delay: 0.3, ease }} className="h-full rounded-full bg-gradient-to-r from-[#55d6fd] to-[#a5ecff]" /></div>
-        <p className="mt-2.5 text-[12.5px] text-white/45">{c.sonraki ? `${tl(Math.max(0, c.sonraki.minKazanc - c.seviyeKazanc))} daha kazanınca ${c.sonraki.ad}` : "En üst seviyedesin"}</p>
+      <Link href="/earn/kampanyalar" className={hucre}>
+        <p className="flex items-center gap-1.5 text-[13px] text-white/55"><Wallet className="h-3.5 w-3.5" />Ödeme</p>
+        <p className="mt-1.5 text-[17px] font-semibold leading-snug text-white">Henüz açık değil</p>
+        <p className="mt-2 text-[12.5px] text-white/45">{katilimlar.length ? `${katilimlar.length} kampanyaya katıldın` : "Kazanç tutarları ödeme açılınca yazılır"}</p>
       </Link>
       <Link href="/earn/hesaplar" className={hucre}>
         <p className="flex items-center justify-between text-[13px] text-white/55">Hesapların<span className="text-white/70">{bagli.size}/{PLATFORMLAR.length}</span></p>
@@ -250,7 +256,7 @@ function Adimlar() {
   const adimlar = [
     { ad: "Hesabını bağla", alt: "Bio'na kısa kodu ekle; hesabın saniyeler içinde doğrulanır.", tamam: s.hesaplar.some((h) => h.durum === "dogrulandi"), href: "/earn/hesaplar", Gorsel: AnHesap },
     { ad: "Üret ve paylaş", alt: "Kampanya kitindeki istemlerle Vayra'da üret, paylaşımının bağlantısını gönder.", tamam: s.gonderiler.length > 0, href: s.katilimlar[0] ? `/earn/kampanyalar/${s.katilimlar[0]}` : "/earn/kampanyalar", Gorsel: AnPaylas },
-    { ad: "Parana ulaş", alt: `Onayda sabit ödeme, 24. saatte ve 7. günde bonus. ${tl(KURALLAR.minCekim)} olunca IBAN ya da Papara'ya çek.`, tamam: s.cekimler.length > 0, href: "/earn/cuzdan", Gorsel: AnBakiye },
+    { ad: "Sonucu takip et", alt: "Vayra ekibi gönderini inceler; onay ya da ret kararı bildirim olarak gelir.", tamam: s.gonderiler.some((g) => g.sunucuDurum === "onaylandi"), href: "/earn/gonderiler", Gorsel: AnBakiye },
   ];
   if (adimlar.every((a) => a.tamam)) return null;
   return (
@@ -286,7 +292,7 @@ function AnHesap() {
         <div className="flex items-center gap-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/gercek/gorsel/gorsel-karakter-Aria.webp" alt="" className="h-11 w-11 rounded-full object-cover ring-2 ring-white/10" />
-          <div className="min-w-0"><p className="flex items-center gap-1 text-[13.5px] font-semibold text-white">@sen<AnimatePresence>{adim === 3 && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={yay}><BadgeCheck className="h-4 w-4 text-[#55d6fd]" /></motion.span>}</AnimatePresence></p><p className="text-[11.5px] text-white/50">Örnek profil</p></div>
+          <div className="min-w-0"><p className="flex items-center gap-1 text-[13.5px] font-semibold text-white">@sen<AnimatePresence>{adim === 3 && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={yay}><BadgeCheck className="h-4 w-4 text-[#55d6fd]" /></motion.span>}</AnimatePresence></p><p className="text-[11.5px] text-white/50">Senin profilin</p></div>
           <span className="ml-auto"><PlatformLogo id="instagram" boyut={18} /></span>
         </div>
         <div className="mt-3 rounded-[12px] bg-black/30 px-3 py-2.5 text-[12.5px] text-white/75 ring-1 ring-white/[0.06]">
@@ -327,16 +333,18 @@ function AnPaylas() {
 }
 
 function AnBakiye() {
-  const [n, setN] = useState(0);
-  useEffect(() => { const t = setInterval(() => setN((x) => x + 1), 3200); return () => clearInterval(t); }, []);
+  const [onay, setOnay] = useState(false);
+  useEffect(() => { const t = setInterval(() => setOnay((x) => !x), 2400); return () => clearInterval(t); }, []);
   return (
     <div className="absolute inset-0 flex items-center justify-center">
-      <div className="relative w-[250px] overflow-hidden rounded-[20px] bg-[linear-gradient(135deg,#55d6fd,#2bb5e0_55%,#8f9cff)] p-4 text-[#05222b]">
-        <span className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/30 blur-2xl" />
-        <p className="relative flex items-center gap-1.5 text-[12.5px] font-medium"><Wallet className="h-3.5 w-3.5" />Çekilebilir</p>
-        <p className="relative mt-1 text-[34px] font-semibold leading-none tracking-[-0.04em]"><Sayac key={n} hedef={2480} sure={1.6} bicim={(v) => tl(v)} /></p>
-        <p className="relative mt-1 text-[11.5px] font-medium opacity-70">Örnek hesap</p>
-        <div className="relative mt-3 flex h-9 items-center justify-center rounded-full bg-[#05222b] text-[12.5px] font-semibold text-white">Para çek</div>
+      <div className="w-[250px] rounded-[20px] bg-white/[0.04] p-4 ring-1 ring-white/[0.09]">
+        <p className="text-[12.5px] text-white/55">Gönderinin durumu</p>
+        <p className="mt-1 text-[22px] font-semibold tracking-[-0.03em] text-white">{onay ? "Onaylandı" : "İncelemede"}</p>
+        <div className="mt-3 flex items-center gap-1.5">
+          <span className="h-1.5 flex-1 rounded-full bg-[#55d6fd]" />
+          <span className={cn("h-1.5 flex-1 rounded-full transition-colors duration-500", onay ? "bg-[#55d6fd]" : "bg-white/[0.12]")} />
+        </div>
+        <p className="mt-3 text-[11.5px] text-white/50">Karar bildirim olarak gelir</p>
       </div>
     </div>
   );
@@ -380,7 +388,7 @@ function EkGelir() {
   const preset = usePaylasim((x) => x.benimPaylasimlar.filter((p) => p.tur === "preset").length);
   const kartlar = [
     { ad: "Davet ve ortaklık", alt: davetli ? `${davetli} abone davetli` : "Davet ettiklerinin aboneliğinden pay al", ikon: Gift, href: "/earn/davet", g: "/gercek/gorsel/gorsel-karakter-Aria.webp" },
-    { ad: "Marketplace", alt: preset ? `${preset} preset yayında` : "Preset'in kullanıldıkça kazan", ikon: Store, href: "/earn/marketplace", g: "/gercek/kesfet/neon-sehir.webp" },
+    { ad: "Presetler", alt: preset ? `${preset} preset yayında` : "Kendi efektini oluştur, galerine ekle", ikon: Store, href: "/panel/presetler", g: "/gercek/kesfet/neon-sehir.webp" },
   ];
   return (
     <Bolum baslik="Ek gelir">

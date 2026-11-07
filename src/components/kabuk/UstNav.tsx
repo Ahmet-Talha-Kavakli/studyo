@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { KrediIsiltiHap } from "@/components/ui/KrediHap";
 import { KullaniciAvatar } from "@/components/ui/KullaniciAvatar";
 import { HesapMenusu } from "./HesapMenusu";
+import { AlanSecici } from "@/components/alan/AlanSecici";
 
 /**
  * Üst navigasyon (masaüstü, sm+).
@@ -78,9 +79,11 @@ export function UstNav() {
       <div className="flex h-full items-center gap-2 px-3 lg:px-5">
         <Link href="/panel" aria-label="Vayra ana sayfa" className={cn("group mr-1 flex h-9 shrink-0 items-center gap-2 rounded-[10px] px-1.5 lg:mr-3", ODAK)}>
           <span className="transition-transform duration-300 group-hover:rotate-[-8deg]"><VayraIsaret size={32} /></span>
-          <span className="hidden text-[18px] font-semibold tracking-[-0.02em] text-white lg:inline">Vayra</span>
+          <span className={cn("hidden text-[18px] font-semibold tracking-[-0.02em] text-white", girisYapildi ? "min-[1600px]:inline" : "lg:inline")}>Vayra</span>
         </Link>
 
+        {/* Çalışma alanı seçici (kişisel ya da ekip alanı): krediler etkin alanın cüzdanından düşer. */}
+        {girisYapildi && <><span aria-hidden className="hidden h-5 w-px bg-white/[0.12] lg:block" /><AlanSecici className="mr-0.5 hidden lg:block" /></>}
         <MegaNav path={path} />
         <div className="min-w-0 flex-1" />
 

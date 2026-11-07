@@ -73,7 +73,7 @@ export const POZISYONLAR: Pozisyon[] = [
     tur: "Tam zamanlı",
     ozet: "Karmaşık üretim akışlarını sade, keyifli deneyimlere çevir. Vayra'nın görsel dilini ve etkileşim standartlarını sen şekillendir.",
     gorevler: [
-      "Uçtan uca akışları tasarlamak (araştırma → prototip → teslim)",
+      "Uçtan uca akışları tasarlamak (araştırmadan prototipe, prototipten teslime)",
       "Tasarım sistemini büyütmek ve tutarlılığı korumak",
       "Mühendislikle sıkı iş birliğiyle yüksek kaliteli teslim",
       "Kullanıcı görüşmeleri ve kullanılabilirlik testleri yürütmek",

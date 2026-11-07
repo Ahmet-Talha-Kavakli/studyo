@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, ClipboardPaste, Copy, Gift, Link2, RefreshCw, Send, Sparkles, Ticket } from "lucide-react";
 import { useAuth } from "@/store/useAuth";
-import { hareketYaz } from "@/store/useHesap";
-import { useHesapKaydi } from "@/components/ayarlar/AyarKabugu";
+import * as O from "@/lib/odeme/istemci";
+import type { KrediKaydi } from "@/lib/odeme/tipler";
 import { Grup, Hap, Satir, Sayfa, Segment, alan, dugme, akis } from "@/components/ayarlar/ui";
 import { goreli } from "@/components/api/ui";
 import { VayraIsaret } from "@/components/kabuk/VayraIsaret";
@@ -17,12 +17,19 @@ import { mesaj } from "@/lib/mesaj";
 import { cn } from "@/lib/utils";
 import { HediyeOzet } from "@/components/ayarlar/YanPaneller";
 
+/**
+ * Kodlar ve hediyeler. Doğrulama ve kredi işlemi sunucuda (/api/hediye): kod kullanınca kredi sunucu defterine eklenir,
+ * hediye oluşturunca gönderenin kredisi defterden düşer. Tarayıcı krediyi kendi eklemez; sonuçtan sonra hesap eşitlenir.
+ */
+type Gonderilen = { ozet: string; kod: string; kredi: number; zaman: number; not?: string; kullanildi?: number; iptal?: number };
+
 const TUTARLAR = [100, 250, 500, 1000, 2500];
 
 async function hediyeApi<T>(govde: Record<string, unknown>): Promise<{ ok: true } & T | { ok: false; hata: string }> {
   try {
-    const r = await fetch("/api/hediye", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde) });
-    return await r.json();
+    const r = await fetch("/api/hediye", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(govde), credentials: "same-origin" });
+    const j = await r.json().catch(() => null);
+    return j ?? { ok: false, hata: `İstek başarısız (${r.status}).` };
   } catch { return { ok: false, hata: "Sunucuya ulaşılamadı. Bağlantını kontrol et." }; }
 }
 
@@ -33,38 +40,41 @@ export default function HediyeSayfasi() {
 function Hediye() {
   const params = useSearchParams();
   const kullanici = useAuth((s) => s.kullanici)!;
-  const krediEkle = useAuth((s) => s.krediEkle);
-  const { email, kayit, guncelle } = useHesapKaydi();
   const [kod, setKod] = useState(() => params.get("kod")?.toUpperCase() ?? "");
   const [hata, setHata] = useState("");
   const [bekle, setBekle] = useState(false);
   const [sonuc, setSonuc] = useState<{ kredi: number; aciklama: string } | null>(null);
-  const [durumlar, setDurumlar] = useState<Record<string, { kullanildi: number | null }>>({});
+  const [gonderilenler, setGonderilenler] = useState<Gonderilen[]>([]);
+  const [kullanilanlar, setKullanilanlar] = useState<KrediKaydi[]>([]);
   const baglantidan = !!params.get("kod");
-  const kullanilanlar = kayit.hareketler.filter((h) => h.tur === "promo" || h.tur === "hediye");
-  const gonderilenler = kayit.gonderilenler ?? [];
 
   const durumYenile = useCallback(async () => {
-    if (!gonderilenler.length) return;
-    const r = await hediyeApi<{ durumlar: typeof durumlar }>({ islem: "durum", email, kodlar: gonderilenler.map((g) => g.kod) });
-    if (r.ok) setDurumlar(r.durumlar);
-  }, [gonderilenler.length, email]); // eslint-disable-line react-hooks/exhaustive-deps
+    const [r, g] = await Promise.all([hediyeApi<{ gonderilenler: Gonderilen[] }>({ islem: "durum" }), O.gecmisGetir()]);
+    if (r.ok) setGonderilenler(r.gonderilenler);
+    if (g.ok) setKullanilanlar(g.krediKayitlari.filter((x) => x.tur === "promo" || x.tur === "hediye"));
+  }, []);
   useEffect(() => { void durumYenile(); }, [durumYenile]);
+  const iptal = async (g: Gonderilen) => {
+    const r = await hediyeApi<{ bakiye: number; gonderilenler: Gonderilen[] }>({ islem: "iptal", ozet: g.ozet });
+    if (!r.ok) return toast.error("Kod iptal edilemedi", { description: r.hata });
+    setGonderilenler(r.gonderilenler);
+    useAuth.getState().krediEsitle(r.bakiye);
+    void O.hesabiTazele();
+    toast.success("Hediye kodu iptal edildi", { description: `${sayi(g.kredi)} kredi bakiyene iade edildi.` });
+  };
 
   const uygula = async (e: React.FormEvent) => {
     e.preventDefault();
     const k = kod.trim().toUpperCase().replace(/\s+/g, "");
     if (!k) return;
     setHata(""); setSonuc(null);
-    if (kayit.kodlar.includes(k)) return setHata("Bu kodu zaten kullandın.");
-    if (gonderilenler.some((g) => g.kod === k)) return setHata("Kendi gönderdiğin hediye kodunu kullanamazsın.");
     setBekle(true);
-    const r = await hediyeApi<{ tur: "promo" | "hediye"; kredi: number; aciklama: string }>({ islem: "kullan", kod: k, email });
+    const r = await hediyeApi<{ tur: "promo" | "hediye"; kredi: number; aciklama: string; bakiye: number }>({ islem: "kullan", kod: k });
     setBekle(false);
     if (!r.ok) return setHata(r.hata);
-    krediEkle(r.kredi);
-    guncelle((h) => ({ ...h, kodlar: [...h.kodlar, k] }));
-    hareketYaz({ tur: r.tur, aciklama: `${r.aciklama} · ${k}`, kredi: r.kredi });
+    useAuth.getState().krediEsitle(r.bakiye);
+    await O.hesabiTazele();
+    void durumYenile();
     setSonuc({ kredi: r.kredi, aciklama: r.aciklama });
     setKod("");
     toast.success(`${sayi(r.kredi)} kredi eklendi`, { description: r.aciklama });
@@ -112,20 +122,21 @@ function Hediye() {
         ) : (
           <>
             {gonderilenler.map((g) => {
-              const d = durumlar[g.kod];
+              const d = { kullanildi: g.kullanildi ?? null };
               return (
-                <Satir key={g.kod} on={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#a78bfa]/12 text-[#a78bfa]"><Send className="h-4 w-4" /></span>}
+                <Satir key={g.ozet} on={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-[#a78bfa]/12 text-[#a78bfa]"><Send className="h-4 w-4" /></span>}
                   ad={<span className="flex items-center gap-2">Hediye gönderildi{g.not && <span className="font-normal text-white/50">, {g.not}</span>}</span>}
                   alt={<span><span className="sc-kod">{g.kod}</span> · {goreli(g.zaman)}</span>}>
                   <span className="text-[14px] font-semibold tabular-nums text-white">-{sayi(g.kredi)}</span>
-                  {d?.kullanildi ? <Hap ton="yesil">Kullanıldı</Hap> : <Hap>Bekliyor</Hap>}
-                  {!d?.kullanildi && <button type="button" onClick={() => void kopyala(g.kod, "Hediye kodu kopyalandı")} aria-label="Kodu kopyala" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-white/40 hover:bg-white/[0.06] hover:text-white"><Copy className="h-3.5 w-3.5" /></button>}
+                  {g.iptal ? <Hap>İptal edildi</Hap> : d?.kullanildi ? <Hap ton="yesil">Kullanıldı</Hap> : <Hap>Bekliyor</Hap>}
+                  {!d?.kullanildi && !g.iptal && <button type="button" onClick={() => void iptal(g)} className={cn(dugme.hayalet, "h-8 px-2.5 text-[12.5px]")}>İptal et</button>}
+                  {!d?.kullanildi && !g.iptal && <button type="button" onClick={() => void kopyala(g.kod, "Hediye kodu kopyalandı")} aria-label="Kodu kopyala" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-white/40 hover:bg-white/[0.06] hover:text-white"><Copy className="h-3.5 w-3.5" /></button>}
                 </Satir>
               );
             })}
             {kullanilanlar.map((h) => (
               <Satir key={h.id} on={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-emerald-400/10 text-emerald-300"><Ticket className="h-4 w-4" /></span>}
-                ad={h.aciklama.split(" · ")[0]} alt={<span>{h.aciklama.split(" · ")[1] && <span className="sc-kod">{h.aciklama.split(" · ")[1]} · </span>}{goreli(h.zaman)}</span>}>
+                ad={h.aciklama.split(", ")[0]} alt={<span>{h.aciklama.split(", ")[1] && <span className="sc-kod">{h.aciklama.split(", ")[1]} · </span>}{goreli(h.zaman)}</span>}>
                 <span className="text-[14px] font-semibold tabular-nums text-emerald-300">+{sayi(h.kredi)}</span>
               </Satir>
             ))}
@@ -140,9 +151,6 @@ function Hediye() {
 function HediyeOlustur({ onOlustu }: { onOlustu: () => void }) {
   const kullanici = useAuth((s) => s.kullanici)!;
   const krediler = kullanici.krediler;
-  const krediDus = useAuth((s) => s.krediDus);
-  const krediEkle = useAuth((s) => s.krediEkle);
-  const { email, guncelle } = useHesapKaydi();
   const [tutar, setTutar] = useState(() => TUTARLAR.find((t) => t <= krediler && t >= 250) ?? 100);
   const [not, setNot] = useState("");
   const [bekle, setBekle] = useState(false);
@@ -153,12 +161,11 @@ function HediyeOlustur({ onOlustu }: { onOlustu: () => void }) {
   const olustur = async () => {
     if (yetersiz) return mesaj.yetersizKredi(tutar, krediler);
     setBekle(true);
-    if (!krediDus(tutar)) { setBekle(false); return; }
-    const r = await hediyeApi<{ kod: string; kredi: number }>({ islem: "olustur", kredi: tutar, email });
+    const r = await hediyeApi<{ kod: string; kredi: number; bakiye: number }>({ islem: "olustur", kredi: tutar, not: not.trim() });
     setBekle(false);
-    if (!r.ok) { krediEkle(tutar); return toast.error("Hediye kodu oluşturulamadı", { description: r.hata ?? "Sunucu yanıt vermedi; kredin iade edildi. Biraz sonra yeniden dene." }); }
-    guncelle((h) => ({ ...h, gonderilenler: [{ kod: r.kod, kredi: r.kredi, zaman: Date.now(), ...(not.trim() ? { not: not.trim() } : {}) }, ...(h.gonderilenler ?? [])] }));
-    hareketYaz({ tur: "hediye-gonder", aciklama: `Hediye kodu oluşturuldu${not.trim() ? ` · ${not.trim()}` : ""}`, kredi: -r.kredi });
+    if (!r.ok) return toast.error("Hediye kodu oluşturulamadı", { description: r.hata ?? "Sunucu yanıt vermedi; kredin düşülmedi. Biraz sonra yeniden dene." });
+    useAuth.getState().krediEsitle(r.bakiye);
+    await O.hesabiTazele();
     setKod(r.kod);
     onOlustu();
   };

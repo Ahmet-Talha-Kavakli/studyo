@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { planOlustur } from "@/lib/saglayicilar/muzik";
 
 export const runtime = "nodejs";
 
 /** İstemden bölüm planı (kredi harcamaz): { istem, model, sureSn? }. */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   const g = (await req.json().catch(() => ({}))) as { istem?: string; model?: string; sureSn?: number | null };
   if (!g.istem || g.istem.trim().length < 3) return NextResponse.json({ ok: false, hata: "Şarkıyı anlatan bir istem yaz." }, { status: 400 });
   try {

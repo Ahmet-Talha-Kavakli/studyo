@@ -25,7 +25,7 @@ export function CerezBandi() {
   const [hazir, setHazir] = useState(false);
   useEffect(() => setHazir(true), []);
   // Başka sitelere gömülen oynatıcıda (iframe) bant gösterilmez.
-  const gomulu = /^\/p\/[^/]+\/embed/.test(usePathname() ?? "");
+  const gomulu = /^\/(p\/[^/]+\/embed|ajan\/[^/]+\/kutu)/.test(usePathname() ?? "");
   const gerekli = hazir && !gomulu && !kararGecerli(s);
 
   return (

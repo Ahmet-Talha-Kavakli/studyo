@@ -25,14 +25,14 @@ type Konu = { id: string; ad: string; ozet: string; sorular: Soru[] };
 
 const KONULAR: Konu[] = [
   { id: "odeme", ad: "Ödemeler", ozet: "Kazancın ne zaman ve nasıl cüzdanına geçer", sorular: [
-    { s: "Ödeme ne zaman yapılır?", c: `Gönderi ${KURALLAR.incelemeSaat} saatte incelenir; onayda sabit ödeme yazılır. ${KURALLAR.kazanmaGun} gün boyunca nitelikli görüntülenmeler sayılır (24. saatte %${KURALLAR.bonus24 * 100}, 7. günde %${KURALLAR.bonus7 * 100} bonus), ardından ${KURALLAR.beklemeGun} günlük güvenlik beklemesinden sonra kazanç cüzdanına geçer.` },
+    { s: "Ödeme ne zaman yapılır?", c: "Ödeme sistemi henüz açık değil. Gönderilerin şu an Vayra ekibince incelenip onaylanıyor ya da gerekçesiyle reddediliyor; kazanç tutarları ve para çekme ödeme sistemi açıldığında devreye girecek. Açıldığında bildirim alacaksın." },
     { s: "Parayı nasıl çekerim?", c: `Cüzdan sayfasında kimliğini bir kez doğrula, IBAN ya da Papara hesabını ekle. En az ${tl(KURALLAR.minCekim)} ile çekebilirsin; Papara anında, banka havalesi 1 iş günü içinde.` },
     { s: "Çekim ücreti var mı?", c: `Çekim başına ${tl(KURALLAR.cekimUcreti)} ücret alınır. Seviyen yükseldikçe ücretsiz çekim hakların artar; Profesyonel seviyede sınırsızdır.` },
     { s: "Vergi ve fatura nasıl işliyor?", c: "Yıllık kazancın yasal sınırı aştığında kimlik ve vergi bilgilerin istenir. Ödemeler Türk lirası yapılır; şahıs ya da şirket olarak fatura kesebilirsin." },
   ] },
   { id: "gonderi", ad: "Gönderiler", ozet: "İnceleme, ret ve itiraz", sorular: [
     { s: "Gönderim neden reddedildi?", c: "En sık sebepler: içeriğin Vayra'da üretilmemesi, zorunlu etiketlerin eksik olması, telif ya da marka ihlali ve gönderinin kampanya başlamadan önce paylaşılmış olması. Her ret için gerekçe yazılır." },
-    { s: "İtiraz nasıl işler?", c: `Reddedilen her gönderi için ${KURALLAR.itirazHakki} kez itiraz edebilirsin. İtiraz Gönderilerim sayfasından yapılır; sonuç 48 saat içinde bildirilir.` },
+    { s: "İtiraz nasıl işler?", c: `Reddedilen her gönderi için ${KURALLAR.itirazHakki} kez itiraz edebilirsin. İtiraz Gönderilerim sayfasından yapılır; karar verilince bildirim alırsın.` },
     { s: "Bir kampanyaya kaç gönderi yapabilirim?", c: "Görüntülenme kampanyalarında sınırsız gönderi yapabilirsin; her gönderi için ayrı alt ve üst sınır geçerlidir. Görevlerde ve yarışmalarda kişi başı 1 başvuru kabul edilir." },
     { s: "Gönderimi silersem ne olur?", c: "Kazanma ya da bekleme süresi bitmeden silinen gönderilerin kazancı iptal edilir. Süre dolduktan sonra gönderiyi yayında tutmak zorunda değilsin." },
   ] },
@@ -314,14 +314,14 @@ function KonuAyrinti({ id }: { id: string }) {
             <div key={sv.id} className="text-center">
               <motion.div initial={{ height: 0 }} animate={{ height: 36 + i * 22 }} transition={{ delay: i * 0.07, duration: 0.5, ease }} className={cn("rounded-t-[12px] ring-1", i === ix ? "bg-[#55d6fd]/20 ring-[#55d6fd]/45" : "bg-white/[0.05] ring-white/[0.08]")} />
               <p className={cn("mt-2 truncate text-[12.5px] font-semibold", i === ix ? "text-white" : "text-white/60")}>{sv.ad}</p>
-              <p className="text-[11.5px] text-white/45">{sv.bonus ? `+%${Math.round(sv.bonus * 100)}` : "Taban"}</p>
+              <p className="text-[11.5px] text-white/45">{sv.bonus ? `yüzde ${Math.round(sv.bonus * 100)} ek` : "Taban"}</p>
             </div>
           ))}
         </div>
         {c.sonraki ? (
           <div className="mt-5">
             <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.08]"><motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(3, oran * 100)}%` }} transition={{ duration: 1, delay: 0.2, ease }} className="h-full rounded-full bg-[#55d6fd]" /></div>
-            <p className="mt-2 text-[12.5px] text-white/55">{tl(Math.max(0, c.sonraki.minKazanc - c.seviyeKazanc))} daha kazanınca {c.sonraki.ad}: tüm kazançlara +%{Math.round(c.sonraki.bonus * 100)}</p>
+            <p className="mt-2 text-[12.5px] text-white/55">{tl(Math.max(0, c.sonraki.minKazanc - c.seviyeKazanc))} daha kazanınca {c.sonraki.ad}: tüm kazançlara yüzde {Math.round(c.sonraki.bonus * 100)} ek</p>
           </div>
         ) : <p className="mt-5 text-[12.5px] text-white/55">En üst seviyedesin.</p>}
       </div>

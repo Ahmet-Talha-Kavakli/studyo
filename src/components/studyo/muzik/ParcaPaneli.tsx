@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  AudioLines, Check, Clock, Copy, Download, Drum, GitBranch, Guitar, Heart, Layers, ListMusic, Maximize2, Mic, MoreHorizontal, Music2, Pause, Piano,
+  AudioLines, Check, Clock, Copy, Download, Drum, GitBranch, Guitar, Heart, Star, Quote, Layers, ListMusic, Maximize2, Mic, MoreHorizontal, Music2, Pause, Piano,
   Play, RefreshCw, Sparkles, Tags, Waves, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -203,9 +203,9 @@ export function ParcaPaneli({ p, soy, onSec, ...e }: { p: Parca; soy?: Parca[]; 
 
       <div className="mt-3 flex items-start gap-2">
         <h3 className="min-w-0 flex-1 text-[19px] font-semibold leading-tight tracking-[-0.02em] text-metin">{p.ad}</h3>
-        <button onClick={e.onBegen} disabled={!bitti} aria-pressed={p.begeni === 1} aria-label={p.begeni === 1 ? "Beğeniyi kaldır" : "Beğen"}
-          className={cn("bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-40", p.begeni === 1 ? "text-rose-300" : "text-metin-2 hover:text-metin")}>
-          <Heart className={cn("h-4 w-4", p.begeni === 1 && "fill-current")} />
+        <button onClick={e.onBegen} disabled={!bitti} aria-pressed={p.begeni === 1} title={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"} aria-label={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"}
+          className={cn("bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-40", p.begeni === 1 ? "!text-aksan" : "text-metin-2 hover:text-metin")}>
+          <Star className={cn("h-4 w-4", p.begeni === 1 && "fill-current")} />
         </button>
         <button onClick={e.onAc} aria-label="Ayrıntılar" title="Ayrıntılar" className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-metin-2 hover:text-metin"><Maximize2 className="h-4 w-4" /></button>
       </div>

@@ -12,6 +12,9 @@ import { cn, saltUrl } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { Yuzen } from "@/components/ui/Yuzen";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, FavoriRozeti, KartDahaMenusu, YenidenKullanDugmesi, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { Star as YildizIkon, ArrowUpRight as AcIkon } from "lucide-react";
 import { Rozet, MarkaKare } from "@/components/studyo/hf";
 import { useSaglayicilar } from "@/hooks/useSaglayicilar";
 import { useMasaustu } from "@/hooks/useMasaustu";
@@ -316,13 +319,20 @@ function GecenSure({ bas }: { bas: number }) {
   return <>{Math.floor(sn / 60)}:{String(sn % 60).padStart(2, "0")}</>;
 }
 
-export function SonucKarti({ u, onAc, etiket, secili, demoGizle }: { u: Uretim; onAc: () => void; etiket?: string; secili?: boolean; /** Demo rozeti üst başlıkta tek kez gösteriliyorsa kartta tekrarlanmaz. */ demoGizle?: boolean }) {
+export function SonucKarti({ u, onAc, etiket, secili, demoGizle, oran, onYenidenKullan, onSil, eylemsiz }: { u: Uretim; onAc: () => void; etiket?: string; secili?: boolean; /** Demo rozeti üst başlıkta tek kez gösteriliyorsa kartta tekrarlanmaz. */ demoGizle?: boolean;
+  /** Görünüm ayarının kart oranı (yatay ya da dikey). */ oran?: number;
+  /** İstemi komut kutusuna geri yazar (alıntı düğmesi). */ onYenidenKullan?: () => void;
+  onSil?: () => void;
+  /** Gönderi önizlemesi gibi süs yerlerinde eylem çubuğu çıkmaz. */ eylemsiz?: boolean;
+}) {
   const g = uretimGorseli(u);
   const surer = u.durum === "kuyrukta" || u.durum === "isleniyor";
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
   return (
+    <div className="group relative">
     <button onClick={onAc} disabled={surer} aria-label={u.baslik}
-      className={cn("hf-kart group relative block w-full overflow-hidden !rounded-2xl bg-yuzey-2 text-left", secili && "ring-2 ring-aksan", u.durum === "hata" && "h-full min-h-[180px]")}
-      style={{ aspectRatio: u.durum === "hata" ? undefined : String(oranSayi(u.meta?.oran === "Auto" ? undefined : u.meta?.oran)) }}>
+      className={cn("hf-kart relative block w-full overflow-hidden !rounded-2xl bg-yuzey-2 text-left", secili && "ring-2 ring-aksan", u.durum === "hata" && "h-full min-h-[180px]")}
+      style={{ aspectRatio: u.durum === "hata" ? undefined : String(oran ?? oranSayi(u.meta?.oran === "Auto" ? undefined : u.meta?.oran)) }}>
       {g && u.durum === "tamam" && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={g} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
@@ -330,7 +340,7 @@ export function SonucKarti({ u, onAc, etiket, secili, demoGizle }: { u: Uretim; 
       {surer && (
         <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[radial-gradient(circle_at_50%_40%,color-mix(in_srgb,var(--color-aksan)_14%,transparent),transparent_70%)]">
           <Loader2 className="h-6 w-6 animate-spin text-aksan" />
-          <span className="text-[12px] font-medium text-metin-2">{u.durum === "kuyrukta" ? "Sırada" : `%${Math.round(u.ilerleme)}`}</span>
+          <span className="text-[12px] font-medium text-metin-2">{u.durum === "kuyrukta" ? "Sırada" : `yüzde ${Math.round(u.ilerleme)}`}</span>
           {u.baslama && <span className="flex items-center gap-1 text-[11px] tabular-nums text-metin-3"><Clock className="h-3 w-3" /><GecenSure bas={u.baslama} /></span>}
           <span className="absolute inset-x-0 bottom-0 h-1 bg-white/5"><span className="block h-full bg-aksan transition-[width] duration-700" style={{ width: `${Math.max(4, u.ilerleme)}%` }} /></span>
         </span>
@@ -349,8 +359,17 @@ export function SonucKarti({ u, onAc, etiket, secili, demoGizle }: { u: Uretim; 
         {etiket && <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white ring-1 ring-white/15">{etiket}</span>}
         
       </span>
-      {u.favori && <Heart className="absolute right-2 top-2 h-4 w-4 fill-rose-400 text-rose-400" />}
     </button>
+      {!eylemsiz && u.favori && u.durum === "tamam" && <FavoriRozeti boyut="kucuk" className="right-2 top-2 [@media(hover:none)]:!opacity-100" />}
+      {!eylemsiz && u.durum === "tamam" && (
+        <div onClick={(e) => e.stopPropagation()} className="pointer-events-none absolute right-2 top-2 z-20 flex gap-1 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:bottom-2 [@media(hover:none)]:top-auto [@media(hover:none)]:opacity-100">
+          <FavoriDugmesi favori={!!u.favori} onClick={() => favoriToggle(u.id)} boyut="kucuk" side="bottom" className="[@media(hover:none)]:hidden" />
+          <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="bottom" />
+          {onYenidenKullan && <YenidenKullanDugmesi onClick={onYenidenKullan} boyut="kucuk" side="bottom" />}
+          <KartDahaMenusu u={u} boyut="kucuk" side="bottom" onSil={onSil} eylemler={[{ ad: "Aç", ikon: AcIkon, fn: onAc }, { ad: u.favori ? "Favorilerden çıkar" : "Favorilere ekle", ikon: YildizIkon, fn: () => favoriToggle(u.id) }]} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -496,8 +515,8 @@ export function SonucGoruntuleyici({ liste, id, onSec, onKapat, kaynak, ekEylem 
           )}
         </div>
         <div className="flex items-center gap-2 border-t border-white/[0.07] p-3">
-          <button onClick={() => uretimIndir(u)} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-white text-[14px] font-semibold text-black transition active:scale-[0.98]"><Download className="h-4 w-4" /> İndir</button>
-          <button onClick={() => guncelle(u.id)} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"} aria-pressed={!!u.favori} className={cn("hf-btn glass-cip flex h-10 w-10 items-center justify-center rounded-full", u.favori ? "text-rose-400" : "text-metin")}><Heart className={cn("h-4 w-4", u.favori && "fill-rose-400 text-rose-400")} /></button>
+          <span className="flex flex-1 [&>span]:flex-1"><IndirDugmesi u={u} side="top" yerlesim="ust-sol" etiket="İndir" className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-white text-[14px] font-semibold text-black transition active:scale-[0.98]"><Download className="h-4 w-4" /> İndir</IndirDugmesi></span>
+          <FavoriDugmesi favori={!!u.favori} onClick={() => guncelle(u.id)} side="top" className="!h-10 !w-10" />
           <button onClick={() => { const yedek = u; const sonraki = liste[i + 1] ?? liste[i - 1]; sil(u.id); if (sonraki) onSec(sonraki.id); else onKapat(); mesaj.silindi("Üretim", () => useProjeler.setState((s) => (s.uretimler.some((x) => x.id === yedek.id) ? s : { uretimler: [yedek, ...s.uretimler] }))); }} aria-label="Sil" className="hf-btn glass-cip flex h-10 w-10 items-center justify-center rounded-full text-metin hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>
         </div>
       </aside>

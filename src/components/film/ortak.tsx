@@ -144,7 +144,7 @@ export function Kart({ baslik, alt, ikon: I, sag, children, className, govde, al
     <section className={cn("flex flex-col overflow-hidden rounded-[26px] bg-[#121315] ring-1 ring-inset ring-white/[0.07]", className)}>
       <header className="flex min-h-[62px] shrink-0 items-center gap-3 border-b border-white/[0.06] px-4 py-2.5 sm:px-5">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px] bg-white/[0.07] text-white"><I className="h-[18px] w-[18px]" /></span>
-        <span className="min-w-0"><h2 className="truncate text-[16px] font-semibold tracking-[-0.02em] text-white">{baslik}</h2>{alt && <p className="truncate text-[12.5px] text-white/50">{alt}</p>}</span>
+        <span className="min-w-0"><h2 className="truncate text-[16px] font-semibold tracking-[-0.02em] text-white">{baslik}</h2>{alt && <p className="line-clamp-2 text-[12.5px] leading-snug text-white/50">{alt}</p>}</span>
         {sag && <span className="ml-auto flex shrink-0 items-center gap-1.5">{sag}</span>}
       </header>
       <div className={cn("min-h-0 flex-1", govde)}>{children}</div>

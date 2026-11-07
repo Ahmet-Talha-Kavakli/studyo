@@ -157,7 +157,7 @@ export function MontajDisaAktar({ proje, onKapat, onOran }: { proje: MontajProje
             <div className="flex flex-col items-center gap-4 py-6 text-center">
               <div className="relative h-28 w-28">
                 <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" /><circle cx="50" cy="50" r="44" fill="none" stroke="#ffffff" strokeWidth="7" strokeLinecap="round" strokeDasharray={`${276.5 * (durum?.ilerleme ?? 0)} 276.5`} /></svg>
-                <span className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] font-bold tabular-nums text-metin">%{yuzde}</span><span className="text-[10.5px] text-metin-3">{durum?.asama === "hazirlaniyor" ? "hazırlanıyor" : "kaydediliyor"}</span></span>
+                <span className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-[22px] font-bold tabular-nums text-metin">yüzde {yuzde}</span><span className="text-[10.5px] text-metin-3">{durum?.asama === "hazirlaniyor" ? "hazırlanıyor" : "kaydediliyor"}</span></span>
               </div>
               <div>
                 <p className="text-[14px] font-semibold text-metin">{durum?.asama === "hazirlaniyor" ? "Medya yükleniyor…" : tur === "gif" ? "GIF kareleri çiziliyor" : "Montaj kaydediliyor"}</p>

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "framer-motion";
 import {
-  Plus, Sparkles, Loader2, MapPin, Shirt, PersonStanding, Sun, Film, Image as ImageIcon, Heart, UserRound, Layers, Images, Download, Copy, Trash2, MoreHorizontal,
+  Plus, Sparkles, Loader2, MapPin, Shirt, PersonStanding, Sun, Film, Image as ImageIcon, Heart, UserRound, Layers, Images, Download, Copy, Trash2, MoreHorizontal, Star,
   IdCard, LayoutGrid, Smartphone, ScanFace, Feather, Scale, Lock, Clock, Play, AlertTriangle, Wand2, Upload, LayoutTemplate, ArrowRight, Pencil,
 } from "lucide-react";
 import { KrediYildiz } from "@/components/ui/KrediHap";
@@ -27,6 +27,11 @@ import { OzelGirdi } from "@/components/film/ortak";
 import { videoErisim } from "@/lib/videoSaglayici";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { PlatformLogo } from "./ortak";
+import { urlIndir } from "@/lib/gercekEylem";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, FavoriRozeti, KartDahaMenusu, eylemDugmesi } from "@/components/galeri/KartEylemleri";
 import { Sihirbaz, type Yol } from "./Sihirbaz";
 import { KimlikKarti } from "./KimlikKarti";
 import { Profil } from "./Profil";
@@ -100,11 +105,16 @@ export function InfluencerStudyo() {
     return m;
   }, [uretimler]);
   const filtreli = sonuclar.filter((u) => filtre === "tum" || (filtre === "favori" ? u.favori : filtre === "video" ? u.tur === "video" : u.tur !== "video"));
+  const [gor] = useGorunum("influencer");
   const gruplar = useMemo(() => {
     const m = new Map<string, Uretim[]>();
     for (const u of filtreli) { const g = u.meta?.grupId ?? u.id; m.set(g, [...(m.get(g) ?? []), u]); }
-    return [...m.values()].map((l) => l.sort((a, b) => (a.meta?.sira ?? 0) - (b.meta?.sira ?? 0)));
-  }, [filtreli]);
+    const enYeni = (l: Uretim[]) => Math.max(...l.map((x) => x.olusturma));
+    return [...m.values()].map((l) => l.sort((a, b) => (a.meta?.sira ?? 0) - (b.meta?.sira ?? 0))).sort((a, b) => (gor.siralama === "eski" ? 1 : -1) * (enYeni(a) - enYeni(b)));
+  }, [filtreli, gor.siralama]);
+  /* Görünüm ayarı: kart yüksekliği (boyut) ve oran (yerleşim). */
+  const kartYuk = gor.boyut === "kucuk" ? (masaustu ? 220 : 170) : gor.boyut === "buyuk" ? (masaustu ? 440 : 300) : gor.boyut === "ozel" ? 140 + gor.sutun * 40 : (masaustu ? 320 : 230);
+  const kartOlc = (o?: string) => kartBoyut(gor.yerlesim === "yatay" ? "16:9" : gor.yerlesim === "dikey" ? "3:4" : o);
   const hazirFotolar = sonuclar.filter((u) => u.tur !== "video" && u.durum === "tamam");
   const suren = sonuclar.filter((u) => u.durum === "kuyrukta" || u.durum === "isleniyor").length;
 
@@ -487,7 +497,7 @@ export function InfluencerStudyo() {
     const bitti = u.durum === "tamam", hata = u.durum === "hata", demoU = u.gercek === false;
     const kapak = (demoU || !bitti) ? demoGorsel(u) ?? onizleme[u.id] ?? saltUrl(u.gorselUrl) : saltUrl(u.gorselUrl) ?? u.meta?.gorselUrl;
     return (
-      <motion.div key={u.id} initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ ...YAY, delay: Math.min(i, 8) * 0.035 }} className="group relative shrink-0" style={kartBoyut(u.meta?.oran)}>
+      <motion.div key={u.id} initial={{ opacity: 0, y: 12, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ ...YAY, delay: Math.min(i, 8) * 0.035 }} className="group relative shrink-0" style={kartOlc(u.meta?.oran)}>
         <button onClick={() => setAcik(u)} className="relative block h-full w-full overflow-hidden rounded-[14px] bg-black text-left outline outline-1 -outline-offset-1 outline-white/[0.08] transition duration-300 hover:outline-white/25">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           {kapak && <img src={kapak} alt="" className={cn("absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]", !bitti && "scale-105 opacity-40 blur-[3px]")} />}
@@ -495,7 +505,7 @@ export function InfluencerStudyo() {
           {!bitti && (
             <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">
               {hata ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}
-              {hata ? "Başarısız" : u.durum === "kuyrukta" ? "Sırada" : `%${Math.round(u.ilerleme ?? 0)}`}
+              {hata ? "Başarısız" : u.durum === "kuyrukta" ? "Sırada" : `yüzde ${Math.round(u.ilerleme ?? 0)}`}
             </span>
           )}
           <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/25" />
@@ -506,10 +516,15 @@ export function InfluencerStudyo() {
           {demoU && bitti && aktif && u.tur !== "video" && kapak !== aktif.portre && <span title="Karakter bu sahnede" className="absolute left-2 top-9 block h-9 w-9 overflow-hidden rounded-full ring-2 ring-white/85">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={aktif.portre} alt="" className="h-full w-full object-cover object-top" /></span>}
           {etiket && <span className="absolute inset-x-2.5 bottom-2.5 line-clamp-1 text-[13px] font-semibold text-white transition-opacity group-hover:opacity-0">{etiket}</span>}
         </button>
-        <button onClick={() => useProjeler.getState().favoriToggle(u.id)} aria-label={u.favori ? "Favoriden çıkar" : "Favorilere ekle"} aria-pressed={!!u.favori}
-          className={cn("absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 backdrop-blur transition active:scale-90", u.favori ? "text-rose-400" : "text-white opacity-0 group-hover:opacity-100 max-sm:opacity-100")}>
-          <motion.span key={String(!!u.favori)} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={YAY}><Heart className={cn("h-4 w-4", u.favori && "fill-current")} /></motion.span>
-        </button>
+        {bitti && u.favori && <FavoriRozeti className="right-2 top-2" />}
+        {bitti && (
+          <div onClick={(e) => e.stopPropagation()} className="pointer-events-none absolute right-2 top-2 z-20 flex flex-col gap-1.5 opacity-0 transition-opacity group-focus-within:pointer-events-auto group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100 max-sm:pointer-events-auto max-sm:opacity-100">
+            <FavoriDugmesi favori={!!u.favori} onClick={() => useProjeler.getState().favoriToggle(u.id)} side="left" />
+            <IndirDugmesi u={u} className={eylemDugmesi("orta")} side="left" />
+            <KartDahaMenusu u={u} side="left" onSil={() => useProjeler.getState().sil(u.id)}
+              eylemler={[{ ad: "Büyük gör", ikon: ImageIcon, fn: () => setAcik(u) }, ...(u.tur !== "video" ? [{ ad: "Videoya çevir", ikon: Film, fn: () => videoyaCevir(u) }, { ad: "Referans setine ekle", ikon: Layers, fn: () => referansYap(u) }, { ad: "Kimlik portresi yap", ikon: UserRound, fn: () => portreYap(u) }] : [])]} />
+          </div>
+        )}
         {bitti && u.tur !== "video" && (
           <div className="absolute inset-x-2 bottom-2 flex translate-y-1 gap-1 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 max-sm:translate-y-0 max-sm:opacity-100">
             <button onClick={() => videoyaCevir(u)} title="Videoya çevir" className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[12px] font-semibold text-black transition active:scale-95"><Film className="h-3.5 w-3.5" />Videoya çevir</button>
@@ -525,7 +540,7 @@ export function InfluencerStudyo() {
     let n = 0;
     for (const u of g.filter((x) => x.durum === "tamam" && x.gercek !== false)) {
       const url = u.tur === "video" ? u.videoUrl : saltUrl(u.gorselUrl); if (!url) continue;
-      const a = document.createElement("a"); a.href = url; a.download = `${u.baslik.replace(/[\\/:*?"<>|]+/g, "-")}.${u.tur === "video" ? "mp4" : "png"}`; a.click(); n++;
+      urlIndir(url, `${u.baslik.replace(/[\\/:*?"<>|]+/g, "-")}.${u.tur === "video" ? "mp4" : "png"}`); n++;
     }
     if (n) toast.success(n > 1 ? `${n} dosya indiriliyor` : "Dosya indiriliyor", { description: "İndirilenler klasörüne kaydedilir." });
     else mesaj.indirilemedi("İndirilecek gerçek dosya yok; önizlemeler indirilemez.");
@@ -583,7 +598,7 @@ export function InfluencerStudyo() {
       {sonuclar.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-0.5 rounded-full p-1 ring-1 ring-inset ring-white/[0.07]" style={YUZ}>
-            {([["tum", "Tümü", LayoutGrid], ["foto", "Fotoğraf", ImageIcon], ["video", "Video", Film], ["favori", "Favoriler", Heart]] as const).map(([id, ad, I]) => (
+            {([["tum", "Tümü", LayoutGrid], ["foto", "Fotoğraf", ImageIcon], ["video", "Video", Film], ["favori", "Favoriler", Star]] as const).map(([id, ad, I]) => (
               <button key={id} onClick={() => setFiltre(id)} aria-pressed={filtre === id} className={cn("relative flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium transition-colors", filtre === id ? "text-black" : "text-metin-2 hover:text-metin")}>
                 {filtre === id && <motion.span layoutId="inf-filtre" transition={YAY} className="absolute inset-0 rounded-full bg-white" />}
                 <I className="relative h-3.5 w-3.5" /><span className="relative">{ad}</span>
@@ -592,15 +607,16 @@ export function InfluencerStudyo() {
           </div>
           <AnimatePresence>{suren > 0 && <motion.span initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-medium text-metin ring-1 ring-inset ring-white/[0.1]"><Loader2 className="h-3.5 w-3.5 animate-spin" />{suren} üretiliyor</motion.span>}</AnimatePresence>
           <span className="ml-auto rounded-full bg-white/[0.075] px-2.5 py-1 text-[12px] tabular-nums text-metin-2">{sonuclar.length} içerik, {sonuclar.filter((u) => u.favori).length} favori</span>
+          <GorunumAyari sayfa="influencer" istemVar={false} />
         </div>
       )}
       {!sonuclar.length ? hizli : !gruplar.length ? (
         <section className="overflow-hidden rounded-[22px] ring-1 ring-inset ring-white/[0.07]" style={YUZ}>
           <div className="flex flex-wrap items-center gap-3 border-b border-white/[0.06] px-4 py-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-metin">{filtre === "favori" ? <Heart className="h-4 w-4" /> : filtre === "video" ? <Film className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}</span>
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.085] text-metin">{filtre === "favori" ? <Star className="h-4 w-4" /> : filtre === "video" ? <Film className="h-4 w-4" /> : <ImageIcon className="h-4 w-4" />}</span>
             <span className="min-w-0 flex-1 leading-tight">
               <span className="block text-[14.5px] font-semibold text-metin">{filtre === "favori" ? "Henüz favori yok" : filtre === "video" ? "Henüz video yok" : "Henüz fotoğraf yok"}</span>
-              <span className="block text-[12.5px] text-metin-3">{filtre === "favori" ? "Aşağıdan beğendiğin karelerin kalbine dokun" : filtre === "video" ? "Bir fotoğrafı seç, hareket verip videoya çevir" : "Bir sahne seç, aynı yüzle çekim yapılsın"}</span>
+              <span className="block text-[12.5px] text-metin-3">{filtre === "favori" ? "Aşağıdan beğendiğin karelerin yıldızına dokun" : filtre === "video" ? "Bir fotoğrafı seç, hareket verip videoya çevir" : "Bir sahne seç, aynı yüzle çekim yapılsın"}</span>
             </span>
             <button onClick={() => setFiltre("tum")} className="flex h-9 items-center gap-1.5 rounded-full bg-white/[0.085] px-3.5 text-[13px] font-medium text-metin transition hover:bg-white/[0.12] active:scale-95"><LayoutGrid className="h-3.5 w-3.5" />Tümünü göster</button>
           </div>
@@ -615,7 +631,7 @@ export function InfluencerStudyo() {
                     <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                     <span className="absolute inset-x-2.5 bottom-2.5 flex items-end justify-end gap-2">
                       {filtre === "favori" ? (
-                        <button onClick={() => useProjeler.getState().favoriToggle(u.id)} aria-label="Favorilere ekle" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black transition active:scale-90"><Heart className="h-4 w-4" /></button>
+                        <button onClick={() => useProjeler.getState().favoriToggle(u.id)} aria-label="Favorilere ekle" title="Favorilere ekle" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-black transition active:scale-90"><Star className="h-4 w-4" /></button>
                       ) : (
                         <button onClick={() => videoyaCevir(u)} className="flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-white text-[12.5px] font-semibold text-black transition active:scale-95"><Film className="h-3.5 w-3.5" />Videoya çevir</button>
                       )}
@@ -684,7 +700,7 @@ export function InfluencerStudyo() {
                   </div>
                 )}
                 {/* Tek satır: kareler, aynı sahneden daha fazla, başka pozlarla öneriler; satır taşarsa yatay kayar */}
-                <div className="flex gap-3 overflow-x-auto p-3.5 [scrollbar-width:thin]" style={{ ["--kh" as string]: masaustu ? "320px" : "230px" }}>
+                <div className="flex gap-3 overflow-x-auto p-3.5 [scrollbar-width:thin]" style={{ ["--kh" as string]: `${kartYuk}px` }}>
                   {g.map((u, i) => kart(u, i, etiket(u)))}
                   {!video && sahneId && (
                     <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} whileTap={{ scale: 0.98 }} onClick={() => uret({ sahneler: [sahneId], mod: "foto" })}

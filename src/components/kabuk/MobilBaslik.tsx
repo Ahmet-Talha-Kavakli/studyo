@@ -10,6 +10,7 @@ import {
   Activity, ArrowRight, Bell, BookOpen, ChevronRight, Code2, Coins, Crown, FolderOpen, HelpCircle, LogOut, Plus, Search, Settings, Sparkles, UserRound, X, Zap,
 } from "lucide-react";
 import { VayraIsaret } from "./VayraIsaret";
+import { AlanSecici } from "@/components/alan/AlanSecici";
 import { STUDYOLAR, TUR_MENU, CamKaro, BolumEtiket, Rozet } from "./MegaNav";
 import { useAuth, krediDurum, PLAN_ADI } from "@/store/useAuth";
 import { useAuthKapi } from "@/store/useAuthKapi";
@@ -38,10 +39,11 @@ function ElmasIkon({ className }: { className?: string }) {
 }
 
 const HIZLI = [
+  { ad: "Vayra Build", href: "/panel/build", ikon: Code2, renk: "#55d6fd" },
   { ad: "Kitaplık", href: "/panel/kitaplik", ikon: FolderOpen, renk: "#fb923c" },
   { ad: "Presetler", href: "/panel/presetler", ikon: Sparkles, renk: "#a78bfa" },
   { ad: "Vayra Earn", href: "/earn", ikon: Coins, renk: "#fbbf24" },
-  { ad: "API", href: "/panel/api", ikon: Code2, renk: "#55d6fd" },
+  { ad: "API", href: "/panel/api", ikon: Code2, renk: "#5cb8ff" },
   { ad: "Modeller", href: "/modeller", ikon: BookOpen, renk: "#34d399" },
 ];
 
@@ -80,10 +82,12 @@ export function MobilBaslik() {
   return (
     <>
       <header className="vayra-mono flex h-[52px] items-center bg-zemin px-4 sm:hidden">
-        <Link href="/panel" className="flex items-center gap-2" aria-label="Vayra ana sayfa">
+        <Link href="/panel" className="flex shrink-0 items-center gap-2" aria-label="Vayra ana sayfa">
           <VayraIsaret size={34} />
-          <span className="text-[19px] font-bold leading-none tracking-tight text-white">Vayra</span>
+          <span className={cn("text-[19px] font-bold leading-none tracking-tight text-white", hazir && girisli && "hidden min-[400px]:inline")}>Vayra</span>
         </Link>
+        {/* Çalışma alanı seçici: telefonda menü ekran genişliğinde açılır. */}
+        {hazir && girisli && <AlanSecici mobil className="ml-1.5 min-w-0" />}
 
         <div className="ml-auto flex items-center gap-1.5">
           {hazir && girisli ? (

@@ -9,7 +9,8 @@ import { Check, Film, ImagePlus, Images, LayoutGrid, Play, Search, Shuffle, Spar
 import { useProjeler } from "@/store/useProjeler";
 import { KATEGORI_AD, KATEGORI_SIRA, type KatalogPreset } from "@/lib/presetKatalog";
 import { kapakUrl } from "@/components/kitaplik/yardimci";
-import { UretimKarti } from "@/components/panel/UretimKarti";
+import { PRESET_GORUNUM, PresetUretimIzgarasi } from "../PresetUretimIzgarasi";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import { cn } from "@/lib/utils";
 import { KAT_IKON, PresetKapak, PresetVideo } from "../PresetKarti";
@@ -66,7 +67,8 @@ export function Sonuclar({ liste, tumu, p, onOnizleme }: { liste: Uretim[]; tumu
           <h2 className="min-w-0 truncate text-[17px] font-semibold tracking-[-0.02em] text-white">{kapsam === "bu" ? `${p.ad} ile ürettiklerin` : "Tüm preset videoların"}</h2>
           {l.length > 0 && <span className="rounded-full bg-white/[0.07] px-2 py-0.5 text-[12px] font-medium tabular-nums text-white/60">{l.length}</span>}
           <LayoutGroup id="sonuc-kapsam">
-            <div className="ml-auto flex h-9 items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">
+            <div className="ml-auto flex items-center gap-2">
+            <div className="flex h-9 items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">
               {([["bu", "Bu efekt", liste.length], ["tumu", "Tümü", tumu.length]] as const).map(([id, ad, n]) => (
                 <button key={id} onClick={() => setKapsam(id)} aria-pressed={kapsam === id} className="relative flex h-8 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium active:scale-[0.97]">
                   {kapsam === id && <motion.span layoutId="sonuc-kapsam-z" className="absolute inset-0 rounded-full bg-white" transition={yay} />}
@@ -75,20 +77,13 @@ export function Sonuclar({ liste, tumu, p, onOnizleme }: { liste: Uretim[]; tumu
                 </button>
               ))}
             </div>
+            <GorunumAyari sayfa={PRESET_GORUNUM} />
+            </div>
           </LayoutGroup>
         </header>
         <div className="p-3 sm:p-4">
           {l.length ? (
-            <div className="columns-2 gap-3 md:columns-3 xl:columns-4">
-              {l.map((u, i) => (
-                <motion.div key={u.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.03 }} className="relative mb-3 break-inside-avoid">
-                  <UretimKarti u={u} kutuBoyut="orta" />
-                  {u.gercek === false && u.durum === "tamam" && (
-                    <span className="hidden" />
-                  )}
-                </motion.div>
-              ))}
-            </div>
+            <PresetUretimIzgarasi liste={l} />
           ) : (
             <div className="flex flex-col items-start gap-4 rounded-[20px] bg-white/[0.025] p-4 ring-1 ring-inset ring-white/[0.06] sm:flex-row sm:items-center">
               <span className="relative h-16 w-11 shrink-0 overflow-hidden rounded-[12px] ring-1 ring-white/10"><PresetKapak p={p} kucuk /></span>

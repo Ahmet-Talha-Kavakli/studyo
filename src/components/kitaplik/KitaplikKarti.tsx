@@ -130,7 +130,7 @@ export function KitaplikKarti({
               alt={<span className="flex items-center gap-2"><span className="flex flex-1 gap-[3px]">{Array.from({ length: 20 }).map((_, i) => (
                 <motion.span key={i} initial={{ opacity: 0, scaleY: 0.4 }} animate={{ opacity: 1, scaleY: 1 }} transition={{ delay: 0.3 + i * 0.025, duration: 0.3 }}
                   className={cn("h-2 flex-1 rounded-[2px]", i < Math.max(1, Math.round(depoYuzde / 5)) ? (depoYuzde > 80 ? "bg-amber-300" : "bg-white/85") : "bg-white/[0.1]")} />
-              ))}</span><span className="shrink-0 tabular-nums">%{Math.max(1, Math.round(depoYuzde))} dolu</span></span>}>
+              ))}</span><span className="shrink-0 tabular-nums">yüzde {Math.max(1, Math.round(depoYuzde))} dolu</span></span>}>
               {depolamaKb < 1024 ? depolamaKb : (depolamaKb / 1024).toFixed(1)}<span className="ml-1 text-[14px] font-medium text-white/55">{depolamaKb < 1024 ? "KB" : "MB"} / 10 MB</span>
             </Hucre>
             <div className="col-span-2 min-w-0 bg-[#111214] px-4 py-3.5 max-sm:hidden sm:px-5 lg:col-span-1">

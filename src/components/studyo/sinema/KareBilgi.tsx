@@ -4,7 +4,10 @@
    altta asıl eylemler (canlandır, sahneye ekle, başka açılar, bu kurulumla üret). */
 
 import { useState } from "react";
-import { Clapperboard, Copy, CopyCheck, Download, Heart, ListCheck, ListPlus, SwitchCamera, Trash2, Wand2 } from "lucide-react";
+import { Clapperboard, Copy, CopyCheck, Download, Star, ListCheck, ListPlus, Quote, SwitchCamera, Trash2 } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { cn } from "@/lib/utils";
 import { mesaj } from "@/lib/mesaj";
 import type { Uretim } from "@/store/useProjeler";
@@ -21,7 +24,7 @@ function Kart({ baslik, sag, children }: { baslik: React.ReactNode; sag?: React.
   );
 }
 
-export function KareBilgi({ u, ekBilgi, sahnede, onCanlandir, onSahne, onAcilar, onKurulum, onIndir, onBegen, onSil }: {
+export function KareBilgi({ u, ekBilgi, sahnede, onCanlandir, onSahne, onAcilar, onKurulum, onIndir: _onIndir, onBegen, onSil }: {
   u: Uretim; sahnede: boolean; ekBilgi?: React.ReactNode;
   onCanlandir: () => void; onSahne: () => void; onAcilar: () => void; onKurulum: () => void; onIndir: () => void; onBegen: () => void; onSil: () => void;
 }) {
@@ -66,12 +69,13 @@ export function KareBilgi({ u, ekBilgi, sahnede, onCanlandir, onSahne, onAcilar,
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onSahne} aria-pressed={sahnede} className={cn(ikincil, sahnede && "bg-white/[0.1] ring-white/40")}>{sahnede ? <ListCheck className="h-4 w-4" /> : <ListPlus className="h-4 w-4" />}{sahnede ? "Sahnede" : "Sahneye ekle"}</button>
           <button onClick={onAcilar} className={ikincil}><SwitchCamera className="h-4 w-4" />Başka açılar</button>
-          <button onClick={onKurulum} className={ikincil}><Wand2 className="h-4 w-4" />Bu kurulumla</button>
-          <button onClick={onIndir} className={ikincil}><Download className="h-4 w-4" />İndir</button>
+          <button onClick={onKurulum} className={ikincil}><Quote className="h-4 w-4" />Yeniden kullan</button>
+          <div className="min-w-0 [&_span]:flex [&_span]:w-full"><IndirDugmesi u={u} side="top" yerlesim="ust-sol" className={cn(ikincil, "w-full")}><Download className="h-4 w-4" />İndir</IndirDugmesi></div>
         </div>
         <div className="flex gap-2">
-          <button onClick={onBegen} aria-pressed={!!u.favori} className={cn(ikincil, "flex-1")}><Heart className={cn("h-4 w-4", u.favori && "fill-rose-400 text-rose-400")} />{u.favori ? "Beğenildi" : "Beğen"}</button>
-          <button onClick={onSil} aria-label="Sil" className={cn(ikincil, "w-10 hover:text-rose-300")}><Trash2 className="h-4 w-4" /></button>
+          <button onClick={onBegen} aria-pressed={!!u.favori} className={cn(ikincil, "flex-1")}><Star className={cn("h-4 w-4", u.favori && "fill-aksan text-aksan")} />{u.favori ? "Favorilerde" : "Favorilere ekle"}</button>
+          <Tooltip label="Klasöre taşı" side="top"><KlasoreTasiDugmesi uretimIdler={[u.id]} etiketSinif="sr-only" yerlesim="ust-sag" className={cn(ikincil, "w-10 px-0")} /></Tooltip>
+          <Tooltip label="Sil" side="top"><button onClick={onSil} aria-label="Sil" className={cn(ikincil, "w-10 hover:text-rose-300")}><Trash2 className="h-4 w-4" /></button></Tooltip>
         </div>
       </div>
     </div>

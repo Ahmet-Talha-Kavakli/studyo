@@ -29,7 +29,8 @@ export const KAYNAK: Record<BildirimKategori, string> = { uretim: "Üretimler", 
 const hedefi = (o: Oge) => (o.uyeler.length > 1 ? `/panel/bildirimler?s=${o.id}` : (o.ana.eylem?.link ?? o.ana.link ?? `/panel/bildirimler?s=${o.id}`));
 const kartSinif = "bd-kart";
 
-export function BildirimMerkezi({ acik, setAcik }: { acik: boolean; setAcik: (v: boolean) => void }) {
+/** `yuvarlak`: Komut navigasyonundaki 36 px yuvarlak zil; okunmamışta sayı yerine camgöbeği nokta. */
+export function BildirimMerkezi({ acik, setAcik, yuvarlak }: { acik: boolean; setAcik: (v: boolean) => void; yuvarlak?: boolean }) {
   useBildirimGozcusu();
   useEarnGozcusu();
   const bildirimler = useBildirim((s) => s.bildirimler);
@@ -78,12 +79,16 @@ export function BildirimMerkezi({ acik, setAcik }: { acik: boolean; setAcik: (v:
     <div className="relative">
       <button ref={zilRef} onClick={() => setAcik(!acik)} aria-expanded={acik} aria-haspopup="dialog"
         aria-label={okunmamis ? `Bildirimler, ${okunmamis} okunmamış` : "Bildirimler"}
-        className={cn("relative flex h-10 w-10 items-center justify-center rounded-[11px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#55d6fd]/60", acik ? "bg-white/[0.08] text-white ring-1 ring-inset ring-white/[0.08]" : "text-white/60 hover:bg-white/[0.07] hover:text-white")}>
+        className={cn("relative flex items-center justify-center outline-none transition-colors focus-visible:ring-2", yuvarlak ? "h-9 w-9 rounded-full focus-visible:ring-[#55d6fd]" : "h-10 w-10 rounded-[11px] focus-visible:ring-[#55d6fd]/60", acik ? (yuvarlak ? "bg-white/[0.07] text-white" : "bg-white/[0.08] text-white ring-1 ring-inset ring-white/[0.08]") : yuvarlak ? "text-white/65 hover:bg-white/[0.07] hover:text-white" : "text-white/60 hover:bg-white/[0.07] hover:text-white")}>
         <motion.span key={salla} animate={salla ? { rotate: [0, -14, 12, -8, 5, 0] } : undefined} transition={{ duration: 0.6 }} className="flex">
-          <Bell className="h-[18px] w-[18px]" strokeWidth={2} />
+          <Bell className="h-[18px] w-[18px]" strokeWidth={yuvarlak ? 1.7 : 2} />
         </motion.span>
         <AnimatePresence>
-          {okunmamis > 0 && (
+          {okunmamis > 0 && yuvarlak && (
+            <motion.i key="nokta" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} aria-hidden
+              className="absolute right-2 top-[7px] h-2 w-2 rounded-full border-2 border-[#0b0d0f] bg-[#55d6fd]" />
+          )}
+          {okunmamis > 0 && !yuvarlak && (
             <motion.span key="rozet" initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} transition={{ type: "spring", stiffness: 600, damping: 30 }}
               className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ff453a] px-1 text-[9.5px] font-bold tabular-nums text-white ring-2 ring-[#0b0b0c]">
               {okunmamis > 9 ? "9+" : okunmamis}
@@ -93,7 +98,7 @@ export function BildirimMerkezi({ acik, setAcik }: { acik: boolean; setAcik: (v:
       </button>
 
       <AnimatePresence>
-        <Yuzen acik={acik} onKapat={kapat} sag={0} ust={52} bosluk={0}>
+        <Yuzen acik={acik} onKapat={kapat} sag={0} ust={yuvarlak ? 46 : 52} bosluk={0}>
           <MotionConfig reducedMotion="user">
             <motion.div role="dialog" aria-label="Bildirimler"
               initial={{ opacity: 0, y: -8, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8, scale: 0.97 }}
@@ -332,7 +337,7 @@ export function CanliEtkinlik({ onGit }: { onGit: () => void }) {
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <span className="min-w-0 truncate text-[14px] font-semibold leading-[18px] text-white">{u.baslik}</span>
-            <span className="ml-auto shrink-0 text-[13px] font-semibold tabular-nums text-[#55d6fd]">{yuzde ? `%${yuzde}` : "Sırada"}</span>
+            <span className="ml-auto shrink-0 text-[13px] font-semibold tabular-nums text-[#55d6fd]">{yuzde ? `yüzde ${yuzde}` : "Sırada"}</span>
           </span>
           <span className="mt-0.5 block truncate text-[13px] leading-[18px] text-white/65">
             {u.model}{suren.length > 1 ? ` · +${suren.length - 1} üretim daha` : ""}{kalan ? ` · yaklaşık ${kalan < 60 ? `${kalan} sn` : `${Math.round(kalan / 60)} dk`} kaldı` : ""}

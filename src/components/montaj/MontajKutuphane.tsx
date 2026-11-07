@@ -25,6 +25,13 @@ import { CipSecici } from "@/components/studyo/CipSecici";
 import { Gauge as Gauge2 } from "lucide-react";
 import { besteWavUrl } from "@/lib/muzikMotoru";
 import { AnahtarSatir, PanelSerit, PKart, SayiHap, Segment } from "./ui";
+import { FavoriKutusu, useKlasorIdleri } from "@/components/galeri/SuzgecCubugu";
+import { KlasorMenusu } from "@/components/galeri/Klasorler";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { zamanaGoreSirala } from "@/lib/galeri/gorunum";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { Star } from "lucide-react";
 
 export type PanelId = "medya" | "uret" | "sablon" | "ses" | "yazi" | "altyazi" | "ogeler" | "gecis" | "efekt" | "akilli";
 export const PANELLER: { id: PanelId; ad: string; ikon: typeof Film }[] = [
@@ -98,8 +105,15 @@ function MedyaPanel({ proje }: { proje: MontajProje }) {
   const [ara, setAra] = useState("");
   const [surukleUstu, setSurukleUstu] = useState(false);
   const dosyaRef = useRef<HTMLInputElement>(null);
+  /* Üretimler sekmesi: favori ve klasör süzgeci, sıralama ve sütun yoğunluğu (görünüm ayarı "montaj"). */
+  const [favori, setFavori] = useState(false);
+  const [klasor, setKlasor] = useState<string | null>(null);
+  const klasorIdleri = useKlasorIdleri(klasor);
+  const [gorunum] = useGorunum("montaj");
+  const sutun = gorunum.boyut === "kucuk" ? 3 : gorunum.boyut === "buyuk" ? 1 : gorunum.boyut === "ozel" ? Math.min(4, Math.max(1, Math.round(gorunum.sutun / 2))) : 2;
 
-  const uretimMedya = useMemo(() => uretimler.filter((u) => u.durum === "tamam" && !u.id.startsWith("seed_") && (u.tur === "video" || u.tur === "gorsel")).map(uretimdenMedya).filter((x): x is MedyaOge => !!x), [uretimler]);
+  const uretimMedya = useMemo(() => zamanaGoreSirala(uretimler.filter((u) => u.durum === "tamam" && !u.id.startsWith("seed_") && (u.tur === "video" || u.tur === "gorsel") && (!favori || u.favori) && (!klasorIdleri || klasorIdleri.has(u.id))), gorunum.siralama).map(uretimdenMedya).filter((x): x is MedyaOge => !!x), [uretimler, favori, klasorIdleri, gorunum.siralama]);
+  const favoriler = useMemo(() => new Set(uretimler.filter((u) => u.favori).map((u) => u.id)), [uretimler]);
   const ornekMedya: MedyaOge[] = useMemo(() => ORNEKLER.map((o) => ({ id: `ornek_${o.dosya}`, ad: o.ad, tur: "video" as const, url: `/gercek/video-hareket/${o.dosya}.mp4`, poster: `/gercek/video-hareket/${o.dosya}-poster.webp` })), []);
   const projeMedya = (proje.medya ?? []).filter((m) => m.tur !== "ses");
   const liste = (sekme === "proje" ? projeMedya : sekme === "uretim" ? uretimMedya : ornekMedya).filter((m) => !ara.trim() || m.ad.toLocaleLowerCase("tr").includes(ara.trim().toLocaleLowerCase("tr")));
@@ -119,6 +133,14 @@ function MedyaPanel({ proje }: { proje: MontajProje }) {
         </button>
         <MontajKayit proje={proje} />
         <Segment etiket="Medya kaynağı" deger={sekme} onDegis={setSekme} secenekler={[["proje", "Projede"], ["uretim", "Üretimler"], ["ornek", "Örnekler"]]} />
+        {sekme === "uretim" && (
+          <div className="gizli-scroll -mx-1 flex items-center gap-1.5 overflow-x-auto px-1">
+            <FavoriKutusu acik={favori} onDegis={setFavori} />
+            <KlasorMenusu secili={klasor} onSec={setKlasor} />
+            <span className="flex-1" />
+            <GorunumAyari sayfa="montaj" istemVar={false} yerlesimVar={false} />
+          </div>
+        )}
         <label className="flex h-10 items-center gap-2 rounded-full bg-white/[0.065] px-3.5 ring-1 ring-inset ring-white/[0.06] focus-within:ring-white/25">
           <Search className="h-3.5 w-3.5 text-metin-3" />
           <input value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Medyada ara" className="min-w-0 flex-1 bg-transparent text-[13px] text-metin outline-none placeholder:text-white/40" />
@@ -127,13 +149,13 @@ function MedyaPanel({ proje }: { proje: MontajProje }) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4 [scrollbar-width:thin]">
         {liste.length ? (
-          <div className="grid grid-cols-2 gap-2">
-            {liste.map((m) => <MedyaKart key={m.id} m={m} onEkle={() => void ekle(proje.id, m)} />)}
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${sekme === "uretim" ? sutun : 2}, minmax(0, 1fr))` }}>
+            {liste.map((m) => <MedyaKart key={m.id} m={m} onEkle={() => void ekle(proje.id, m)} favori={sekme === "uretim" && m.kaynakId ? favoriler.has(m.kaynakId) : undefined} />)}
           </div>
         ) : (
           <div className="flex flex-col items-center gap-2 rounded-2xl bg-white/[0.045] ring-1 ring-inset ring-white/[0.07] px-4 py-8 text-center">
             <span className="bg-white/[0.075] text-metin-2 flex h-10 w-10 items-center justify-center rounded-xl"><Film className="h-4 w-4 text-metin-2" /></span>
-            <p className="text-[13px] font-semibold text-metin">{sekme === "proje" ? "Henüz dosya yüklemedin" : sekme === "uretim" ? "Henüz video ya da görsel üretmedin" : "Sonuç yok"}</p>
+            <p className="text-[13px] font-semibold text-metin">{sekme === "proje" ? "Henüz dosya yüklemedin" : sekme === "uretim" ? (favori || klasor ? "Bu süzgece uyan üretim yok" : "Henüz video ya da görsel üretmedin") : "Sonuç yok"}</p>
             <p className="text-[11.5px] text-metin-3">{sekme === "uretim" ? "Video ya da Görsel stüdyosunda üret; burada hazır olur." : "Yukarıdan dosya yükle ya da örneklere göz at."}</p>
             {sekme !== "ornek" && <button onClick={() => setSekme("ornek")} className="mt-1 flex h-8 items-center rounded-full bg-white px-3.5 text-[12.5px] font-semibold text-black transition active:scale-[0.97]">Örnek kliplerle dene</button>}
           </div>
@@ -143,7 +165,7 @@ function MedyaPanel({ proje }: { proje: MontajProje }) {
   );
 }
 
-function MedyaKart({ m, onEkle }: { m: MedyaOge; onEkle: () => void }) {
+function MedyaKart({ m, onEkle, favori }: { m: MedyaOge; onEkle: () => void; favori?: boolean }) {
   const [oyna, setOyna] = useState(false);
   const poster = gorselKaynak(m.poster) ?? (m.tur === "gorsel" ? m.url : undefined);
   return (
@@ -155,7 +177,15 @@ function MedyaKart({ m, onEkle }: { m: MedyaOge; onEkle: () => void }) {
       {oyna && <video src={m.url} autoPlay muted loop playsInline className="absolute inset-0 h-full w-full object-cover" />}
       <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
       <span className="pointer-events-none absolute left-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-md bg-black/55">{m.tur === "video" ? <Film className="h-3 w-3 text-white" /> : <ImageIcon className="h-3 w-3 text-white" />}</span>
-      {m.sure ? <span className="pointer-events-none absolute right-1.5 top-1.5 rounded-full bg-black/60 px-1.5 py-px text-[10.5px] font-medium tabular-nums text-white backdrop-blur">{kisaSure(m.sure)}</span> : null}
+      {m.sure ? <span className={cn("pointer-events-none absolute top-1.5 rounded-full bg-black/60 px-1.5 py-px text-[10.5px] font-medium tabular-nums text-white backdrop-blur", favori !== undefined ? "right-9" : "right-1.5")}>{kisaSure(m.sure)}</span> : null}
+      {favori !== undefined && m.kaynakId && (
+        <Tooltip label={favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="bottom">
+          <button onClick={(e) => { e.stopPropagation(); useProjeler.getState().favoriToggle(m.kaynakId!); }} aria-label={favori ? "Favorilerden çıkar" : "Favorilere ekle"} aria-pressed={favori}
+            className={cn("absolute right-1.5 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 backdrop-blur transition-[opacity,transform] active:scale-90", favori ? "text-aksan" : "text-white opacity-0 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100")}>
+            <Star className={cn("h-3.5 w-3.5", favori && "fill-current")} />
+          </button>
+        </Tooltip>
+      )}
       <span className="pointer-events-none absolute bottom-1.5 left-2 right-10 truncate text-[11.5px] font-medium text-white">{m.ad}</span>
       <button onClick={onEkle} aria-label={`${m.ad} ekle`}
         className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-white text-black opacity-0 transition-[opacity,transform] active:scale-90 group-hover:opacity-100 focus:opacity-100 [@media(hover:none)]:opacity-100"><Plus className="h-4 w-4" strokeWidth={2.5} /></button>
@@ -298,7 +328,7 @@ function SesMikser({ proje }: { proje: MontajProje }) {
                 <span className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" style={{ left: `${(d / 150) * 100}%` }} />
                 <input type="range" min={0} max={150} value={d} onChange={(e) => st().katmanGuncelle(proje.id, k.id, { duzey: Number(e.target.value), sessiz: false })} aria-label={`${k.ad} ses düzeyi`} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
               </span>
-              <span className="w-10 text-right text-[11.5px] tabular-nums text-metin-2">{k.sessiz ? "Kapalı" : `%${d}`}</span>
+              <span className="min-w-10 whitespace-nowrap text-right text-[11.5px] tabular-nums text-metin-2">{k.sessiz ? "Kapalı" : `yüzde ${d}`}</span>
               {k.tur !== "ses" ? <span className="w-[46px] shrink-0" /> : (
                 <button onClick={() => st().katmanGuncelle(proje.id, k.id, { rol: k.rol === "muzik" ? undefined : "muzik" })} title="Müzik katmanı olarak işaretle (otomatik kısma için)" aria-pressed={k.rol === "muzik"}
                   className={cn("w-[46px] shrink-0 rounded-full py-0.5 text-center text-[11px] font-medium transition active:scale-95", k.rol === "muzik" ? "bg-white text-black" : "bg-white/[0.085] text-metin-3 hover:text-metin")}>Müzik</button>
@@ -329,7 +359,7 @@ const YAZI_KOMBO: { id: string; ad: string; ornek: string; font: string; renk: s
   { id: "zarif", ad: "Zarif", ornek: "Yeni sezon", font: "playfair", renk: "#ffffff", boyut: 76, konum: "orta", anim: "fade", stil: "alinti" },
   { id: "sinema", ad: "Sinema", ornek: "BÖLÜM BİR", font: "bebas", renk: "#ffffff", boyut: 110, konum: "orta", anim: "fade", stil: "sinematik", aralik: 24 },
   { id: "el", ad: "El yazısı", ornek: "teşekkürler", font: "caveat", renk: "#ffffff", boyut: 96, konum: "orta", anim: "daktilo", stil: "baslik" },
-  { id: "rozet", ad: "Rozet", ornek: "%50 İNDİRİM", font: "archivo", renk: "#04131a", boyut: 54, konum: "ust", anim: "pop", stil: "etiket", kutu: "#22d3ee" },
+  { id: "rozet", ad: "Rozet", ornek: "YÜZDE 50 İNDİRİM", font: "archivo", renk: "#04131a", boyut: 54, konum: "ust", anim: "pop", stil: "etiket", kutu: "#22d3ee" },
   { id: "retro", ad: "Retro", ornek: "Yaz Partisi", font: "lobster", renk: "#f472b6", kontur: 8, konturRenk: "#1e1b4b", boyut: 88, konum: "orta", anim: "yukari", stil: "baslik" },
 ];
 

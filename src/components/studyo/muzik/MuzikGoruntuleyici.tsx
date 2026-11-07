@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { KenarTutamac, useKenarStili } from "@/components/ui/KenarTutamac";
 import { motion } from "framer-motion";
 import {
-  Clock, Copy, Download, Share2, Fingerprint, GitBranch, Heart, Info, Layers, Mic, Music2, Pause, Pencil, Piano, Play, RefreshCw, RotateCcw, RotateCw, Sparkles,
+  Clock, Copy, Download, Share2, Fingerprint, GitBranch, Heart, Star, Quote, Info, Layers, Mic, Music2, Pause, Pencil, Piano, Play, RefreshCw, RotateCcw, RotateCw, Sparkles,
   Tags, Trash2, Volume2, VolumeX, X, AudioLines, CalendarDays, Coins, ListMusic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -129,7 +129,7 @@ export function MuzikGoruntuleyici({ p, soy, onSec, onAdKaydet, onKapat, ...e }:
             </div>
           ) : (
             <p className={cn("bg-white/[0.075] mt-5 rounded-full px-3 py-1 text-center text-[12.5px]", p.durum === "hata" ? "text-rose-200" : "text-white/70")}>
-              {p.durum === "hata" ? `${p.hata ?? "Üretim başarısız"} · ${p.kredi ? "kredi iade edildi" : "kredi düşmedi"}` : `Besteleniyor · %${Math.round(p.ilerleme)}`}
+              {p.durum === "hata" ? `${p.hata ?? "Üretim başarısız"} · ${p.kredi ? "kredi iade edildi" : "kredi düşmedi"}` : `Besteleniyor · yüzde ${Math.round(p.ilerleme)}`}
             </p>
           )}
           {benim && cal.hata && <p className="mt-4 rounded-full bg-rose-500/15 px-3 py-1 text-center text-[12px] text-rose-300">{cal.hata}</p>}
@@ -209,12 +209,12 @@ export function MuzikGoruntuleyici({ p, soy, onSec, onAdKaydet, onKapat, ...e }:
                 <RefreshCw className="h-4 w-4 shrink-0" />Varyasyon
               </button>
             )}
-            <button onClick={e.onYenidenKullan} aria-label="Ayarları yeniden kullan" title="Ayarları yeniden kullan" className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full text-metin"><Sparkles className="h-4 w-4" /></button>
+            <button onClick={e.onYenidenKullan} aria-label="Ayarları yeniden kullan" title="Yeniden kullan" className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full text-metin"><Quote className="h-4 w-4" /></button>
             <button onClick={e.onIndir} disabled={!bitti} aria-label="İndir" title={p.sesUrl ? "Ses dosyasını indir" : "Örnek WAV indir"} className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full text-metin disabled:opacity-40"><Download className="h-4 w-4" /></button>
             <button onClick={() => void paylas()} disabled={!paylasilir || paylasiliyor} aria-label="Paylaş" title={paylasilir ? "Herkese açık bağlantı oluştur ve kopyala" : "Yalnız sağlayıcıyla üretilmiş parça paylaşılabilir"} className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full text-metin disabled:opacity-40"><Share2 className="h-4 w-4" /></button>
-            <button onClick={e.onBegen} disabled={!bitti} aria-pressed={p.begeni === 1} aria-label={p.begeni === 1 ? "Beğeniyi kaldır" : "Beğen"}
-              className={cn("bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full disabled:opacity-40", p.begeni === 1 ? "text-rose-400" : "text-metin")}>
-              <Heart className={cn("h-4 w-4", p.begeni === 1 && "fill-rose-400 text-rose-400")} />
+            <button onClick={e.onBegen} disabled={!bitti} aria-pressed={p.begeni === 1} title={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"} aria-label={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"}
+              className={cn("bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full disabled:opacity-40", p.begeni === 1 ? "!text-aksan" : "text-metin")}>
+              <Star className={cn("h-4 w-4", p.begeni === 1 && "fill-current")} />
             </button>
             <button onClick={e.onSil} aria-label="Sil" className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-10 w-10 items-center justify-center rounded-full text-metin hover:bg-rose-500/15 hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>
           </div>

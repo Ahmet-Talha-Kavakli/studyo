@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { icerikDenetle } from "@/lib/moderasyon";
 import { SC_MODELLER, SC_VARSAYILAN_MODEL, type ScOlay, type ScGidenEk, type ScKisisel, type ScProjeBaglam } from "@/lib/scSohbet";
 
@@ -95,6 +96,9 @@ Sayısal bir karşılaştırma ya da zaman içindeki değişim grafikle daha iyi
 const kimlikVar = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 
 export async function POST(req: Request) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   let g: Govde;
   try { g = (await req.json()) as Govde; } catch { return Response.json({ ok: false, hata: "Geçersiz istek." }, { status: 400 }); }
   const mesajlar = (g.mesajlar ?? []).filter((m) => m.metin?.trim()).slice(-40);

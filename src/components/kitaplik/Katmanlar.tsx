@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowUpRight, ChevronRight, Columns2, Copy, Download, FolderInput, FolderMinus, FolderPlus, Globe, Hash, Heart, ImagePlus, Keyboard, Link2, Maximize2,
+  ArrowUpRight, ChevronRight, Columns2, Copy, Download, Folder, FolderInput, FolderMinus, FolderPlus, Globe, Hash, Star, ImagePlus, Keyboard, Link2, Maximize2,
   Pause, Pencil, Play, ScanSearch, RefreshCw, RotateCcw, Search, Trash2, Upload, X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { toast } from "@/lib/toast";
 import { aracUygula, araclarFor, ayarlarlaAcAdres, copeTasi, etiketEkle, favoriYap, indir, paylasimBaglantisi, projedenCikar, projeyeTasi, referansOlarakKullan, yayinla } from "./eylemler";
 import { kartArka, tarihUzun } from "./yardimci";
 import { cn } from "@/lib/utils";
+import { KlasoreTasiDugmesi, KlasoreTasiListesi } from "@/components/galeri/Klasorler";
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [h, setH] = useState(false);
@@ -41,6 +42,7 @@ export function BaglamMenusu({ u, x, y, aktifProjeId, onKapat, onAc, onAdlandir,
   const router = useRouter();
   const projeler = useProje((s) => s.projeler);
   const [alt, setAlt] = useState(false);
+  const [klasorAlt, setKlasorAlt] = useState(false);
   const W = 244;
   const sol = typeof window === "undefined" ? x : Math.max(8, Math.min(x, window.innerWidth - W - 8));
   const ust = typeof window === "undefined" ? y : Math.max(8, Math.min(y, window.innerHeight - 560));
@@ -92,7 +94,20 @@ export function BaglamMenusu({ u, x, y, aktifProjeId, onKapat, onAc, onAdlandir,
           </AnimatePresence>
         </div>
         {aktifProjeId && <Oge ikon={FolderMinus} ad="Bu projeden çıkar" f={() => projedenCikar([u.id], aktifProjeId)} />}
-        <Oge ikon={Heart} ad={u.favori ? "Favoriden çıkar" : "Favorile"} f={() => favoriYap([u.id], !u.favori)} />
+        <div className="relative" onMouseEnter={() => setKlasorAlt(true)} onMouseLeave={() => setKlasorAlt(false)}>
+          <button onClick={() => setKlasorAlt((v) => !v)} aria-expanded={klasorAlt} className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-[7px] text-left text-[13.5px] text-white hover:bg-white/[0.06]">
+            <Folder className="h-4 w-4 text-white/60" /><span className="flex-1">Klasöre taşı</span><ChevronRight className="h-3.5 w-3.5 text-white/45" />
+          </button>
+          <AnimatePresence>
+            {klasorAlt && (
+              <motion.div initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}
+                className={cn("galeri-cam absolute top-0 z-10 w-64 rounded-[16px] border border-white/[0.09] p-0.5", sol + W + 270 > (typeof window === "undefined" ? 0 : window.innerWidth) ? "right-full mr-1" : "left-full ml-1")}>
+                <KlasoreTasiListesi uretimIdler={[u.id]} onBitti={onKapat} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <Oge ikon={Star} ad={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} f={() => favoriYap([u.id], !u.favori)} />
         <div className="my-1 h-px bg-white/[0.06]" />
         <Oge ikon={Globe} ad={u.yayinda ? "Keşfet'ten kaldır" : "Keşfet'te yayınla"} f={() => yayinla([u.id], !u.yayinda)} />
         <Oge ikon={Link2} ad="Bağlantıyı kopyala" f={() => void kopyala(paylasimBaglantisi(u), "Bağlantı kopyalandı")} />
@@ -156,7 +171,7 @@ export function SecimCubugu({ secilenler, toplam, copModu, aktifProjeId, onTemiz
     <button onClick={f} disabled={disabled} title={ad} aria-label={ad}
       className={cn("flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-medium transition-colors active:scale-95 disabled:opacity-35",
         tehlike ? "text-rose-300 hover:bg-rose-500/10" : aktif ? "bg-white/[0.12] text-white" : "text-white/75 hover:bg-white/[0.07] hover:text-white")}>
-      <I className={cn("h-4 w-4", ad.startsWith("Favori") && hepsiFavori && "fill-rose-500 text-rose-500")} /><span className="hidden xl:inline">{ad}</span>
+      <I className={cn("h-4 w-4", ad.startsWith("Favori") && hepsiFavori && "fill-aksan text-aksan")} /><span className="hidden xl:inline">{ad}</span>
     </button>
   );
   const ACILIR = "absolute bottom-full left-0 mb-2 w-64 rounded-[16px] border border-white/[0.08] bg-[#151517] p-1.5";
@@ -223,7 +238,8 @@ export function SecimCubugu({ secilenler, toplam, copModu, aktifProjeId, onTemiz
                     )}
                   </AnimatePresence>
                 </div>
-                <Btn ikon={Heart} ad={hepsiFavori ? "Favoriden çıkar" : "Favorile"} f={() => favoriYap(idler, !hepsiFavori)} aktif={hepsiFavori} />
+                <KlasoreTasiDugmesi uretimIdler={idler} etiket="Klasöre taşı" etiketSinif="hidden xl:inline" className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95" />
+                <Btn ikon={Star} ad={hepsiFavori ? "Favorilerden çıkar" : "Favorilere ekle"} f={() => favoriYap(idler, !hepsiFavori)} aktif={hepsiFavori} />
                 <Btn ikon={Columns2} ad="Karşılaştır" f={onKarsilastir} disabled={secilenler.length < 2 || secilenler.length > 4} />
                 <Btn ikon={Globe} ad="Yayınla" f={() => yayinla(idler, true)} />
                 <Btn ikon={Trash2} ad="Çöpe taşı" f={() => { copeTasi(idler); onTemizle(); }} tehlike />
@@ -347,7 +363,7 @@ const KISAYOL_GRUPLARI: { ad: string; ogeler: { ad: string; tus: Parca[] }[] }[]
     { ad: "Seçilenlere Onaylandı etiketi", tus: [["3"]] },
   ] },
   { ad: "Görüntüleyici", ogeler: [
-    { ad: "Önceki, sonraki", tus: [["←"], ["→"]] },
+    { ad: "Önceki, sonraki", tus: [["Sol"], ["Sağ"]] },
     { ad: "Favori", tus: [["F"]] },
     { ad: "İndir", tus: [["D"]] },
     { ad: "Sesi oynat, duraklat", tus: [["Boşluk"]] },

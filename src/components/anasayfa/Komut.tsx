@@ -83,8 +83,8 @@ export const TURLER: TurTanim[] = [
 
 /** Bir türün kutuda gösterilecek modelleri: tercih sırası önce, sonra öne çıkanlar. */
 export function turModelleri(t: TurTanim, adet = 7): KatalogModel[] {
-  // Yalnız şu an kullanılabilen modeller: "Yakında" ve "Kapandı" olanlar listelenmez.
-  const hepsi = KATALOG.filter((m) => m.tur === t.id && m.rozet !== "Yakında" && m.rozet !== "Kapandı");
+  // Yalnız şu an kullanılabilen modeller: "Bağlı değil" ve "Kapandı" olanlar listelenmez.
+  const hepsi = KATALOG.filter((m) => m.tur === t.id && m.rozet !== "Bağlı değil" && m.rozet !== "Kapandı");
   const sirali: KatalogModel[] = [];
   for (const r of t.tercih) { const m = hepsi.find((x) => r.test(x.ad) && !sirali.includes(x)); if (m) sirali.push(m); }
   for (const m of hepsi.filter((x) => x.oneCikan)) if (!sirali.includes(m)) sirali.push(m);

@@ -12,8 +12,8 @@ export const UC_BOYUT_MODLARI: {
   aciklama: string;
   yeni?: boolean;
 }[] = [
-  { id: "metin", ad: "Metin → 3D", ikon: "type", aciklama: "Metinden dokulu 3D model üret." },
-  { id: "gorsel", ad: "Görsel → 3D", ikon: "image", aciklama: "Tek görselden 3D mesh çıkar." },
+  { id: "metin", ad: "Metinden 3D", ikon: "type", aciklama: "Metinden dokulu 3D model üret." },
+  { id: "gorsel", ad: "Görselden 3D", ikon: "image", aciklama: "Tek görselden 3D mesh çıkar." },
   { id: "doku", ad: "Dokulama", ikon: "palette", aciklama: "Mevcut modele yeni PBR doku uygula." },
   { id: "canlandir", ad: "Canlandır", ikon: "person-standing", aciklama: "Otomatik rig + animasyon kütüphanesi.", yeni: true },
   { id: "yazdir", ad: "3D Baskı", ikon: "layers", aciklama: "Çok renkli baskı, taban ekle, dilimleyiciye gönder." },
@@ -169,8 +169,8 @@ export const PLA_PALETI = [
 export const RAY_MODLARI: { id: string; ad: string; ikon: string; yeni?: boolean }[] = [
   { id: "varliklar", ad: "Varlıklar", ikon: "layout-grid" },
   { id: "ajan", ad: "Ajan", ikon: "sparkles", yeni: true },
-  { id: "metin", ad: "Metin → 3D", ikon: "type" },
-  { id: "gorsel", ad: "Görsel → 3D", ikon: "image" },
+  { id: "metin", ad: "Metinden 3D", ikon: "type" },
+  { id: "gorsel", ad: "Görselden 3D", ikon: "image" },
   { id: "doku", ad: "Dokulama", ikon: "palette" },
   { id: "canlandir", ad: "Canlandır", ikon: "person-standing", yeni: true },
   { id: "yazdir", ad: "3D Baskı", ikon: "layers" },

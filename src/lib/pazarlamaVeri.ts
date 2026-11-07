@@ -190,7 +190,7 @@ export interface PazKanca {
 
 export const PAZ_KANCALAR: PazKanca[] = [
   { slug: "urun-carpmasi", ad: "Ürün Çarpması", ozet: "Nesne kadraja uçar, kişiye çarpar",
-    istem: "Bir nesne kadraja uçarak girer ve kişiye çarpar. Kısa bir tepki anı → ardından ürüne geçiş.",
+    istem: "Bir nesne kadraja uçarak girer ve kişiye çarpar. Kısa bir tepki anı, ardından ürüne geçiş.",
     kat: "Gösterişli", tohum: "kanca-carpma" },
   { slug: "baharatli", ad: "Baharatlı", ozet: "Köprücük kemiğinden yukarı kayan yakın çekim",
     istem: "Çekim, köprücük kemiğine aşırı yakın bir kadrajla başlar; kamera yavaşça yukarı kayarak kusursuz bir makyaj görünümünü ortaya çıkarır ve ardından ürüne döner.",

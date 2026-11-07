@@ -7,7 +7,7 @@ import {
   AudioLines, Check, ChevronDown, ChevronLeft, Dices, Film, History, Languages, Lightbulb, Loader2, Mic,
   Play, Plus, Repeat, SlidersHorizontal, Sparkles, Upload, X, Pause, MessagesSquare, Waves, Tags,
   Trash2, Square, Lock, Megaphone, Newspaper, Moon, Globe2, RotateCcw, ArrowUp, ArrowDown, Infinity as InfinityIcon, Clock, Target, Search,
-  CloudRain, Coffee, Zap, DoorOpen, Rocket, Flame, Car, Trees, BellRing, PartyPopper, Copy, Users, Wind, Heart, Fingerprint, Smile, Laugh, Frown, Angry, Activity, HelpCircle, Annoyed, Leaf, Ear, Feather, Drama, Snail, CircleAlert, MessageCircle, Droplets, DoorClosed, Footprints, Bomb, Timer, Eraser, Captions, Link2, Scissors, ArrowRight, Keyboard, Undo2, Code2, ListChecks, ClipboardPaste, BookOpen, Library, Wand2, Download, Settings2, type LucideIcon,
+  CloudRain, Coffee, Zap, DoorOpen, Rocket, Flame, Car, Trees, BellRing, PartyPopper, Copy, Users, Wind, Heart, Star, Fingerprint, Smile, Laugh, Frown, Angry, Activity, HelpCircle, Annoyed, Leaf, Ear, Feather, Drama, Snail, CircleAlert, MessageCircle, Droplets, DoorClosed, Footprints, Bomb, Timer, Eraser, Captions, Link2, Scissors, ArrowRight, Keyboard, Undo2, Code2, ListChecks, ClipboardPaste, BookOpen, Library, Wand2, Download, Settings2, type LucideIcon,
 } from "lucide-react";
 import { KrediYildiz } from "@/components/ui/KrediHap";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -17,6 +17,7 @@ import { KCip } from "./Cip";
 import { Segment, Kaydirici, AnahtarSatir } from "@/components/montaj/ui";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
+import { SES_UCRETSIZ_HAK } from "@/lib/krediTarife";
 import { begeniBildir, neden, uretimGeriYukle } from "@/components/studyo/bildirim";
 import { yerelDepo } from "@/lib/yerelDepo";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,10 @@ import { GecmisSatiri } from "./ses/GecmisSatiri";
 import { OynaticiCubugu } from "./ses/OynaticiCubugu";
 import { Dalga, SesAvatar } from "./ses/ortak";
 import { Dalga as SDalga } from "@/components/speak/SesSecici";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { istemTemizlensinMi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 
 /**
  * Ses Stüdyosu — Seslendirme · Diyalog · Efekt · Ses Değiştir · Çeviri · Temizle · Transkript.
@@ -194,7 +199,7 @@ function medyaSuresi(f: File): Promise<number> {
 
 type Kaynak = { ad: string; dataUrl: string; mb: number; sn: number; video: boolean; onizleme: string };
 
-const UCRETSIZ_HAK = 2;
+const UCRETSIZ_HAK = SES_UCRETSIZ_HAK;
 
 const YAY = { type: "spring", stiffness: 420, damping: 32 } as const;
 const POP = "rounded-[18px] border border-white/[0.09] bg-[#1b1c1f]";
@@ -278,6 +283,8 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
   const [kaynakBaglanti, setKaynakBaglanti] = useState("");
   // Geçmiş: arama, mod süzgeci, toplu seçim
   const [gecmisAra, setGecmisAra] = useState("");
+  /* Görünüm ayarı (sıralama, gönderdikten sonra istemi temizle) sayfa başına kalıcı. */
+  const [gorunum] = useGorunum("ses");
   const [gecmisMod, setGecmisMod] = useState<SesMod | "tumu">("tumu");
   const [secimModu, setSecimModu] = useState(false);
   const [secilenler, setSecilenler] = useState<string[]>([]);
@@ -308,6 +315,11 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
     if (m && SES_URETIM_MODELLERI.some((x) => x.ad === m)) setModel(m);
     const p = aramaParam.get("prompt");
     if (p) setMetin(p);
+    // ?mod=ceviri&kaynak=https://… (kitaplıktaki "Çevir"): video bağlantısı dublaj kaynağı olarak gelir.
+    const md = aramaParam.get("mod");
+    if (md && (["seslendirme", "diyalog", "efekt", "sesdegistir", "ceviri", "temizle", "transkript"] as const).includes(md as SesMod)) setMod(md as SesMod);
+    const kb = aramaParam.get("kaynak");
+    if (md === "ceviri" && kb && /^https:[/][/]/.test(kb)) setKaynakBaglanti(kb.slice(0, 500));
   }, [aramaParam]);
 
   const modelTanim = SES_URETIM_MODELLERI.find((m) => m.ad === model) ?? SES_URETIM_MODELLERI[0];
@@ -379,10 +391,10 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
   );
   const gorunen = useMemo(() => {
     const q = gecmisAra.trim().toLocaleLowerCase("tr");
-    return sesUretimleri.filter((u) => (filtre !== "favori" || u.favori)
+    return zamanaGoreSirala(sesUretimleri.filter((u) => (filtre !== "favori" || u.favori)
       && (gecmisMod === "tumu" || ((u.meta?.mod as SesMod | undefined) ?? "seslendirme") === gecmisMod)
-      && (!q || [u.baslik, u.prompt, u.meta?.ses, u.model, u.meta?.transkript].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q)));
-  }, [sesUretimleri, filtre, gecmisAra, gecmisMod]);
+      && (!q || [u.baslik, u.prompt, u.meta?.ses, u.model, u.meta?.transkript].filter(Boolean).join(" ").toLocaleLowerCase("tr").includes(q))), gorunum.siralama);
+  }, [sesUretimleri, filtre, gecmisAra, gecmisMod, gorunum.siralama]);
   const gruplar = useMemo(() => {
     const g: { etiket: string; oge: Uretim[] }[] = [];
     for (const u of gorunen) {
@@ -504,7 +516,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
       const bos = l.every((x) => !x.metin.trim());
       return bos ? yeni : [...l.slice(0, i + 1).filter((x) => x.id !== buradan || x.metin.trim()), ...yeni, ...l.slice(i + 1)];
     });
-    toast.success(`${yeni.length} satır eklendi`, { description: `${atanan.size} konuşmacı: ${[...atanan].map(([a, v]) => `${a} → ${v.ad}`).join(", ")}.` });
+    toast.success(`${yeni.length} satır eklendi`, { description: `${atanan.size} konuşmacı: ${[...atanan].map(([a, v]) => `${a}: ${v.ad}`).join(", ")}.` });
   };
   const satirSil = (id: string) => setSatirlar((l) => (l.length > 1 ? l.filter((x) => x.id !== id) : l));
   const satirTasi = (id: string, yon: -1 | 1) => setSatirlar((l) => {
@@ -574,7 +586,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
     const diyalogMetni = doluSatirlar.map((x) => `${x.ses.ad}: ${x.metin.trim()}`).join("\n");
     const kaynakAd = kaynak?.ad ?? kaynakBaglanti.trim();
     const istem = mod === "seslendirme" ? metin.trim() : mod === "diyalog" ? diyalogMetni : mod === "efekt" ? efektTarif.trim()
-      : mod === "sesdegistir" ? `${kaynakAd} → ${ses.ad} sesi` : mod === "ceviri" ? `${kaynakAd} → ${hedefDiller.map(dilAdi).join(", ")}`
+      : mod === "sesdegistir" ? `${kaynakAd}, ${ses.ad} sesiyle` : mod === "ceviri" ? `${kaynakAd}, çeviri: ${hedefDiller.map(dilAdi).join(", ")}`
       : mod === "temizle" ? `${kaynakAd} · gürültü temizleme` : `${kaynakAd} · transkript`;
     const denetim = icerikDenetle(istem);
     if (!denetim.izin) return void toast.error(`İçerik engellendi · ${kategoriEtiket(denetim.kategori)}`, { description: denetim.mesaj });
@@ -634,6 +646,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
       basarili++;
     }
     if (!basarili) return;
+    if (istemTemizlensinMi("ses") && (mod === "seslendirme" || mod === "efekt")) setMetin("");
     // İlerleme bildirimle değil, editör şeridinde ve geçmişte gösterilir.
     setFiltre("tumu"); setSonId(ilkId ?? null);
     if (basarili > 1) setCekmece(true);
@@ -931,7 +944,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
     </div>
   );
 
-  const yuzde = (n: number) => `%${Math.round(n * 100)}`;
+  const yuzde = (n: number) => `yüzde ${Math.round(n * 100)}`;
 
   /* ── Okuma tarzı (seslendirme): hazır tarzlar 2 sütun + kaydırıcılar ── */
   const hazirTarz = HAZIR_STILLER.find((h) => hiz === h.hiz && kararlilik === h.kararlilik && stil === h.stil);
@@ -1798,9 +1811,10 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
               </Yuzen>
             </AnimatePresence>
           </div>
-          <button onClick={() => setFiltre((f) => (f === "favori" ? "tumu" : "favori"))} aria-pressed={filtre === "favori"} aria-label="Yalnız beğenilenler" title="Yalnız beğenilenler"
-            className={cn(IKON, "h-8 w-8", filtre === "favori" && "bg-rose-400/10 text-rose-300")}><Heart className={cn("h-4 w-4", filtre === "favori" && "fill-current")} /></button>
+          <button onClick={() => setFiltre((f) => (f === "favori" ? "tumu" : "favori"))} aria-pressed={filtre === "favori"} aria-label="Yalnız favoriler" title="Yalnız favoriler"
+            className={cn(IKON, "h-8 w-8", filtre === "favori" && "bg-aksan/10 !text-aksan")}><Star className={cn("h-4 w-4", filtre === "favori" && "fill-current")} /></button>
           <span className="flex-1" />
+          <GorunumAyari sayfa="ses" yerlesimVar={false} boyutVar={false} dugmeSinif="h-8 w-8" />
           {secimModu && <button onClick={() => setSecilenler(secilenler.length === gorunen.length ? [] : gorunen.map((u) => u.id))} className={ARAC}>{secilenler.length === gorunen.length ? "Hiçbiri" : "Tümü"}</button>}
           <button onClick={() => { setSecimModu((v) => !v); setSecilenler([]); }} aria-pressed={secimModu} className={cn(ARAC, secimModu && "bg-white/[0.08] text-metin")}>
             <ListChecks className="h-4 w-4" />{secimModu ? "Bitti" : "Seç"}
@@ -1812,6 +1826,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
               <div className="flex items-center gap-1.5 rounded-[12px] bg-white/[0.065] p-1.5 pl-3">
                 <span className="flex-1 text-[13px] font-medium text-metin">{secilenler.length} seçili</span>
                 <button onClick={() => { const l = sesUretimleri.filter((u) => secilenler.includes(u.id) && u.durum === "tamam"); l.forEach((u, i) => setTimeout(() => uretimIndir(u), i * 350)); toast.success(`${l.length} ses indiriliyor`, { description: "Tarayıcı indirmeleri sırayla başlatır." }); }} className={ARAC}><Download className="h-4 w-4" />İndir</button>
+                <KlasoreTasiDugmesi uretimIdler={secilenler} etiket="Klasör" className={ARAC} yerlesim="alt-sag" onBitti={() => { setSecilenler([]); setSecimModu(false); }} />
                 <button onClick={() => { const l = sesUretimleri.filter((x) => secilenler.includes(x.id)); l.forEach((u) => sesiSil(u, true)); setSecilenler([]); setSecimModu(false); mesaj.silindi(`${l.length} ses`, () => uretimGeriYukle(l)); }}
                   className={cn(ARAC, "text-rose-300 hover:text-rose-200")}><Trash2 className="h-4 w-4" />Sil</button>
               </div>
@@ -1826,7 +1841,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
             <p className="mt-1 text-[12.5px] leading-relaxed text-metin-2">Ürettiğin her ses burada listelenir: dinle, indir, beğen ya da aynı ayarlarla yeniden üret.</p>
           </div>
         ) : gorunen.length === 0 ? (
-          <p className="px-4 py-10 text-center text-[13px] text-metin-3">{gecmisAra || gecmisMod !== "tumu" ? "Bu süzgece uyan ses yok." : "Beğendiğin ses yok; kalp ile beğenebilirsin."}</p>
+          <p className="px-4 py-10 text-center text-[13px] text-metin-3">{gecmisAra || gecmisMod !== "tumu" ? "Bu süzgece uyan ses yok." : "Favori sesin yok; yıldızla favorilere ekleyebilirsin."}</p>
         ) : gruplar.map((g) => (
           <div key={g.etiket} className="mt-3 first:mt-1">
             <p className="pb-1.5"><span className="inline-flex rounded-full bg-white/[0.075] px-2.5 py-0.5 text-[12px] font-medium text-metin-2">{g.etiket}</span></p>
@@ -1865,7 +1880,7 @@ export function SesStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps = {
     [["R"], "Son sesi yeniden üret"],
     [["["], "İfade menüsü (metin alanında)"],
     [["↵"], "Diyalogda son satırdan yeni satır"],
-    [["←", "→"], "Ayrıntıda önceki / sonraki ses"],
+    [["Sol", "Sağ"], "Ayrıntıda önceki / sonraki ses"],
     [["Esc"], "Açık pencereyi kapat"],
     [["?"], "Bu listeyi aç / kapat"],
   ];

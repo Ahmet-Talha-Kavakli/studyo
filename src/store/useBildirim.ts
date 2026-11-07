@@ -66,32 +66,13 @@ const ARSIV_OMRU = 30 * 86_400_000;
 let sayac = 0;
 const yeniId = () => `b_${Date.now().toString(36)}_${(sayac += 1)}`;
 
-const DK = 60_000, SA = 3_600_000, GUN = 86_400_000;
+const SA = 3_600_000;
 
-/** İlk açılış örnekleri — gerçek olay biçiminde (kategori, görsel, eylem). */
+/** İlk açılış: yalnız karşılama. Olmamış üretim, iade ya da kredi olayı örnek diye gösterilmez. */
 function ornekler(): Bildirim[] {
-  const t = Date.now();
   return [
-    { id: "o1", kategori: "uretim", tur: "basari", okundu: false, zaman: t - 4 * DK,
-      baslik: "Video hazır", mesaj: "\"Yağmurlu ara sokak, neon yansımalar\" · Kling 3.0 · 5 sn",
-      gorsel: "/gercek/proje-kesfet/kesfet-04.webp", link: "/panel/kitaplik", eylem: { ad: "Görüntüle", link: "/panel/kitaplik" } },
-    { id: "o2", kategori: "uretim", tur: "basari", okundu: false, zaman: t - 26 * DK,
-      demo: true, baslik: "4 görsel hazır", mesaj: "\"Mermer zeminde lüks saat, dramatik yan ışık\" · Nano Banana Pro",
-      gorsel: "/gercek/proje-kesfet/kesfet-03.webp", link: "/panel/kitaplik", eylem: { ad: "Görüntüle", link: "/panel/kitaplik" } },
-    { id: "o3", kategori: "duyuru", tur: "bilgi", okundu: false, zaman: t - 3 * SA,
-      baslik: "Kling 4.0 Vayra'da", mesaj: "30 saniyelik doğal video, 15 referans ve 10 anahtar kare. Video stüdyosunda dene.",
-      gorsel: "/gercek/hero-video/seedance-banner-poster.webp", link: "/panel/video", eylem: { ad: "Dene", link: "/panel/video" } },
-    { id: "o4", kategori: "hesap", tur: "uyari", okundu: true, zaman: t - 20 * SA,
-      baslik: "Kredin azalıyor", mesaj: "Bakiyende 640 kredi kaldı. Kesintisiz üretim için kredi yükleyebilirsin.",
-      link: "/panel/kredi?sekme=kredi", eylem: { ad: "Kredi yükle", link: "/panel/kredi?sekme=kredi" }, anahtar: "kredi-dusuk" },
-    { id: "o5", kategori: "uretim", tur: "hata", okundu: true, zaman: t - 26 * SA,
-      baslik: "Üretim tamamlanamadı", mesaj: "\"Kapadokya balonları\" · Seedance 2.0 · Sağlayıcı zaman aşımı. 42 kredi iade edildi.",
-      link: "/panel/video", eylem: { ad: "Tekrar dene", link: "/panel/video" } },
-    { id: "o6", kategori: "duyuru", tur: "bilgi", okundu: true, zaman: t - 3 * GUN,
-      baslik: "Fiyatlar artık Türk lirası", mesaj: "Tüm planlar ve paketler TL; yıllık ödemede %20 indirim.",
-      link: "/fiyatlandirma", eylem: { ad: "Planları gör", link: "/fiyatlandirma" } },
-    { id: "o7", kategori: "hesap", tur: "basari", okundu: true, zaman: t - 6 * GUN,
-      baslik: "Vayra'ya hoş geldin", mesaj: "Hesabına 50 kredi hoş geldin hediyesi tanımlandı.",
+    { id: "o7", kategori: "hesap", tur: "bilgi", okundu: false, zaman: Date.now(),
+      baslik: "Vayra'ya hoş geldin", mesaj: "Stüdyolardan birini seçip ilk üretimini başlatabilirsin.",
       link: "/panel", eylem: { ad: "Üretmeye başla", link: "/panel" } },
   ];
 }
@@ -145,7 +126,7 @@ export const useBildirim = create<BildirimState>()(
     }),
     {
       name: "vayra-bildirim",
-      version: 5,
+      version: 6,
       // v3 → v4: kategori ve eylem alanları eklendi; eski örnek (emoji'li, sahte) kayıtlar yenileriyle değişir.
       migrate: (kayitli, surum) => {
         const k = (kayitli ?? {}) as Partial<BildirimState>;
@@ -157,6 +138,8 @@ export const useBildirim = create<BildirimState>()(
             return { ...b, baslik: m ? b.baslik.slice(0, m.index) : b.baslik, demo: b.demo || !!m || undefined, kategori: earn ? "earn" : b.kategori };
           });
         }
+        // v5 → v6: ilk açılışta gösterilen uydurma örnek olaylar (o1-o6: olmamış üretim, iade, kredi uyarısı) silinir.
+        if (surum < 6 && k.bildirimler) k.bildirimler = k.bildirimler.filter((b) => !/^o[1-6]$/.test(b.id));
         if (surum < 4) {
           const gercek = (k.bildirimler ?? []).filter((b) => !/^b\d$/.test(b.id)).map((b) => ({ ...b, kategori: b.kategori ?? kategoriTahmin(b) }));
           return { ...k, bildirimler: [...gercek, ...ornekler()].sort((a, b) => b.zaman - a.zaman).slice(0, UST_SINIR), kapatilanKartlar: [] } as BildirimState;

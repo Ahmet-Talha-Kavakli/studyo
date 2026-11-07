@@ -1,37 +1,50 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import qrcode from "qrcode-generator";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertTriangle, Check, CheckCircle2, Copy, Download, Eye, EyeOff, Fingerprint, KeyRound, LogIn, LogOut, Mail, Monitor, RefreshCw,
+  AlertTriangle, Check, CheckCircle2, Copy, Download, Eye, EyeOff, KeyRound, Link2, Link2Off, LogIn, LogOut, Lock, Mail, MailCheck, Monitor, RefreshCw,
   ShieldCheck, ShieldOff, Smartphone, Tablet,
 } from "lucide-react";
-import { buOturum, olayYaz, type GuvenlikOlayi, type OlayTur, type Oturum } from "@/store/useHesap";
-import { useAyarTercih } from "@/store/useAyarTercih";
+import { useAuth } from "@/store/useAuth";
 import { useHesapKaydi } from "@/components/ayarlar/AyarKabugu";
 import { Anahtar, Grup, Hap, Pencere, Satir, Sayfa, Segment, alan, dugme, akis } from "@/components/ayarlar/ui";
-import { otpauthAdresi, sifreDogrula, sifreGucu, sifreOzeti, totpDogrula, totpSirUret, yedekKodlarUret } from "@/lib/guvenlik";
+import { sifreGucu } from "@/lib/guvenlik";
+import * as H from "@/lib/hesap/istemci";
+import type { GuvenlikOlayTuru, GuvenlikOlayiBilgisi, OturumBilgisi } from "@/lib/hesap/tipler";
 import { OLAY_AD, goreli, guvenlikAdimlari, tarih } from "@/lib/ayarlar";
 import { kopyala, metinIndir } from "@/lib/gercekEylem";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { cn } from "@/lib/utils";
 
+/**
+ * Güvenlik ayarları — hepsi sunucuda: şifre (scrypt), iki adımlı doğrulama (TOTP, yedek kod özetleri),
+ * oturumlar (httpOnly çerez; her biri tek tek kapatılabilir) ve güvenlik geçmişi.
+ */
 export default function GuvenlikAyarlari() {
-  const { email, kayit, guncelle } = useHesapKaydi();
-  const adimlar = guvenlikAdimlari(kayit);
-  const puan = adimlar.filter((a) => a.tamam).length;
+  const hesap = useAuth((s) => s.hesap);
+  const sunucu = useAuth((s) => s.sunucu);
+  const { kayit } = useHesapKaydi();
+  const [veri, setVeri] = useState<{ oturumlar: OturumBilgisi[]; olaylar: GuvenlikOlayiBilgisi[] } | null>(null);
   const [sifreAcik, setSifreAcik] = useState(false);
   const [kurulum, setKurulum] = useState(false);
   const [kapat2fa, setKapat2fa] = useState(false);
   const [yenile, setYenile] = useState(false);
-  const [yedekGoster, setYedekGoster] = useState(false);
-  const yeniGirisEposta = useAyarTercih((s) => s.bildirim.guvenlik.eposta);
-  const bildirimAyarla = useAyarTercih((s) => s.bildirimAyarla);
+  const [yeniKodlar, setYeniKodlar] = useState<string[] | null>(null);
 
-  const aktif = kayit.ikiAdim?.aktif ? kayit.ikiAdim : null;
-  const kalan = aktif?.yedekler.filter((y) => !y.kullanildi).length ?? 0;
+  const getir = useCallback(async () => { const r = await H.oturumlarGetir(); if (r.ok) setVeri({ oturumlar: r.oturumlar, olaylar: r.olaylar }); }, []);
+  useEffect(() => { if (hesap) void getir(); }, [hesap?.uid, getir]); // eslint-disable-line react-hooks/exhaustive-deps
+  const tazele = useCallback(async () => { await useAuth.getState().esitle(); await getir(); }, [getir]);
+
+  const adimlar = guvenlikAdimlari(kayit);
+  const puan = adimlar.filter((a) => a.tamam).length;
+  if (!hesap) return <SunucuHesabiYok />;
+
+  const aktif = hesap.ikiAdim.aktif;
+  const kalan = hesap.ikiAdim.yedekKalan;
   const ilkEksik = adimlar.find((a) => !a.tamam);
   const eksikEylem = () => {
     if (!ilkEksik) return;
@@ -41,7 +54,8 @@ export default function GuvenlikAyarlari() {
     else document.getElementById("oturumlar")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
   const eksikAd = { sifre: "Şifre belirle", "2fa": "İki adımlı doğrulamayı aç", yedek: "Yedek kodları yenile", oturum: "Oturumları gözden geçir" } as Record<string, string>;
-  const gun = kayit.sifre ? Math.floor((Date.now() - kayit.sifre.guncelleme) / 86_400_000) : 0;
+  const gun = hesap.sifreGuncelleme ? Math.floor((Date.now() - hesap.sifreGuncelleme) / 86_400_000) : 0;
+  const epostaVar = !!sunucu?.epostaServisi;
 
   const ozet = (
     <div className="overflow-hidden rounded-[20px] bg-[#121214] ring-1 ring-inset ring-white/[0.08]">
@@ -68,56 +82,68 @@ export default function GuvenlikAyarlari() {
   return (
     <Sayfa baslik="Güvenlik" aciklama="Hesabına kimin, hangi cihazdan girebildiğini kontrol et." yan={ozet}>
       <Grup baslik="Giriş">
-        <Satir id="sifre" ad="Şifre" alt={kayit.sifre ? `Son değişiklik ${tarih(kayit.sifre.guncelleme)}, ${gun === 0 ? "bugün" : `${gun} gün önce`}` : kayit.saglayici ? "Sosyal girişle açıldı. Şifre belirlersen e-postanla da girebilirsin." : "Henüz şifre belirlemedin."}>
-          <button type="button" onClick={() => setSifreAcik(true)} className={dugme.ikincil}>{kayit.sifre ? "Değiştir" : "Şifre belirle"}</button>
+        <Satir id="sifre" ad="Şifre" alt={hesap.sifreVar && hesap.sifreGuncelleme ? `Son değişiklik ${tarih(hesap.sifreGuncelleme)}, ${gun === 0 ? "bugün" : `${gun} gün önce`}` : hesap.saglayicilar.length ? "Sosyal girişle açıldı. Şifre belirlersen e-postanla da girebilirsin." : "Henüz şifre belirlemedin."}>
+          <button type="button" onClick={() => setSifreAcik(true)} className={dugme.ikincil}>{hesap.sifreVar ? "Değiştir" : "Şifre belirle"}</button>
         </Satir>
         <Satir id="iki-adim" ad={<span className="flex items-center gap-2">İki adımlı doğrulama<Hap ton={aktif ? "yesil" : "sari"}>{aktif ? "Açık" : "Kapalı"}</Hap></span>}
-          alt={aktif ? `${aktif.acilis ? tarih(aktif.acilis) : ""} tarihinde açıldı. Girişte doğrulama uygulamandaki kod istenir.` : "Girişte şifrenin yanında doğrulama uygulamandaki 6 haneli kod da istenir."}>
+          alt={aktif ? `${hesap.ikiAdim.acilis ? tarih(hesap.ikiAdim.acilis) : ""} tarihinde açıldı. Girişte, sosyal girişler dahil, doğrulama uygulamandaki kod istenir.` : "Girişte şifrenin yanında doğrulama uygulamandaki 6 haneli kod da istenir."}>
           {aktif ? <button type="button" onClick={() => setKapat2fa(true)} className={dugme.hayalet}>Kapat</button>
             : <button type="button" onClick={() => setKurulum(true)} className={dugme.vurgu}><ShieldCheck className="h-4 w-4" />Kur</button>}
         </Satir>
         {aktif && (
           <Satir id="yedek" dikey ad="Yedek kodlar"
-            alt={kalan <= 2 ? <span className="text-amber-300">Yalnız {kalan} kod kaldı. Yenilerini oluştur.</span> : `10 koddan ${kalan} tanesi kullanılabilir. Telefonuna erişemezsen bunlarla girersin.`}>
+            alt={kalan <= 2 ? <span className="text-amber-300">Yalnız {kalan} kod kaldı. Yenilerini oluştur.</span> : `${hesap.ikiAdim.yedekToplam} koddan ${kalan} tanesi kullanılabilir. Kodlar yalnız oluşturulduğunda gösterilir; sunucuda yalnız özetleri durur.`}>
             <div className="flex w-full flex-wrap items-center gap-3">
-              <div className="flex flex-1 gap-1" aria-label={`10 yedek koddan ${kalan} tanesi kaldı`}>
-                {aktif.yedekler.map((y, i) => <motion.span key={y.kod} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: i * 0.03 }} className={cn("h-1.5 flex-1 rounded-full", y.kullanildi ? "bg-white/[0.08]" : kalan <= 2 ? "bg-amber-300" : "bg-emerald-400/80")} />)}
+              <div className="flex flex-1 gap-1" aria-label={`${hesap.ikiAdim.yedekToplam} yedek koddan ${kalan} tanesi kaldı`}>
+                {hesap.ikiAdim.yedekDurum.map((kullanildi, i) => <motion.span key={i} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: i * 0.03 }} className={cn("h-1.5 flex-1 rounded-full", kullanildi ? "bg-white/[0.08]" : kalan <= 2 ? "bg-amber-300" : "bg-emerald-400/80")} />)}
               </div>
-              <button type="button" onClick={() => setYedekGoster((v) => !v)} className={dugme.ikincil}>{yedekGoster ? "Gizle" : "Göster"}</button>
-              <button type="button" onClick={() => setYenile(true)} className={dugme.hayalet}><RefreshCw className="h-3.5 w-3.5" />Yenile</button>
+              <button type="button" onClick={() => setYenile(true)} className={dugme.ikincil}><RefreshCw className="h-3.5 w-3.5" />Yeni kodlar oluştur</button>
             </div>
             <AnimatePresence initial={false}>
-              {yedekGoster && (
+              {yeniKodlar && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: akis }} className="w-full overflow-hidden">
-                  <YedekKodlar kodlar={aktif.yedekler} email={email} />
+                  <p className="mb-2 text-[13px] text-amber-200/90">Bu kodlar bir daha gösterilmez. Şimdi indir ya da güvenli bir yere kopyala.</p>
+                  <YedekKodlar kodlar={yeniKodlar} email={hesap.email} />
+                  <button type="button" onClick={() => setYeniKodlar(null)} className={cn(dugme.hayalet, "mt-2")}>Kaydettim, gizle</button>
                 </motion.div>
               )}
             </AnimatePresence>
           </Satir>
         )}
-        <Satir id="gecis-anahtari" on={<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.06]"><Fingerprint className="h-[18px] w-[18px] text-white/70" /></span>}
-          ad={<span className="flex items-center gap-2">Geçiş anahtarı<Hap>Yakında</Hap></span>} alt="Şifresiz giriş: parmak izi, yüz tanıma ya da cihaz kilidiyle.">
-          <button type="button" disabled className={dugme.ikincil}>Ekle</button>
-        </Satir>
-        <Satir ad="Yeni girişte e-posta gönder" alt="Tanımadığın bir cihazdan girildiğinde hemen haberin olsun.">
-          <Anahtar acik={yeniGirisEposta} onDegis={(v) => bildirimAyarla("guvenlik", "eposta", v)} etiket="Yeni girişte e-posta" />
+        <Satir ad="Yeni cihazdan girişte e-posta gönder" alt={epostaVar ? "Tanımadığın bir cihazdan girildiğinde hemen haberin olsun." : "E-posta servisi bu sunucuda kurulu olmadığı için bildirim gönderilemiyor."}>
+          <Anahtar acik={epostaVar && hesap.yeniGirisEposta} disabled={!epostaVar} etiket="Yeni girişte e-posta"
+            onDegis={(v) => { void H.profilYaz({ yeniGirisEposta: v }).then((r) => { if (r.ok) void useAuth.getState().esitle(); else toast.error("Kaydedilemedi", { description: r.hata }); }); }} />
         </Satir>
       </Grup>
 
-      <Oturumlar />
-      <Gecmis />
+      <Oturumlar liste={veri?.oturumlar ?? hesap.oturumlar} onDegis={(l) => { setVeri((v) => (v ? { ...v, oturumlar: l } : v)); void tazele(); }} />
+      <Gecmis olaylar={veri?.olaylar ?? null} />
 
-      <SifrePenceresi acik={sifreAcik} onKapat={() => setSifreAcik(false)} />
-      <KurulumPenceresi acik={kurulum} onKapat={() => setKurulum(false)} />
-      <KodOnayPenceresi acik={kapat2fa} onKapat={() => setKapat2fa(false)} baslik="İki adımlı doğrulamayı kapat" aciklama="Devam etmek için uygulamandaki kodu gir. Kapatınca girişte yalnız şifren istenir." eylem="Kapat" tehlike
-        onOnay={() => { guncelle((h) => ({ ...h, ikiAdim: undefined })); olayYaz(email, "2fa-kapat"); toast.success("İki adımlı doğrulama kapatıldı"); }} />
+      <SifrePenceresi acik={sifreAcik} onKapat={() => setSifreAcik(false)} onTamam={tazele} />
+      <KurulumPenceresi acik={kurulum} onKapat={() => setKurulum(false)} onTamam={tazele} />
+      <KodOnayPenceresi acik={kapat2fa} onKapat={() => setKapat2fa(false)} baslik="İki adımlı doğrulamayı kapat" aciklama="Devam etmek için uygulamandaki kodu ya da bir yedek kodu gir. Kapatınca girişte yalnız şifren istenir." eylem="Kapat" tehlike yedekIzinli
+        onOnay={async (kod) => { const r = await H.ikiAdimKapat(kod); if (!r.ok) return r.hata; toast.success("İki adımlı doğrulama kapatıldı"); setYeniKodlar(null); void tazele(); return null; }} />
       <KodOnayPenceresi acik={yenile} onKapat={() => setYenile(false)} baslik="Yedek kodları yenile" aciklama="Eski kodların tamamı geçersiz olur. Devam etmek için uygulamandaki kodu gir." eylem="Yeni kodlar oluştur"
-        onOnay={() => { guncelle((h) => ({ ...h, ikiAdim: h.ikiAdim && { ...h.ikiAdim, yedekler: yedekKodlarUret().map((kod) => ({ kod, kullanildi: null })) } })); olayYaz(email, "yedek-yenile"); setYedekGoster(true); toast.success("Yeni yedek kodlar oluşturuldu", { description: "Hemen indir ya da güvenli bir yere kopyala." }); }} />
+        onOnay={async (kod) => { const r = await H.yedekYenile(kod); if (!r.ok) return r.hata; setYeniKodlar(r.yedekKodlar); toast.success("Yeni yedek kodlar oluşturuldu", { description: "Hemen indir ya da güvenli bir yere kopyala." }); void tazele(); return null; }} />
     </Sayfa>
   );
 }
 
 const KISA: Record<string, string> = { sifre: "Şifre", "2fa": "İki adımlı doğrulama", yedek: "Yedek kodlar", oturum: "Oturumlar" };
+
+/** Eski tarayıcı profili (sunucu oturumu yok): güvenlik ayarları sunucu hesabı ister. */
+function SunucuHesabiYok() {
+  return (
+    <Sayfa baslik="Güvenlik" aciklama="Hesabına kimin, hangi cihazdan girebildiğini kontrol et.">
+      <Grup baslik="Sunucu hesabı gerekli">
+        <Satir on={<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-amber-300/10 text-amber-200"><Lock className="h-[18px] w-[18px]" /></span>}
+          ad="Bu profil yalnız bu tarayıcıda" alt="Şifre, iki adımlı doğrulama ve oturumlar artık sunucuda tutuluyor. Bu ayarları yönetmek için hesabınla giriş yap ya da yeni hesap aç.">
+          <Link href="/giris?gecis=1&geri=/panel/ayarlar/guvenlik" className={dugme.vurgu}>Giriş yap</Link>
+        </Satir>
+      </Grup>
+    </Sayfa>
+  );
+}
 
 function PuanHalkasi({ puan, toplam }: { puan: number; toplam: number }) {
   const r = 27, c = 2 * Math.PI * r, oran = puan / toplam;
@@ -149,8 +175,8 @@ function SifreAlani({ id, ad, deger, onDegis, otomatik, goster, setGoster, autoF
   );
 }
 
-function SifrePenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => void }) {
-  const { email, kayit, guncelle } = useHesapKaydi();
+function SifrePenceresi({ acik, onKapat, onTamam }: { acik: boolean; onKapat: () => void; onTamam: () => void }) {
+  const hesap = useAuth((s) => s.hesap)!;
   const [mevcut, setMevcut] = useState("");
   const [yeni, setYeni] = useState("");
   const [tekrar, setTekrar] = useState("");
@@ -159,6 +185,7 @@ function SifrePenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => void 
   const [hata, setHata] = useState("");
   const [bekle, setBekle] = useState(false);
   const g = sifreGucu(yeni);
+  const var_ = hesap.sifreVar;
   const kapat = () => { onKapat(); setMevcut(""); setYeni(""); setTekrar(""); setHata(""); setGoster(false); };
 
   const kaydet = async (e: React.FormEvent) => {
@@ -168,16 +195,11 @@ function SifrePenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => void 
     if (g.puan < 2) return setHata(`Şifre zayıf: ${g.eksikler.join(", ")} ekle.`);
     if (yeni !== tekrar) return setHata("Şifreler eşleşmiyor.");
     setBekle(true);
-    if (kayit.sifre) {
-      if (!(await sifreDogrula(mevcut, kayit.sifre))) { setBekle(false); olayYaz(email, "giris-hatali", "Şifre değişikliğinde hatalı mevcut şifre"); return setHata("Şu anki şifre hatalı."); }
-      if (await sifreDogrula(yeni, kayit.sifre)) { setBekle(false); return setHata("Yeni şifre eskisiyle aynı olamaz."); }
-    }
-    const ozet = await sifreOzeti(yeni);
-    const bu = buOturum();
-    guncelle((h) => ({ ...h, sifre: { ...ozet, guncelleme: Date.now() }, oturumlar: digerleri ? h.oturumlar.filter((o) => o.id === bu) : h.oturumlar }));
-    olayYaz(email, "sifre", kayit.sifre ? "Şifre değiştirildi" : "Şifre belirlendi");
+    const r = await H.sifreDegistir({ ...(var_ ? { mevcut } : {}), yeni, digerleriniKapat: digerleri });
     setBekle(false);
-    toast.success(kayit.sifre ? "Şifren değiştirildi" : "Şifren belirlendi", { description: digerleri ? "Diğer cihazlardaki oturumlar kapatıldı." : undefined });
+    if (!r.ok) return setHata(r.hata);
+    toast.success(var_ ? "Şifren değiştirildi" : "Şifren belirlendi", { description: r.kapatilan ? `Diğer cihazlardaki ${r.kapatilan} oturum kapatıldı.` : undefined });
+    onTamam();
     kapat();
   };
 
@@ -189,12 +211,12 @@ function SifrePenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => void 
   ];
 
   return (
-    <Pencere acik={acik} onKapat={kapat} baslik={kayit.sifre ? "Şifreyi değiştir" : "Şifre belirle"} aciklama="Şifren cihazında özetlenir; kendisi hiçbir yerde saklanmaz.">
+    <Pencere acik={acik} onKapat={kapat} baslik={var_ ? "Şifreyi değiştir" : "Şifre belirle"} aciklama="Şifren sunucuda scrypt ile özetlenir; kendisi hiçbir yerde saklanmaz.">
       <form onSubmit={kaydet} className="space-y-4">
-        <input type="email" value={email} readOnly autoComplete="username" hidden />
-        {kayit.sifre && <SifreAlani id="s-mevcut" ad="Şu anki şifre" deger={mevcut} onDegis={setMevcut} otomatik="current-password" goster={goster} setGoster={setGoster} autoFocus />}
+        <input type="email" value={hesap.email} readOnly autoComplete="username" hidden />
+        {var_ && <SifreAlani id="s-mevcut" ad="Şu anki şifre" deger={mevcut} onDegis={(v) => { setMevcut(v); setHata(""); }} otomatik="current-password" goster={goster} setGoster={setGoster} autoFocus />}
         <div>
-          <SifreAlani id="s-yeni" ad="Yeni şifre" deger={yeni} onDegis={(v) => { setYeni(v); setHata(""); }} otomatik="new-password" goster={goster} setGoster={setGoster} autoFocus={!kayit.sifre} />
+          <SifreAlani id="s-yeni" ad="Yeni şifre" deger={yeni} onDegis={(v) => { setYeni(v); setHata(""); }} otomatik="new-password" goster={goster} setGoster={setGoster} autoFocus={!var_} />
           <div className="mt-2.5 flex gap-1">{[0, 1, 2, 3].map((i) => <span key={i} className="h-1 flex-1 rounded-full transition-colors duration-300" style={{ background: yeni && i < g.puan ? ["#f43f5e", "#f97316", "#eab308", "#22c55e"][g.puan - 1] : "rgba(255,255,255,.08)" }} />)}</div>
           <ul className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5">
             {kurallar.map(([ad, ok]) => (
@@ -212,7 +234,7 @@ function SifrePenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => void 
         {hata && <p role="alert" className="text-[13px] text-rose-300">{hata}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={kapat} className={dugme.hayalet}>Vazgeç</button>
-          <button type="submit" disabled={bekle || !yeni || !tekrar || (!!kayit.sifre && !mevcut)} className={dugme.birincil}>{bekle ? "Kaydediliyor…" : "Şifreyi kaydet"}</button>
+          <button type="submit" disabled={bekle || !yeni || !tekrar || (var_ && !mevcut)} className={dugme.birincil}>{bekle ? "Kaydediliyor…" : "Şifreyi kaydet"}</button>
         </div>
       </form>
     </Pencere>
@@ -235,16 +257,16 @@ function QrKod({ metin, boyut = 168 }: { metin: string; boyut?: number }) {
   );
 }
 
-function YedekKodlar({ kodlar, email }: { kodlar: { kod: string; kullanildi: number | null }[]; email: string }) {
-  const metin = `Vayra yedek kodları (${email})\nOluşturma: ${new Date().toLocaleString("tr-TR")}\nHer kod yalnız bir kez kullanılabilir.\n\n${kodlar.map((k) => `${k.kod}${k.kullanildi ? "  (kullanıldı)" : ""}`).join("\n")}\n`;
+function YedekKodlar({ kodlar, email }: { kodlar: string[]; email: string }) {
+  const metin = `Vayra yedek kodları (${email})\nOluşturma: ${new Date().toLocaleString("tr-TR")}\nHer kod yalnız bir kez kullanılabilir.\n\n${kodlar.join("\n")}\n`;
   return (
     <div className="mt-1 rounded-[16px] bg-black/30 p-4 ring-1 ring-inset ring-white/[0.06]">
       <div className="sc-kod grid grid-cols-2 gap-x-6 gap-y-2 text-[14.5px] sm:grid-cols-5">
-        {kodlar.map((k) => <span key={k.kod} className={cn("tabular-nums", k.kullanildi ? "text-white/25 line-through" : "text-white")}>{k.kod}</span>)}
+        {kodlar.map((k) => <span key={k} className="tabular-nums text-white">{k}</span>)}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         <button type="button" onClick={() => { if (metinIndir(metin, "vayra-yedek-kodlar.txt")) mesaj.indirildi("Yedek kodlar"); else mesaj.indirilemedi("Tarayıcı indirmeyi engelledi."); }} className={dugme.ikincil}><Download className="h-3.5 w-3.5" />İndir</button>
-        <button type="button" onClick={() => void kopyala(kodlar.filter((k) => !k.kullanildi).map((k) => k.kod).join("\n"), "Yedek kodlar kopyalandı")} className={dugme.ikincil}><Copy className="h-3.5 w-3.5" />Kopyala</button>
+        <button type="button" onClick={() => void kopyala(kodlar.join("\n"), "Yedek kodlar kopyalandı")} className={dugme.ikincil}><Copy className="h-3.5 w-3.5" />Kopyala</button>
       </div>
     </div>
   );
@@ -269,52 +291,66 @@ function KodKutulari({ deger, onDegis, id }: { deger: string; onDegis: (v: strin
   );
 }
 
-function KodOnayPenceresi({ acik, onKapat, baslik, aciklama, eylem, onOnay, tehlike }: { acik: boolean; onKapat: () => void; baslik: string; aciklama: string; eylem: string; onOnay: () => void; tehlike?: boolean }) {
-  const { kayit } = useHesapKaydi();
+function KodOnayPenceresi({ acik, onKapat, baslik, aciklama, eylem, onOnay, tehlike, yedekIzinli }: { acik: boolean; onKapat: () => void; baslik: string; aciklama: string; eylem: string; onOnay: (kod: string) => Promise<string | null>; tehlike?: boolean; yedekIzinli?: boolean }) {
   const [kod, setKod] = useState("");
+  const [yedek, setYedek] = useState(false);
   const [hata, setHata] = useState("");
-  const kapat = () => { setKod(""); setHata(""); onKapat(); };
+  const [bekle, setBekle] = useState(false);
+  const kapat = () => { setKod(""); setHata(""); setYedek(false); onKapat(); };
   const gonder = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!kayit.ikiAdim || !(await totpDogrula(kayit.ikiAdim.sir, kod))) return setHata("Kod hatalı ya da süresi geçti.");
-    onOnay(); kapat();
+    setBekle(true);
+    const h = await onOnay(kod.trim());
+    setBekle(false);
+    if (h) { setHata(h); if (!yedek) setKod(""); return; }
+    kapat();
   };
+  const hazir = yedek ? kod.replace(/\W/g, "").length >= 8 : kod.length === 6;
   return (
     <Pencere acik={acik} onKapat={kapat} baslik={baslik} aciklama={aciklama} genislik={440}>
       <form onSubmit={gonder} className="space-y-5 pt-1">
-        <KodKutulari id="onay-kod" deger={kod} onDegis={(v) => { setKod(v); setHata(""); }} />
+        {yedek
+          ? <input value={kod} onChange={(e) => { setKod(e.target.value.slice(0, 9)); setHata(""); }} autoFocus placeholder="xxxx-xxxx" autoComplete="one-time-code" aria-label="Yedek kod" className={cn(alan, "sc-kod text-center text-[16px] tracking-wider")} />
+          : <KodKutulari id="onay-kod" deger={kod} onDegis={(v) => { setKod(v); setHata(""); }} />}
         {hata && <p role="alert" className="text-center text-[13px] text-rose-300">{hata}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={kapat} className={dugme.hayalet}>Vazgeç</button>
-          <button type="submit" disabled={kod.length < 6} className={tehlike ? dugme.tehlikeDolu : dugme.birincil}>{eylem}</button>
+        <div className="flex items-center justify-between gap-2">
+          {yedekIzinli ? <button type="button" onClick={() => { setYedek((v) => !v); setKod(""); setHata(""); }} className="text-[13px] font-medium text-white/60 hover:text-white">{yedek ? "Uygulama kodu" : "Yedek kod kullan"}</button> : <span />}
+          <div className="flex gap-2">
+            <button type="button" onClick={kapat} className={dugme.hayalet}>Vazgeç</button>
+            <button type="submit" disabled={!hazir || bekle} className={tehlike ? dugme.tehlikeDolu : dugme.birincil}>{bekle ? "Doğrulanıyor…" : eylem}</button>
+          </div>
         </div>
       </form>
     </Pencere>
   );
 }
 
-function KurulumPenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => void }) {
-  const { email, guncelle } = useHesapKaydi();
+function KurulumPenceresi({ acik, onKapat, onTamam }: { acik: boolean; onKapat: () => void; onTamam: () => void }) {
+  const email = useAuth((s) => s.hesap?.email ?? "");
   const [adim, setAdim] = useState<1 | 2 | 3>(1);
-  const [sir, setSir] = useState("");
+  const [kurulum, setKurulum] = useState<{ sir: string; otpauth: string } | null>(null);
   const [kod, setKod] = useState("");
   const [hata, setHata] = useState("");
+  const [bekle, setBekle] = useState(false);
   const [yedekler, setYedekler] = useState<string[]>([]);
   const [kaydettim, setKaydettim] = useState(false);
-  useEffect(() => { if (acik) { setSir(totpSirUret()); setAdim(1); setKod(""); setHata(""); setKaydettim(false); } }, [acik]);
+  useEffect(() => {
+    if (!acik) return;
+    setAdim(1); setKod(""); setHata(""); setKaydettim(false); setKurulum(null);
+    void H.ikiAdimKur().then((r) => { if (r.ok) setKurulum({ sir: r.sir, otpauth: r.otpauth }); else setHata(r.hata); });
+  }, [acik]);
 
   const dogrula = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(await totpDogrula(sir, kod))) return setHata("Kod eşleşmedi. Telefonunun saatinin otomatik ayarlı olduğundan emin ol.");
-    setYedekler(yedekKodlarUret()); setAdim(3);
-  };
-  const bitir = () => {
-    guncelle((h) => ({ ...h, ikiAdim: { sir, aktif: true, acilis: Date.now(), yedekler: yedekler.map((kod) => ({ kod, kullanildi: null })) } }));
-    olayYaz(email, "2fa-ac");
+    setBekle(true);
+    const r = await H.ikiAdimAc(kod);
+    setBekle(false);
+    if (!r.ok) { setKod(""); return setHata(r.hata); }
+    setYedekler(r.yedekKodlar); setAdim(3);
     toast.success("İki adımlı doğrulama açıldı", { description: "Bir sonraki girişte kod istenecek." });
-    onKapat();
+    onTamam();
   };
-  const sirGruplu = sir.match(/.{1,4}/g)?.join(" ") ?? "";
+  const sirGruplu = kurulum?.sir.match(/.{1,4}/g)?.join(" ") ?? "";
   const ADIM = ["QR kodu tara", "Kodu doğrula", "Yedek kodları sakla"];
 
   return (
@@ -333,19 +369,20 @@ function KurulumPenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => voi
           {adim === 1 && (
             <div>
               <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-start">
-                {sir && <QrKod metin={otpauthAdresi(email, sir)} />}
+                {kurulum ? <QrKod metin={kurulum.otpauth} /> : <span className="flex h-[168px] w-[168px] shrink-0 items-center justify-center rounded-[16px] bg-white/[0.04] text-[13px] text-white/40">{hata ? "Kurulum başlatılamadı" : "Hazırlanıyor…"}</span>}
                 <div className="min-w-0 flex-1 text-[13.5px] leading-relaxed text-white/60">
                   <p>Google Authenticator, 1Password, Authy gibi bir doğrulama uygulamasıyla tara.</p>
                   <p className="mt-3 font-medium text-white">Tarayamıyor musun?</p>
                   <p className="mt-0.5">Uygulamada anahtarı elle gir:</p>
-                  <button type="button" onClick={() => void kopyala(sir, "Kurulum anahtarı kopyalandı")} className="sc-kod mt-2 flex w-full items-center justify-between gap-2 rounded-[12px] bg-white/[0.05] px-3 py-2.5 text-left text-[12.5px] leading-relaxed text-white ring-1 ring-inset ring-white/[0.08] hover:bg-white/[0.08]">
-                    <span className="break-all">{sirGruplu}</span><Copy className="h-3.5 w-3.5 shrink-0 text-white/40" />
+                  <button type="button" disabled={!kurulum} onClick={() => kurulum && void kopyala(kurulum.sir, "Kurulum anahtarı kopyalandı")} className="sc-kod mt-2 flex w-full items-center justify-between gap-2 rounded-[12px] bg-white/[0.05] px-3 py-2.5 text-left text-[12.5px] leading-relaxed text-white ring-1 ring-inset ring-white/[0.08] hover:bg-white/[0.08]">
+                    <span className="break-all">{sirGruplu || "…"}</span><Copy className="h-3.5 w-3.5 shrink-0 text-white/40" />
                   </button>
                 </div>
               </div>
+              {hata && <p role="alert" className="mt-3 text-[13px] text-rose-300">{hata}</p>}
               <div className="mt-6 flex justify-end gap-2">
                 <button type="button" onClick={onKapat} className={dugme.hayalet}>Vazgeç</button>
-                <button type="button" onClick={() => setAdim(2)} className={dugme.birincil}>Taradım, devam</button>
+                <button type="button" disabled={!kurulum} onClick={() => { setHata(""); setAdim(2); }} className={dugme.birincil}>Taradım, devam</button>
               </div>
             </div>
           )}
@@ -356,21 +393,21 @@ function KurulumPenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => voi
               {hata && <p role="alert" className="mt-3 text-center text-[13px] text-rose-300">{hata}</p>}
               <div className="mt-6 flex justify-between gap-2">
                 <button type="button" onClick={() => setAdim(1)} className={dugme.hayalet}>Geri</button>
-                <button type="submit" disabled={kod.length < 6} className={dugme.birincil}>Doğrula</button>
+                <button type="submit" disabled={kod.length < 6 || bekle} className={dugme.birincil}>{bekle ? "Doğrulanıyor…" : "Doğrula ve aç"}</button>
               </div>
             </form>
           )}
           {adim === 3 && (
             <div>
-              <p className="flex items-center gap-2 text-[14px] font-medium text-emerald-300"><CheckCircle2 className="h-4 w-4" />Kod doğrulandı</p>
-              <p className="mt-1.5 text-[14px] leading-relaxed text-white/60">Son adım: yedek kodlarını sakla. Telefonunu kaybedersen hesabına yalnız bunlarla girersin; her kod bir kez çalışır.</p>
-              <div className="mt-4"><YedekKodlar kodlar={yedekler.map((kod) => ({ kod, kullanildi: null }))} email={email} /></div>
+              <p className="flex items-center gap-2 text-[14px] font-medium text-emerald-300"><CheckCircle2 className="h-4 w-4" />İki adımlı doğrulama açık</p>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-white/60">Son adım: yedek kodlarını sakla. Telefonunu kaybedersen hesabına yalnız bunlarla girersin; her kod bir kez çalışır ve bir daha gösterilmez.</p>
+              <div className="mt-4"><YedekKodlar kodlar={yedekler} email={email} /></div>
               <div className="mt-4 flex items-center justify-between gap-3 rounded-[14px] bg-white/[0.04] px-4 py-3">
                 <span className="text-[13.5px] text-white/75">Yedek kodlarımı güvenli bir yere kaydettim</span>
                 <Anahtar acik={kaydettim} onDegis={setKaydettim} etiket="Kodları kaydettim" kayit={false} />
               </div>
               <div className="mt-5 flex justify-end">
-                <button type="button" onClick={bitir} disabled={!kaydettim} className={dugme.vurgu}>İki adımlı doğrulamayı aç</button>
+                <button type="button" onClick={onKapat} disabled={!kaydettim} className={dugme.vurgu}>Bitti</button>
               </div>
             </div>
           )}
@@ -384,18 +421,29 @@ function KurulumPenceresi({ acik, onKapat }: { acik: boolean; onKapat: () => voi
 const CIHAZ_IKON = { masaustu: Monitor, mobil: Smartphone, tablet: Tablet } as const;
 const CIHAZ_AD = { masaustu: "Masaüstü", mobil: "Telefon", tablet: "Tablet" } as const;
 
-function Oturumlar() {
-  const { email, kayit, guncelle } = useHesapKaydi();
-  const bu = buOturum();
+function Oturumlar({ liste: ham, onDegis }: { liste: OturumBilgisi[]; onDegis: (l: OturumBilgisi[]) => void }) {
   const [hepsiOnay, setHepsiOnay] = useState(false);
+  const [bekle, setBekle] = useState<string | null>(null);
   const [, setTik] = useState(0);
   useEffect(() => { const t = setInterval(() => setTik((x) => x + 1), 30_000); return () => clearInterval(t); }, []);
-  const liste = [...kayit.oturumlar].sort((a, b) => (a.id === bu ? -1 : b.id === bu ? 1 : b.sonGorulme - a.sonGorulme));
-  const diger = liste.filter((o) => o.id !== bu).length;
-  const kapat = (o: Oturum) => {
-    guncelle((h) => ({ ...h, oturumlar: h.oturumlar.filter((x) => x.id !== o.id) }));
-    olayYaz(email, "oturum-kapat", `${o.tarayici}, ${o.isletim}`);
-    toast.success("Oturum kapatıldı");
+  const liste = [...ham].sort((a, b) => (a.bu ? -1 : b.bu ? 1 : b.sonGorulme - a.sonGorulme));
+  const diger = liste.filter((o) => !o.bu).length;
+  const kapat = async (o: OturumBilgisi) => {
+    setBekle(o.id);
+    const r = await H.oturumKapat(o.id);
+    setBekle(null);
+    if (!r.ok) return toast.error("Oturum kapatılamadı", { description: r.hata });
+    onDegis(r.oturumlar);
+    toast.success("Oturum kapatıldı", { description: `${o.tarayici}, ${o.isletim} cihazında yeniden giriş gerekecek.` });
+  };
+  const hepsiniKapat = async () => {
+    setBekle("hepsi");
+    const r = await H.digerOturumlariKapat();
+    setBekle(null);
+    setHepsiOnay(false);
+    if (!r.ok) return toast.error("Oturumlar kapatılamadı", { description: r.hata });
+    onDegis(r.oturumlar);
+    toast.success(`${r.kapatilan} oturum kapatıldı`);
   };
   return (
     <Grup id="oturumlar" baslik={<span className="flex items-center gap-2">Açık oturumlar<Hap>{liste.length}</Hap></span>} aciklama="Tanımadığın bir oturum görürsen kapat ve şifreni değiştir."
@@ -403,65 +451,67 @@ function Oturumlar() {
       {liste.length ? (
         <AnimatePresence initial={false}>
           {liste.map((o) => {
-            const I = CIHAZ_IKON[o.tur];
-            const buMu = o.id === bu;
-            const etkin = buMu || Date.now() - o.sonGorulme < 3_600_000;
+            const I = CIHAZ_IKON[o.tur] ?? Monitor;
+            const etkin = o.bu || Date.now() - o.sonGorulme < 3_600_000;
             return (
               <motion.div key={o.id} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.25, ease: akis }}>
                 <Satir on={<span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-white/[0.06] text-white/80"><I className="h-[18px] w-[18px]" />{etkin && <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-[2.5px] ring-[#121214]" />}</span>}
-                  ad={<span className="flex items-center gap-2">{o.tarayici}, {o.isletim}{buMu && <Hap ton="vurgu">Bu cihaz</Hap>}</span>}
-                  alt={`${CIHAZ_AD[o.tur]} · ${buMu ? "Şu an etkin" : `Son etkinlik ${goreli(o.sonGorulme)}`} · Giriş ${new Date(o.baslangic).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`}>
-                  {!buMu && <button type="button" onClick={() => kapat(o)} className={dugme.hayalet}>Kapat</button>}
+                  ad={<span className="flex items-center gap-2">{o.tarayici}, {o.isletim}{o.bu && <Hap ton="vurgu">Bu cihaz</Hap>}</span>}
+                  alt={`${CIHAZ_AD[o.tur] ?? "Cihaz"} · ${o.bu ? "Şu an etkin" : `Son etkinlik ${goreli(o.sonGorulme)}`} · ${o.yontem} · Giriş ${new Date(o.baslangic).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}${o.ip && o.ip !== "yerel" ? ` · ${o.ip}` : ""}`}>
+                  {!o.bu && <button type="button" disabled={!!bekle} onClick={() => void kapat(o)} className={dugme.hayalet}>{bekle === o.id ? "Kapatılıyor…" : "Kapat"}</button>}
                 </Satir>
               </motion.div>
             );
           })}
         </AnimatePresence>
       ) : <p className="px-6 py-5 text-[14px] text-white/45">Kayıtlı oturum yok.</p>}
-      <Pencere acik={hepsiOnay} onKapat={() => setHepsiOnay(false)} baslik="Diğer oturumları kapat" aciklama="Bu cihaz dışındaki tüm oturumlar sonlandırılır; o cihazlarda yeniden giriş gerekir." genislik={420}
+      <Pencere acik={hepsiOnay} onKapat={() => setHepsiOnay(false)} baslik="Diğer oturumları kapat" aciklama="Bu cihaz dışındaki tüm oturumlar sunucuda sonlandırılır; o cihazlarda yeniden giriş gerekir." genislik={420}
         alt={<><button type="button" onClick={() => setHepsiOnay(false)} className={dugme.hayalet}>Vazgeç</button>
-          <button type="button" onClick={() => { guncelle((h) => ({ ...h, oturumlar: h.oturumlar.filter((x) => x.id === bu) })); olayYaz(email, "oturum-kapat", `${diger} oturum`); toast.success("Diğer oturumlar kapatıldı"); setHepsiOnay(false); }} className={dugme.tehlikeDolu}>{diger} oturumu kapat</button></>} />
+          <button type="button" disabled={bekle === "hepsi"} onClick={() => void hepsiniKapat()} className={dugme.tehlikeDolu}>{bekle === "hepsi" ? "Kapatılıyor…" : `${diger} oturumu kapat`}</button></>} />
     </Grup>
   );
 }
 
 /* ── Güvenlik geçmişi ── */
-const OLAY: Record<OlayTur, { ikon: React.ElementType; renk: string }> = {
+const OLAY: Record<GuvenlikOlayTuru, { ikon: React.ElementType; renk: string; ad?: string }> = {
   giris: { ikon: LogIn, renk: "text-emerald-300" }, "giris-hatali": { ikon: AlertTriangle, renk: "text-rose-300" }, cikis: { ikon: LogOut, renk: "text-white/55" },
   kayit: { ikon: CheckCircle2, renk: "text-[#55d6fd]" }, sifre: { ikon: KeyRound, renk: "text-amber-300" }, "2fa-ac": { ikon: ShieldCheck, renk: "text-emerald-300" },
   "2fa-kapat": { ikon: ShieldOff, renk: "text-rose-300" }, "yedek-kod": { ikon: KeyRound, renk: "text-amber-300" }, "yedek-yenile": { ikon: RefreshCw, renk: "text-sky-300" },
   eposta: { ikon: Mail, renk: "text-amber-300" }, "oturum-kapat": { ikon: LogOut, renk: "text-white/55" }, "veri-indir": { ikon: Download, renk: "text-sky-300" },
+  "eposta-dogrula": { ikon: MailCheck, renk: "text-emerald-300", ad: "E-posta doğrulandı" }, sifirla: { ikon: KeyRound, renk: "text-amber-300", ad: "Şifre sıfırlandı" },
+  "saglayici-bagla": { ikon: Link2, renk: "text-[#55d6fd]", ad: "Sosyal hesap bağlandı" }, "saglayici-kaldir": { ikon: Link2Off, renk: "text-white/55", ad: "Sosyal hesap bağı kaldırıldı" },
+  kilit: { ikon: Lock, renk: "text-rose-300", ad: "Giriş kilitlendi" },
 };
-const ONEMLI = ["giris-hatali", "2fa-kapat", "eposta", "sifre"];
+const olayAdi = (t: GuvenlikOlayTuru) => OLAY[t]?.ad ?? (OLAY_AD as Record<string, string>)[t] ?? "Güvenlik olayı";
+const ONEMLI: GuvenlikOlayTuru[] = ["giris-hatali", "2fa-kapat", "eposta", "sifre", "sifirla", "kilit", "saglayici-bagla"];
 function gunBasligi(t: number) {
   const d = new Date(t), b = new Date();
   const fark = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime() - new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()) / 86_400_000);
   return fark === 0 ? "Bugün" : fark === 1 ? "Dün" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: d.getFullYear() === b.getFullYear() ? undefined : "numeric" });
 }
 
-function Gecmis() {
-  const { kayit } = useHesapKaydi();
+function Gecmis({ olaylar: ham }: { olaylar: GuvenlikOlayiBilgisi[] | null }) {
   const [hepsi, setHepsi] = useState(false);
   const [filtre, setFiltre] = useState<"tumu" | "onemli">("tumu");
-  const olaylar = (kayit.olaylar ?? []).filter((o) => filtre === "tumu" || ONEMLI.includes(o.tur));
+  const olaylar = (ham ?? []).filter((o) => filtre === "tumu" || ONEMLI.includes(o.tur));
   const gorunen = hepsi ? olaylar : olaylar.slice(0, 8);
-  const gruplar: { gun: string; liste: GuvenlikOlayi[] }[] = [];
+  const gruplar: { gun: string; liste: GuvenlikOlayiBilgisi[] }[] = [];
   for (const o of gorunen) { const g = gunBasligi(o.zaman); const son = gruplar[gruplar.length - 1]; if (son?.gun === g) son.liste.push(o); else gruplar.push({ gun: g, liste: [o] }); }
 
   return (
-    <Grup id="gecmis" baslik="Güvenlik geçmişi" aciklama="Hesabındaki girişler ve güvenlik değişiklikleri."
+    <Grup id="gecmis" baslik="Güvenlik geçmişi" aciklama="Hesabındaki girişler ve güvenlik değişiklikleri; sunucu kaydeder."
       sag={<Segment kucuk kayit={false} deger={filtre} onSec={setFiltre} secenekler={[{ deger: "tumu", ad: "Tümü" }, { deger: "onemli", ad: "Önemli" }]} />}
       alt={olaylar.length > 8 ? <button type="button" onClick={() => setHepsi((v) => !v)} className="font-medium text-white/70 hover:text-white">{hepsi ? "Daha az göster" : `Tümünü göster (${olaylar.length})`}</button> : undefined}>
-      {gruplar.length ? gruplar.map((g) => (
+      {ham === null ? <p className="px-6 py-5 text-[14px] text-white/45">Yükleniyor…</p> : gruplar.length ? gruplar.map((g) => (
         <div key={g.gun} className="py-1">
           <p className="px-6 pb-1 pt-3 text-[12.5px] font-medium text-white/40">{g.gun}</p>
           {g.liste.map((o) => {
-            const t = OLAY[o.tur];
+            const t = OLAY[o.tur] ?? { ikon: ShieldCheck, renk: "text-white/55" };
             return (
               <div key={o.id} className="flex items-center gap-3.5 px-6 py-2.5">
                 <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-white/[0.05]", t.renk)}><t.ikon className="h-4 w-4" /></span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[14px] text-white">{OLAY_AD[o.tur]}{o.ayrinti && <span className="text-white/45">, {o.ayrinti}</span>}</p>
+                  <p className="truncate text-[14px] text-white">{olayAdi(o.tur)}{o.ayrinti && <span className="text-white/45">, {o.ayrinti}</span>}</p>
                   <p className="truncate text-[12.5px] text-white/40">{o.cihaz}</p>
                 </div>
                 <time dateTime={new Date(o.zaman).toISOString()} title={new Date(o.zaman).toLocaleString("tr-TR")} className="shrink-0 text-[12.5px] tabular-nums text-white/40">

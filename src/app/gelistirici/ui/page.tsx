@@ -955,7 +955,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
     ogeler: [
       {
         ad: "sidebar/studyo-sidebar",
-        not: "/panel/sinema → StudyoSidebar — dar sol stüdyo sidebar'ı (tüm parçalarıyla)",
+        not: "/panel/sinema › StudyoSidebar — dar sol stüdyo sidebar'ı (tüm parçalarıyla)",
         zemin: "koyu",
         onizleme: <div className="flex justify-center"><StudyoSidebarDemo /></div>,
         kod: `{/* Kaynak: src/components/kabuk/StudyoSidebar.tsx — ~215px, fixed, .sinema-kapsam.
@@ -988,7 +988,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
     ogeler: [
       {
         ad: "composer/sinema-uretim-paneli",
-        not: "/panel/sinema → VideoComposer — ana sayfadaki TAM üretim paneli (Görsel/Video · prompt · çipler · ÜRET)",
+        not: "/panel/sinema › VideoComposer — ana sayfadaki TAM üretim paneli (Görsel/Video · prompt · çipler · ÜRET)",
         zemin: "koyu",
         onizleme: <SinemaUretimPaneli />,
         kod: `{/* Kaynak: /panel/sinema (VideoComposer.tsx ~787). .sinema-kapsam → mavi aksan.
@@ -1094,7 +1094,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
       },
       {
         ad: "composer/sure-secici",
-        not: "/panel/video → SureKaydirici — üretim panelindeki süre seçici",
+        not: "/panel/video › SureKaydirici — üretim panelindeki süre seçici",
         zemin: "koyu",
         onizleme: <div className="flex justify-center"><SureSecici /></div>,
         kod: `{/* Kaynak bileşen: src/components/ui/SureKaydirici.tsx */}
@@ -1109,54 +1109,7 @@ const [paylasAcik, setPaylasAcik] = useState(false);
   },
   { id: "girdiler", ad: "Girdiler & Formlar", ogeler: [] },
   { id: "modaller", ad: "Modallar & Overlay", ogeler: [] },
-  {
-    id: "durum",
-    ad: "Durum Ekranları",
-    ogeler: [
-      {
-        ad: "durum/yakinda-ekrani",
-        not: "/panel/canvas — 'Yakında' boş-durum ekranı (ikon rozeti + Yakında etiketi + başlık + CTA'lar)",
-        zemin: "koyu",
-        onizleme: (
-          <div className="flex w-full flex-col items-center justify-center px-6 py-8 text-center">
-            <div className="relative mb-6">
-              <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-500/20 to-blue-600/10 ring-1 ring-inset ring-cyan-400/25">
-                <Workflow className="h-9 w-9 text-aksan" strokeWidth={1.6} />
-              </span>
-              <span className="absolute -right-1 -top-1 flex h-6 items-center rounded-full bg-aksan px-2 text-[10px] font-bold text-zemin">Yakında</span>
-            </div>
-            <h1 className="hf-baslik text-2xl text-metin">Canvas yakında geliyor</h1>
-            <p className="mt-3 max-w-md text-[14px] leading-relaxed text-metin-2">
-              Düğüm tabanlı sonsuz tuval — moodboard oluştur, iş akışlarını zincirle ve ekibinle paylaş.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              <button className="hf-btn glass-cip-aktif flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold text-aksan">Görsel Stüdyosuna git</button>
-              <button className="hf-btn glass-cip flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-medium text-metin-2 hover:text-metin">Keşfet'e dön</button>
-            </div>
-          </div>
-        ),
-        kod: `{/* Kaynak: src/app/panel/canvas/page.tsx → CanvasYakinda.
-    Bir sayfa henüz hazır değilse bu ekranı export default yaparsın;
-    hazır olunca gerçek sayfayı export'a alırsın. */}
-<div className="flex min-h-[calc(100vh-3rem)] flex-col items-center justify-center px-6 text-center">
-  <div className="relative mb-6">
-    <span className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-500/20 to-blue-600/10 ring-1 ring-inset ring-cyan-400/25">
-      <Workflow className="h-9 w-9 text-aksan" strokeWidth={1.6} />
-    </span>
-    <span className="absolute -right-1 -top-1 flex h-6 items-center rounded-full bg-aksan px-2 text-[10px] font-bold text-zemin">Yakında</span>
-  </div>
-  <h1 className="hf-baslik text-2xl text-metin sm:text-3xl">Canvas yakında geliyor</h1>
-  <p className="mt-3 max-w-md text-[14px] leading-relaxed text-metin-2">
-    Düğüm tabanlı sonsuz tuval — moodboard oluştur, iş akışlarını zincirle ve ekibinle paylaş.
-  </p>
-  <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-    <Link href="/panel/gorsel" className="hf-btn glass-cip-aktif flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-semibold text-aksan">Görsel Stüdyosuna git</Link>
-    <Link href="/panel" className="hf-btn glass-cip flex items-center gap-2 rounded-xl px-5 py-2.5 text-[14px] font-medium text-metin-2 hover:text-metin">Keşfet'e dön</Link>
-  </div>
-</div>`,
-      },
-    ],
-  },
+  { id: "durum", ad: "Durum Ekranları", ogeler: [] },
   { id: "rozetler", ad: "Rozetler & Etiketler", ogeler: [] },
 ];
 

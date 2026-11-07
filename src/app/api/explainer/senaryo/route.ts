@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { istemHazir, explainerSenaryo, sahneYaz, senaryoCevir } from "@/lib/saglayicilar/istem";
 import { icerikDenetle } from "@/lib/moderasyon";
 
@@ -16,6 +17,9 @@ export function GET() {
  * { islem: "cevir", sahneler, hedef } → { sahneler }
  */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   if (!istemHazir()) return NextResponse.json({ ok: false, hata: "Senaryo yazarı (Gemini) bağlı değil." }, { status: 503 });
   const g = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const s = (k: string) => (typeof g[k] === "string" ? (g[k] as string) : "");

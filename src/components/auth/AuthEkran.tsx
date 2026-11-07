@@ -15,7 +15,8 @@ const LOGOLAR = [
   ["kling-color", "Kling"], ["bytedance-color", "Seedance"], ["gemini-color", "Nano Banana"], ["openai", "OpenAI"], ["elevenlabs", "ElevenLabs"], ["meshy-color", "Meshy"],
 ] as const;
 
-export function AuthEkran({ niyet, geri }: { niyet: AuthNiyet; geri: string }) {
+/** children verilirse giriş akışı yerine o gösterilir (şifre sıfırlama, e-posta doğrulama sayfaları). */
+export function AuthEkran({ niyet, geri, children }: { niyet: AuthNiyet; geri: string; children?: React.ReactNode }) {
   const router = useRouter();
   const diger = niyet === "giris"
     ? { metin: "Hesabın yok mu?", ad: "Kaydol", href: `/kayit${geri !== "/panel" ? `?geri=${encodeURIComponent(geri)}` : ""}` }
@@ -39,7 +40,7 @@ export function AuthEkran({ niyet, geri }: { niyet: AuthNiyet; geri: string }) {
           <span aria-hidden className="absolute -inset-10 -z-10 rounded-full bg-[#55d6fd]/[0.07] blur-3xl" />
           <div className="auth-cerceve rounded-[30px] p-px">
             <div className="rounded-[29px] bg-[#0d0d0f]/95 px-6 py-8 backdrop-blur-xl sm:px-9 sm:py-10" style={{ ["--auth-zemin" as string]: "#0d0d0f" }}>
-              <AuthAkis niyet={niyet} onTamam={() => router.push(geri)} />
+              {children ?? <AuthAkis niyet={niyet} geri={geri} onTamam={() => router.push(geri)} />}
             </div>
           </div>
         </motion.div>

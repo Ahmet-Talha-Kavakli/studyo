@@ -1,83 +1,49 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { NextResponse } from "next/server";
+import { govdeOku, hata, hizHatasi, hizSiniri, tamam } from "@/lib/hesap/guvenlik";
+import { oturumGerekli } from "@/lib/hesap/yetki";
+import { HEDIYE_TUTARLARI, gonderilenler, hediyeIptal, hediyeOlustur, kodKullan } from "@/lib/odeme/hediye";
+import { hataYanit } from "@/lib/odeme/uc";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 /**
- * Promosyon ve hediye kodları — doğrulama sunucuda yapılır.
- *
- * - Promosyon kodları yalnız burada tanımlı; istemci paketinde görünmez.
- * - Hediye kodu: "VAYRA-" + kredi + rastgele kısım + HMAC imzası. İmza sunucudaki sırla
- *   atıldığı için kod elde üretilemez. Kullanılan kodlar bellekte tutulur (aynı kod iki
- *   kez kullanılamaz); istemci de kendi hesabında ikinci bir kayıt tutar.
+ * Promosyon ve hediye kodları. Oturum zorunlu; kimlik çerezden gelir (gövdedeki e-posta yok sayılır).
+ * Doğrulama ve kredi işlemi sunucuda, kredi defterinde (lib/odeme/hediye):
+ *   { islem: "kullan", kod }                  kodu uygular, kredi bu hesaba eklenir
+ *   { islem: "olustur", kredi, not? }         bakiyeden düşer, tek kullanımlık kod döner
+ *   { islem: "iptal", ozet }                  kullanılmamış kodu iptal eder, kredi iade edilir
+ *   { islem: "durum" }                        bu hesabın gönderdiği kodlar ve durumları
  */
-
-const SIR = process.env.VAYRA_HEDIYE_SIRRI ?? "vayra_hediye_imza_siri_2026";
-const PROMOSYONLAR: Record<string, { kredi: number; aciklama: string; bitis?: string }> = {
-  HOSGELDIN: { kredi: 100, aciklama: "Hoş geldin hediyesi" },
-  VAYRA50: { kredi: 50, aciklama: "Topluluk kodu" },
-  YARATICI2026: { kredi: 250, aciklama: "2026 yaratıcı kampanyası", bitis: "2026-12-31T23:59:59+03:00" },
-};
-const HEDIYE_TUTARLARI = [100, 250, 500, 1000, 2500];
-
-type Durum = { kullanilan: Map<string, { email: string; zaman: number }> };
-const g = globalThis as unknown as { __vayraHediye?: Durum };
-const durum: Durum = (g.__vayraHediye ??= { kullanilan: new Map() });
-
-const imza = (govde: string) => createHmac("sha256", SIR).update(govde).digest("base64url").replace(/[-_]/g, "").slice(0, 8).toUpperCase();
-
-function hediyeCoz(kod: string): { kredi: number } | null {
-  const m = /^VAYRA-(\d{3,4})-([A-Z0-9]{6})-([A-Z0-9]{8})$/.exec(kod);
-  if (!m) return null;
-  const beklenen = imza(`${m[1]}-${m[2]}`);
-  const a = Buffer.from(beklenen), b = Buffer.from(m[3]);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  const kredi = Number(m[1]);
-  return HEDIYE_TUTARLARI.includes(kredi) ? { kredi } : null;
-}
-
-const hata = (mesaj: string, kod = 400) => NextResponse.json({ ok: false, hata: mesaj }, { status: kod });
-
 export async function POST(req: Request) {
-  let b: { islem?: string; kod?: string; kredi?: number; email?: string };
-  try { b = await req.json(); } catch { return hata("Geçersiz istek"); }
-  const email = String(b.email ?? "").trim().toLowerCase();
-  if (!email.includes("@")) return hata("Giriş gerekli", 401);
-
-  if (b.islem === "olustur") {
-    const kredi = Number(b.kredi);
-    if (!HEDIYE_TUTARLARI.includes(kredi)) return hata("Geçersiz tutar");
-    const alfabe = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    const rast = Array.from(randomBytes(6), (x) => alfabe[x % alfabe.length]).join("");
-    const govde = `${String(kredi).padStart(3, "0")}-${rast}`;
-    return NextResponse.json({ ok: true, kod: `VAYRA-${govde}-${imza(govde)}`, kredi });
-  }
-
-  if (b.islem === "kullan") {
-    const kod = String(b.kod ?? "").trim().toUpperCase().replace(/\s+/g, "");
-    if (!kod) return hata("Bir kod gir.");
-    const promo = PROMOSYONLAR[kod];
-    if (promo) {
-      if (promo.bitis && Date.now() > Date.parse(promo.bitis)) return hata("Bu kampanyanın süresi doldu.", 410);
-      const anahtar = `${kod}:${email}`;
-      if (durum.kullanilan.has(anahtar)) return hata("Bu kodu bu hesapta zaten kullandın.", 409);
-      durum.kullanilan.set(anahtar, { email, zaman: Date.now() });
-      return NextResponse.json({ ok: true, tur: "promo", kod, kredi: promo.kredi, aciklama: promo.aciklama });
+  const o = await oturumGerekli(req);
+  if (o instanceof Response) return o;
+  const uid = o.hesap.uid;
+  const g = await govdeOku<{ islem?: string; kod?: string; kredi?: number; not?: string; ozet?: string }>(req, 4_000);
+  if (!g) return hata("Geçersiz istek.");
+  try {
+    if (g.islem === "kullan") {
+      // Kod deneme saldırısı: hesap başına 10 dakikada 15 deneme.
+      const bekle = hizSiniri(`kod-kullan:${uid}`, 15, 600_000, false);
+      if (bekle) return hizHatasi(bekle);
+      const r = await kodKullan(uid, o.hesap.plan, String(g.kod ?? ""));
+      return tamam({ tur: r.tur, kod: r.kod, kredi: r.kredi, aciklama: r.aciklama, bakiye: r.ozet.bakiye, ozet: r.ozet });
     }
-    const h = hediyeCoz(kod);
-    if (!h) return hata("Bu kod geçerli değil. Harfleri ve tireleri kontrol et.", 404);
-    const once = durum.kullanilan.get(kod);
-    if (once) return hata(once.email === email ? "Bu hediye kodunu zaten kullandın." : "Bu hediye kodu başka bir hesapta kullanılmış.", 409);
-    durum.kullanilan.set(kod, { email, zaman: Date.now() });
-    return NextResponse.json({ ok: true, tur: "hediye", kod, kredi: h.kredi, aciklama: "Hediye kredisi" });
-  }
-
-  if (b.islem === "durum") {
-    const kodlar = (Array.isArray((b as { kodlar?: unknown }).kodlar) ? (b as { kodlar: string[] }).kodlar : []).slice(0, 100);
-    return NextResponse.json({ ok: true, durumlar: Object.fromEntries(kodlar.map((k) => { const u = durum.kullanilan.get(String(k).toUpperCase()); return [k, u ? { kullanildi: u.zaman } : { kullanildi: null }]; })) });
-  }
-
-  return hata("Bilinmeyen işlem");
+    if (g.islem === "olustur") {
+      const bekle = hizSiniri(`kod-olustur:${uid}`, 20, 3_600_000, false);
+      if (bekle) return hizHatasi(bekle);
+      const not = String(g.not ?? "").replace(/[\u0000-\u001f\u007f<>]/g, "").trim().slice(0, 40);
+      const r = await hediyeOlustur(uid, o.hesap.plan, Number(g.kredi), not);
+      return tamam({ kod: r.kod, kredi: r.kredi, bakiye: r.ozet.bakiye, ozet: r.ozet });
+    }
+    if (g.islem === "iptal") {
+      const ozet = await hediyeIptal(uid, String(g.ozet ?? ""));
+      return tamam({ bakiye: ozet.bakiye, ozet, gonderilenler: await gonderilenler(uid) });
+    }
+    if (g.islem === "durum") return tamam({ gonderilenler: await gonderilenler(uid) });
+    return hata("Bilinmeyen işlem.");
+  } catch (e) { return hataYanit(e, "hediye"); }
 }
 
 export function GET() {
-  return NextResponse.json({ tutarlar: HEDIYE_TUTARLARI });
+  return tamam({ tutarlar: HEDIYE_TUTARLARI });
 }

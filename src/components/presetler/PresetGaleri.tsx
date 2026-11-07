@@ -23,7 +23,8 @@ import { sayiKisa, tumPresetler, tutamac, yaraticiBul } from "@/lib/presetToplul
 import { useAuth } from "@/store/useAuth";
 import { usePaylasim } from "@/store/usePaylasim";
 import { PresetPaneli, YaraticiAvatar } from "./PresetPaneli";
-import { UretimKarti } from "@/components/panel/UretimKarti";
+import { PRESET_GORUNUM, PresetUretimIzgarasi } from "./PresetUretimIzgarasi";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import { toast } from "@/lib/toast";
@@ -41,10 +42,7 @@ const yay = { type: "spring" as const, stiffness: 420, damping: 34 };
 
 const SIRALAR: { id: Sira; ad: string; alt: string; ikon: React.ElementType }[] = [
   { id: "onerilen", ad: "Önerilen", alt: "Karışık; raflarda görmediklerin önce", ikon: Sparkles },
-  { id: "trend", ad: "Trend", alt: "Son günlerde en çok kullanılan ve beğenilen", ikon: Flame },
   { id: "yeni", ad: "En yeni", alt: "Son yayınlanan presetler", ikon: Clock },
-  { id: "kullanim", ad: "En çok kullanılan", alt: "Tüm zamanlar", ikon: Play },
-  { id: "begeni", ad: "En çok beğenilen", alt: "Topluluğun favorileri", ikon: Heart },
   { id: "kredi-artan", ad: "Kredi: düşükten yükseğe", alt: "En uygun önce", ikon: ArrowUpNarrowWide },
   { id: "kredi-azalan", ad: "Kredi: yüksekten düşüğe", alt: "En kapsamlı önce", ikon: ArrowDownWideNarrow },
 ];
@@ -262,9 +260,6 @@ export function PresetGaleri() {
                     sag={<button onClick={() => galeriRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })} className="inline-flex h-12 items-center gap-2 rounded-full bg-white/[0.07] px-5 text-[14.5px] font-medium text-white ring-1 ring-inset ring-white/[0.12] transition hover:bg-white/[0.12] active:scale-[0.97]"><Search className="h-4 w-4" />Tüm presetlerde ara</button>} />
                   <OnluRaf liste={(k) => trendAkis.filter((p) => k === "hepsi" || (k === "vayra" ? !p.yazar : !!p.yazar))} olay={olay} />
                   <KonuRafi akis={trendAkis} konular={konular} ad={katAd} ikon={katIkon} olay={olay} onTumu={konuGor} haric={gorulen} />
-                  {takipYeni.length > 0 && <SatirRaf baslik="Takip ettiklerinden" ikon={UserCheck} liste={takipYeni} olay={olay}
-                    sag={<button onClick={() => kaynakDegis("takip")} className="flex h-9 items-center gap-1 rounded-full bg-white/[0.07] px-3 text-[12.5px] font-medium text-white/85 hover:bg-white/[0.12]">Tümü<ArrowRight className="h-3.5 w-3.5" /></button>} />}
-                  <YaraticiRafi akis={akis} takip={takip} onTakip={takipEt} onSec={yaraticiSec} />
                   <SatirRaf baslik="Yeni çıkanlar" ikon={Sparkles} liste={yeniler} olay={olay}
                     sag={<button onClick={() => setSira("yeni")} className="hidden h-9 items-center gap-1 rounded-full bg-white/[0.07] px-3 text-[12.5px] font-medium text-white/85 hover:bg-white/[0.12] sm:flex">Tümü<ArrowRight className="h-3.5 w-3.5" /></button>} />
                   <KarisimRafi />
@@ -276,7 +271,6 @@ export function PresetGaleri() {
           {/* Yaratıcı başlığı */}
           {yaratici && sekme === "kesfet" && <YaraticiBasligi kapak={kaynakListe[0]?.kapak} yazar={yaratici} benim={yaratici === benimTutamac} n={kaynakListe.length} takipte={takip.includes(yaratici)} onTakip={() => takipEt(yaratici)} onKapat={() => yaraticiSec(null)} />}
           {sekme === "benim" && <BenimOzet benimler={benimler} />}
-          {sekme === "kesfet" && !yaratici && (kaynak === "topluluk" || kaynak === "takip") && <YaraticiRafi akis={akis} takip={takip} onTakip={takipEt} onSec={yaraticiSec} baslik={kaynak === "takip" && !takip.length ? "Takip edebileceğin yaratıcılar" : undefined} />}
 
           {/* Tüm presetler: yapışkan başlıklı sonuç kartı */}
           <section ref={galeriRef} className={cn("scroll-mt-[calc(var(--ust-nav)+8px)] rounded-[28px] bg-[#111214] ring-1 ring-inset ring-white/[0.07]", sekme === "benim" && !benimler.length && "hidden")}>
@@ -298,12 +292,11 @@ export function PresetGaleri() {
                 {sekme === "kesfet" && !yaratici && (
                     <LayoutGroup id="preset-kaynak">
                       <div role="radiogroup" aria-label="Kaynak" className="ml-auto flex h-10 shrink-0 items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">
-                        {([["hepsi", "Hepsi", LayoutGrid], ["vayra", "Vayra", Sparkles], ["topluluk", "Topluluk", Users], ["takip", "Takip", UserCheck]] as const).map(([k, a, I]) => (
+                        {([["hepsi", "Hepsi", LayoutGrid], ["vayra", "Vayra", Sparkles]] as const).map(([k, a, I]) => (
                           <button key={k} role="radio" aria-checked={kaynak === k} aria-label={a} onClick={() => kaynakDegis(k)}
                             className={cn("relative flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium transition-colors active:scale-[0.97]", kaynak === k ? "text-black" : "text-white/65 hover:text-white")}>
                             {kaynak === k && <motion.span layoutId="preset-kaynak-z" className="absolute inset-0 rounded-full bg-white" transition={yay} />}
                             <I className="relative h-4 w-4" /><span className={cn("relative", kaynak !== k && "max-xl:hidden", "max-sm:hidden")}>{a}</span>
-                            {k === "takip" && takip.length > 0 && <span className={cn("relative text-[11px] tabular-nums max-sm:hidden", kaynak === k ? "text-black/45" : "text-white/35")}>{takip.length}</span>}
                           </button>
                         ))}
                       </div>
@@ -312,7 +305,7 @@ export function PresetGaleri() {
                 <div className={cn("flex min-w-0 items-center gap-1.5 max-sm:w-full", !(sekme === "kesfet" && !yaratici) && "sm:ml-auto")}>
                   <label className="group relative min-w-0 flex-1 sm:w-[240px] sm:flex-none xl:w-[280px]">
                     <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/40 transition-colors group-focus-within:text-white" />
-                    <input ref={aramaRef} value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Efekt ya da yaratıcı ara" aria-label="Preset ara"
+                    <input ref={aramaRef} value={ara} onChange={(e) => setAra(e.target.value)} placeholder="Efekt ara" aria-label="Preset ara"
                       className="h-10 w-full rounded-full bg-white/[0.06] pl-10 pr-10 text-[13.5px] text-white outline-none transition placeholder:text-white/40 focus:bg-white/[0.09]" />
                     {ara ? (
                       <button onClick={() => setAra("")} aria-label="Aramayı temizle" className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-black hover:bg-white/40"><X className="h-3.5 w-3.5" strokeWidth={3} /></button>
@@ -372,9 +365,8 @@ export function PresetGaleri() {
               ) : <BosDurum sekme={sekme} onTemizle={filtreTemizle} onKesfet={() => sekmeDegis("kesfet")} onHepsi={sekme === "kesfet" && (kaynak !== "hepsi" || !!yaratici) ? () => { if (yaratici) yaraticiSec(null); kaynakDegis("hepsi"); } : undefined} />}
             </div>
 
-            {(liste.length > goster || (toplulukGorunur && liste.length > 0)) && (
+            {liste.length > goster && (
               <footer className="flex flex-wrap items-center gap-2 border-t border-white/[0.06] px-4 py-3 sm:px-5">
-                {toplulukGorunur && <p className="text-[12.5px] text-white/45">Topluluk presetleri ve sayılar şimdilik örnek içeriktir.</p>}
                 {liste.length > goster && (
                   <button onClick={() => setGoster((g) => g + SAYFA)} className="ml-auto flex h-10 items-center gap-1.5 rounded-full bg-white/[0.08] px-4 text-[13px] font-medium text-white transition hover:bg-white/[0.13] active:scale-[0.97]">
                     Daha fazla göster<span className="tabular-nums text-white/50">{liste.length - goster}</span>
@@ -383,7 +375,6 @@ export function PresetGaleri() {
               </footer>
             )}
           </section>
-          {yaratici && sekme === "kesfet" && kaynakListe.length < 6 && <YaraticiRafi akis={akis} takip={takip} onTakip={takipEt} onSec={yaraticiSec} baslik="Diğer yaratıcılar" haric={yaratici} />}
           {((sekme === "kayitli" && !kayitliListe.length) || (sekme === "benim" && !benimler.length)) && baslangic}
         </div>
       )}
@@ -409,10 +400,9 @@ function YaraticiBasligi({ yazar, benim, n, takipte, onTakip, onKapat, kapak }: 
       <span className="relative rounded-full ring-[3px] ring-white/10"><YaraticiAvatar yazar={yazar} boyut={64} /></span>
       <div className="relative min-w-0 flex-1">
         <p className="flex items-center gap-1.5 text-[22px] font-semibold tracking-[-0.02em] text-white">{benim ? "Sen" : y?.ad ?? yazar}{y?.dogrulanmis && <BadgeCheck className="h-4 w-4" />}</p>
-        <p className="text-[13px] text-white/55">{yazar} · {n} preset{y ? ` · ${sayiKisa(y.takipci + (takipte ? 1 : 0))} takipçi` : ""}</p>
+        <p className="text-[13px] text-white/55">{yazar} · {n} preset</p>
         {y?.bio && <p className="mt-1 text-[13px] text-white/70">{y.bio}</p>}
       </div>
-      {!benim && <button onClick={onTakip} aria-pressed={takipte} className={cn("relative flex h-10 items-center gap-1.5 rounded-full px-4 text-[13px] font-semibold active:scale-[0.97]", takipte ? "bg-white/[0.08] text-white" : "bg-white text-black")}>{takipte ? <><Check className="h-4 w-4" />Takipte</> : <><UserPlus className="h-4 w-4" />Takip et</>}</button>}
       <button onClick={onKapat} className="relative flex h-10 items-center gap-1.5 rounded-full px-3 text-[13px] text-white/60 hover:bg-white/[0.06] hover:text-white"><X className="h-4 w-4" />Tüm presetler</button>
     </section>
   );
@@ -427,14 +417,13 @@ function BenimOzet({ benimler }: { benimler: KatalogPreset[] }) {
         <div>
           <span className="flex h-12 w-12 items-center justify-center rounded-[16px] bg-white text-black"><Wand2 className="h-5 w-5" /></span>
           <h3 className="mt-4 text-[24px] font-semibold tracking-[-0.02em] text-white">İlk presetini yayınla</h3>
-          <p className="mt-2 max-w-[440px] text-[14px] leading-relaxed text-white/60">Hareketi tarif et, farklı yüzlerle test et ve toplulukta paylaş. Ek fiyat koyarsan her kullanımda yarısı sana kalır; kazancın Earn cüzdanına geçer.</p>
+          <p className="mt-2 max-w-[440px] text-[14px] leading-relaxed text-white/60">Hareketi tarif et, farklı yüzlerle test et ve galerine ekle. Presetlerin şimdilik yalnız senin hesabında görünür.</p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href="/panel/presetler/olustur" className="flex h-11 items-center gap-1.5 rounded-full bg-white px-5 text-[14px] font-semibold text-black active:scale-[0.97]"><Plus className="h-4 w-4" />Preset oluştur</Link>
-            <Link href="/earn/marketplace" className="flex h-11 items-center gap-1.5 rounded-full bg-white/[0.07] px-4 text-[14px] font-medium text-white/85 transition hover:bg-white/[0.12]"><Wallet className="h-4 w-4" />Nasıl kazanırım</Link>
           </div>
         </div>
         <ol className="grid gap-2">
-          {([["Tarif et", "Özneye ne olacağını, kamerayı ve atmosferi seç.", Wand2], ["Test et", "Farklı yüzlerle dene, en iyi sonucu kapak yap.", Play], ["Yayınla ve kazan", "Toplulukta paylaş, ek fiyatın yarısı sana.", Wallet]] as const).map(([b, a, I], i) => (
+          {([["Tarif et", "Özneye ne olacağını, kamerayı ve atmosferi seç.", Wand2], ["Test et", "Farklı yüzlerle dene, en iyi sonucu kapak yap.", Play], ["Yayınla", "Galerinde Vayra presetlerinin yanında görünür.", Wallet]] as const).map(([b, a, I], i) => (
             <li key={b} className="flex items-center gap-3 rounded-[16px] bg-white/[0.04] p-3 ring-1 ring-inset ring-white/[0.06]">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-[13px] font-semibold tabular-nums text-white">{i + 1}</span>
               <span className="min-w-0 flex-1"><span className="block text-[14px] font-semibold text-white">{b}</span><span className="block text-[12.5px] text-white/50">{a}</span></span>
@@ -456,12 +445,11 @@ function BenimOzet({ benimler }: { benimler: KatalogPreset[] }) {
         <ArrowRight className="h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
       </Link>
       <div className="flex items-center gap-2 rounded-[20px] bg-white/[0.03] p-2 ring-1 ring-inset ring-white/[0.08]">
-        <dl className="grid min-w-0 flex-1 grid-cols-4 divide-x divide-white/[0.06] text-center">
-          {([["Toplulukta", yayinda], ["Taslak", taslak], ["Kullanım", sayiKisa(kullanim)], ["Kazanç", `${kazanc} kredi`]] as const).map(([k, v]) => (
+        <dl className="grid min-w-0 flex-1 grid-cols-3 divide-x divide-white/[0.06] text-center">
+          {([["Yayında", yayinda], ["Taslak", taslak], ["Toplam", benimler.length]] as const).map(([k, v]) => (
             <div key={k} className="px-1.5 py-1.5"><dt className="text-[11.5px] text-white/45">{k}</dt><dd className="mt-0.5 truncate text-[15px] font-semibold tabular-nums text-white">{v}</dd></div>
           ))}
         </dl>
-        <Link href="/earn/marketplace" className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13px] font-medium text-white/85 transition hover:bg-white/[0.12]"><Wallet className="h-4 w-4" />Kazanç paneli</Link>
       </div>
     </div>
   );
@@ -682,6 +670,7 @@ function UretimlerSekmesi() {
   }
   return (
     <div className="mt-6">
+      <div className="flex items-center gap-2">
       <LayoutGroup id="uretim-tur">
         <div className="flex w-max gap-0.5 rounded-full bg-white/[0.04] p-1 ring-1 ring-inset ring-white/[0.07]">
           {([["hepsi", "Hepsi"], ["suruyor", "Üretiliyor"], ["tamam", "Tamamlanan"]] as const).map(([id, ad]) => (
@@ -692,9 +681,9 @@ function UretimlerSekmesi() {
           ))}
         </div>
       </LayoutGroup>
-      <div className="mt-4 columns-2 gap-3 sm:columns-3 lg:columns-4 2xl:columns-5">
-        {liste.map((u) => <div key={u.id} className="mb-3 break-inside-avoid"><UretimKarti u={u} kutuBoyut="orta" /></div>)}
+      <GorunumAyari sayfa={PRESET_GORUNUM} className="ml-auto" />
       </div>
+      <div className="mt-4"><PresetUretimIzgarasi liste={liste} /></div>
     </div>
   );
 }

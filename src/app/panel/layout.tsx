@@ -14,7 +14,9 @@ import { AuthKapiModal } from "@/components/kabuk/AuthKapiModal";
 import { DuyuruModal } from "@/components/kabuk/DuyuruModal";
 import { KrediModal } from "@/components/kabuk/KrediModal";
 import { MarkaSplash } from "@/components/kabuk/MarkaSplash";
+import { TamEkranYukleme } from "@/components/kabuk/YuklemeEkrani";
 import { projeSenkron } from "@/lib/projeSenkron";
+import { GaleriSenkron } from "@/components/galeri/GaleriSenkron";
 import { cn } from "@/lib/utils";
 
 /**
@@ -47,6 +49,8 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
   /* Canvas TUVALİ (/panel/canvas/<id>) referansta TAM EKRAN: üst nav yok,
      kendi yüzen barlarını basar. Canvas ANASAYFASI (/panel/canvas) üst nav'lı kalır. */
   const tuvalKabugu = /^\/panel\/canvas\/[^/]+/.test(path);
+  /* Vayra Build ayrı bir stüdyo: ana sayfası ve çalışma alanı site menüsü olmadan, kendi üst çubuğuyla açılır (sol üstten siteye dönülür). */
+  const buildKabugu = path === "/panel/build" || path.startsWith("/panel/build/");
   /* Composer (üretim akışı) rotaları — mobilde tam ekran, kendi başlığını basar. */
   /* Mobil öncelikli araçlar — masaüstünde solda akış, sağda araç geçmişi. */
   const aracRota = aracRotasi(path);
@@ -64,9 +68,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
 
   if (!hazir) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zemin">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-white/15 border-t-aksan" />
-      </div>
+      <TamEkranYukleme />
     );
   }
   // Misafir gezebilir → burada `return null` YOK. Giriş yalnızca aksiyonda istenir.
@@ -87,7 +89,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
             {children}
           </main>
         </div>
-      ) : tuvalKabugu ? (
+      ) : tuvalKabugu || buildKabugu ? (
         /* Kabuk C — Canvas tuvali: üst nav yok,
            kendi kabuklarını basarlar. */
         children
@@ -114,6 +116,7 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
       <MarkaSplash />
       <Onboarding />
       <Kisayollar />
+      <GaleriSenkron />
       <AuthKapiModal />
       <DuyuruModal />
       <KrediModal />

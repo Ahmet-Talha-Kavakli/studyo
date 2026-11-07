@@ -10,6 +10,10 @@
  * Üretim: canlı anahtarda gerçek sağlayıcı (lib/saglayicilar) anahtarı varsa
  * gerçek çıktı, yoksa `simulated: true` işaretli örnek çıktı. Test anahtarı her
  * zaman simülasyon ve 0 kredi.
+ *
+ * Kredi: canlı üretimin bedeli anahtarın sahibi olan hesabın sunucu defterinden, üretim
+ * başlamadan kesilir (rota, lib/hesap/krediKapi). Üretim başarısız olur, iptal edilir ya da
+ * örnek çıktıyla biterse kesinti burada iade edilir ve `credits` 0 olur.
  */
 
 import { readdirSync } from "fs";
@@ -18,7 +22,8 @@ import { MODELLER, type AIModel, type ModelTur } from "@/lib/catalog";
 import { uretimYonlendir } from "@/lib/saglayicilar";
 import { SESLER } from "@/lib/sesVeri";
 import { hmacHex } from "@/lib/apiAnahtarDogrula";
-import { TUR_API, krediHesapla } from "./sema";
+import { TUR_API } from "./sema";
+import type { KrediIslemi, SahteSaglayici } from "@/lib/hesap/krediKapi";
 
 export type Ortam = "live" | "test";
 export type UretimDurumu = "queued" | "processing" | "succeeded" | "failed" | "canceled";
@@ -49,7 +54,7 @@ export interface Uretim {
   urls: { get: string; cancel: string };
 }
 
-interface UretimKaydi { g: Uretim; kid: string; hesap: string | null; iptal: boolean; zaman: number }
+interface UretimKaydi { g: Uretim; kid: string; hesap: string | null; iptal: boolean; zaman: number; fatura?: KrediIslemi | null; sahte?: SahteSaglayici }
 
 export interface WebhookUc { id: string; url: string; events: string[]; secret: string; active: boolean }
 
@@ -200,10 +205,11 @@ function simSure(tur: string, ortam: Ortam) {
 export function genelUretim(id: string) { const k = D.uretimler.get(id); return k?.g; }
 export function uretimKaydi(id: string) { return D.uretimler.get(id); }
 
-export function uretimOlustur(a: { kid: string; ortam: Ortam; model: AIModel; input: Record<string, unknown>; webhook_url: string | null; metadata: Record<string, unknown>; origin: string; hesap: string | null }): Uretim {
+export function uretimOlustur(a: { kid: string; ortam: Ortam; model: AIModel; input: Record<string, unknown>; webhook_url: string | null; metadata: Record<string, unknown>; origin: string; hesap: string | null; fatura?: KrediIslemi | null; sahte?: SahteSaglayici }): Uretim {
   temizle();
   const id = `gen_${rndHex(12)}`;
-  const kredi = a.ortam === "test" ? 0 : krediHesapla(a.model, a.input);
+  // Sunucu defterinden kesilen tutar (kesinti yoksa, örneğin sağlayıcı bağlı değilse, 0).
+  const kredi = a.ortam === "test" ? 0 : a.fatura?.tutar ?? 0;
   const base = `${a.origin}/api/v1/generations/${id}`;
   const gen: Uretim = {
     id, object: "generation", model: a.model.id, type: TUR_API[a.model.tur], status: "queued", input: a.input, output: null, error: null,
@@ -211,7 +217,7 @@ export function uretimOlustur(a: { kid: string; ortam: Ortam; model: AIModel; in
     created_at: new Date().toISOString(), started_at: null, completed_at: null, metrics: { queue_ms: null, run_ms: null },
     urls: { get: base, cancel: `${base}/cancel` },
   };
-  D.uretimler.set(id, { g: gen, kid: a.kid, hesap: a.hesap, iptal: false, zaman: Date.now() });
+  D.uretimler.set(id, { g: gen, kid: a.kid, hesap: a.hesap, iptal: false, zaman: Date.now(), fatura: a.fatura ?? null, sahte: a.sahte ?? null });
   if (a.hesap && kredi > 0) D.hesaplar.get(a.hesap)?.bekleyen.set(id, kredi);
   void calistir(id, a.model.tur, a.origin);
   return gen;
@@ -222,9 +228,10 @@ function guncelle(id: string, p: Partial<Uretim>) {
   if (k) k.g = { ...k.g, ...p };
   return k;
 }
-function iade(k: UretimKaydi) {
+function iade(k: UretimKaydi, neden = "API üretimi tamamlanmadı: kredi iade edildi") {
   if (k.hesap) D.hesaplar.get(k.hesap)?.bekleyen.delete(k.g.id);
   k.g = { ...k.g, credits: 0 };
+  return k.fatura?.iade(neden).catch(() => undefined);
 }
 
 /** voice_id: hazır sesin adı (büyük/küçük harf fark etmez) ya da doğrudan sağlayıcı ses kimliği. */
@@ -253,7 +260,9 @@ async function calistir(id: string, tur: ModelTur, origin: string) {
   let simule = true;
   let hata: Uretim["error"] = null;
   try {
-    if (k0.g.environment === "live" && tur !== "muzik") {
+    if (k0.sahte === "hata") throw new Error("Sınama: sağlayıcı hata verdi.");
+    if (k0.sahte === "gercek") { simule = false; saglayici = "sinama"; cikti = simCikti(k0.g, origin); }
+    else if (k0.g.environment === "live" && tur !== "muzik") {
       const input = k0.g.input;
       const sonuc = await uretimYonlendir({
         tur: tur as "gorsel" | "video" | "ses" | "3d",
@@ -284,16 +293,18 @@ async function calistir(id: string, tur: ModelTur, origin: string) {
   if (!k || k.iptal) return;
   const bitis = new Date().toISOString();
   if (hata) {
-    iade(k);
+    await iade(k, "API üretimi başarısız: kredi iade edildi");
     guncelle(id, { status: "failed", error: hata, completed_at: bitis, provider: saglayici, metrics: { queue_ms: k.g.metrics.queue_ms, run_ms: Date.now() - baslangic } });
     await olayYay(k.kid, "generation.failed", k.g);
     return;
   }
+  // Örnek çıktı gerçek üretim değildir: kesinti varsa geri verilir.
+  if (simule && k.g.credits > 0) await iade(k, "API örnek çıktı döndü: kredi alınmadı");
   guncelle(id, { status: "succeeded", output: cikti, simulated: simule, provider: saglayici, completed_at: bitis, metrics: { queue_ms: k.g.metrics.queue_ms, run_ms: Date.now() - baslangic } });
   await olayYay(k.kid, "generation.completed", k.g);
   if (k.hesap) {
     const h = D.hesaplar.get(k.hesap);
-    const kalan = hesapKullanilabilir(k.hesap);
+    const kalan = k.fatura?.bakiye ?? hesapKullanilabilir(k.hesap);
     if (h && h.dusukEsik !== null && kalan !== null && kalan <= h.dusukEsik && !h.dusukUyarildi) {
       h.dusukUyarildi = true;
       await olayYay(k.kid, "credits.low", { object: "balance", credits_available: kalan, threshold: h.dusukEsik });
@@ -316,7 +327,7 @@ export async function uretimIptal(id: string): Promise<Uretim | "bitti" | undefi
   if (!k) return undefined;
   if (k.g.status !== "queued" && k.g.status !== "processing") return "bitti";
   k.iptal = true;
-  iade(k);
+  await iade(k, "API üretimi iptal edildi: kredi iade edildi");
   guncelle(id, { status: "canceled", completed_at: new Date().toISOString() });
   await olayYay(k.kid, "generation.canceled", k.g);
   return k.g;

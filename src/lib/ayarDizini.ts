@@ -5,6 +5,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   UserRound, KeyRound, ShieldCheck, Wand2, Lock, HardDrive, CreditCard, Coins, ReceiptText, Gift, Palette, Bell, Code2, Database,
+  Building2, Users, Wallet, BarChart3, FolderKanban, ShieldHalf,
 } from "lucide-react";
 
 export type AyarSayfa = { id: string; ad: string; href: string; ikon: LucideIcon; ozet: string; rozet?: string };
@@ -12,6 +13,14 @@ export const AYAR_GRUPLARI: { ad: string; sayfalar: AyarSayfa[] }[] = [
   { ad: "Hesap", sayfalar: [
     { id: "hesap", ad: "Giriş ve hesap", href: "/panel/ayarlar/hesap", ikon: KeyRound, ozet: "E-posta, giriş yöntemleri, hesabı sil" },
     { id: "guvenlik", ad: "Güvenlik", href: "/panel/ayarlar/guvenlik", ikon: ShieldCheck, ozet: "Şifre, iki adımlı doğrulama, oturumlar" },
+  ] },
+  { ad: "Çalışma alanı", sayfalar: [
+    { id: "alan", ad: "Genel", href: "/panel/ayarlar/alan", ikon: Building2, ozet: "Alan adı, logo, alanlar arası geçiş, yeni alan" },
+    { id: "alan-uyeler", ad: "Üyeler", href: "/panel/ayarlar/alan/uyeler", ikon: Users, ozet: "Davet, roller, çıkarma, alan adıyla katılım" },
+    { id: "alan-kredi", ad: "Kredi ve sınırlar", href: "/panel/ayarlar/alan/kredi", ikon: Wallet, ozet: "Ortak havuz, alan planı, üye başına aylık sınır" },
+    { id: "alan-kullanim", ad: "Kullanım", href: "/panel/ayarlar/alan/kullanim", ikon: BarChart3, ozet: "Üye ve ürün başına harcama, CSV" },
+    { id: "alan-varliklar", ad: "Ortak varlıklar", href: "/panel/ayarlar/alan/varliklar", ikon: FolderKanban, ozet: "Alanın Build projeleri ve kitaplığı" },
+    { id: "alan-guvenlik", ad: "Güvenlik", href: "/panel/ayarlar/alan/guvenlik", ikon: ShieldHalf, ozet: "Denetim günlüğü, sahiplik, ayrılma, silme" },
   ] },
   { ad: "Üretim", sayfalar: [
     { id: "uretim", ad: "Üretim varsayılanları", href: "/panel/ayarlar/uretim", ikon: Wand2, ozet: "Model, oran, adet, süre", rozet: "Yeni" },
@@ -47,6 +56,18 @@ const S: [string, string, string, string?][] = [
   ["guvenlik", "gecis-anahtari", "Geçiş anahtarı", "passkey parmak izi yüz"],
   ["guvenlik", "oturumlar", "Açık oturumlar", "cihaz tarayıcı çıkış"],
   ["guvenlik", "gecmis", "Güvenlik geçmişi", "giriş kayıtları"],
+  ["alan", "alanlar", "Çalışma alanları", "ekip takım workspace geçiş yeni"],
+  ["alan", "logo", "Alan logosu ve adı"],
+  ["alan-uyeler", "davet", "Üye davet et", "ekip takım e-posta bağlantı"],
+  ["alan-uyeler", "roller", "Üye rolleri", "sahip yönetici izleyici"],
+  ["alan-uyeler", "alanadi", "Alan adıyla katılım", "domain şirket e-posta"],
+  ["alan-kredi", "havuz", "Ortak kredi havuzu", "ekip kredisi aktar"],
+  ["alan-kredi", "sinir", "Üye başına aylık sınır", "harcama limiti"],
+  ["alan-kredi", "plan", "Alan planı", "satın al ekip planı"],
+  ["alan-kullanim", "rapor", "Alan kullanım raporu", "csv dışa aktar üye ürün"],
+  ["alan-guvenlik", "gunluk", "Denetim günlüğü", "audit log kayıt"],
+  ["alan-guvenlik", "devret", "Sahipliği devret"],
+  ["alan-guvenlik", "sil", "Alanı sil", "ayrıl"],
   ["uretim", "gorsel-model", "Varsayılan görsel modeli", "model"],
   ["uretim", "oran", "Varsayılan en-boy oranı", "16:9 9:16 kare"],
   ["uretim", "adet", "Bir seferde üretilecek görsel", "adet sayı"],

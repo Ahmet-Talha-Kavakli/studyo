@@ -14,7 +14,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useScrollKilit, useEscKapat } from "@/hooks/useScrollKilit";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plus, ChevronRight, Heart, Download, Copy, MoreHorizontal, UserRound, Package,
+  Plus, ChevronRight, Heart, Star, Download, Copy, MoreHorizontal, UserRound, Package,
   Search, Check, BarChart3, Sparkles, Minus, Share2, UserSquare,
   RefreshCw, Recycle, Wand2, Palette, Maximize2, Scissors, Expand, Crop,
   X, XCircle, ChevronLeft, ChevronDown, Info, RotateCcw,
@@ -64,6 +64,10 @@ import { GorselGoruntuleyici, type AracIstegi } from "@/components/studyo/Gorsel
 import { YorumSekmesi } from "@/components/studyo/YorumSekmesi";
 import { InfoSekmesi } from "@/components/studyo/gorsel/GorselBilgi";
 import { KartAraclari } from "@/components/studyo/gorsel/KartAraclari";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi as gorunumSutun, zamanaGoreSirala } from "@/lib/galeri/gorunum";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 import { useEkler, aktifSinirsizlar } from "@/store/useEkler";
 import { GORSEL_STILLER, stilBul, REF_ROLLERI, type RefRol } from "@/lib/gorselStiller";
 import { upscaleAdresi } from "@/lib/upscaleVeri";
@@ -254,14 +258,17 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const [demoGizle, setDemoGizle] = useState(false);
   const [akisModelAcik, setAkisModelAcik] = useState(false);
   const suzgecAktif = !!akisAra.trim() || akisFavori || !!akisModel || demoGizle;
+  /* Görünüm ayarı (yerleşim, boyut, sıralama, istemi temizle) — sayfa başına kalıcı. */
+  const [gorunumG] = useGorunum("gorsel");
+  const [galeriRef, galeriEn] = useAlanGenisligi<HTMLDivElement>(1400);
   const suzulmus = useMemo(() => {
     const q = akisAra.trim().toLocaleLowerCase("tr");
-    return gorselUretimleri.filter((u) =>
+    return zamanaGoreSirala(gorselUretimleri, gorunumG.siralama).filter((u) =>
       (!q || `${u.meta?.hamIstem ?? u.prompt} ${u.baslik} ${u.model}`.toLocaleLowerCase("tr").includes(q))
       && (!akisFavori || u.favori)
       && (!akisModel || u.model === akisModel)
       && (!demoGizle || u.gercek !== false));
-  }, [gorselUretimleri, akisAra, akisFavori, akisModel, demoGizle]);
+  }, [gorselUretimleri, akisAra, akisFavori, akisModel, demoGizle, gorunumG.siralama]);
   const akisModelleri = useMemo(() => [...new Set(gorselUretimleri.map((u) => u.model))], [gorselUretimleri]);
   const aktifIs = gorselUretimleri.filter((u) => u.durum === "kuyrukta" || u.durum === "isleniyor").length;
   const [gonderiliyor, setGonderiliyor] = useState(false);
@@ -655,7 +662,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     return 4;
   };
 
-  // Sağlayıcı bağlantısı: bağlı değilse model "Demo" olarak işaretlenir (kredi düşmez, örnek görsel).
+  // Sağlayıcı bağlantısı: bağlı değilse model "Bağlı değil" olarak işaretlenir (üretim hata verir, kredi düşmez).
   const saglayicilar = useSaglayicilar();
   const modelBagli = (m: GorselModel) => !saglayicilar ? true
     : m.ad === "Auto" ? ["gemini", "seedream", "openai", "fal"].some((k) => saglayicilar[k]) : !!saglayicilar[m.api.saglayici];
@@ -757,7 +764,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const gorselAdi = useMemo(() => {
     if (acikUretim?.baslik) return acikUretim.baslik;
     if (seciliKart && stokAdlari[seciliKart]) return stokAdlari[seciliKart];
-    return acikUretim ? "İsimsiz görsel" : "Örnek görsel";
+    return acikUretim ? "İsimsiz görsel" : "İlham görseli";
   }, [acikUretim, seciliKart, stokAdlari]);
   const adKaydet = () => {
     const yeni = adTaslak.trim();
@@ -864,7 +871,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
         baslik: `${yuzMu ? "Yüz" : "Karakter"} değiştirme`,
         tur: "gorsel",
         model,
-        prompt: `${yuzMu ? "Yüz" : "Karakter"} değiştirme · kaynak → hedef`,
+        prompt: `${yuzMu ? "Yüz" : "Karakter"} değiştirme · kaynaktan hedefe`,
         kredi: birim,
         projeId: aktifProjeId ?? undefined,
         meta: { islem: yuzMu ? "swap-yuz" : "swap-karakter", referanslar: [kaynakUrl, hedefUrl], gorselUrl: hedefUrl },
@@ -954,6 +961,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     }
     setTimeout(() => setGonderiliyor(false), 600);
     if (!basarili) return;
+    if (istemTemizlensinMi("gorsel")) setPrompt("");
     sonModelYaz(hedefler);
     if (!gomulu) {
       setAkis("benim");
@@ -1018,7 +1026,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     const idler = seciliUretimIdler();
     if (!idler.length) return void toast.info("Yayınlanacak üretim yok", { description: "Yalnız kendi üretimlerin toplulukta yayınlanabilir." });
     idler.forEach((id) => guncelle(id, { yayinda: true }));
-    toast.success(`${idler.length} üretim toplulukta yayınlandı`, { description: "Keşfet akışında görünecek." });
+    toast.success(`${idler.length} üretim yayında olarak işaretlendi`, { description: "Keşfet'te senin hesabında görünür; başka kullanıcılarla henüz paylaşılmaz." });
     secimTemizle();
   };
 
@@ -1303,7 +1311,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
               </label>
               <button onClick={() => setAkisFavori((v) => !v)} aria-pressed={akisFavori}
                 className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium ring-1 ring-inset transition active:scale-[0.97]", akisFavori ? "bg-white text-black ring-white" : "bg-white/[0.08] text-metin-2 ring-transparent hover:bg-white/[0.13] hover:text-metin")}>
-                <Heart className={cn("h-4 w-4", akisFavori && "fill-rose-500 text-rose-500")} />Favoriler
+                <Star className={cn("h-4 w-4", akisFavori && "fill-[#0d0e10]")} />Favoriler
               </button>
               <div className="relative shrink-0">
                 <button onClick={() => setAkisModelAcik((v) => !v)} aria-expanded={akisModelAcik}
@@ -1329,7 +1337,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                 </Yuzen>
               </div>
               {gorselUretimleri.some((u) => u.gercek === false) && (
-                <button role="switch" aria-checked={demoGizle} onClick={() => setDemoGizle((v) => !v)} title="Sağlayıcı bağlı değilken üretilen örnek görselleri gizle"
+                <button role="switch" aria-checked={demoGizle} onClick={() => setDemoGizle((v) => !v)} title="Sağlayıcı bağlı değilken oluşan eski kayıtları gizle"
                   className="flex h-9 shrink-0 items-center gap-2 rounded-full px-3 text-[13px] font-medium bg-white/[0.08] text-metin-2 transition hover:bg-white/[0.13] hover:text-metin max-xl:hidden">
                   <span className={cn("relative h-[18px] w-8 shrink-0 rounded-full transition-colors", demoGizle ? "bg-white" : "bg-white/15")}>
                     <span className={cn("absolute top-[2px] h-3.5 w-3.5 rounded-full transition-[left,background-color] duration-200", demoGizle ? "left-[16px] bg-black" : "left-[2px] bg-white")} />
@@ -1360,29 +1368,17 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                 </motion.button>
               )}
             </AnimatePresence>
-            {/* Izgara yoğunluğu: 3 adım (büyük · orta · sık) */}
-            <div role="radiogroup" aria-label="Izgara yoğunluğu" className="isolate hidden items-center gap-0.5 rounded-full p-[3px] bg-white/[0.06] sm:flex">
-              {([[85, "Büyük kartlar", 2], [45, "Orta kartlar", 3], [10, "Sık ızgara", 4]] as const).map(([d, ad, n]) => {
-                const sec = Math.abs(boyut - d) < 18;
-                return (
-                  <button key={d} role="radio" aria-checked={sec} aria-label={ad} title={ad} onClick={() => { setBoyutGorsel(d); setBoyut(d); }}
-                    className={cn("relative flex h-8 w-8 items-center justify-center rounded-full transition-colors", sec ? "text-black" : "text-metin-3 hover:text-metin-2")}>
-                    {sec && <motion.span layoutId="izgaraYog" transition={{ type: "spring", stiffness: 480, damping: 36 }} className="absolute inset-0 -z-10 rounded-full bg-white" />}
-                    <span className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
-                      {Array.from({ length: n * n }).map((_, k) => <span key={k} className="rounded-[1.5px] bg-current" style={{ width: 12 / n, height: 12 / n }} />)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Görünüm ayarları: yerleşim, boyut, sıralama, istemi temizle (sayfa başına kalıcı) */}
+            <GorunumAyari sayfa="gorsel" />
           </div>
         </div>
       )}
 
       {/* Gömülüyken galeri YOK: üretimleri dış sayfa (proje varlıkları) gösterir. */}
-      <div className={gomulu ? "hidden" : "space-y-3 px-3 pb-[280px] pt-3"}>
+      <div ref={galeriRef} className={gomulu ? "hidden" : "space-y-3 px-3 pb-[280px] pt-3"}>
         {(() => {
-          const sutunSayisi = Math.max(2, Math.round(1400 / sutunGen));
+          const sutunSayisi = gorunumSutun(galeriEn, gorunumG);
+          void sutunGen;
           const KART = "overflow-hidden rounded-[22px]";
           // İstem kutusuyla aynı cam
           const YUZ: React.CSSProperties = { background: "rgba(34,35,40,0.8)", backdropFilter: "blur(14px) saturate(1.25)", WebkitBackdropFilter: "blur(14px) saturate(1.25)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.14), 0 0 0 1px rgba(255,255,255,0.1)" };
@@ -1450,7 +1446,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                 ...(akisAra.trim() ? [{ ad: `“${akisAra.trim()}”`, ikon: Search, kaldir: () => setAkisAra("") }] : []),
                 ...(akisFavori ? [{ ad: "Yalnız favoriler", ikon: Heart, kaldir: () => setAkisFavori(false) }] : []),
                 ...(akisModel ? [{ ad: akisModel, ikon: LayoutGrid, kaldir: () => setAkisModel(null) }] : []),
-                ...(demoGizle ? [{ ad: "Demolar gizli", ikon: X, kaldir: () => setDemoGizle(false) }] : []),
+                ...(demoGizle ? [{ ad: "Eski kayıtlar gizli", ikon: X, kaldir: () => setDemoGizle(false) }] : []),
               ];
               const ornek = gorselUretimleri.map((u) => kapakUrl(u)).filter(Boolean).slice(0, 3) as string[];
               return (
@@ -1525,7 +1521,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
           const bitti = u.durum === "tamam";
           const hata = u.durum === "hata";
           // Gerçek en-boy oranı — kartın doğal yüksekliğini belirler (madde 14).
-          const or = oranSayi(u);
+          const or = kartOrani(gorunumG, oranSayi(u));
           const arka = u.gorselUrl
             ? (/^(data:|https?:|\/)/.test(u.gorselUrl) ? `url("${u.gorselUrl}") center/cover no-repeat` : u.gorselUrl)
             : "linear-gradient(135deg,#1a1725,#12101a)";
@@ -1596,6 +1592,8 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                     onBegen={() => { favoriToggle(u.id); toast.success(u.favori ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); }}
                     onIndir={() => gorseliIndir(u.gorselUrl, u.baslik || "vayra-gorsel")}
                     onKopyala={() => uretimiGeriYukle(u)}
+                    uretim={u}
+                    klasorAdi="proje"
                     onAc={() => lightboxAc(u.gorselUrl!)}
                     gorselUrl={u.gorselUrl}
                     onYenidenUret={() => yenidenUret(u.prompt || u.baslik)}
@@ -1605,7 +1603,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                     onVaryasyon={(g) => varyasyonUret(u.gorselUrl!, u, g)}
                     onBuyut={() => buyutAc(u.gorselUrl!, u.id)}
                     onElement={() => elementModalAc(u.gorselUrl, u.baslik || u.prompt)}
-                    onYayinla={() => { guncelle(u.id, { yayinda: true }); toast.success("Toplulukta yayınlandı", { description: "Keşfet akışında görünecek.", action: { label: "Geri al", onClick: () => guncelle(u.id, { yayinda: false }) } }); }}
+                    onYayinla={() => { guncelle(u.id, { yayinda: true }); toast.success("Yayında olarak işaretlendi", { description: "Keşfet'te senin hesabında görünür; başka kullanıcılarla henüz paylaşılmaz.", action: { label: "Geri al", onClick: () => guncelle(u.id, { yayinda: false }) } }); }}
                     klasorler={klasorListesi}
                     onKlasoreEkle={(kid) => klasoreEkle(kid, u.id)}
                     onYeniKlasor={() => yeniKlasoreEkle(u.id)}
@@ -1630,7 +1628,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
               <section>
                 <div className="flex items-center gap-2 px-1 pb-2.5 pt-1">
                   <h2 className="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-[14px] font-semibold text-metin"><Lightbulb className="h-4 w-4 text-metin-2" />İlham galerisi</h2>
-                  <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] text-metin-2">Örnek görseller</span>
+                  <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] text-metin-2">İlham için</span>
                   <span className="flex-1" />
                   <span className="flex items-center gap-1.5 rounded-full bg-white/[0.08] px-2.5 py-1 text-[12px] text-metin-2 max-md:hidden"><ImagePlus className="h-3.5 w-3.5" />Referans için kutuya sürükle</span>
                 </div>
@@ -1711,31 +1709,33 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
               <button onClick={topluGorselIndir} className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95"><Download className="h-5 w-5" /><span className="hidden sm:inline">İndir</span></button>
               <button onClick={topluYayinla} className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95"><Sparkles className="h-5 w-5" /><span className="hidden sm:inline">Yayınla</span></button>
               <div className="relative">
-                <button onClick={() => setTopluKlasorAcik((v) => !v)} aria-expanded={topluKlasorAcik} className={cn("flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium transition-colors active:scale-95", topluKlasorAcik ? "bg-white/[0.12] text-white" : "text-white/75 hover:bg-white/[0.07] hover:text-white")}><FolderPlus className="h-5 w-5" /><span className="hidden sm:inline">Klasöre ekle</span></button>
+                <button onClick={() => setTopluKlasorAcik((v) => !v)} aria-expanded={topluKlasorAcik} className={cn("flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium transition-colors active:scale-95", topluKlasorAcik ? "bg-white/[0.12] text-white" : "text-white/75 hover:bg-white/[0.07] hover:text-white")}><FolderPlus className="h-5 w-5" /><span className="hidden sm:inline">Projeye ekle</span></button>
                 <AnimatePresence>
                   {topluKlasorAcik && (
                     <motion.div initial={{ opacity: 0, y: 6, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6, scale: 0.98 }} transition={{ duration: 0.16 }}
                       className="absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 overflow-hidden rounded-[18px] border border-white/[0.09] bg-[#1b1c1f]">
-                      <MenuKart className="rounded-none ring-0" baslik="Klasöre ekle" sag={<span className="text-[11.5px] tabular-nums text-metin-3">{klasorListesi.length}</span>}>
+                      <MenuKart className="rounded-none ring-0" baslik="Projeye ekle" sag={<span className="text-[11.5px] tabular-nums text-metin-3">{klasorListesi.length}</span>}>
                         <div className="max-h-[260px] overflow-y-auto p-1 [scrollbar-width:thin]">
                           {klasorListesi.map((k) => (
                             <button key={k.id} onClick={() => topluKlasoreEkle(k.id)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] text-metin transition-colors hover:bg-white/[0.06]">
                               <FolderPlus className="h-4 w-4 shrink-0 text-metin-2" /><span className="min-w-0 flex-1 break-words">{k.ad}</span><span className="text-[11.5px] tabular-nums text-metin-3">{k.adet}</span>
                             </button>
                           ))}
-                          <button onClick={() => topluKlasoreEkle(null)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] font-medium text-metin transition-colors hover:bg-white/[0.06]"><Plus className="h-4 w-4 shrink-0" />Yeni klasör</button>
+                          <button onClick={() => topluKlasoreEkle(null)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] font-medium text-metin transition-colors hover:bg-white/[0.06]"><Plus className="h-4 w-4 shrink-0" />Yeni proje</button>
                         </div>
                       </MenuKart>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
+              <KlasoreTasiDugmesi uretimIdler={secililer.filter((id) => gorselUretimleri.some((u) => u.id === id))} onBitti={secimTemizle} etiketSinif="hidden sm:inline"
+                className="flex h-11 items-center gap-2 whitespace-nowrap rounded-full px-4 text-[15px] font-medium text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95 disabled:opacity-40 [&>svg]:h-5 [&>svg]:w-5" />
               {(() => { const hepsi = secililer.length > 0 && secililer.every((id) => begeni.includes(id)); return (
                 <button onClick={() => { if (hepsi) { setBegeni((v) => v.filter((x) => !secililer.includes(x))); toast.success("Beğeniler kaldırıldı"); } else { setBegeni((v) => [...new Set([...v, ...secililer])]); toast.success(`${secililer.length} görsel beğenilere eklendi`); } }}
-                  className={cn("flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/[0.07] active:scale-95", hepsi ? "text-rose-400" : "text-white/75 hover:text-white")} aria-label={hepsi ? "Beğeniyi kaldır" : "Beğen"}><Heart className={cn("h-5 w-5", hepsi && "fill-current")} /></button>); })()}
-              <button onClick={topluSil} className="flex h-11 w-11 items-center justify-center rounded-full text-rose-300 transition-colors hover:bg-rose-500/10 active:scale-95" aria-label="Sil"><Trash2 className="h-5 w-5" /></button>
+                  className={cn("flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-white/[0.07] active:scale-95", hepsi ? "text-aksan" : "text-white/75 hover:text-white")} title={hepsi ? "Favorilerden çıkar" : "Favorilere ekle"} aria-label={hepsi ? "Favorilerden çıkar" : "Favorilere ekle"}><Star className={cn("h-5 w-5", hepsi && "fill-current")} /></button>); })()}
+              <button onClick={topluSil} title="Sil" className="flex h-11 w-11 items-center justify-center rounded-full text-rose-300 transition-colors hover:bg-rose-500/10 active:scale-95" aria-label="Sil"><Trash2 className="h-5 w-5" /></button>
               <span className="mx-1 h-7 w-px bg-white/10" />
-              <button onClick={() => { setTopluKlasorAcik(false); secimTemizle(); }} className="flex h-11 w-11 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95" aria-label="Seçimi temizle"><X className="h-5 w-5" /></button>
+              <button onClick={() => { setTopluKlasorAcik(false); secimTemizle(); }} title="Seçimi temizle" className="flex h-11 w-11 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95" aria-label="Seçimi temizle"><X className="h-5 w-5" /></button>
             </div>
           </motion.div>
         )}
@@ -2137,7 +2137,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                               <KrediHap deger={krediYaz(m.kredi ?? 2)} secili={secili} baslik={`Görsel başına ${krediYaz(m.kredi ?? 2)} kredi`} />
                             ) : (
                               <span
-                                className="flex h-7 shrink-0 items-center rounded-full bg-white/[0.06] px-2.5 text-[12px] font-medium text-metin-2">Ücretsiz</span>
+                                className="flex h-7 shrink-0 items-center rounded-full bg-white/[0.06] px-2.5 text-[12px] font-medium text-metin-2">Bağlı değil</span>
                             )}
                             <span className={cn("flex h-5 w-5 shrink-0 items-center justify-center transition", karsilastir ? "rounded-[6px] border-2" : "rounded-full", secili ? "border-white bg-white text-black" : karsilastir ? "border-white/30" : "opacity-0")}>
                               {secili && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -2155,7 +2155,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
                           {hepsiDemo && (
                             <p className="mx-1 mb-1 flex items-center gap-2 rounded-[12px] bg-amber-300/[0.06] px-2.5 py-2 text-[12px] leading-snug text-amber-100/90 ring-1 ring-inset ring-amber-300/15">
                               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" />
-                              Sağlayıcılar bağlanana kadar örnek görsel üretilir; kredi düşmez.
+                              Görsel sağlayıcısı bağlı değil; bu modellerle üretim yapılamaz, kredi düşmez.
                             </p>
                           )}
                           {son.length > 0 && <><Baslik ikon={History}>Son kullanılanlar</Baslik>{son.map((m) => KartSatir(m, "s"))}<div className="mx-2 my-1 h-px bg-white/[0.07]" /></>}
@@ -2550,7 +2550,7 @@ export function GorselStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
             ad={gorselAdi}
             altBaslik={acikUretim
               ? `${acikUretim.model} · ${new Date(acikUretim.olusturma).toLocaleDateString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-              : "Örnek görsel · İlham galerisi"}
+              : "İlham galerisi"}
             onAdKaydet={adDegistir}
             sira={lbIndex >= 0 ? { i: lbIndex, n: gezListe.length } : null}
             onGez={lightboxGez}

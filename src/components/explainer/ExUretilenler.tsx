@@ -14,6 +14,9 @@ import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { useExplainer } from "@/store/useExplainer";
 import { EX_STILLER, stilPoster } from "@/lib/explainerMotor";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi } from "@/components/galeri/KartEylemleri";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 import { UretimGoruntuleyici } from "@/components/studyo/UretimGoruntuleyici";
 import { EX_ARAC, explainerVideoUret } from "./exVideo";
 
@@ -21,6 +24,7 @@ import { EX_ARAC, explainerVideoUret } from "./exVideo";
 export const ExUretilenler = forwardRef<HTMLElement, { onTumu: () => void }>(function ExUretilenler({ onTumu }, ref) {
   const uretimler = useProjeler((s) => s.uretimler);
   const projeler = useExplainer((s) => s.projeler);
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
   const liste = useMemo(() => uretimler.filter((u) => u.arac === EX_ARAC), [uretimler]);
   const [acik, setAcik] = useState<Uretim | null>(null);
   const son = liste[0];
@@ -68,7 +72,7 @@ export const ExUretilenler = forwardRef<HTMLElement, { onTumu: () => void }>(fun
             <span className="absolute inset-x-0 bottom-0 flex items-center gap-3 bg-gradient-to-t from-black/85 to-transparent px-4 pb-4 pt-10 text-left">
               {son.durum === "hata" ? <AlertTriangle className="h-5 w-5 shrink-0 text-rose-300" /> : <Loader2 className="h-5 w-5 shrink-0 animate-spin text-white" />}
               <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between text-[13px] font-semibold text-white"><span>{son.durum === "hata" ? "Kurulamadı" : "Video kuruluyor"}</span>{son.durum !== "hata" && <span className="tabular-nums text-white/70">%{Math.round(son.ilerleme ?? 0)}</span>}</span>
+                <span className="flex items-center justify-between text-[13px] font-semibold text-white"><span>{son.durum === "hata" ? "Kurulamadı" : "Video kuruluyor"}</span>{son.durum !== "hata" && <span className="tabular-nums text-white/70">yüzde {Math.round(son.ilerleme ?? 0)}</span>}</span>
                 {son.durum !== "hata" && <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-white/20"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${Math.max(3, son.ilerleme ?? 0)}%` }} transition={{ duration: 0.4 }} /></span>}
               </span>
             </span>
@@ -82,8 +86,10 @@ export const ExUretilenler = forwardRef<HTMLElement, { onTumu: () => void }>(fun
           {son.durum === "hata" && <p className="mt-2 text-[13px] text-rose-200/90">{son.hata ?? "Video kurulamadı."}</p>}
           {bitti && (
             <div className="mt-5 flex flex-wrap gap-2">
-              {son.videoUrl && <a href={son.videoUrl} download={`${son.baslik.slice(0, 40)}.mp4`} className="flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition active:scale-95"><Download className="h-4 w-4" />MP4 indir</a>}
+              <IndirDugmesi u={son} side="top" yerlesim="alt-sol" className="flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition active:scale-95"><Download className="h-4 w-4" />İndir</IndirDugmesi>
               <button onClick={() => setAcik(son)} className="flex h-11 items-center gap-2 rounded-full bg-white/[0.08] px-5 text-[14px] font-medium text-metin transition hover:bg-white/[0.13] active:scale-95"><Play className="h-4 w-4 fill-current" />Büyük izle</button>
+              <FavoriDugmesi favori={!!son.favori} onClick={() => favoriToggle(son.id)} side="top" className="!h-11 !w-11 !bg-white/[0.08] hover:!bg-white/[0.13]" />
+              <Tooltip label="Klasöre taşı" side="top"><KlasoreTasiDugmesi uretimIdler={[son.id]} etiketSinif="sr-only" yerlesim="alt-sol" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] text-metin transition hover:bg-white/[0.13] active:scale-95" /></Tooltip>
             </div>
           )}
 

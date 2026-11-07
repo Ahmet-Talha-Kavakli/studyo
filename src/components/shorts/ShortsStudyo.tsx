@@ -23,6 +23,14 @@ import { varsayilanAyar, exId, type ExProje, type ExSahne } from "@/store/useExp
 import { EX_STILLER, explainerMontaj, sahneAnlari, sahneSure, toplamSure, stilPoster, stilVideo, stilBul, ozelStil, stilTaban } from "@/lib/explainerMotor";
 import { OzelGirdi } from "@/components/film/ortak";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, KartDahaMenusu, YenidenKullanDugmesi, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { ArrowUpRight } from "lucide-react";
+import { uretimGeriAl } from "@/components/panel/uretimGeriAl";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 import { Dalga } from "@/components/speak/SesSecici";
 import { UretimSecici as UretimPaneli } from "@/components/studyo/video/UretimSecici";
 import { UretimGoruntuleyici } from "@/components/studyo/UretimGoruntuleyici";
@@ -103,7 +111,11 @@ export function ShortsStudyo() {
   const sag = useSaglayicilar();
   const elevenBagli = sag?.eleven === true;
   const uretimler = useProjeler((s) => s.uretimler);
-  const shortlar = useMemo(() => uretimler.filter((u) => u.arac === ARAC_ADI), [uretimler]);
+  /* Görünüm ayarı (yerleşim, boyut, sıralama, istemi temizle) sayfa başına kalıcı. */
+  const [galeriGorunum] = useGorunum("shorts");
+  const [shortIzgaraRef, shortIzgaraEn] = useAlanGenisligi<HTMLDivElement>(1100);
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
+  const shortlar = useMemo(() => zamanaGoreSirala(uretimler.filter((u) => u.arac === ARAC_ADI), galeriGorunum.siralama), [uretimler, galeriGorunum.siralama]);
   const [mod, setMod] = useState<Mod>("klip");
   const [gorunum, setGorunum] = useState<Gorunum>("giris");
   const [cip, setCip] = useState<string | null>(null);
@@ -316,7 +328,7 @@ export function ShortsStudyo() {
   const sahneSil = (i: number) => { setSahneler((l) => (l && l.length > 1 ? l.filter((_, j) => j !== i) : l)); setAktifSahne((a) => Math.max(0, Math.min(a, (sahneler?.length ?? 1) - 2))); };
   const sahneCogalt = (i: number) => setSahneler((l) => { if (!l) return l; const c = [...l]; c.splice(i + 1, 0, { ...l[i], id: exId("sh") }); return c; });
   const turDegis = (sh: ExSahne, tur: ExSahne["tur"]) => sahneDegis(sh.id, tur === "liste" ? { tur, maddeler: sh.maddeler?.length ? sh.maddeler : sh.anlatim.split(/[.!?]\s*/).filter(Boolean).slice(0, 3) }
-    : tur === "istatistik" ? { tur, deger: sh.deger || "%70", etiket: sh.etiket || sh.baslik } : tur === "cta" ? { tur, etiket: sh.etiket || "Takip et" } : { tur });
+    : tur === "istatistik" ? { tur, deger: sh.deger || "yüzde 70", etiket: sh.etiket || sh.baslik } : tur === "cta" ? { tur, etiket: sh.etiket || "Takip et" } : { tur });
   const sahneEkle = () => { const yeri = Math.max(0, (sahneler?.length ?? 1) - 1); setSahneler((l) => { const c = [...(l ?? [])]; c.splice(yeri, 0, { id: exId("sh"), tur: "anlatim", baslik: "Yeni sahne", anlatim: "Bu sahnede ne anlatılsın?", gorselIstem: "" } as ExSahne); return c; }); setAktifSahne(yeri); };
   // Önizleme ilk karede boş görünmesin: kanca ve ilk altyazı görünen ana git
   useEffect(() => { const z = setTimeout(() => oynatici.current?.git(1.2), 500); return () => clearTimeout(z); }, [secId, sahneler?.length, mod, gorunum]);
@@ -349,6 +361,7 @@ export function ShortsStudyo() {
     const ad = konu.trim().slice(0, 60);
     const id = pr.ekle({ baslik: ad, tur: "video", model: "Vayra kurgu", prompt: konu.trim(), durum: "isleniyor", ilerleme: 2, baslama: Date.now(), kredi: 0, arac: ARAC_ADI, gorselUrl: stilPoster(konuStil), meta: { oran: "9:16", hamIstem: konu.trim(), mod: "konu", stilAd: stilBul(konuStil).ad } });
     setTimeout(() => shortlarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+    if (istemTemizlensinMi("shorts")) setKonu("");
     try {
       const r = await shortSenaryo(konu.trim(), konuSn, konuStil);
       // Taslakta boş kalan maddeler videoda görünmez; liste sahnesi hiç madde içermiyorsa anlatım sahnesine dönüşür
@@ -617,22 +630,31 @@ export function ShortsStudyo() {
   /* Shortlarım */
   const shortlarKart = (baslik: string, alt: string, ust?: boolean) => (
     <section className={KART} style={YUZ}>
-      {kartBaslik(Film, baslik, alt, shortlar.length ? <span className="flex items-center gap-2">{ust && shortlar.length > 6 && <button onClick={() => setUstSekme("shortlarim")} className="flex h-8 items-center rounded-full bg-white/[0.085] px-3 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.12] hover:text-metin">Tümü</button>}<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin-2">{shortlar.length}</span></span> : undefined)}
+      {kartBaslik(Film, baslik, alt, shortlar.length ? <span className="flex items-center gap-2"><GorunumAyari sayfa="shorts" />{ust && shortlar.length > 6 && <button onClick={() => setUstSekme("shortlarim")} className="flex h-8 items-center rounded-full bg-white/[0.085] px-3 text-[12.5px] font-medium text-metin-2 transition hover:bg-white/[0.12] hover:text-metin">Tümü</button>}<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin-2">{shortlar.length}</span></span> : undefined)}
       {shortlar.length ? (
-        <div className="grid grid-cols-2 gap-3 p-3.5 sm:grid-cols-4 lg:grid-cols-6">
+        <div ref={shortIzgaraRef} className="grid gap-3 p-3.5" style={{ gridTemplateColumns: `repeat(${sutunSayisi(shortIzgaraEn, galeriGorunum, { enCok: 8 })}, minmax(0, 1fr))` }}>
           {(ust ? shortlar.slice(0, 6) : shortlar).map((u, i) => {
             const bitti = u.durum === "tamam", kp = saltUrl(u.gorselUrl) ?? u.meta?.gorselUrl;
             return (
-              <motion.button key={u.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.03 }} whileHover={{ y: -3 }} onClick={() => setAcik(u)} className="group relative aspect-[9/16] overflow-hidden rounded-[16px] bg-black text-left ring-1 ring-inset ring-white/[0.08] hover:ring-white/25">
+              <motion.div key={u.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.03 }} whileHover={{ y: -3 }} className="group relative overflow-hidden rounded-[16px] bg-black text-left ring-1 ring-inset ring-white/[0.08] hover:ring-white/25" style={{ aspectRatio: String(kartOrani(galeriGorunum, 9 / 16)) }}>
+                <button type="button" onClick={() => setAcik(u)} aria-label={`${u.baslik} aç`} className="absolute inset-0 z-0" />
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                {kp && <img src={kp} alt="" className={cn("absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105", !bitti && "opacity-40 blur-[2px]")} />}
+                {kp && <img src={kp} alt="" className={cn("pointer-events-none absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105", !bitti && "opacity-40 blur-[2px]")} />}
                 {bitti && u.videoUrl && <video src={u.videoUrl} muted loop playsInline preload="none" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-hover:opacity-100" onMouseEnter={(e) => void e.currentTarget.play().catch(() => {})} onMouseLeave={(e) => e.currentTarget.pause()} />}
-                {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-3 text-center text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `%${Math.round(u.ilerleme ?? 0)}`}{u.durum !== "hata" && u.meta?.mod === "konu" && <span className="text-[11px] font-normal leading-snug text-white/70">Short kuruluyor; bu sekmeyi açık tut</span>}</span>}
-                {bitti && u.meta?.stilAd && <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">{u.meta.stilAd}</span>}
+                {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-3 text-center text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `yüzde ${Math.round(u.ilerleme ?? 0)}`}{u.durum !== "hata" && u.meta?.mod === "konu" && <span className="text-[11px] font-normal leading-snug text-white/70">Short kuruluyor; bu sekmeyi açık tut</span>}</span>}
+                {bitti && u.meta?.stilAd && <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">{u.meta.stilAd}</span>}
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent" />
                 
-                <span className="absolute inset-x-2.5 bottom-2 line-clamp-2 text-[12.5px] font-medium leading-tight text-white">{u.baslik}</span>
-              </motion.button>
+                <span className="pointer-events-none absolute inset-x-2.5 bottom-2 line-clamp-2 text-[12.5px] font-medium leading-tight text-white">{u.baslik}</span>
+                {bitti && (
+        <div onClick={(e) => e.stopPropagation()} className="pointer-events-none absolute right-2 top-2 z-20 flex flex-col gap-1.5 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+          <FavoriDugmesi favori={!!u.favori} onClick={() => favoriToggle(u.id)} boyut="kucuk" />
+          <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="left" />
+          <YenidenKullanDugmesi onClick={() => { setUstSekme("olustur"); setMod("konu"); setKonu((u.meta?.hamIstem as string) || u.prompt); }} boyut="kucuk" />
+          <KartDahaMenusu u={u} boyut="kucuk" eylemler={[{ ad: "Aç", ikon: ArrowUpRight, fn: () => setAcik(u) }]} onSil={() => { const geri = uretimGeriAl([u.id]); useProjeler.getState().sil(u.id); mesaj.silindi("Short", geri); }} />
+        </div>
+                )}
+              </motion.div>
             );
           })}
         </div>
@@ -666,7 +688,7 @@ export function ShortsStudyo() {
             <span className="absolute inset-x-0 bottom-0 flex items-center gap-2.5 bg-gradient-to-t from-black/85 to-transparent px-3 pb-3 pt-10 text-left">
               {son.durum === "hata" ? <AlertTriangle className="h-4 w-4 shrink-0 text-rose-300" /> : <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white" />}
               <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between text-[12.5px] font-semibold text-white"><span>{son.durum === "hata" ? "Başarısız" : "Kuruluyor"}</span>{son.durum !== "hata" && <span className="tabular-nums text-white/70">%{Math.round(son.ilerleme ?? 0)}</span>}</span>
+                <span className="flex items-center justify-between text-[12.5px] font-semibold text-white"><span>{son.durum === "hata" ? "Başarısız" : "Kuruluyor"}</span>{son.durum !== "hata" && <span className="tabular-nums text-white/70">yüzde {Math.round(son.ilerleme ?? 0)}</span>}</span>
                 {son.durum !== "hata" && <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-white/20"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${Math.max(3, son.ilerleme ?? 0)}%` }} transition={{ duration: 0.4 }} /></span>}
               </span>
             </span>
@@ -680,7 +702,9 @@ export function ShortsStudyo() {
           {son.durum === "hata" && <p className="mt-2 text-[13px] text-rose-200/90">{son.hata ?? "Üretim tamamlanamadı."}</p>}
           {sonBitti && (
             <div className="mt-5 flex flex-wrap gap-2">
-              {son.videoUrl && <a href={son.videoUrl} download={`${son.baslik.slice(0, 40)}.mp4`} className="flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition active:scale-95"><Download className="h-4 w-4" />MP4 indir</a>}
+              <IndirDugmesi u={son} side="top" yerlesim="alt-sol" className="flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition active:scale-95"><Download className="h-4 w-4" />İndir</IndirDugmesi>
+              <FavoriDugmesi favori={!!son.favori} onClick={() => favoriToggle(son.id)} side="top" className="!h-11 !w-11 !bg-white/[0.08] hover:!bg-white/[0.13]" />
+              <Tooltip label="Klasöre taşı" side="top"><KlasoreTasiDugmesi uretimIdler={[son.id]} etiketSinif="sr-only" yerlesim="alt-sol" className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.08] text-metin transition hover:bg-white/[0.13] active:scale-95" /></Tooltip>
               <button onClick={() => setAcik(son)} className="flex h-11 items-center gap-2 rounded-full bg-white/[0.08] px-5 text-[14px] font-medium text-metin transition hover:bg-white/[0.13] active:scale-95"><Play className="h-4 w-4 fill-current" />Büyük izle</button>
             </div>
           )}
@@ -948,7 +972,7 @@ export function ShortsStudyo() {
               })}
             </div>
             {yerlesim === "doldur" && <><AltBaslik>Odak</AltBaslik><Segment etiket="Odak" deger={odak} onDegis={setOdak} secenekler={[["sol", "Sol"], ["orta", "Orta"], ["sag", "Sağ"]]} /></>}
-            <Kaydirici ad="Yakınlaştırma" deger={zoom} min={100} max={160} adim={1} varsayilan={100} onDegis={setZoom} yaz={(n) => `%${Math.round(n)}`} />
+            <Kaydirici ad="Yakınlaştırma" deger={zoom} min={100} max={160} adim={1} varsayilan={100} onDegis={setZoom} yaz={(n) => `yüzde ${Math.round(n)}`} />
           </Bolum>
         </>
       )}
@@ -1010,7 +1034,7 @@ export function ShortsStudyo() {
                 <Segment etiket="Sahne türü" deger={sh.tur as "baslik" | "anlatim" | "liste" | "istatistik" | "cta"} onDegis={(t) => turDegis(sh, t)} secenekler={(["baslik", "anlatim", "liste", "istatistik", "cta"] as const).map((t) => [t, SAHNE_TUR[t]] as const)} />
                 {sh.tur === "istatistik" ? (
                   <div className="grid grid-cols-[110px_1fr] gap-2">
-                    <label><span className="mb-1.5 block text-[12.5px] text-metin-2">Rakam</span><input value={sh.deger ?? ""} onChange={(e) => sahneDegis(sh.id, { deger: e.target.value.slice(0, 12) })} placeholder="%40" className={cn(girdi, "h-11 text-[16px] font-semibold", !sh.deger?.trim() && "ring-amber-300/40")} /></label>
+                    <label><span className="mb-1.5 block text-[12.5px] text-metin-2">Rakam</span><input value={sh.deger ?? ""} onChange={(e) => sahneDegis(sh.id, { deger: e.target.value.slice(0, 12) })} placeholder="yüzde 40" className={cn(girdi, "h-11 text-[16px] font-semibold", !sh.deger?.trim() && "ring-amber-300/40")} /></label>
                     <label><span className="mb-1.5 block text-[12.5px] text-metin-2">Açıklama</span><input value={sh.etiket ?? ""} onChange={(e) => sahneDegis(sh.id, { etiket: e.target.value.slice(0, 50) })} placeholder="Ne ölçüldü, kaynak" className={cn(girdi, "h-11 text-[14px]")} /></label>
                   </div>
                 ) : (

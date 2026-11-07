@@ -5,7 +5,7 @@ import { KenarTutamac, useKenarGenisligi } from "@/components/ui/KenarTutamac";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  Crop, Upload, Images, Loader2, X, Check, Download, Maximize2, Wand2, Ban, Monitor, Smartphone, ShoppingBag, Film,
+  Crop, Upload, Images, Loader2, X, Check, Download, Maximize2, Quote, Wand2, Ban, Monitor, Smartphone, ShoppingBag, Film,
   RotateCcw, ZoomOut, ChevronLeft, ChevronDown, Keyboard, PanelRightClose, History, Repeat2, Move, Link2, Unlink2,
   Expand, Sparkles, Eye, Image as ImageIcon, Grid3x3, ShieldCheck, ArrowLeftRight, Layers, Clapperboard, SplitSquareHorizontal,
   Square, Trash2, type LucideIcon,
@@ -26,6 +26,11 @@ import { Yuzen } from "@/components/ui/Yuzen";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { KrediHap, KrediYildiz } from "@/components/ui/KrediHap";
 import { KitaplikPaneli } from "@/components/studyo/KitaplikPaneli";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, KartDahaMenusu } from "@/components/galeri/KartEylemleri";
+import { istemTemizlensinMi } from "@/lib/galeri/gorunum";
 import { OranSekli, useGorselBaglanti, dosyaOku, gorselOlcu, gorselYukle, uretimGorseli, GORSEL_TURLERI, krediYaz } from "@/components/arac/kit";
 
 const ARAC = "Reframe";
@@ -152,6 +157,8 @@ export function GorselCercevele() {
   const [seciliSonuc, setSeciliSonuc] = useState<string | null>(null);
   const [onceGoster, setOnceGoster] = useState(false);
   const [gorunumMod, setGorunumMod] = useState<"sonuc" | "karsilastir">("sonuc");
+  const [galeriGorunum] = useGorunum("reframe");
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
   const [sinirGoster, setSinirGoster] = useState(false);
   const [kesit, setKesit] = useState(50);
   const [onizlemeler, setOnizlemeler] = useState<Gorunum[]>([]);
@@ -313,6 +320,7 @@ export function GorselCercevele() {
       }
     }
     setGonderiliyor(false);
+    if (n && istemTemizlensinMi("reframe")) setIstem("");
     if (n) { setSeciliSonuc(null); setOnizlemeSecili(null); toast.success(n > 1 ? `${n} sonuç üretiliyor` : "Çerçeveleniyor", { description: `${video ? VIDEO_MODEL : mt.ad} · ${toplamKredi ? `${krediYaz(toplamKredi)} kredi.` : "Kredi düşmez."}` }); }
   };
 
@@ -817,7 +825,7 @@ export function GorselCercevele() {
       <div className="relative" style={{ width: W, height: H }}>
         <div className="pointer-events-none absolute -top-9 left-1/2 flex w-max -translate-x-1/2 items-center gap-1.5 whitespace-nowrap text-[12px] tabular-nums">
           <span className={cn("flex items-center gap-1.5 rounded-full px-2.5 py-1 text-white", YUZEY)}>{ustBilgi}<span className="text-white/45">·</span>{kv.w}×{kv.h}</span>
-          {duzenleme && <motion.span key={Math.round(g.yeni * 100)} initial={{ opacity: 0.6, y: -2 }} animate={{ opacity: 1, y: 0 }} className={cn("rounded-full px-2.5 py-1 font-medium text-white", YUZEY)}>%{Math.round(g.yeni * 100)} yeni alan</motion.span>}
+          {duzenleme && <motion.span key={Math.round(g.yeni * 100)} initial={{ opacity: 0.6, y: -2 }} animate={{ opacity: 1, y: 0 }} className={cn("rounded-full px-2.5 py-1 font-medium text-white", YUZEY)}>yüzde {Math.round(g.yeni * 100)} yeni alan</motion.span>}
           {(gorunum?.yerel || gorunum?.demo) && <span className="rounded-full bg-amber-300/15 px-2.5 py-1 font-medium text-amber-100 ring-1 ring-inset ring-amber-300/30 backdrop-blur">{gorunum.yerel ? "AI değil" : "Genişletme uygulanmadı"}</span>}
         </div>
 
@@ -877,7 +885,7 @@ export function GorselCercevele() {
             <div className={cn("pointer-events-auto flex items-center gap-2.5 rounded-full py-2 pl-4 pr-2 text-[13px] font-medium text-white", YUZEY)}>
               <Loader2 className="h-4 w-4 animate-spin" />
               {onizleniyor ? "Tarayıcıda dolduruluyor" : surer[0].durum === "kuyrukta" ? "Sırada" : video ? "Video genişletiliyor" : "Genişletiliyor"}
-              {yuzde != null && yuzde > 0 && <span className="tabular-nums text-white/60">%{yuzde}</span>}
+              {yuzde != null && yuzde > 0 && <span className="tabular-nums text-white/60">yüzde {yuzde}</span>}
               {surer.length > 1 && <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] tabular-nums">{surer.length} iş</span>}
               {surer[0] && <button onClick={() => uretimIptal(surer[0].id)} aria-label="İptal" className="flex h-7 w-7 items-center justify-center rounded-full text-white/60 hover:bg-white/10 hover:text-white"><X className="h-3.5 w-3.5" /></button>}
               {!surer[0] && <span className="w-1.5" />}
@@ -904,7 +912,7 @@ export function GorselCercevele() {
           <ZoomOut className="h-3.5 w-3.5 text-white/60" />
           <input type="range" min={1} max={Math.max(2.5, zoom)} step={0.05} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Uzaklaştır"
             className="vy-aralik-beyaz w-24 cursor-pointer appearance-none rounded-full" style={{ ["--d" as string]: `${((zoom - 1) / (Math.max(2.5, zoom) - 1)) * 100}%` }} />
-          <span className="w-9 text-right text-[12px] tabular-nums text-white/80">%{Math.round(100 / zoom)}</span>
+          <span className="min-w-9 whitespace-nowrap text-right text-[12px] tabular-nums text-white/80">yüzde {Math.round(100 / zoom)}</span>
         </span>
       </Tooltip>
       </>}
@@ -944,7 +952,8 @@ export function GorselCercevele() {
           <button onClick={f} disabled={u.gercek === false} aria-label={ad} className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 transition hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-30"><I className="h-4 w-4" /></button>
         </Tooltip>
       ))}
-      <button onClick={() => uretimIndir(u)} className="ml-0.5 flex h-8 items-center gap-1.5 rounded-full bg-white px-3.5 text-[12.5px] font-semibold text-black transition active:scale-95"><Download className="h-3.5 w-3.5" />İndir</button>
+      <FavoriDugmesi favori={!!u.favori} onClick={() => favoriToggle(u.id)} side="bottom" className="h-8 w-8 !bg-transparent hover:!bg-white/10" />
+      <IndirDugmesi u={u} side="bottom" yerlesim="alt-sag" etiket="İndir ya da önce ve sonra" className="ml-0.5 flex h-8 items-center gap-1.5 rounded-full bg-white px-3.5 text-[12.5px] font-semibold text-black transition active:scale-95"><Download className="h-3.5 w-3.5" />İndir</IndirDugmesi>
     </div>
   );
   const guvenliMenu = dikey && (
@@ -1004,7 +1013,7 @@ export function GorselCercevele() {
             <Yuzen acik={kisayolAcik} onKapat={() => setKisayolAcik(false)} yerlesim="alt-sag" bosluk={8} etiket="Kısayollar" className={cn("w-[310px] overflow-hidden", POP)}>
               <div className="flex items-center gap-2 border-b border-white/[0.07] px-3.5 py-2.5"><Keyboard className="h-4 w-4 text-metin-2" /><span className="text-[13.5px] font-semibold text-metin">Klavye kısayolları</span></div>
               <div className="p-3 pt-2">
-                {([["Çerçevele", ["Ctrl", "Enter"]], ["Görseli kaydır", ["←", "→", "↑", "↓"]], ["Büyük adım", ["Shift", "Ok"]], ["Uzaklaştır, yaklaştır", ["−", "+"]], ["Ortala ve sıfırla", ["R"]], ["Izgara", ["G"]], ["Önceyi göster (basılı tut)", ["\\"]], ["Karşılaştır", ["C"]], ["Kenarı iki yana çek", ["Alt", "Sürükle"]], ["Çerçeveye dön", ["Esc"]]] as const).map(([ad, t]) => (
+                {([["Çerçevele", ["Ctrl", "Enter"]], ["Görseli kaydır", ["Sol", "Sağ", "Yukarı", "Aşağı"]], ["Büyük adım", ["Shift", "Ok"]], ["Uzaklaştır, yaklaştır", ["−", "+"]], ["Ortala ve sıfırla", ["R"]], ["Izgara", ["G"]], ["Önceyi göster (basılı tut)", ["\\"]], ["Karşılaştır", ["C"]], ["Kenarı iki yana çek", ["Alt", "Sürükle"]], ["Çerçeveye dön", ["Esc"]]] as const).map(([ad, t]) => (
                   <div key={ad} className="flex items-center justify-between gap-2 py-1 text-[12.5px]"><span className="text-metin-2">{ad}</span><span className="flex gap-1">{t.map((k) => <kbd key={k}>{k}</kbd>)}</span></div>
                 ))}
               </div>
@@ -1039,7 +1048,7 @@ export function GorselCercevele() {
   );
 
   /* ═════════════ Sürümler ═════════════ */
-  const surumOgesi = (o: { id: string; url?: string | null; video?: boolean; baslik: string; alt: string; secili: boolean; durum: "tamam" | "suruyor" | "hata"; rozet?: string; onAc: () => void; onIndir?: () => void; onSil?: () => void; hata?: string }, yatay: boolean) => (
+  const surumOgesi = (o: { id: string; url?: string | null; video?: boolean; baslik: string; alt: string; secili: boolean; durum: "tamam" | "suruyor" | "hata"; rozet?: string; onAc: () => void; onIndir?: () => void; onSil?: () => void; hata?: string; u?: Uretim }, yatay: boolean) => (
     <motion.div key={o.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className={cn("group relative flex items-center gap-2.5 rounded-[12px] p-1.5 outline outline-1 -outline-offset-1 transition-colors", yatay && "w-[220px] shrink-0",
       o.secili ? "bg-white/[0.09] outline-white/60" : "bg-white/[0.02] outline-white/[0.06] hover:bg-white/[0.05]")}>
       <button onClick={o.onAc} disabled={o.durum !== "tamam"} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
@@ -1053,7 +1062,16 @@ export function GorselCercevele() {
           <span className={cn("block truncate text-[11.5px] tabular-nums", o.durum === "hata" ? "text-rose-300/90" : "text-metin-2")} title={o.hata}>{o.alt}</span>
         </span>
       </button>
-      {o.durum !== "suruyor" && (o.onIndir || o.onSil) && (
+      {o.u && o.durum === "tamam" && (
+        <span className="absolute right-1.5 top-1/2 flex -translate-y-1/2 gap-0.5 rounded-[10px] bg-[#1f2024] p-0.5 opacity-0 ring-1 ring-inset ring-white/[0.08] transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:static [@media(hover:none)]:translate-y-0 [@media(hover:none)]:bg-transparent [@media(hover:none)]:opacity-100 [@media(hover:none)]:ring-0">
+          <FavoriDugmesi favori={!!o.u.favori} onClick={() => favoriToggle(o.u!.id)} boyut="kucuk" side="top" className="!h-7 !w-7 rounded-[8px] !bg-transparent text-metin-2 hover:!bg-white/[0.08]" />
+          <IndirDugmesi u={o.u} side="top" yerlesim="sol-ust" className="flex h-7 w-7 items-center justify-center rounded-[8px] text-metin-2 hover:bg-white/[0.08] hover:text-metin" ikonSinif="h-3.5 w-3.5" />
+          <KartDahaMenusu u={o.u} boyut="kucuk" side="top" className="flex h-7 w-7 items-center justify-center rounded-[8px] text-metin-2 hover:bg-white/[0.08] hover:text-metin"
+            onSil={() => { const x = o.u!; if (seciliSonuc === x.id) setSeciliSonuc(null); useProjeler.getState().sil(x.id); mesaj.silindi("Sürüm", () => useProjeler.setState((s) => ({ uretimler: [x, ...s.uretimler] }))); }}
+            eylemler={[{ ad: "Aç", ikon: Maximize2, fn: o.onAc }, { ad: "Yeniden kullan", ikon: Quote, fn: () => setIstem(String(o.u!.meta?.hamIstem ?? "").slice(0, 400)) }]} />
+        </span>
+      )}
+      {!o.u && o.durum !== "suruyor" && (o.onIndir || o.onSil) && (
         <span className="flex shrink-0 gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
           {o.onIndir && o.durum === "tamam" && <button onClick={o.onIndir} aria-label="İndir" className="flex h-7 w-7 items-center justify-center rounded-[8px] text-metin-2 hover:bg-white/[0.08] hover:text-metin"><Download className="h-3.5 w-3.5" /></button>}
           {o.onSil && <button onClick={o.onSil} aria-label="Kaldır" className="flex h-7 w-7 items-center justify-center rounded-[8px] text-metin-2 hover:bg-white/[0.08] hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>}
@@ -1066,14 +1084,14 @@ export function GorselCercevele() {
       <AnimatePresence initial={false}>
         {onizlemeler.map((o) => surumOgesi({ id: o.id, url: o.url, video: o.video, baslik: o.etiket, rozet: "AI değil", alt: `Önizleme · ${o.kanvas.w}×${o.kanvas.h}`, secili: onizlemeSecili === o.id, durum: "tamam",
           onAc: () => { setOnizlemeSecili(o.id); setSeciliSonuc(null); }, onSil: () => { setOnizlemeler((l) => l.filter((x) => x.id !== o.id)); if (onizlemeSecili === o.id) setOnizlemeSecili(null); } }, yatay))}
-        {[...sonuclar].reverse().map((u) => {
+        {(galeriGorunum.siralama === "yeni" ? [...sonuclar].reverse() : sonuclar).map((u) => {
           const i = sonuclar.indexOf(u);
           const kn = u.meta?.kanvas as Kanvas | undefined;
           const durum = u.durum === "tamam" ? "tamam" : u.durum === "hata" ? "hata" : "suruyor";
           return surumOgesi({
             id: u.id, url: u.tur === "video" ? u.videoUrl : uretimGorseli(u), video: u.tur === "video", baslik: `V${i + 1} · ${u.baslik.replace(/^Çerçevele · /, "")}`, rozet: u.gercek === false && u.durum === "tamam" ? "Önizleme" : undefined, secili: seciliSonuc === u.id, durum, hata: u.hata,
-            alt: durum === "hata" ? (u.hata ?? "Başarısız") : durum === "suruyor" ? `${u.durum === "kuyrukta" ? "Sırada" : "Genişletiliyor"}${u.ilerleme ? ` · %${Math.round(u.ilerleme)}` : ""}` : `${u.model.replace(/ (Expand|Reframe)$/, "")} · ${kn ? `${kn.w}×${kn.h}` : String(u.meta?.oran ?? "")}`,
-            onAc: () => { setSeciliSonuc(u.id); setOnizlemeSecili(null); }, onIndir: () => uretimIndir(u),
+            alt: durum === "hata" ? (u.hata ?? "Başarısız") : durum === "suruyor" ? `${u.durum === "kuyrukta" ? "Sırada" : "Genişletiliyor"}${u.ilerleme ? ` · yüzde ${Math.round(u.ilerleme)}` : ""}` : `${u.model.replace(/ (Expand|Reframe)$/, "")} · ${kn ? `${kn.w}×${kn.h}` : String(u.meta?.oran ?? "")}`,
+            onAc: () => { setSeciliSonuc(u.id); setOnizlemeSecili(null); }, onIndir: () => uretimIndir(u), u: u.durum === "hata" ? undefined : u,
           }, yatay);
         })}
       </AnimatePresence>
@@ -1262,7 +1280,7 @@ export function GorselCercevele() {
             {g && (
               <div className="mx-3 mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
                 <span className="rounded-full bg-white/[0.07] px-2.5 py-1 tabular-nums text-metin-2">{kaynak.w}×{kaynak.h} <ChevronLeft className="inline h-3 w-3 rotate-180" /> <span className="font-semibold text-metin">{g.w}×{g.h}</span></span>
-                <span className="rounded-full bg-white/[0.07] px-2.5 py-1 tabular-nums text-metin-2">%{Math.round(g.yeni * 100)} yeni alan</span>
+                <span className="rounded-full bg-white/[0.07] px-2.5 py-1 tabular-nums text-metin-2">yüzde {Math.round(g.yeni * 100)} yeni alan</span>
               </div>
             )}
             <section className={cn("mx-3 mt-3 overflow-hidden rounded-[20px]", YUZEY)}>
@@ -1292,13 +1310,13 @@ export function GorselCercevele() {
                   <span className="text-[12.5px] text-metin-2">Uzaklaştır</span>
                   <input type="range" min={1} max={Math.max(2.5, zoom)} step={0.05} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-label="Uzaklaştır"
                     className="vy-aralik-beyaz flex-1 appearance-none rounded-full" style={{ ["--d" as string]: `${((zoom - 1) / (Math.max(2.5, zoom) - 1)) * 100}%` }} />
-                  <span className="w-9 text-right text-[12px] tabular-nums text-metin">%{Math.round(100 / zoom)}</span>
+                  <span className="min-w-9 whitespace-nowrap text-right text-[12px] tabular-nums text-metin">yüzde {Math.round(100 / zoom)}</span>
                 </div>
               )}
             </section>
             {surumSayisi > 0 && (
               <section className={cn("mx-3 mt-3 overflow-hidden rounded-[20px]", YUZEY)}>
-                <div className="flex items-center gap-2 border-b border-white/[0.07] px-3.5 py-2.5"><History className="h-4 w-4 text-metin-2" /><span className="text-[13.5px] font-semibold text-metin">Sürümler</span><span className="rounded-full bg-white/[0.08] px-1.5 text-[11px] tabular-nums text-metin-2">{surumSayisi}</span></div>
+                <div className="flex items-center gap-2 border-b border-white/[0.07] px-3.5 py-2.5"><History className="h-4 w-4 text-metin-2" /><span className="text-[13.5px] font-semibold text-metin">Sürümler</span><span className="rounded-full bg-white/[0.08] px-1.5 text-[11px] tabular-nums text-metin-2">{surumSayisi}</span><span className="ml-auto"><GorunumAyari sayfa="reframe" yerlesimVar={false} boyutVar={false} dugmeSinif="h-8 w-8" /></span></div>
                 <div className="p-2.5">{surumListesi(true)}</div>
               </section>
             )}
@@ -1364,7 +1382,7 @@ export function GorselCercevele() {
                   <div className="flex h-12 shrink-0 items-center justify-between px-3">
                     <span className="flex items-center gap-2 text-[13.5px] font-semibold text-metin">Sürümler <span className="rounded-full bg-white/[0.08] px-1.5 text-[11px] font-semibold tabular-nums text-metin-2">{surumSayisi}</span>
                       {surer.length > 0 && <span className="flex items-center gap-1 rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-metin"><Loader2 className="h-3 w-3 animate-spin" />{surer.length} sürüyor</span>}</span>
-                    <button onClick={() => setSurumAcik(false)} aria-label="Sürümleri gizle" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-metin-2 hover:bg-white/[0.06] hover:text-metin"><PanelRightClose className="h-4 w-4" /></button>
+                    <span className="flex items-center gap-1"><GorunumAyari sayfa="reframe" yerlesimVar={false} boyutVar={false} dugmeSinif="h-8 w-8" /><button onClick={() => setSurumAcik(false)} aria-label="Sürümleri gizle" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-metin-2 hover:bg-white/[0.06] hover:text-metin"><PanelRightClose className="h-4 w-4" /></button></span>
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">{surumListesi(false)}</div>
                   <button onClick={() => router.push("/panel/kitaplik")} className="m-3 mt-0 flex h-9 items-center justify-center gap-1.5 rounded-full bg-white/[0.06] text-[12.5px] text-metin-2 transition hover:bg-white/[0.1] hover:text-metin active:scale-[0.98]"><Images className="h-3.5 w-3.5" />Kitaplıkta aç</button>

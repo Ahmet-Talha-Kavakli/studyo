@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
+import { guvenliFetch } from "@/lib/guvenliAg";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,12 +15,15 @@ const temiz = (s?: string) => (s ?? "").replace(/&amp;/g, "&").replace(/&quot;/g
 
 /** POST { url } → ürün sayfasından ad, açıklama, görsel ve fiyat (Open Graph / JSON-LD). */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   const { url } = (await req.json().catch(() => ({}))) as { url?: string };
   let u: URL;
   try { u = new URL(/^https?:\/\//i.test(String(url ?? "")) ? String(url) : `https://${url}`); } catch { return NextResponse.json({ ok: false, hata: "Geçerli bir bağlantı gir." }, { status: 400 }); }
   if (!/^https?:$/.test(u.protocol) || IC_AG.test(u.hostname)) return NextResponse.json({ ok: false, hata: "Bu adres okunamaz." }, { status: 400 });
   try {
-    const r = await fetch(u, { headers: { "User-Agent": "Mozilla/5.0 (VayraUGC)", Accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(12000) });
+    const r = await guvenliFetch(u, { headers: { "User-Agent": "Mozilla/5.0 (VayraUGC)", Accept: "text/html" }, signal: AbortSignal.timeout(12000) });
     if (!r.ok) return NextResponse.json({ ok: false, hata: `Sayfa açılmadı (${r.status}).` }, { status: 502 });
     const html = (await r.text()).slice(0, 2_000_000);
     let ad = temiz(meta(html, "og:title") ?? html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]);

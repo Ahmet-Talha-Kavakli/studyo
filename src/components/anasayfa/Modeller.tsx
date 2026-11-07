@@ -13,7 +13,7 @@ import { useYumusak } from "./performans";
 const ease = [0.22, 1, 0.36, 1] as const;
 
 /** Yalnız şu an kullanılabilen modeller. */
-const MODELLER = KATALOG.filter((m) => m.rozet !== "Yakında" && m.rozet !== "Kapandı");
+const MODELLER = KATALOG.filter((m) => m.rozet !== "Bağlı değil" && m.rozet !== "Kapandı");
 const SAGLAYICILAR = [...new Set(MODELLER.map((m) => m.saglayici))];
 
 /** Aile ve tür havuzu tükenirse kullanılan ek gerçek çıktılar (tekrar olmasın diye). */

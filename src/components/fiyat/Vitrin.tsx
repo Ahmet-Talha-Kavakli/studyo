@@ -21,10 +21,7 @@ import { modelLogoUrl } from "@/components/kitaplik/Simgeler";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import { useAuth } from "@/store/useAuth";
 import { useAuthKapi } from "@/store/useAuthKapi";
-import { hareketYaz, useHesap } from "@/store/useHesap";
-import { hesapBildirimi } from "@/lib/bildirimler";
-import { davetliFiyat } from "@/lib/earn/davet";
-import { toast } from "@/lib/toast";
+import { odemeyeGec } from "@/components/fiyat/OdemePenceresi";
 import {
   BIREYSEL_PLANLAR, EKIP, FIYAT_SSS, HIZ_SEVIYELERI, KARSILASTIRMA, KREDI_PAKETLERI, KURUMSAL_OZELLIK, PLAN_SINIRSIZ, SINIRSIZ_TEKLIFLER,
   ULTRA_KREDI_KADEMELERI, UCRETSIZ, aylikFiyat, ekipFiyat, krediBasina, modelErisim, sayi, sinirsizFiyat, tl, tlKurus,
@@ -104,7 +101,7 @@ export function Bolumlu<T extends string>({ id, secenekler, deger, setDeger, eti
 export function DonemSec({ donem, setDonem, id = "donem" }: { donem: Donem; setDonem: (d: Donem) => void; id?: string }) {
   return <Bolumlu id={id} etiket="Faturalandırma dönemi" deger={donem} setDeger={setDonem} secenekler={[
     { id: "aylik", ad: "Aylık" },
-    { id: "yillik", ad: <>Yıllık<span className={cn("rounded-full px-1.5 text-[11px] font-bold leading-[18px] transition-colors", donem === "yillik" ? "bg-[#55d6fd]/25 text-[#08637e]" : "bg-[#55d6fd]/15 text-[#55d6fd]")}>%20 indirim</span></> },
+    { id: "yillik", ad: <>Yıllık<span className={cn("rounded-full px-1.5 text-[11px] font-bold leading-[18px] transition-colors", donem === "yillik" ? "bg-[#55d6fd]/25 text-[#08637e]" : "bg-[#55d6fd]/15 text-[#55d6fd]")}>yüzde 20 indirim</span></> },
   ]} />;
 }
 
@@ -203,18 +200,10 @@ function Ozellikler({ onceki, liste }: { onceki?: string; liste: string[] }) {
   );
 }
 
-/** Panelde planı doğrudan seçer (demo): profil, fatura kaydı, abonelik, bildirim. */
+/** Panelde planı seçer: ödeme özeti açılır, ödeme sağlayıcının güvenli sayfasında yapılır (davet indirimi sunucuda uygulanır). */
 export function planaGec(k: Kart, donem: Donem) {
-  const a = useAuth.getState();
-  if (!a.kullanici) return a.girisYapildi ? undefined : useAuthKapi.getState().ac();
-  const davet = a.kullanici.davetIndirimi === "bekliyor";
-  const ilk = davet ? davetliFiyat(k.fiyat) : k.fiyat;
-  a.profilGuncelle({ plan: k.id as "baslangic" | "arti" | "ultra", ...(davet ? { davetIndirimi: "kullanildi" as const } : {}) });
-  hareketYaz({ tur: "plan", aciklama: `${k.ad} planı · ${donem === "yillik" ? "yıllık" : "aylık"}`, kredi: 0, tutar: ilk, kdv: Math.round(ilk * 0.2), belge: true });
-  const em = a.kullanici.email;
-  if (em) useHesap.getState().guncelle(em, (h) => ({ ...h, abonelik: { donem: donem === "yillik" ? "yillik" : "aylik", baslangic: Date.now(), iptal: false, iptalTarihi: null } }));
-  hesapBildirimi(`${k.ad} planına geçtin`, `Ayda ${sayi(k.ayKredi)} kredi · ${tl(k.fiyat)} / ay, ${donem === "yillik" ? "yıllık" : "aylık"} faturalandırılır.${davet ? ` Davet indirimiyle ilk ödemen ${tl(ilk)}.` : ""}`, { ad: "Planını gör", link: "/panel/kredi?sekme=plan" });
-  toast.success(`${k.ad} planına geçtin`, { description: davet ? `Davet indirimi uygulandı, ilk ödemen ${tl(ilk)}. Gerçek ödeme alınmadı.` : "Gerçek ödeme alınmadı." });
+  if (k.id === "ucretsiz") return;
+  odemeyeGec({ tur: "plan", urun: k.id === "ultra" && k.kredi !== ULTRA_KREDI_KADEMELERI[0] ? `ultra-${k.kredi}` : k.id, donem });
 }
 
 /** Ücretsizde giriş penceresi; ücretli planlarda sitede satın alma sayfasına, panelde doğrudan plan değişimi. */
@@ -502,7 +491,7 @@ export function KrediPaketleri() {
               className="group flex h-full flex-col items-center overflow-hidden rounded-[25px] bg-[linear-gradient(180deg,#151519_0%,#101012_60%)] px-4 pb-4 pt-4 text-center outline-none focus-visible:ring-2 focus-visible:ring-[#55d6fd]/60">
               <span className={cn("h-[22px] whitespace-nowrap rounded-full px-2.5 text-[11.5px] font-semibold leading-[22px]",
                 pop ? "rgb-rozet text-white" : ind > 0 ? "bg-white/[0.07] text-white/70" : "invisible")}>
-                {pop ? "En çok alınan" : `%${ind} avantaj`}
+                {pop ? "En çok alınan" : `yüzde ${ind} avantaj`}
               </span>
               <div className="mt-2 w-full"><Yigin i={i} ust={ust === i} /></div>
               <p className="mt-4 flex items-baseline gap-1">
@@ -661,7 +650,7 @@ export function Guven() {
 
 /* ══════════════ SSS ══════════════ */
 const EK_SSS = [
-  { s: "Fiyatlara KDV dahil mi?", c: "Hayır. Gösterilen fiyatlara %20 KDV eklenir; ödeme ekranında toplamı ayrıca görürsün. Kurumsal müşterilere e-fatura kesilir." },
+  { s: "Fiyatlara KDV dahil mi?", c: "Hayır. Gösterilen fiyatlara yüzde 20 KDV eklenir; ödeme özetinde toplamı ayrıca görürsün. Yurt dışından ABD doları ile yapılan ödemede KDV uygulanmaz." },
   { s: "Ekip planında koltuk başına ücret var mı?", c: "Yok. Ekip planında ortak bir kredi havuzu alırsın; 10 üyeye kadar ekleyebilir, her üyeye harcama limiti koyabilirsin." },
   { s: "“Kredi düşmeden” kullanım nasıl çalışır?", c: "Planında listelenen modeller Vayra arayüzünde kredi harcamadan çalışır. Yoğun saatlerde sıraya alınabilir; API, MCP ve Canvas kullanımında kredi düşer." },
 ];

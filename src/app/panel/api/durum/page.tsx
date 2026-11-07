@@ -65,7 +65,7 @@ export default function DurumSayfasi() {
     }
     const son24 = teslimler.filter((t) => Date.now() - Date.parse(t.created_at) < 86400_000 && t.state !== "pending");
     const basarili = son24.filter((t) => t.state === "succeeded").length;
-    liste.push({ id: "webhook", ad: "Webhook teslimi", ozet: "Son 24 saatteki teslimlerin", durum: !son24.length ? "bilinmiyor" : basarili / son24.length >= 0.95 ? "ok" : "uyari", detay: son24.length ? `%${Math.round((basarili / son24.length) * 100)} başarılı · ${son24.length} teslim` : "teslim yok" });
+    liste.push({ id: "webhook", ad: "Webhook teslimi", ozet: "Son 24 saatteki teslimlerin", durum: !son24.length ? "bilinmiyor" : basarili / son24.length >= 0.95 ? "ok" : "uyari", detay: son24.length ? `yüzde ${Math.round((basarili / son24.length) * 100)} başarılı · ${son24.length} teslim` : "teslim yok" });
     try {
       const r = await fetch("/api/saglayici-durum", { cache: "no-store" });
       const j = (await r.json()) as { durum: Record<string, { saglayici: string; gercek: boolean }> };
@@ -128,7 +128,7 @@ export default function DurumSayfasi() {
         <dl className="relative grid grid-cols-3 gap-px border-t border-white/[0.07] bg-white/[0.05]">
           {[
             ["API p50", p50 === null ? null : sureMetin(Math.round(p50))],
-            ["Erişim · 48 sa", erisim === null ? null : `%${erisim.toFixed(erisim === 100 ? 0 : 2).replace(".", ",")}`],
+            ["Erişim · 48 sa", erisim === null ? null : `yüzde ${erisim.toFixed(erisim === 100 ? 0 : 2).replace(".", ",")}`],
             ["Bileşen", bilesenler.length ? `${bilesenler.filter((b) => b.durum !== "bilinmiyor").length} / ${bilesenler.length}` : null],
           ].map(([e, v]) => (
             <div key={e} className="min-w-0 bg-[#0b0d0e]/80 px-3.5 py-3.5 sm:px-5">
@@ -158,7 +158,7 @@ export default function DurumSayfasi() {
             <h2 className="text-[15.5px] font-semibold text-white">Son 48 saat</h2>
             <p className="mt-0.5 text-[13px] text-white/60">Bu tarayıcıdan yapılan ping ölçümleri · saatlik</p>
           </div>
-          <p className="text-[13px] text-white/60">Erişilebilirlik <span className="ml-1 text-[18px] font-semibold tabular-nums text-white">{erisim === null ? "Veri yok" : `%${erisim.toFixed(2).replace(".", ",")}`}</span></p>
+          <p className="text-[13px] text-white/60">Erişilebilirlik <span className="ml-1 text-[18px] font-semibold tabular-nums text-white">{erisim === null ? "Veri yok" : `yüzde ${erisim.toFixed(2).replace(".", ",")}`}</span></p>
         </div>
         <SaatCubugu saatler={saatler} yukseklik={52} />
         <div className="mt-2 flex justify-between text-[11.5px] text-white/50"><span>48 sa önce</span><span>Şimdi</span></div>

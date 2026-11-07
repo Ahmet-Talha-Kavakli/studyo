@@ -5,7 +5,7 @@ import type { Platform } from "./kampanyalar";
 
 /**
  * Earn API istemcisi — /api/earn/* uç noktalarını çağırır.
- * Ağ hatasında `gercek: false` döner; çağıran taraf simülasyona düşer.
+ * Ağ hatasında ok: false döner: bağlantı yokken hiçbir işlem başarılı sayılmaz.
  */
 async function cagir<T>(islem: string, govde: unknown): Promise<T & { ok: boolean; gercek: boolean; hata?: string }> {
   try {
@@ -14,7 +14,7 @@ async function cagir<T>(islem: string, govde: unknown): Promise<T & { ok: boolea
     if (!r.ok) return { ok: false, gercek: true, hata: j.hata ?? "İşlem başarısız." } as never;
     return j;
   } catch {
-    return { ok: true, gercek: false } as never;
+    return { ok: false, gercek: false, hata: "Sunucuya ulaşılamadı. Bağlantını kontrol edip yeniden dene." } as never;
   }
 }
 
@@ -30,6 +30,23 @@ export const kimlikIstek = (tckn: string, ad: string, soyad: string, dogumYili: 
 
 export const cekimIstek = (o: { tur: "iban" | "papara"; hesapNo: string; tutar: number; referans: string; tckn?: string }) =>
   cagir<{ referans?: string }>("cekim", o);
+
+/** Sunucudaki başvuru kaydı (lib/hesap/earnDepo ile aynı biçim). */
+export type SunucuBasvuru = {
+  id: string; kampanyaId: string; kampanyaAd: string; platform: Platform; link: string; tarih: number;
+  durum: "inceleme" | "onaylandi" | "reddedildi"; red?: string; itiraz?: "inceleniyor" | "reddedildi";
+  kontrol?: { gercek: boolean; sahibiMi: boolean | null };
+};
+export const basvuruGonder = async (b: { kampanyaId: string; platform: Platform; link: string; kontrol?: { gercek: boolean; sahibiMi: boolean | null } }) =>
+  (await cagir<{ basvuru: SunucuBasvuru }>("basvuru", b)) as ({ ok: true; basvuru: SunucuBasvuru } | { ok: false; hata?: string });
+export const itirazGonder = (id: string) => cagir<{ basvuru?: SunucuBasvuru }>("itiraz", { id });
+export async function basvurularGetir(): Promise<{ ok: true; basvurular: SunucuBasvuru[] } | { ok: false }> {
+  try {
+    const r = await fetch("/api/earn/basvurular", { cache: "no-store" });
+    const j = await r.json();
+    return r.ok && j.ok && Array.isArray(j.basvurular) ? { ok: true, basvurular: j.basvurular } : { ok: false };
+  } catch { return { ok: false }; }
+}
 
 export type EntegrasyonDurumu = {
   dogrulama: Record<Platform, boolean>;

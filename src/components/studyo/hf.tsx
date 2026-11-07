@@ -19,7 +19,7 @@ export function Rozet({ tur }: { tur: "yeni" | "demo" | "yakinda" | "kilit" }) {
   if (tur === "kilit") return <span title="Bu araç gerçek sağlayıcı bağlantısı ister" className="rounded-full bg-amber-300/15 px-1.5 py-px text-[10.5px] font-medium text-amber-200">Bağlantı gerekli</span>;
   if (tur === "yeni") return <span className="rounded-full bg-aksan/15 px-1.5 py-px text-[10.5px] font-medium text-aksan">Yeni</span>;
   if (tur === "demo") return null;
-  return <span className="rounded-full bg-white/10 px-1.5 py-px text-[10.5px] font-medium text-metin-2">Yakında</span>;
+  return <span className="rounded-full bg-white/10 px-1.5 py-px text-[10.5px] font-medium text-metin-2">Bağlı değil</span>;
 }
 
 /** Marka logosu cam kutuda. */

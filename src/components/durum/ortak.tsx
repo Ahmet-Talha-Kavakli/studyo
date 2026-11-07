@@ -57,7 +57,7 @@ export function calismaYuzdesi(d: BilesenDurumu | undefined): number | null {
   const t = (d?.gunler ?? []).reduce((a, k) => ({ o: a.o + k.olcum, b: a.b + k.basarisiz }), { o: 0, b: 0 });
   return t.o ? ((t.o - t.b) / t.o) * 100 : null;
 }
-export const yuzdeMetni = (y: number) => `%${y >= 99.995 ? "100" : y.toFixed(2).replace(".", ",")}`;
+export const yuzdeMetni = (y: number) => `yüzde ${y >= 99.995 ? "100" : y.toFixed(2).replace(".", ",")}`;
 
 /** Bileşenin şu anki durumu (aktif olay varsa onu da hesaba katar). */
 export function anlikDurum(id: string, d: BilesenDurumu | undefined): DurumKodu | null {

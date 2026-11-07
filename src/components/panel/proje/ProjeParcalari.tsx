@@ -482,10 +482,10 @@ export function PaylasModal({ proje, kullanici, onKapat, onLink, onErisim }: {
         </button>
         {erisimAcik && (
           <div className="menu-surface absolute inset-x-0 top-12 z-10 rounded-2xl p-1.5">
-            <button onClick={() => { onErisim("ozel"); setErisimAcik(false); toast.success("Erişim güncellendi", { description: "Projeyi yalnız davet edilenler görebilir." }); }} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] text-metin-2 hover:bg-white/[0.06] hover:text-metin">
+            <button onClick={() => { onErisim("ozel"); setErisimAcik(false); toast.success("Erişim ayarı kaydedildi", { description: "Yalnızca davet edilenler." }); }} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] text-metin-2 hover:bg-white/[0.06] hover:text-metin">
               <Lock className="h-4 w-4" /> Yalnızca davet edilenler
             </button>
-            <button onClick={() => { onErisim("acik"); setErisimAcik(false); toast.success("Erişim güncellendi", { description: "Bağlantısı olan herkes projeyi görebilir." }); }} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] text-metin-2 hover:bg-white/[0.06] hover:text-metin">
+            <button onClick={() => { onErisim("acik"); setErisimAcik(false); toast("Erişim ayarı kaydedildi", { description: "Projeler şimdilik bu tarayıcıda saklanıyor; bağlantıyı başka biri açamaz." }); }} className="flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-[13.5px] text-metin-2 hover:bg-white/[0.06] hover:text-metin">
               <Globe className="h-4 w-4" /> Bağlantısı olan herkes
             </button>
           </div>
@@ -533,7 +533,6 @@ export function YayinSihirbazi({ proje, varliklar, onKapat, onYayinla, onYayinKa
   useEscKapat(true, onKapat);
 
   const kullaniciAd = kullanici?.ad ?? "sen";
-  const link = `vayra.app/@${kullaniciAd.toLocaleLowerCase("tr").replace(/\s+/g, "")}/projeler/${baslik.toLocaleLowerCase("tr").replace(/\s+/g, "-") || "proje"}`;
 
   const varlikGorsel = (u?: Uretim) =>
     u ? (saltUrl(u.gorselUrl) ?? kapakSrc(u.prompt || u.baslik)) : kapakSrc(proje.kapakTohum || proje.id);
@@ -583,17 +582,12 @@ export function YayinSihirbazi({ proje, varliklar, onKapat, onYayinla, onYayinKa
                     placeholder="Projeni bir-iki cümleyle anlat."
                     className="w-full resize-none bg-transparent px-3 py-2.5 text-[13.5px] text-metin outline-none placeholder:text-metin-3"
                   />
-                  <div className="flex items-center justify-between px-3 pb-2">
-                    <button
-                      onClick={() => setAciklama(`${baslik} — sinematik bir yolculuk: atmosfer, karakter ve ritim tek bir anlatıda buluşuyor.`)}
-                      className="flex items-center gap-1.5 text-[12px] text-metin-3 transition-colors hover:text-aksan"
-                    ><Sparkles className="h-3.5 w-3.5" /> Yeniden üret</button>
+                  <div className="flex items-center justify-end px-3 pb-2">
                     <span className="text-[12px] text-metin-3">{280 - aciklama.length} karakter kaldı</span>
                   </div>
                 </div>
 
-                <label className="mb-1.5 block text-[12.5px] text-metin-2">Bağlantı</label>
-                <p className="mb-4 truncate rounded-xl bg-white/[0.03] px-3 py-2.5 text-[13.5px] text-metin-3">{link}</p>
+                <p className="mb-4 rounded-xl bg-white/[0.03] px-3 py-2.5 text-[13px] leading-relaxed text-metin-3">Proje bu tarayıcıda yayında olarak işaretlenir. Herkese açık proje sayfası henüz yok; başka kullanıcılar göremez.</p>
 
                 <label className="mb-1.5 block text-[12.5px] text-metin-2">Yazarlar</label>
                 <div className="mb-4 flex items-center gap-2 rounded-xl bg-white/[0.05] px-2.5 py-1.5 ring-1 ring-inset ring-white/[0.08] sm:w-fit">

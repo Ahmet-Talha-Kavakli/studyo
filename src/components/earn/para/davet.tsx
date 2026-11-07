@@ -46,7 +46,7 @@ export function BaglantiKutusu({ deger, gorunen }: { deger: string; gorunen: str
 
 /* ── Paylaş düğmeleri (gerçek logolar) ── */
 export function PaylasDugmeleri({ link }: { link: string }) {
-  const metin = `Vayra'da görsel, video ve müzik üretiyorum. Bu bağlantıyla katılırsan ilk plan ödemende %${Math.round(DAVET_INDIRIM * 100)} indirim kazanırsın:`;
+  const metin = `Vayra'da görsel, video ve müzik üretiyorum. Bu bağlantıyla katılırsan ilk plan ödemende yüzde ${Math.round(DAVET_INDIRIM * 100)} indirim kazanırsın:`;
   const k = encodeURIComponent(`${metin} ${link}`);
   const paylas = async () => {
     if (navigator.share) { try { await navigator.share({ title: "Vayra daveti", text: metin, url: link }); } catch { /* vazgeçti */ } }
@@ -127,7 +127,7 @@ export function KademeYolu({ aktif, aylikOdeme, sonraki, toplam }: { aktif: stri
           return (
             <div key={k.ad} className={cn("rounded-[18px] p-4 ring-1 transition", a ? "bg-white/[0.06] ring-white/[0.18]" : "ring-white/[0.06]")}>
               <p className="flex items-center gap-2 text-[14px] font-semibold text-white"><span className="h-2.5 w-2.5 rounded-full" style={{ background: MADALYA[k.ad] }} />{k.ad}{a && <span className="rounded-full bg-[#55d6fd]/15 px-2 py-px text-[11px] font-medium text-[#8fe6ff]">Buradasın</span>}</p>
-              <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-white">%{Math.round(k.oran * 100)}</p>
+              <p className="mt-2 text-[28px] font-semibold leading-none tracking-[-0.03em] text-white">yüzde {Math.round(k.oran * 100)}</p>
               <p className="mt-1.5 text-[12.5px] text-white/45">{k.minAylik ? `Aylık ${tl(k.minAylik)} ve üstü` : "Herkes buradan başlar"}</p>
             </div>
           );

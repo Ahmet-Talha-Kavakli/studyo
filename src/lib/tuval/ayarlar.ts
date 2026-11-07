@@ -27,7 +27,7 @@ export type ModelSecenek = { ad: string; alt: string; kredi: number; rozet?: str
 export const gorselModelleri = (): ModelSecenek[] => GORSEL_KATALOG.filter((m) => !m.gizli).map((m) => ({ ad: m.ad, alt: m.ozet, kredi: m.kredi ?? 4, rozet: m.rozet, grup: m.grup === "one" ? "Öne çıkan" : "Tüm modeller", not: m.api.refZorunlu ? "Referans görsel gerekir" : m.tip === "swap" ? "İki görsel gerekir" : undefined }));
 export const videoModelleri = (): ModelSecenek[] => MODEL_AILELERI.flatMap((a) => a.varyantlar.map((v) => ({ ad: v.ad, alt: `${a.ozet} · ${v.coz} · ${v.sureAralik.replace("sn", " sn")}${v.ses ? " · sesli" : ""}`, kredi: v.kredi, rozet: v.rozet, grup: a.grup === "one" ? "Öne çıkan" : a.ad })))
   .filter((m, i, l) => l.findIndex((x) => x.ad === m.ad) === i);
-export const sesModelleri = (): ModelSecenek[] => SES_URETIM_MODELLERI.map((m) => ({ ad: m.ad, alt: m.ozet, kredi: 1, rozet: m.rozet, grup: m.saglayici ? "Kullanılabilir" : "Yakında", not: m.saglayici ? undefined : "Yakında" }));
+export const sesModelleri = (): ModelSecenek[] => SES_URETIM_MODELLERI.map((m) => ({ ad: m.ad, alt: m.ozet, kredi: 1, rozet: m.rozet, grup: m.saglayici ? "Kullanılabilir" : "Bağlı değil", not: m.saglayici ? undefined : "Bağlı değil" }));
 export const muzikModelleri = (): ModelSecenek[] => MUZIK_MODELLERI.map((m) => ({ ad: m.ad, alt: m.ozet, kredi: muzikKredi(m.ad, 30), rozet: m.rozet, grup: m.saglayici === "eleven" ? "ElevenLabs" : "Google" }));
 
 export function modelListesi(tur: DugumTur): ModelSecenek[] {
@@ -102,7 +102,7 @@ export function kontroller(tur: DugumTur, model?: string): Kontrol[] {
   if (tur === "maske") return [{ id: "mod", ad: "İşlem", tur: "secim", secenekler: [{ deger: "duzenle", ad: "Değiştir", alt: "Boyanan alanı isteme göre yeniden üret" }, { deger: "sil", ad: "Nesneyi sil", alt: "Boyanan nesneyi kaldır, arkayı doldur" }], varsayilan: "duzenle", cip: true }];
   if (tur === "videoKes") return [
     { id: "bas", ad: "Başlangıç", tur: "kaydirici", min: 0, max: 60, adim: 0.1, varsayilan: 0, birim: "sn" },
-    { id: "son", ad: "Bitiş (0 = sonuna kadar)", tur: "kaydirici", min: 0, max: 60, adim: 0.1, varsayilan: 0, birim: "sn" },
+    { id: "son", ad: "Bitiş (0 ise sonuna kadar)", tur: "kaydirici", min: 0, max: 60, adim: 0.1, varsayilan: 0, birim: "sn" },
     { id: "hiz", ad: "Hız", tur: "secim", secenekler: ["0.5", "0.75", "1", "1.25", "1.5", "2", "3"].map((x) => ({ deger: x, ad: `${x.replace(".", ",")}×` })), varsayilan: "1", cip: true },
   ];
   if (tur === "videoBirlestir") return [

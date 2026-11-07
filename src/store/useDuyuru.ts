@@ -58,14 +58,5 @@ export const useDuyuru = create<DuyuruState>()(
  * gerçek bir duyuru çıkarmak için aşağıya kayıt ekle.
  */
 export const DUYURULAR: Duyuru[] = [
-  // Higgsfield "Our terms have changed" birebir — politika duyurusu (onay zorunlu):
-  {
-    id: "terms-2026-08",
-    tur: "politika",
-    baslik: "Koşullarımız değişti",
-    mesaj: "Üretmeye devam etmek için güncellenen Kullanım Koşulları ve Gizlilik Politikası'nı incele ve kabul et. Koşullar 6 Ağustos 2026'da yürürlüğe girecek.",
-    onayGerekli: true,
-    onayMetni: "Kullanım Koşulları'nı kabul ediyor, Gizlilik Politikası'nı onaylıyor ve 18 yaşından büyük olduğumu doğruluyorum.",
-    btnMetin: "Kabul ediyorum",
-  },
+  // Tarihi geçmiş koşul duyurusu kaldırıldı (2026-11-07). Koşullar değişince kayıt sayfası onayı ve e-posta bildirimi kullanılır.
 ];

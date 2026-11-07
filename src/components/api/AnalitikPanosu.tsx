@@ -62,7 +62,7 @@ export function AnalitikPanosu({ model }: { model?: string }) {
 
   const kpi: { e: string; d: string; a: string; r?: string }[] = [
     { e: "İstek", d: o.toplam.toLocaleString("tr-TR"), a: `${o.basarili} başarılı · ${o.basarisiz} başarısız` },
-    { e: "Başarı oranı", d: o.oran === null ? "Veri yok" : `%${(o.oran * 100).toFixed(1).replace(".", ",").replace(",0", "")}`, a: "Biten istekler içinde", r: o.oran === null ? undefined : o.oran >= 0.99 ? "text-emerald-300" : o.oran >= 0.9 ? "text-amber-200" : "text-rose-300" },
+    { e: "Başarı oranı", d: o.oran === null ? "Veri yok" : `yüzde ${(o.oran * 100).toFixed(1).replace(".", ",").replace(",0", "")}`, a: "Biten istekler içinde", r: o.oran === null ? undefined : o.oran >= 0.99 ? "text-emerald-300" : o.oran >= 0.9 ? "text-amber-200" : "text-rose-300" },
     { e: "Çalışma süresi", d: o.p50 === null ? "Veri yok" : sureMetin(o.p50), a: `p50 · p95 ${sureMetin(o.p95)}` },
     { e: "Harcanan kredi", d: o.kredi.toLocaleString("tr-TR"), a: "Yalnız canlı ve tamamlanan" },
   ];

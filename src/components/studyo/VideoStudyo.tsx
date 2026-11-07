@@ -1,5 +1,6 @@
 "use client";
 
+import { Iskelet } from "@/components/ui/Iskelet";
 /**
  * Video stüdyosu — stüdyo düzeni: büyük tuval (üretimlerim / hareket kütüphanesi) + altta yüzen
  * komut kutusu. Komut kutusunda kareler, istem ve görselli çiplerden açılan seçiciler bulunur.
@@ -16,7 +17,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Dices,
   AtSign, ArrowLeftRight, Check, ChevronDown, Clock, Film, FastForward, Heart, ImagePlus, Images, Info, Layers, Lightbulb,
-  Loader2, Lock, Minus, Plus, Move3d, PenLine, Ban, Sparkles, Upload, Volume2, VolumeX, Wand2, X, Infinity as Sonsuz, LayoutGrid, Rows3, ScanEye, Feather,
+  Loader2, Lock, Minus, Plus, Star, Move3d, PenLine, Ban, Sparkles, Upload, Volume2, VolumeX, Wand2, X, Infinity as Sonsuz, LayoutGrid, Rows3, ScanEye, Feather,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
@@ -55,6 +56,9 @@ import { YorumSekmesi } from "@/components/studyo/YorumSekmesi";
 import type { StudyoGomuluProps } from "@/components/studyo/tipler";
 import { VideoKart } from "./video/VideoKart";
 import { Kayan } from "@/components/dump/dumpOrtak";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 import { HareketGalerisi } from "./video/HareketGalerisi";
 import { ModelSecici } from "./video/ModelSecici";
 import { UretimSecici } from "./video/UretimSecici";
@@ -175,7 +179,9 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
   const [surukle, setSurukle] = useState(false);
   const [sekme, setSekme] = useState<"akis" | "ilham" | "hareketler">("akis");
   const [filtre, setFiltre] = useState<"tumu" | "begenilen">("tumu");
-  const [yogunluk, setYogunluk] = useState<"rahat" | "sik">("rahat");
+  /* Görünüm ayarı (yerleşim, boyut, sıralama, istemi temizle) sayfa başına kalıcı. */
+  const [gorunum] = useGorunum("video", { boyut: "buyuk" });
+  const [izgaraRef, izgaraEn] = useAlanGenisligi<HTMLDivElement>(1200);
   const [seciliId, setSeciliId] = useState<string | null>(null);
   const [yorum, setYorum] = useState("");
   const [favModeller, setFavModeller] = useState<string[]>([]);
@@ -456,6 +462,7 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
       }
       if (!basarili) return void (sonHata && uretimHataToast(sonHata));
       if (sonHata) uretimHataToast(sonHata);
+      if (istemTemizlensinMi("video")) setPrompt("");
       if (!gomulu) { setSekme("akis"); setFiltre("tumu"); akisRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }
       toast.success(taslak ? (basarili > 1 ? `${basarili} taslak üretiliyor` : "Taslak üretiliyor") : basarili > 1 ? `${basarili} video üretiliyor` : uzatMod ? "Video uzatılıyor" : "Video üretiliyor", {
         description: `${model} · ${taslak ? `${kalite} taslak · ` : etkinSure ? `${etkinSure} sn · ` : ""}${demo ? "Kredi düşmez." : sinirsizGecerli ? "Sınırsız erişim, kredi düşmez." : `${kredi * basarili} kredi.`}${taslak ? ` Beğenirsen ${coz} son hâline getirebilirsin.` : ""}`,
@@ -529,7 +536,7 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
 
   /* ── Görüntüleyici eylemleri ── */
   const videoUretimleri = useMemo(() => tumUretimler.filter((u) => u.tur === "video" && !u.id.startsWith("seed_")), [tumUretimler]);
-  const gorunenler = filtre === "begenilen" ? videoUretimleri.filter((u) => u.favori) : videoUretimleri;
+  const gorunenler = zamanaGoreSirala(filtre === "begenilen" ? videoUretimleri.filter((u) => u.favori) : videoUretimleri, gorunum.siralama);
   const gezListe = useMemo(() => videoUretimleri.filter((u) => u.durum === "tamam"), [videoUretimleri]);
   const seciliUretim = seciliId ? tumUretimler.find((u) => u.id === seciliId) : undefined;
   const lbIndex = seciliUretim ? gezListe.findIndex((u) => u.id === seciliUretim.id) : -1;
@@ -844,7 +851,7 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
     <>
       <p className="flex items-center gap-1.5 px-1.5 pb-1.5 text-[12.5px] font-semibold text-metin"><ScanEye className="h-3.5 w-3.5 text-metin-2" />Kareden istem önerileri</p>
       {oneriYukleniyor ? (
-        <div className="space-y-1.5 p-1">{[0, 1, 2].map((i) => <span key={i} className="block h-12 animate-pulse rounded-[10px] bg-white/[0.05]" />)}</div>
+        <div aria-busy aria-label="Öneriler hazırlanıyor">{[0, 1, 2].map((i) => <span key={i} className="block space-y-1.5 px-2 py-2.5"><Iskelet className="h-3 w-full rounded-full" /><Iskelet className={i === 1 ? "h-3 w-1/2 rounded-full" : "h-3 w-3/4 rounded-full"} /></span>)}</div>
       ) : oneriler?.liste.map((o) => (
         <button key={o} onClick={() => { setPrompt(o); setAcik(null); setTimeout(() => promptRef.current?.focus(), 30); }}
           className="block w-full rounded-[10px] px-2 py-2 text-left text-[12.5px] leading-snug text-metin-2 hover:bg-white/[0.05] hover:text-metin">{o}</button>
@@ -975,7 +982,7 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
       {oz.sesToggle && (
         <>
           {ayrac}
-          <button onClick={() => setSesli((v) => !v)} role="switch" aria-checked={sesli} title={sesli ? "Ses açık · kredi %25 artar" : "Sesi aç"} className={SEG}>
+          <button onClick={() => setSesli((v) => !v)} role="switch" aria-checked={sesli} title={sesli ? "Ses açık · kredi yüzde 25 artar" : "Sesi aç"} className={SEG}>
             {daire(sesli ? <Volume2 className="h-4 w-4 text-metin" strokeWidth={1.9} /> : <VolumeX className="h-4 w-4" strokeWidth={1.9} />)}{segMetin("Ses", sesli ? "Açık" : "Kapalı", sesli)}
           </button>
         </>
@@ -1129,7 +1136,8 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
   );
 
   /* ═════════════ Tuval ═════════════ */
-  const izgaraSutun = yogunluk === "rahat" ? "columns-1 sm:columns-2 xl:columns-3" : "columns-2 md:columns-3 xl:columns-4 2xl:columns-5";
+  const izgaraSutun = sutunSayisi(izgaraEn, gorunum, { enCok: 8 });
+  const kartOran = gorunum.yerlesim === "ozgun" ? undefined : kartOrani(gorunum, 16 / 9);
   const gruplar = useMemo(() => {
     const l: { etiket: string; oge: Uretim[] }[] = [];
     for (const u of gorunenler) { const e = gunEtiketi(u.olusturma); const s = l[l.length - 1]; if (s && s.etiket === e) s.oge.push(u); else l.push({ etiket: e, oge: [u] }); }
@@ -1198,7 +1206,7 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
   );
 
   const akis = (
-    <div className="mx-auto max-w-[1440px] px-6 pt-2">
+    <div ref={izgaraRef} className="mx-auto max-w-[1440px] px-6 pt-2">
       {gruplar.map((g) => {
         const tamamlar = g.oge.filter((u) => u.durum === "tamam");
         const hepsi = tamamlar.length > 0 && tamamlar.every((u) => secililer.includes(u.id));
@@ -1212,12 +1220,12 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
                 <button onClick={() => tamamlar.forEach((u) => { if (hepsi === secililer.includes(u.id)) secimToggle(u.id); })} className="flex h-8 shrink-0 items-center rounded-full bg-white/[0.05] px-3 text-[12.5px] font-medium text-metin-2 ring-1 ring-inset ring-white/[0.07] transition-colors hover:bg-white/[0.1] hover:text-metin active:scale-95">{hepsi ? "Seçimi kaldır" : "Tümünü seç"}</button>
               )}
             </div>
-            <div className={cn("gap-3", izgaraSutun)}>
+            <div className="gap-3" style={gorunum.yerlesim === "ozgun" ? { columnCount: izgaraSutun } : { display: "grid", gridTemplateColumns: `repeat(${izgaraSutun}, minmax(0, 1fr))`, rowGap: 0 }}>
               <AnimatePresence initial={false}>
                 {g.oge.map((u) => (
                   <motion.div key={u.id} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.25 }} className="mb-3 break-inside-avoid">
-                    <VideoKart u={u} secili={secililer.includes(u.id)} secimModu={secimModu}
-                      onAc={() => setSeciliId(u.id)} onSecim={() => secimToggle(u.id)} onBegen={() => { favoriToggle(u.id); toast.success(u.favori ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); }} onIndir={() => uretimIndir(u)} onAyar={() => ayarlariYukle(u)}
+                    <VideoKart u={u} oran={kartOran} secili={secililer.includes(u.id)} secimModu={secimModu}
+                      onAc={() => setSeciliId(u.id)} onSecim={() => secimToggle(u.id)} onBegen={() => { favoriToggle(u.id); toast.success(u.favori ? "Favorilerden çıkarıldı" : "Favorilere eklendi"); }} onIndir={() => uretimIndir(u)} onAyar={() => ayarlariYukle(u)}
                       onBuyut={u.gercek !== false && buyutAdresi(u) ? () => router.push(buyutAdresi(u)!) : undefined}
                       onDevam={u.gercek !== false && u.videoUrl ? () => kartlaDevam(u) : undefined}
                       onSonHal={u.meta?.taslak ? () => sonHalineGetir(u) : undefined}
@@ -1232,9 +1240,9 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
       })}
       {!gorunenler.length && (
         <div className="flex flex-col items-center gap-2 py-20 text-center">
-          <Heart className="h-6 w-6 text-metin-3" />
-          <p className="text-[14px] font-semibold text-metin">Beğendiğin video yok</p>
-          <p className="text-[12.5px] text-metin-3">Bir videonun kalbine basınca burada toplanır.</p>
+          <Star className="h-6 w-6 text-metin-3" />
+          <p className="text-[14px] font-semibold text-metin">Favori videon yok</p>
+          <p className="text-[12.5px] text-metin-3">Bir videonun yıldızına basınca burada toplanır.</p>
         </div>
       )}
     </div>
@@ -1341,13 +1349,11 @@ export function VideoStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps =
         )}
         {gorunenSekme === "akis" && (
           <>
-            {!masaustu && <button onClick={() => setFiltre((v) => (v === "begenilen" ? "tumu" : "begenilen"))} aria-pressed={filtre === "begenilen"} aria-label="Yalnız beğenilenler" className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95", filtre === "begenilen" ? "bg-white text-[#0a0a0b]" : "bg-white/[0.06] text-metin-2")}><Heart className={cn("h-4 w-4", filtre === "begenilen" && "fill-current")} /></button>}
+            {!masaustu && <button onClick={() => setFiltre((v) => (v === "begenilen" ? "tumu" : "begenilen"))} aria-pressed={filtre === "begenilen"} aria-label="Yalnız favoriler" title="Yalnız favoriler" className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95", filtre === "begenilen" ? "bg-white text-[#0a0a0b]" : "bg-white/[0.06] text-metin-2")}><Star className={cn("h-4 w-4", filtre === "begenilen" && "fill-current")} /></button>}
             {masaustu && <Kayan id="video-filtre" etiket="Süzgeç" deger={filtre} onDeger={setFiltre} secenekler={[
-              { v: "tumu", a: "Tümü" }, { v: "begenilen", a: <><Heart className="h-3.5 w-3.5" />Beğenilenler</> },
+              { v: "tumu", a: "Tümü" }, { v: "begenilen", a: <><Star className="h-3.5 w-3.5" />Favoriler</> },
             ]} />}
-            <span className="max-md:hidden"><Kayan id="video-yogun" etiket="Izgara yoğunluğu" deger={yogunluk} onDeger={setYogunluk} secenekler={[
-              { v: "rahat", a: <><Rows3 className="h-3.5 w-3.5" /><span className="sr-only">Büyük kartlar</span></> }, { v: "sik", a: <><LayoutGrid className="h-3.5 w-3.5" /><span className="sr-only">Sık ızgara</span></> },
-            ]} /></span>
+            <GorunumAyari sayfa="video" taban={{ boyut: "buyuk" }} />
           </>
         )}
         <Link href="/panel/kitaplik" title="Kitaplık" aria-label="Kitaplık" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-metin-2 ring-1 ring-inset ring-white/[0.07] transition-colors hover:bg-white/[0.1] hover:text-metin max-md:hidden"><Images className="h-4 w-4" /></Link>

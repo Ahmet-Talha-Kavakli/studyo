@@ -25,7 +25,7 @@ export default function Referanslar() {
       <Kap>
         <SayiSeridi ogeler={[
           { deger: "10.000+", etiket: "aktif yaratıcı ve ekip" },
-          { deger: "%74", etiket: "ortalama daha kısa teslim süresi" },
+          { deger: "yüzde 74", etiket: "ortalama daha kısa teslim süresi" },
           { deger: "3,1x", etiket: "proje başına daha fazla konsept" },
           { deger: "4,9/5", etiket: "ortalama memnuniyet puanı" },
         ]} />

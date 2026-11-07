@@ -107,7 +107,7 @@ function videolar(): KatalogModel[] {
       gorulen.set(v.ad, {
         slug: slugla(v.ad), ad: v.ad, aile: aile.ad.trim(), saglayici: saglayiciBul(v.ad), tur: "video",
         ozet: aile.ozet, kredi, bedel: `${kredi} kredi / video`,
-        rozet: (() => { const e = videoErisim(v.ad); return e.durum === "kapandi" ? "Kapandı" : e.durum === "yakinda" ? "Yakında" : v.rozet; })(),
+        rozet: (() => { const e = videoErisim(v.ad); return e.durum === "kapandi" ? "Kapandı" : e.durum === "yakinda" ? "Bağlı değil" : v.rozet; })(),
         oneCikan: aile.grup === "one" && videoErisim(v.ad).durum === "gercek",
         ozellikler, etiketler, href: `/panel/video?model=${encodeURIComponent(v.ad)}`,
       });
@@ -167,7 +167,7 @@ function sesler(): KatalogModel[] {
   // Seslendirme metin uzunluğuyla ücretlenir: 1.000 karakter başına 1 kredi (en az 1). Çeviri dk başına 12, ses değiştirme dk başına 1, klonlama 40.
   return SES_URETIM_MODELLERI.map((m, i) => ({
     slug: slugla(m.ad), ad: m.ad, aile: m.ad.split(" ")[0], saglayici: saglayiciBul(m.ad), tur: "ses" as const, ozet: m.ozet,
-    kredi: 1, bedel: "1 kredi / 1.000 karakter", oneCikan: i < 2, rozet: !m.saglayici ? "Yakında" : m.rozet,
+    kredi: 1, bedel: "1 kredi / 1.000 karakter", oneCikan: i < 2, rozet: !m.saglayici ? "Bağlı değil" : m.rozet,
     ozellikler: [
       { ad: "Girdi", deger: "Metin" },
       { ad: "Tek üretimde", deger: `En fazla ${m.karakterSiniri.toLocaleString("tr-TR")} karakter` },

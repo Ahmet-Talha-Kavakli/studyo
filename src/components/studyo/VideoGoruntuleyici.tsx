@@ -15,6 +15,10 @@ import { cn, saltUrl } from "@/lib/utils";
 import { kopyala } from "@/lib/gercekEylem";
 import { ModelLogo } from "@/components/kitaplik/Simgeler";
 import type { Uretim } from "@/store/useProjeler";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { Star } from "lucide-react";
 
 /* ───────────────────────────────────────────────────────────────────────────
    Video görüntüleyici — büyük oynatıcı + sağ panel (Bilgi · Araçlar · Yorumlar).
@@ -189,10 +193,10 @@ export function VideoGoruntuleyici({
           <span className="glass-cip absolute left-1/2 top-5 z-10 -translate-x-1/2 rounded-full px-3 py-1 text-[12px] tabular-nums text-white/85">{sira.i + 1} / {sira.n}</span>
         )}
         {sira && sira.i > 0 && (
-          <button onClick={() => onGez(-1)} className="hf-btn glass-ikon absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Önceki video (←)"><ChevronLeft className="h-6 w-6" /></button>
+          <button onClick={() => onGez(-1)} className="hf-btn glass-ikon absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Önceki video (sol ok tuşu)"><ChevronLeft className="h-6 w-6" /></button>
         )}
         {sira && sira.i < sira.n - 1 && (
-          <button onClick={() => onGez(1)} className="hf-btn glass-ikon absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Sonraki video (→)"><ChevronRight className="h-6 w-6" /></button>
+          <button onClick={() => onGez(1)} className="hf-btn glass-ikon absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Sonraki video (sağ ok tuşu)"><ChevronRight className="h-6 w-6" /></button>
         )}
 
         <div className="relative z-[5] flex max-h-full max-w-full items-center justify-center">
@@ -484,16 +488,25 @@ function VideoBilgi({ u, klip, kaynak, onAyarlariYukle, onYenidenUret, onIndir, 
           <RefreshCw className="h-4 w-4" /> Yeniden üret
         </button>
         <div className="flex items-center gap-2">
-          <button onClick={onIndir} disabled={!u.videoUrl} className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/[0.08] text-[13.5px] font-medium text-metin transition hover:bg-white/[0.13] active:scale-[0.98] disabled:opacity-40">
-            <Download className="h-3.5 w-3.5" /> İndir
-          </button>
-          <button onClick={onBegen} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"} aria-pressed={!!u.favori}
-            className={cn("flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] transition-colors hover:bg-white/[0.13]", u.favori ? "text-rose-400" : "text-metin-2 hover:text-rose-400")}>
-            <Heart className={cn("h-4 w-4", u.favori && "fill-rose-400 text-rose-400")} />
-          </button>
-          <button onClick={onSil} aria-label="Sil" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-metin-2 transition-colors hover:bg-rose-500/15 hover:text-rose-400">
+          {u.videoUrl || u.gorselUrl ? (
+            <div className="min-w-0 flex-1 [&_span]:flex [&_span]:w-full">
+              <IndirDugmesi u={u} side="top" yerlesim="ust-sol" className="flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-white/[0.08] text-[13.5px] font-medium text-metin transition hover:bg-white/[0.13] active:scale-[0.98]">
+                <Download className="h-3.5 w-3.5" /> İndir
+              </IndirDugmesi>
+            </div>
+          ) : (
+            <button onClick={onIndir} disabled className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/[0.08] text-[13.5px] font-medium text-metin opacity-40">
+              <Download className="h-3.5 w-3.5" /> İndir
+            </button>
+          )}
+          <Tooltip label="Klasöre taşı" side="top"><KlasoreTasiDugmesi uretimIdler={[u.id]} etiketSinif="sr-only" yerlesim="ust-sag" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-metin-2 transition-colors hover:bg-white/[0.13] hover:text-metin" /></Tooltip>
+          <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><button onClick={onBegen} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} aria-pressed={!!u.favori}
+            className={cn("flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] transition-colors hover:bg-white/[0.13]", u.favori ? "text-aksan" : "text-metin-2 hover:text-aksan")}>
+            <Star className={cn("h-4 w-4", u.favori && "fill-aksan text-aksan")} />
+          </button></Tooltip>
+          <Tooltip label="Sil" side="top"><button onClick={onSil} aria-label="Sil" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.08] text-metin-2 transition-colors hover:bg-rose-500/15 hover:text-rose-400">
             <Trash2 className="h-4 w-4" />
-          </button>
+          </button></Tooltip>
         </div>
       </div>
     </div>

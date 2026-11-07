@@ -11,6 +11,13 @@ import {
 import Link from "next/link";
 import { OzelGirdi } from "@/components/film/ortak";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, KartDahaMenusu, YenidenKullanDugmesi, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { ArrowUpRight } from "lucide-react";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 import { cn, saltUrl } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
@@ -238,6 +245,7 @@ export function SpeakStudyo() {
       if (!sr.ok) uretimHataToast(sr);
     }
     setMesgul(false);
+    if (istemTemizlensinMi("speak")) setMetin("");
     setTimeout(() => sonRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     toast.success(ok > 1 ? `${ok} konuşan video üretiliyor` : "Konuşan video üretiliyor", { description: `${model} · ${sure} sn · ${demo ? "Kredi düşmez." : `${(videoKredi + elevenKredi) * ok} kredi.`}` });
   };
@@ -447,7 +455,7 @@ export function SpeakStudyo() {
             </div>
           </MenuKart>
           {!sesModu && (
-            <MenuKart baslik="Konuşma hızı" sag={<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin">{hiz === 1 ? "Normal" : hiz < 1 ? `%${Math.round((1 - hiz) * 100)} yavaş` : `%${Math.round((hiz - 1) * 100)} hızlı`}</span>}>
+            <MenuKart baslik="Konuşma hızı" sag={<span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin">{hiz === 1 ? "Normal" : hiz < 1 ? `yüzde ${Math.round((1 - hiz) * 100)} yavaş` : `yüzde ${Math.round((hiz - 1) * 100)} hızlı`}</span>}>
               <div className="px-3 pb-3 pt-2"><Kaydirici ad="Yavaş" deger={hiz} min={0.8} max={1.2} adim={0.05} varsayilan={1} onDegis={setHiz} yaz={() => "Hızlı"} /></div>
             </MenuKart>
           )}
@@ -682,7 +690,7 @@ export function SpeakStudyo() {
           {!sonBitti && (
             <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center text-[13px] font-medium text-white">
               {son.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}
-              {son.durum === "hata" ? "Başarısız" : `%${Math.round(son.ilerleme ?? 0)}`}
+              {son.durum === "hata" ? "Başarısız" : `yüzde ${Math.round(son.ilerleme ?? 0)}`}
               {son.durum !== "hata" && <span className="h-1 w-28 overflow-hidden rounded-full bg-white/15"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${Math.max(3, son.ilerleme ?? 0)}%` }} transition={{ duration: 0.4 }} /></span>}
             </span>
           )}
@@ -698,6 +706,13 @@ export function SpeakStudyo() {
             <div className="flex flex-wrap items-center gap-2 border-t border-white/[0.06] px-3 py-2.5">
               {sonBitti && <button onClick={() => setAcik(son)} className="flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[13.5px] font-semibold text-black transition active:scale-95"><Play className="h-3.5 w-3.5 fill-current" />Büyük izle</button>}
               <button onClick={() => ayarlariKullan(son)} className="flex h-10 items-center gap-1.5 rounded-full bg-white/[0.07] px-4 text-[13.5px] font-medium text-metin transition hover:bg-white/[0.12] active:scale-95"><RotateCcw className="h-3.5 w-3.5" />Düzenleyip yeniden</button>
+              {sonBitti && (
+                <>
+                  <IndirDugmesi u={son} side="top" yerlesim="alt-sol" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.07] text-metin transition hover:bg-white/[0.12] active:scale-95" />
+                  <FavoriDugmesi favori={!!son.favori} onClick={() => useProjeler.getState().favoriToggle(son.id)} side="top" className="!h-10 !w-10 !bg-white/[0.07] hover:!bg-white/[0.12]" />
+                  <Tooltip label="Klasöre taşı" side="top"><KlasoreTasiDugmesi uretimIdler={[son.id]} etiketSinif="sr-only" yerlesim="alt-sol" className="flex h-10 w-10 items-center justify-center rounded-full bg-white/[0.07] text-metin transition hover:bg-white/[0.12] active:scale-95" /></Tooltip>
+                </>
+              )}
               <span className="flex-1" />
               {son.olusturma && <span className="text-[12px] text-metin-3 max-sm:hidden">{new Date(son.olusturma).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</span>}
             </div>
@@ -833,17 +848,17 @@ function MenuKart({ baslik, sag, children }: { baslik: string; sag?: React.React
 }
 const SayiRozet = ({ n }: { n: number }) => <span className="rounded-full bg-white/[0.08] px-2.5 py-0.5 text-[12px] font-medium tabular-nums text-metin-2">{n}</span>;
 
-function SonucKart({ u, i, onAc, onKullan }: { u: Uretim; i: number; onAc: () => void; onKullan?: () => void }) {
+function SonucKart({ u, i, onAc, onKullan, oran }: { u: Uretim; i: number; onAc: () => void; onKullan?: () => void; oran?: number }) {
   const bitti = u.durum === "tamam", ses = u.tur === "ses";
   const kapak = u.meta?.gorselUrl ?? saltUrl(u.gorselUrl);
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.03 }} className="group/k relative min-w-0">
-      <motion.button whileHover={{ y: -3 }} onClick={onAc} className="group relative block aspect-[3/4] w-full overflow-hidden rounded-[16px] bg-black text-left ring-1 ring-inset ring-white/[0.08] hover:ring-white/25">
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(i, 10) * 0.03 }} className="group group/k relative min-w-0">
+      <motion.button whileHover={{ y: -3 }} onClick={onAc} style={{ aspectRatio: String(oran ?? 3 / 4) }} className="group relative block w-full overflow-hidden rounded-[16px] bg-black text-left ring-1 ring-inset ring-white/[0.08] hover:ring-white/25">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {kapak && !ses && <img src={kapak} alt="" className={cn("absolute inset-0 h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105", !bitti && "opacity-40 blur-[2px]")} />}
         {ses && <span className="absolute inset-0 flex items-center justify-center"><Dalga ad={u.id} renk="#ffffff" adet={12} yukseklik={40} /></span>}
         {bitti && u.tur === "video" && u.videoUrl && <video src={u.videoUrl} muted loop playsInline preload="none" className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity group-hover:opacity-100" onMouseEnter={(e) => void e.currentTarget.play().catch(() => {})} onMouseLeave={(e) => e.currentTarget.pause()} />}
-        {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `%${Math.round(u.ilerleme ?? 0)}`}</span>}
+        {!bitti && <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-[12.5px] font-medium text-white">{u.durum === "hata" ? <AlertTriangle className="h-5 w-5 text-rose-300" /> : <Loader2 className="h-5 w-5 animate-spin" />}{u.durum === "hata" ? "Başarısız" : `yüzde ${Math.round(u.ilerleme ?? 0)}`}</span>}
         <span className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
         <span className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 backdrop-blur">{ses ? <AudioLines className="h-3.5 w-3.5 text-white" /> : <Film className="h-3.5 w-3.5 text-white" />}</span>
         
@@ -851,12 +866,15 @@ function SonucKart({ u, i, onAc, onKullan }: { u: Uretim; i: number; onAc: () =>
           <span className="block truncate text-[11.5px] font-medium text-white/65">{u.model}{u.meta?.sure ? ` · ${u.meta.sure.replace("sn", " sn")}` : ""}</span>
           <span className="mt-0.5 line-clamp-2 block text-[12.5px] font-semibold text-white">{u.baslik.split(" · ").slice(1).join(" · ") || u.baslik}</span>
         </span>
-        <span className="absolute right-2 top-2 rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">{u.baslik.split(" · ")[0]}</span>
+        <span className="absolute left-10 top-2 max-w-[calc(100%-96px)] truncate rounded-full bg-black/55 px-2 py-0.5 text-[11px] font-medium text-white backdrop-blur">{u.baslik.split(" · ")[0]}</span>
       </motion.button>
-      {onKullan && u.tur === "video" && (
-        <Tooltip side="top" label="Bu ayarlarla yeniden">
-          <button onClick={onKullan} aria-label="Bu ayarlarla yeniden" className="absolute right-2 top-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white opacity-0 backdrop-blur transition hover:bg-black/75 group-hover/k:opacity-100 [@media(hover:none)]:opacity-100"><RotateCcw className="h-3.5 w-3.5" /></button>
-        </Tooltip>
+      {bitti && (
+        <div onClick={(e) => e.stopPropagation()} className="pointer-events-none absolute right-2 top-2 z-20 flex flex-col gap-1.5 opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100">
+          <FavoriDugmesi favori={!!u.favori} onClick={() => useProjeler.getState().favoriToggle(u.id)} boyut="kucuk" />
+          <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="left" />
+          {onKullan && u.tur === "video" && <YenidenKullanDugmesi onClick={onKullan} boyut="kucuk" />}
+          <KartDahaMenusu u={u} boyut="kucuk" eylemler={[{ ad: "Aç", ikon: ArrowUpRight, fn: onAc }]} />
+        </div>
       )}
     </motion.div>
   );
@@ -934,6 +952,8 @@ function AvatarGaleri({ secili, yukleniyor, onYukle, onDosya, onSec, karakterler
 
 function SonucPanel({ sonuclar, onAc, onKullan, onYeni, onAvatar, onSablon }: { sonuclar: Uretim[]; onAc: (u: Uretim) => void; onKullan: (u: Uretim) => void; onYeni: () => void; onAvatar: () => void; onSablon: (m: string) => void }) {
   const [f, setF] = useState<"tumu" | "video" | "ses">("tumu");
+  const [g] = useGorunum("speak");
+  const [izgaraRef, izgaraEn] = useAlanGenisligi<HTMLDivElement>(1100);
   if (!sonuclar.length) return (
     <Kart ikon={Film} baslik="Henüz konuşan video yok" alt="Bir senaryo seç ya da stüdyoda kendi metnini yaz"
       sag={<span className="flex gap-2"><button onClick={onAvatar} className="flex h-10 items-center gap-1.5 rounded-full bg-white/[0.07] px-4 text-[13.5px] font-medium text-metin transition hover:bg-white/[0.12] active:scale-95"><ScanFace className="h-4 w-4" /><span className="max-sm:hidden">Avatar seç</span></button><button onClick={onYeni} className="flex h-10 items-center gap-1.5 rounded-full bg-white px-4 text-[13.5px] font-semibold text-black transition active:scale-95"><Plus className="h-4 w-4" />Video üret</button></span>}>
@@ -953,13 +973,14 @@ function SonucPanel({ sonuclar, onAc, onKullan, onYeni, onAvatar, onSablon }: { 
       </div>
     </Kart>
   );
-  const liste = sonuclar.filter((u) => f === "tumu" || u.tur === f);
+  const liste = zamanaGoreSirala(sonuclar.filter((u) => f === "tumu" || u.tur === f), g.siralama);
+  const kartOran = kartOrani(g, 3 / 4);
   return (
     <Kart ikon={Film} baslik="Videolarım" alt="Ürettiğin konuşan videolar ve ayrı ses kayıtları"
-      sag={<div className="w-[320px] max-w-full max-sm:w-full"><Segment etiket="Filtre" deger={f} onDegis={setF} secenekler={[["tumu", `Tümü ${sonuclar.length}`], ["video", "Videolar"], ["ses", "Ses kayıtları"]]} /></div>}>
+      sag={<div className="flex w-[368px] max-w-full items-center gap-2 max-sm:w-full"><div className="min-w-0 flex-1"><Segment etiket="Filtre" deger={f} onDegis={setF} secenekler={[["tumu", `Tümü ${sonuclar.length}`], ["video", "Videolar"], ["ses", "Ses kayıtları"]]} /></div><GorunumAyari sayfa="speak" /></div>}>
       {liste.length ? (
-        <div className="grid grid-cols-2 gap-3 p-3.5 sm:grid-cols-3 lg:grid-cols-5">
-          {liste.map((u, i) => <SonucKart key={u.id} u={u} i={i} onAc={() => onAc(u)} onKullan={() => onKullan(u)} />)}
+        <div ref={izgaraRef} className="grid gap-3 p-3.5" style={{ gridTemplateColumns: `repeat(${sutunSayisi(izgaraEn, g, { enCok: 8 })}, minmax(0, 1fr))` }}>
+          {liste.map((u, i) => <SonucKart key={u.id} u={u} i={i} oran={kartOran} onAc={() => onAc(u)} onKullan={() => onKullan(u)} />)}
         </div>
       ) : <p className="px-6 py-14 text-center text-[13.5px] text-metin-2">Bu filtrede kayıt yok.</p>}
     </Kart>

@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion, type MotionValue } from "framer-motion";
-import { ChevronRight, Clock, FolderPlus, HardDrive, Heart, Keyboard, LayoutGrid, Loader2, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { ChevronRight, Clock, FolderPlus, HardDrive, Star, Keyboard, LayoutGrid, Loader2, Plus, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { KenarTutamac } from "@/components/ui/KenarTutamac";
 import { MacKlasor } from "@/components/panel/proje/calisma/ortak";
 import { cn } from "@/lib/utils";
@@ -59,7 +59,7 @@ export function KitaplikRayi({
       <nav className="min-h-0 flex-1 divide-y divide-white/[0.06] overflow-y-auto [scrollbar-width:thin]">
         <Bolum ad="Kitaplık">
           <RaySatiri {...s} id="tumu" ad="Tüm üretimler" ikon={<LayoutGrid className="h-4 w-4" />} n={sayilar.tumu} />
-          <RaySatiri {...s} id="favori" ad="Favoriler" ikon={<Heart className={cn("h-4 w-4", aktif === "favori" && "fill-current")} />} n={sayilar.favori} />
+          <RaySatiri {...s} id="favori" ad="Favoriler" ikon={<Star className={cn("h-4 w-4", aktif === "favori" && "fill-current")} />} n={sayilar.favori} />
           <RaySatiri {...s} id="son7" ad="Son 7 gün" ikon={<Clock className="h-4 w-4" />} n={sayilar.son7} />
         </Bolum>
 

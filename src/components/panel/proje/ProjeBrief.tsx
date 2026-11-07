@@ -712,7 +712,7 @@ function VarlikKarti({ tip, metin, en, ikon: Ikon, onEn, onDegistir, onSil }: {
                       <button key={k} onClick={() => { onEn(k); setBoyutAcik(false); }}
                         className={cn("rounded-md px-2 py-1 text-[12px] tabular-nums transition-colors",
                           en === k ? "bg-aksan text-zemin font-bold" : "text-metin-2 hover:bg-white/[0.08] hover:text-white")}>
-                        {k}%
+                        yüzde {k}
                       </button>
                     ))}
                   </span>

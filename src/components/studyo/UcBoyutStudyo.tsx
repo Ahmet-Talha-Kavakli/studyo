@@ -7,8 +7,13 @@ import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import {
   Smartphone,
   Box, Boxes, Camera, Check, Cpu, Download, Focus, Grid3x3, Image as ImageIcon, Layers, Loader2, Maximize2, Paintbrush, PersonStanding,
-  Plus, Printer, Repeat, RotateCw, Dices, Hash, Triangle, Settings2, Sparkles, Sun, Trash2, TriangleAlert, Type, Wand2, X,
+  Plus, Printer, Repeat, RotateCw, Dices, Hash, Triangle, Settings2, Sparkles, Sun, Trash2, TriangleAlert, Type, Wand2, X, Star, ArrowUpRight,
 } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriRozeti, KartDahaMenusu, YenidenKullanDugmesi, FavoriDugmesi } from "@/components/galeri/KartEylemleri";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { uretimGeriYukle } from "@/components/studyo/bildirim";
@@ -16,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { uretimBaslat, uretimHataToast } from "@/lib/uretimMotoru";
 import { useAktifProje } from "@/lib/useAktifProje";
+import { useIstemParametresi } from "@/lib/useIstemParametresi";
 import { useSaglayicilar } from "@/hooks/useSaglayicilar";
 import { useMasaustu } from "@/hooks/useMasaustu";
 import { Yuzen } from "@/components/ui/Yuzen";
@@ -48,6 +54,12 @@ type Kurulum = { model?: string; stil?: string; poz?: string; topoloji?: "quad" 
 const kurulumu = (u?: Uretim | null): Kurulum => (u?.meta?.kurulum ?? {}) as Kurulum;
 const arkaPlan = (s?: string) => (!s ? undefined : s.startsWith("url(") || s.includes("gradient") ? s : `url("${s}") center/contain no-repeat`);
 
+/** Araç işlemi için kaynak model: sağlayıcı görevi ya da herkese açık GLB adresi (örnek ve yerel dosyalar gönderilmez). */
+const kaynakModel = (u: Uretim): { kaynakGorev?: { id?: string; tur?: string }; kaynakGlb?: string } => ({
+  ...(u.gercek && u.meta?.saglayiciGorev ? { kaynakGorev: u.meta.saglayiciGorev } : {}),
+  ...(u.gercek && u.glbUrl && /^https:\/\//.test(u.glbUrl) ? { kaynakGlb: u.glbUrl } : {}),
+});
+
 /** Görseli 160 px'lik küçük önizlemeye indirir (kayıtta saklanır; büyük dosya depoya yazılmaz). */
 async function kucult(dataUrl: string): Promise<string> {
   return new Promise((coz) => {
@@ -75,6 +87,9 @@ export function UcBoyutStudyo() {
   const demo = saglayici !== null && !bagli;
 
   const tum = useProjeler((s) => s.uretimler);
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
+  /* Görünüm ayarı: sıralama, sütun yoğunluğu ve gönderdikten sonra istemi temizle (sayfa başına kalıcı). */
+  const [galeriGorunum] = useGorunum("3d");
   const guncelle = useProjeler((s) => s.guncelle);
   const sil = useProjeler((s) => s.sil);
   // Yalnız bu stüdyonun kayıtları ve 3D dosyası olanlar (dosyasız eski örnek kayıtlar sahnede boş kalırdı).
@@ -83,6 +98,8 @@ export function UcBoyutStudyo() {
   /* ── Komut kutusu ── */
   const [girdi, setGirdi] = useState<GirdiMod>("metin");
   const [istem, setIstem] = useState("");
+  /* ?istem= (üst çubuktaki komut paleti, paylaşılan bağlantılar): metinden 3D isteği olarak yazılır. */
+  useIstemParametresi((i) => { setGirdi("metin"); setIstem(i.slice(0, 800)); });
   const [gorseller, setGorseller] = useState<(string | null)[]>([null, null, null, null]);
   const [modelId, setModelId] = useState<string>(MODELLER_3D[0].id);
   /** Karşılaştırma: aynı girdi birden çok modelde (en çok 3); boşsa yalnız seçili model. */
@@ -223,6 +240,7 @@ export function UcBoyutStudyo() {
     if (sonuc.id) {
       guncelle(sonuc.id, { topoloji: { poligon, tip: kurulum.topoloji ?? "triangle", pbr: false }, ...(poz !== "serbest" ? { poz: pozAd?.ad } : {}) });
       setOrnek(null); setSeciliId(sonuc.id); setFiltre("tumu");
+      if (istemTemizlensinMi("3d")) setIstem("");
     }
   };
   const uretHepsi = async () => {
@@ -237,7 +255,7 @@ export function UcBoyutStudyo() {
     const m = MODELLER_3D.find((x) => x.id === k.model) ?? MODELLER_3D[0];
     const sonuc = uretimBaslat({
       baslik: secili.baslik, tur: "3d", model: m.ad, prompt: `${secili.prompt} · ${dokulu ? `${coz} PBR doku` : "dokusuz"}`.slice(0, 600), kredi: m.detay, arac: ARAC_AD, projeId: aktifProjeId ?? undefined,
-      meta: { mod: "detay", kaynakId: secili.id, sira: aday, hamIstem: secili.meta?.hamIstem, kurulum: { ...k, pbr: dokulu, cozunurluk: coz } },
+      meta: { mod: "detay", kaynakId: secili.id, sira: aday, hamIstem: secili.meta?.hamIstem, kurulum: { ...k, pbr: dokulu, cozunurluk: coz }, ...kaynakModel(secili) },
     });
     if (!sonuc.ok) return uretimHataToast(sonuc);
     if (sonuc.id) { guncelle(sonuc.id, { topoloji: { poligon: k.poligon ?? 30000, tip: k.topoloji ?? "triangle", pbr: dokulu }, dokuCozunurluk: coz, poz: secili.poz }); setSeciliId(sonuc.id); }
@@ -247,16 +265,17 @@ export function UcBoyutStudyo() {
   const aracCalistir = (a: AracAyar) => {
     if (!secili) return;
     const b = ARAC_BILGI[a.arac];
-    const ozet = a.arac === "doku" ? `Doku: ${a.istem} · ${a.cozunurluk}` : a.arac === "remesh" ? `Remesh: ${a.tip === "quad" ? "dörtgen" : "üçgen"} · ${a.poligon}` : a.arac === "rig" ? `Rig: ${a.tur} · ${a.animasyonlar.join(", ")}` : `Baskı: ${a.yukseklik} mm · ${a.taban}`;
+    if (!bagli) return void toast.error(`${b.ad} yapılamadı`, { description: "3D sağlayıcısı bağlı değil. Kredi düşmedi." });
+    const ozet = a.arac === "doku" ? `Doku: ${a.istem} · ${a.cozunurluk}` : a.arac === "remesh" ? `Remesh: ${a.tip === "quad" ? "dörtgen" : "üçgen"} · ${a.poligon}` : a.arac === "rig" ? `Rig: ${a.boy.toFixed(2).replace(".", ",")} m` : `Baskı: ${a.yukseklik} mm`;
+    const stilIstem = a.arac === "doku" ? STILLER.find((x) => x.id === a.stil)?.istem : undefined;
     const sonuc = uretimBaslat({
       baslik: secili.baslik, tur: "3d", model: `Vayra 3D ${b.ad}`, prompt: `${secili.meta?.hamIstem || secili.baslik} · ${ozet}`.slice(0, 600), kredi: b.kredi, arac: ARAC_AD, projeId: aktifProjeId ?? undefined,
-      meta: { mod: a.arac, kaynakId: secili.id, sira: secili.meta?.sira, hamIstem: secili.meta?.hamIstem, kurulum: { ...k, ...a } },
+      meta: { mod: a.arac, kaynakId: secili.id, sira: secili.meta?.sira, hamIstem: secili.meta?.hamIstem, kurulum: { ...k, ...a, ...(stilIstem ? { stilIstem } : {}) }, ...kaynakModel(secili) },
     });
     if (!sonuc.ok) return uretimHataToast(sonuc);
     if (sonuc.id) {
       guncelle(sonuc.id, {
         topoloji: a.arac === "remesh" ? { poligon: a.poligon, tip: a.tip, pbr: secili.topoloji?.pbr ?? true } : secili.topoloji,
-        ...(a.arac === "rig" ? { animasyonlar: a.animasyonlar } : {}),
         ...(a.arac === "doku" ? { dokuCozunurluk: a.cozunurluk } : {}),
       });
       setSeciliId(sonuc.id); setArac(null);
@@ -273,6 +292,11 @@ export function UcBoyutStudyo() {
     setTimeout(() => URL.revokeObjectURL(url), 4000);
   };
   const indir = (format: string) => {
+    const baskiDosyasi = format !== "glb" ? secili?.meta?.dosyalar?.[format] : undefined;
+    if (baskiDosyasi) {
+      indirUrl(baskiDosyasi, `${dosyaAdi(secili?.baslik ?? "vayra-3d")}.${format}`);
+      return void toast.success("Baskı dosyası indiriliyor", { description: `${dosyaAdi(secili?.baslik ?? "vayra-3d")}.${format}` });
+    }
     if (format !== "glb" || !sahne?.glb) return;
     indirUrl(sahne.glb, `${dosyaAdi(secili?.baslik ?? "vayra-3d")}.glb`);
     toast.success("3D model indiriliyor", { description: `${dosyaAdi(secili?.baslik ?? "vayra-3d")}.glb` });
@@ -683,7 +707,8 @@ export function UcBoyutStudyo() {
   ) : null;
 
   /* ═══════════ MODELLERİM ═══════════ */
-  const liste = modeller.filter((u) => filtre === "tumu" || (filtre === "taslak" ? u.meta?.mod === "taslak" : u.meta?.mod !== "taslak"));
+  const liste = zamanaGoreSirala(modeller.filter((u) => filtre === "tumu" || (filtre === "taslak" ? u.meta?.mod === "taslak" : u.meta?.mod !== "taslak")), galeriGorunum.siralama);
+  const sutun = galeriGorunum.boyut === "kucuk" ? 3 : galeriGorunum.boyut === "buyuk" ? 1 : galeriGorunum.boyut === "ozel" ? Math.min(4, Math.max(1, Math.round(galeriGorunum.sutun / 2))) : 2;
   const ornekKarti = (baslik: string, alt: string) => (
     <div className="overflow-hidden rounded-[18px] ring-1 ring-inset ring-white/[0.07]" style={{ background: "rgba(255,255,255,0.025)" }}>
       <div className="flex items-center gap-2.5 border-b border-white/[0.06] px-3 py-2.5">
@@ -710,16 +735,18 @@ export function UcBoyutStudyo() {
           <h2 className="text-[15px] font-semibold text-metin">Modellerim</h2>
           {modeller.length > 0 && <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[12px] tabular-nums text-metin-2">{modeller.length}</span>}
           {aktifIs > 0 && <span className="flex items-center gap-1 rounded-full bg-white/[0.085] px-2 py-0.5 text-[12px] text-metin-2"><Loader2 className="h-3.5 w-3.5 animate-spin" />{aktifIs} sürüyor</span>}
+          <span className="flex-1" />
+          <GorunumAyari sayfa="3d" yerlesimVar={false} dugmeSinif="h-8 w-8" />
         </div>
       )}
       {modeller.length > 0 && <div className="px-4 pb-3"><Segment deger={filtre} onDegis={setFiltre} etiket="Filtre" secenekler={[["tumu", "Tümü"], ["taslak", "Taslaklar"], ["model", "Modeller"]]} /></div>}
       <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-4 [scrollbar-width:thin]">
         {modeller.length === 0 ? ornekKarti("Örneklerle başla", "Ürettiklerin burada toplanır; bir örneği aç") : (
           <>
-          <motion.div className="grid grid-cols-2 gap-2.5">
+          <motion.div layout className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${sutun}, minmax(0, 1fr))` }}>
             <AnimatePresence initial={false}>
               {liste.map((u) => <ModelKarti key={u.id} u={u} sec={u.id === seciliId && ornek === null} onSec={() => { setOrnek(null); setSeciliId(u.id); setMobilListe(false); }}
-                onSil={() => { sil(u.id); mesaj.silindi("Model", () => uretimGeriYukle(u)); }} onIndir={u.glbUrl ? () => { indirUrl(u.glbUrl!, `${dosyaAdi(u.baslik)}.glb`); toast.success("3D model indiriliyor", { description: `${dosyaAdi(u.baslik)}.glb` }); } : undefined} />)}
+                onSil={() => { sil(u.id); mesaj.silindi("Model", () => uretimGeriYukle(u)); }} onFavori={() => favoriToggle(u.id)} onYenidenKullan={() => ayarlariYukle(u)} onIndir={u.glbUrl ? () => { indirUrl(u.glbUrl!, `${dosyaAdi(u.baslik)}.glb`); toast.success("3D model indiriliyor", { description: `${dosyaAdi(u.baslik)}.glb` }); } : undefined} />)}
             </AnimatePresence>
           </motion.div>
           {modeller.length < 6 && <div className="mt-4">{ornekKarti("Örnek modeller", "Aç, döndür, istemini kullan")}</div>}
@@ -821,7 +848,7 @@ function Surec({ yuzde, adimlar }: { yuzde: number; adimlar: string[] }) {
     <div className="flex w-[min(360px,80vw)] flex-col items-center gap-2.5">
       <div className="flex w-full items-center justify-between text-[13px]">
         <span className="flex items-center gap-1.5 font-medium text-metin"><Loader2 className="h-3.5 w-3.5 animate-spin text-aksan" />{adimlar[etkin]}</span>
-        <motion.span key={Math.round(yuzde / 5)} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} className="tabular-nums text-metin-2">%{Math.round(yuzde)}</motion.span>
+        <motion.span key={Math.round(yuzde / 5)} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} className="tabular-nums text-metin-2">yüzde {Math.round(yuzde)}</motion.span>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
         <motion.div className="h-full rounded-full bg-aksan" animate={{ width: `${Math.max(4, yuzde)}%` }} transition={{ duration: 0.5 }} />
@@ -831,7 +858,7 @@ function Surec({ yuzde, adimlar }: { yuzde: number; adimlar: string[] }) {
 }
 
 /** Modellerim kartı: taslakta 2×2 aday, modelde kapak; süreçte ilerleme. */
-function ModelKarti({ u, sec, onSec, onSil, onIndir }: { u: Uretim; sec: boolean; onSec: () => void; onSil: () => void; onIndir?: () => void }) {
+function ModelKarti({ u, sec, onSec, onSil, onIndir, onFavori, onYenidenKullan }: { u: Uretim; sec: boolean; onSec: () => void; onSil: () => void; onIndir?: () => void; onFavori: () => void; onYenidenKullan: () => void }) {
   const mod = u.meta?.mod ?? "detay";
   const surecte = u.durum === "kuyrukta" || u.durum === "isleniyor";
   const v = u.varyasyonlar ?? [];
@@ -867,10 +894,19 @@ function ModelKarti({ u, sec, onSec, onSil, onIndir }: { u: Uretim; sec: boolean
           {(MODELLER_3D.find((m) => m.ad === u.model)?.kisa ?? u.model)} · {mod === "taslak" ? `${v.length || 4} taslak` : u.topoloji ? `${u.topoloji.tip === "quad" ? "Dörtgen" : "Üçgen"} · ${kisaSayi(u.topoloji.poligon)}` : MOD_AD[mod] ?? "Model"}
         </span>
       </button>
-      <span className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-        {onIndir && <button onClick={onIndir} aria-label={`${u.baslik} indir`} title="GLB indir" className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white/85 hover:text-white"><Download className="h-3.5 w-3.5" /></button>}
-        <button onClick={onSil} aria-label={`${u.baslik} sil`} title="Sil" className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white/85 hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>
-      </span>
+      {u.durum === "tamam" && u.favori && <FavoriRozeti boyut="kucuk" className="right-1.5 top-1.5" />}
+      {u.durum === "tamam" ? (
+        <span className="absolute right-1.5 top-1.5 z-20 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 max-sm:opacity-100">
+          <FavoriDugmesi favori={!!u.favori} onClick={onFavori} boyut="kucuk" side="bottom" />
+          {(onIndir || u.thumbnailUrl) && <IndirDugmesi u={u} side="bottom" className="hf-btn glass-ikon flex h-7 w-7 items-center justify-center rounded-full text-white transition-transform active:scale-90" ikonSinif="h-3.5 w-3.5" />}
+          <YenidenKullanDugmesi onClick={onYenidenKullan} boyut="kucuk" side="bottom" />
+          <KartDahaMenusu u={u} boyut="kucuk" side="bottom" onSil={onSil} eylemler={[{ ad: "Aç", ikon: ArrowUpRight, fn: onSec }]} />
+        </span>
+      ) : (
+        <span className="absolute right-1.5 top-1.5 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+          <button onClick={onSil} aria-label={`${u.baslik} sil`} title="Sil" className="flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white/85 hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>
+        </span>
+      )}
     </motion.div>
   );
 }

@@ -225,7 +225,7 @@ function ProjeCalismaAlani() {
       </AnimatePresence>
       {yayin && (
         <YayinSihirbazi proje={p} varliklar={varliklar} onKapat={() => setYayin(false)}
-          onYayinla={(y) => { useProje.getState().projeYayinla(p.id, y); setYayin(false); toast.success("Proje yayınlandı"); }}
+          onYayinla={(y) => { useProje.getState().projeYayinla(p.id, y); setYayin(false); toast.success("Proje yayında olarak işaretlendi", { description: "Bu tarayıcıda saklanır; herkese açık proje sayfası henüz yok." }); }}
           onYayinKaldir={() => { useProje.getState().projeYayinKaldir(p.id); setYayin(false); toast.success("Proje yayından kaldırıldı"); }} />
       )}
     </MotionConfig>

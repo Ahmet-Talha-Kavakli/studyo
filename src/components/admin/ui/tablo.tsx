@@ -1,6 +1,7 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ export function Tablo<T extends { id: string }>({
             <tr className="border-b border-[color:var(--ad-kenar)]">
               {kolonlar.map((k) => (
                 <th key={k.anahtar} style={{ width: k.genislik }}
-                  className={cn("px-4 py-3 text-[11px] font-semibold uppercase tracking-wider", AD.metin3, hiza(k.hizala), k.gizleMobil && "hidden md:table-cell")}>
+                  className={cn("whitespace-nowrap px-4 py-3 text-[12px] font-semibold", AD.metin3, hiza(k.hizala), k.gizleMobil && "hidden md:table-cell")}>
                   {k.baslik}
                 </th>
               ))}
@@ -67,7 +68,7 @@ export function Tablo<T extends { id: string }>({
       {toplamSayfa > 1 && (
         <div className="flex items-center justify-between border-t border-[color:var(--ad-kenar)] px-4 py-3">
           <span className={cn("text-[13px]", AD.metin3)}>
-            {sayfa * sayfaBoyut + 1}–{Math.min((sayfa + 1) * sayfaBoyut, satirlar.length)} / {satirlar.length.toLocaleString("tr-TR")}
+            {satirlar.length.toLocaleString("tr-TR")} kayıttan {sayfa * sayfaBoyut + 1} ile {Math.min((sayfa + 1) * sayfaBoyut, satirlar.length)} arası
           </span>
           <div className="flex items-center gap-1">
             <button onClick={() => setSayfa((s) => Math.max(0, s - 1))} disabled={sayfa === 0}
@@ -90,7 +91,18 @@ export function Tablo<T extends { id: string }>({
 export function Cekmece({ acik, kapat, baslik, genislik = "max-w-lg", children }: {
   acik: boolean; kapat: () => void; baslik?: ReactNode; genislik?: string; children: ReactNode;
 }) {
-  return (
+  // Çekmece body'ye taşınır: backdrop-filter taşıyan kartların içinde fixed konum karta göre hesaplanırdı.
+  const [hazir, setHazir] = useState(false);
+  useEffect(() => setHazir(true), []);
+  useEffect(() => {
+    if (!acik) return;
+    const k = (e: KeyboardEvent) => { if (e.key === "Escape") kapat(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [acik, kapat]);
+  if (!hazir) return null;
+  return createPortal(
+    <div className="admin-kapsam">
     <AnimatePresence>
       {acik && (
         <>
@@ -101,7 +113,7 @@ export function Cekmece({ acik, kapat, baslik, genislik = "max-w-lg", children }
             className={cn("fixed right-0 top-0 z-[81] h-full w-full overflow-y-auto ad-ince-scroll border-l border-[color:var(--ad-kenar)] bg-[color:var(--ad-yuzey)]", genislik)}>
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[color:var(--ad-kenar)] bg-[color:var(--ad-yuzey)]/90 px-5 py-4 backdrop-blur-xl">
               <div className={cn("font-bold", AD.metin)}>{baslik}</div>
-              <button onClick={kapat} className="flex h-8 w-8 items-center justify-center rounded-lg text-[color:var(--ad-metin-3)] transition-colors hover:bg-white/[0.06] hover:text-[color:var(--ad-metin)]">
+              <button onClick={kapat} aria-label="Kapat" className="flex h-8 w-8 items-center justify-center rounded-lg text-[color:var(--ad-metin-3)] transition-colors hover:bg-white/[0.06] hover:text-[color:var(--ad-metin)]">
                 <X className="h-4.5 w-4.5" />
               </button>
             </div>
@@ -110,5 +122,7 @@ export function Cekmece({ acik, kapat, baslik, genislik = "max-w-lg", children }
         </>
       )}
     </AnimatePresence>
+    </div>,
+    document.body,
   );
 }

@@ -13,7 +13,7 @@
  */
 
 import { toast } from "@/lib/toast";
-import { gorseliIndir, saltUrl } from "./utils";
+import { filigranliIndirildi, gorseliIndir, saltUrl } from "./utils";
 
 /* ------------------------------------------------------------------ */
 /* KOPYALAMA                                                           */
@@ -93,6 +93,8 @@ function dosyaAdiTemiz(ad: string, uzanti: string) {
 /** Bir URL'i (http / data: / blob:) GERÇEKTEN indirir. */
 export function urlIndir(url: string, dosyaAdi: string): boolean {
   if (typeof document === "undefined") return false;
+  // Başlangıç planında görsel indirmeleri filigranlı (lib/galeri/indir köprüsü).
+  if (filigranliIndirildi(url, dosyaAdi.replace(/\.[a-z0-9]+$/i, ""), dosyaAdi.match(/\.(png|jpe?g|webp)$/i)?.[1]?.replace("jpeg", "jpg"))) return true;
   try {
     const a = document.createElement("a");
     a.href = url;

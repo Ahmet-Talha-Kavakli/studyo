@@ -3,15 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion, useAnimationControls } from "framer-motion";
-import { AlertCircle, ArrowLeft, Check, Eye, EyeOff, Loader2, Mail, ShieldCheck } from "lucide-react";
+import { AlertCircle, ArrowLeft, Check, ExternalLink, Eye, EyeOff, Info, Loader2, Mail, ShieldCheck } from "lucide-react";
 import { GoogleIcon, AppleIcon, MicrosoftIcon } from "@/components/site/SocialIcons";
 import { VayraIsaret } from "@/components/kabuk/VayraIsaret";
 import { useAuth } from "@/store/useAuth";
 import { useOnboarding } from "@/store/useOnboarding";
-import { useHesap, oturumBaslat, olayYaz } from "@/store/useHesap";
-import { sifreOzeti, sifreDogrula, sifreGucu, totpDogrula } from "@/lib/guvenlik";
+import { sifreGucu } from "@/lib/guvenlik";
+import * as H from "@/lib/hesap/istemci";
+import { SAGLAYICI_AD, SIFRE_KURALLARI, YAYGIN_SIFRE, type SaglayiciKimligi } from "@/lib/hesap/tipler";
 import { davetOku, davetTemizle } from "@/lib/earn/davet";
 import { kodUret } from "@/lib/earn/dogrulama";
+import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,20 +21,23 @@ import { cn } from "@/lib/utils";
  *  1. Başla: Google / Apple / Microsoft ya da e-posta.
  *  2. E-posta kayıtlıysa şifre; değilse ad + şifre ile hesap oluştur. Sosyal hesapsa o düğmeye yönlendir.
  *  3. Hesapta iki adımlı doğrulama açıksa 6 haneli kod (ya da yedek kod).
- *  Şifremi unuttum: demo — gerçek e-posta gönderimi yayında bağlanır (açıkça söylenir).
+ *  Şifremi unuttum: sunucu bağlantıyı e-postayla gönderir (servis yoksa açıkça söylenir).
+ * Hepsi sunucuda doğrulanır (/api/hesap/*); hatalı deneme kilidi ve hız sınırı sunucudadır.
  * Sayfa (/giris, /kayit) ve her yerden açılan pencere aynı bileşeni kullanır.
  */
 type Adim = "basla" | "sifre" | "kayit" | "ikiAdim" | "sifirla";
 export type AuthNiyet = "giris" | "kayit";
 
 const EPOSTA = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const buyukHarf = (s: string) => s.charAt(0).toLocaleUpperCase("tr-TR") + s.slice(1);
+const IKON: Record<SaglayiciKimligi, (p: { className?: string }) => React.ReactNode> = { google: GoogleIcon, apple: AppleIcon, microsoft: MicrosoftIcon };
 
-export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
+export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik, geri }: {
   niyet?: AuthNiyet; onTamam: () => void; baslik?: string; altBaslik?: string;
+  /** Sosyal girişten sonra dönülecek site içi yol (verilmezse bulunulan sayfa). */
+  geri?: string;
 }) {
-  const girisYap = useAuth((s) => s.girisYap);
-  const kayitOl = useAuth((s) => s.kayitOl);
+  const benUygula = useAuth((s) => s.benUygula);
+  const sunucu = useAuth((s) => s.sunucu);
   const onboardingBaslat = useOnboarding((s) => s.baslat);
 
   const [adim, setAdim] = useState<Adim>("basla");
@@ -43,14 +48,18 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
   const [kod, setKod] = useState("");
   const [yedekMod, setYedekMod] = useState(false);
   const [hata, setHata] = useState<{ alan: string; metin: string } | null>(null);
+  const [bilgi, setBilgi] = useState<string | null>(null);
   const [yukleniyor, setYukleniyor] = useState<string | null>(null);
   const [tamam, setTamam] = useState(false);
   const [sifirlaGonderildi, setSifirlaGonderildi] = useState(false);
-  const [sosyalIpucu, setSosyalIpucu] = useState<string | null>(null);
+  const [gelistirmeBaglantisi, setGelistirmeBaglantisi] = useState<string | null>(null);
+  const [sosyalIpucu, setSosyalIpucu] = useState<SaglayiciKimligi[] | null>(null);
+  const [bekleyen, setBekleyen] = useState<string | null>(null);
+  const [oauthIkiAdim, setOauthIkiAdim] = useState<{ yeni: boolean } | null>(null);
+  const [kurulu, setKurulu] = useState<Record<SaglayiciKimligi, boolean> | null>(sunucu?.saglayicilar ?? null);
   const titre = useAnimationControls();
 
-  // Art arda hatalı denemede kısa kilit (kaba kuvvete karşı)
-  const [hatalar, setHatalar] = useState(0);
+  // Sunucunun kilit ya da hız sınırı süresi (geri sayım)
   const [kilitBitis, setKilitBitis] = useState(0);
   const [, setTik] = useState(0);
   useEffect(() => {
@@ -62,66 +71,77 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
 
   const git = (a: Adim, ileri = true) => { setYon(ileri ? 1 : -1); setHata(null); setAdim(a); };
   const hataGoster = (alan: string, metin: string) => { setHata({ alan, metin }); setYukleniyor(null); void titre.start({ x: [0, -8, 7, -5, 3, 0], transition: { duration: 0.38 } }); };
+  const sunucuHatasi = (alan: string, r: H.Hata) => {
+    if ((r.kod === "kilit" || r.kod === "hiz") && r.bekle) setKilitBitis(Date.now() + r.bekle * 1000);
+    hataGoster(alan, r.hata);
+  };
   const bitir = () => { setTamam(true); setYukleniyor(null); setTimeout(onTamam, 650); };
+  const donusYolu = () => geri ?? (typeof location !== "undefined" ? `${location.pathname}${location.search}` : "/panel");
 
-  /* ── Sosyal (demo: sağlayıcı yayında bağlanır) ── */
-  const sosyal = (saglayici: "google" | "apple" | "microsoft") => {
-    setYukleniyor(saglayici);
-    setTimeout(() => {
-      const ePosta = `kullanici@${saglayici}.com`;
-      const yeni = !useHesap.getState().hesaplar[ePosta];
-      girisYap(ePosta, `${buyukHarf(saglayici)} Kullanıcı`);
-      useHesap.getState().guncelle(ePosta, (h) => ({ ...h, saglayici }));
-      oturumBaslat(ePosta, buyukHarf(saglayici));
-      if (yeni) onboardingBaslat();
-      bitir();
-    }, 750);
+  /* ── Sağlayıcı durumu ve sosyal girişten dönüş ── */
+  useEffect(() => {
+    if (sunucu?.saglayicilar) setKurulu(sunucu.saglayicilar);
+    else void H.saglayicilarGetir().then((r) => { if (r.ok) setKurulu(r.sunucu.saglayicilar); });
+  }, [sunucu]);
+
+  useEffect(() => {
+    if (!/^\/(giris|kayit)\/?$/.test(location.pathname)) return;
+    const q = new URLSearchParams(location.search);
+    const temizle = () => { const u = new URL(location.href); for (const k of ["hata", "s", "oauth", "yeni", "adim", "gecis", "email"]) u.searchParams.delete(k); history.replaceState(null, "", u.pathname + u.search); };
+    if (q.get("gecis") === "1") setBilgi("Hesaplar artık sunucuda güvenle tutuluyor. Bu tarayıcıdaki eski profil taşınamadı; aynı e-postayla giriş yap ya da yeni hesap aç.");
+    const e = q.get("email");
+    if (e && EPOSTA.test(e)) setEmail(e);
+    const h = q.get("hata");
+    if (h) setHata({ alan: "sosyal", metin: H.oauthHataMetni(h, q.get("s")) ?? "Giriş tamamlanamadı." });
+    if (q.get("adim") === "iki-adim") { setOauthIkiAdim({ yeni: q.get("yeni") === "1" }); setAdim("ikiAdim"); }
+    if (q.get("oauth") === "tamam") {
+      setYukleniyor("oauth");
+      void useAuth.getState().esitle().then((r) => {
+        if (r === "oturum") { if (q.get("yeni") === "1") { davetIsle(useAuth.getState().kullanici?.ad ?? ""); onboardingBaslat(); } bitir(); }
+        else hataGoster("sosyal", "Giriş tamamlanamadı. Yeniden dene.");
+      });
+    }
+    if (h || e || q.has("oauth") || q.has("adim") || q.has("gecis")) temizle();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* ── Sosyal: sağlayıcının sayfasına tam yönlendirme ── */
+  const sosyal = (s: SaglayiciKimligi) => {
+    if (kurulu && !kurulu[s]) return hataGoster("sosyal", H.oauthHataMetni("kurulu-degil", s)!);
+    setYukleniyor(s);
+    window.location.assign(H.oauthAdresi(s, donusYolu()));
   };
 
   /* ── 1. E-posta ── */
-  const epostaDevam = (e: React.FormEvent) => {
+  const epostaDevam = async (e: React.FormEvent) => {
     e.preventDefault();
     const m = email.trim().toLowerCase();
     if (!EPOSTA.test(m)) return hataGoster("email", "Geçerli bir e-posta adresi gir.");
     setYukleniyor("email");
-    setTimeout(() => {
-      setYukleniyor(null);
-      const kayit = useHesap.getState().hesaplar[m];
-      if (kayit?.saglayici && !kayit.sifre) { setSosyalIpucu(kayit.saglayici); return git("sifre"); }
-      setSosyalIpucu(null);
-      git(kayit?.sifre ? "sifre" : "kayit");
-    }, 350);
+    const r = await H.epostaKontrol(m);
+    setYukleniyor(null);
+    if (!r.ok) return sunucuHatasi("email", r);
+    if (r.adim === "sosyal") { setSosyalIpucu(r.saglayicilar ?? []); return git("sifre"); }
+    setSosyalIpucu(null);
+    git(r.adim === "sifre" ? "sifre" : "kayit");
   };
 
   /* ── 2a. Şifre ile giriş ── */
-  const hataliDeneme = (alan: string, metin: string) => {
-    const n = hatalar + 1;
-    setHatalar(n);
-    olayYaz(email, "giris-hatali", adim === "ikiAdim" ? "Doğrulama kodu" : "Şifre");
-    if (n >= 5) { setKilitBitis(Date.now() + 30_000); setHatalar(0); hataGoster(alan, "Çok fazla hatalı deneme. 30 saniye sonra yeniden dene."); }
-    else hataGoster(alan, metin);
-  };
   const girisGonder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (kilitKalan) return;
     if (!sifre) return hataGoster("sifre", "Şifreni gir.");
     setYukleniyor("sifre");
-    const kayit = useHesap.getState().hesaplar[email.trim().toLowerCase()];
-    if (!kayit?.sifre || !(await sifreDogrula(sifre, kayit.sifre))) return hataliDeneme("sifre", "Şifre hatalı. Yeniden dene ya da şifreni sıfırla.");
-    if (kayit.ikiAdim?.aktif) { setHatalar(0); setYukleniyor(null); return git("ikiAdim"); }
-    girisYap(email.trim());
-    oturumBaslat(email, "E-posta ve şifre");
+    const r = await H.girisIstek(email.trim(), sifre);
+    if (!r.ok) return sunucuHatasi("sifre", r.durum === 401 ? { ...r, hata: "E-posta ya da şifre hatalı. Yeniden dene ya da şifreni sıfırla." } : r);
+    if ("bekleyen" in r) { setBekleyen(r.bekleyen); setYukleniyor(null); return git("ikiAdim"); }
+    benUygula(r);
     bitir();
   };
 
   /* ── 2b. Kayıt ── */
-  const kosullar = [
-    { ok: sifre.length >= 8, ad: "En az 8 karakter" },
-    { ok: /[a-zçğıöşü]/.test(sifre) && /[A-ZÇĞİÖŞÜ]/.test(sifre), ad: "Büyük ve küçük harf" },
-    { ok: /\d/.test(sifre), ad: "Bir rakam" },
-  ];
+  const kosullar = SIFRE_KURALLARI.map((k) => ({ ok: k.test(sifre), ad: k.ad }));
   // Güç ölçeri ekrandaki koşullarla uyumlu: koşullar + uzunluk/sembol artısı; yaygın şifreler zayıf sayılır.
-  const yaygin = sifreGucu(sifre).puan <= 1 && /^(123456|password|sifre|qwerty|111111|abc123|vayra)/i.test(sifre);
+  const yaygin = sifreGucu(sifre).puan <= 1 && YAYGIN_SIFRE.test(sifre);
   const puan = yaygin ? 1 : Math.min(4, kosullar.filter((k) => k.ok).length + (sifre.length >= 12 || /[^A-Za-z0-9çğıöşüÇĞİÖŞÜ]/.test(sifre) ? 1 : 0));
   const guc = { puan, etiket: yaygin ? "Çok yaygın" : ["Çok zayıf", "Zayıf", "Orta", "Güçlü", "Çok güçlü"][puan] };
   const kayitGonder = async (e: React.FormEvent) => {
@@ -129,45 +149,65 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
     if (ad.trim().length < 2) return hataGoster("ad", "Adını gir.");
     if (kosullar.some((k) => !k.ok)) return hataGoster("sifre", "Şifre aşağıdaki koşulları karşılamalı.");
     if (yaygin) return hataGoster("sifre", "Bu şifre çok yaygın, kolay tahmin edilir. Başka bir şifre seç.");
+    if (kilitKalan) return;
     setYukleniyor("kayit");
-    const m = email.trim();
-    const ozet = await sifreOzeti(sifre);
-    if (useAuth.getState().profiller[m.toLowerCase()]) girisYap(m); else kayitOl(ad.trim(), m);
-    useHesap.getState().guncelle(m, (h) => ({ ...h, olusturma: Date.now(), sifre: { ...ozet, guncelleme: Date.now() } }));
-    olayYaz(m, "kayit");
-    oturumBaslat(m, "E-posta ve şifre");
+    const r = await H.kayitIstek(ad.trim(), email.trim(), sifre);
+    if (!r.ok) return sunucuHatasi(r.alan === "ad" ? "ad" : r.alan === "sifre" ? "sifre" : "kayit", r);
+    benUygula(r);
     davetIsle(ad.trim());
     onboardingBaslat();
+    const d = r.dogrulama;
+    if (d.gonderildi) toast.success("Doğrulama e-postası gönderildi", { description: `${email.trim()} adresine gelen bağlantıyla e-postanı doğrula.` });
+    else if (d.gelistirmeBaglantisi) toast("Geliştirme ortamı: e-posta servisi kurulu değil", { description: "Doğrulama bağlantısı Ayarlar, Giriş ve hesap sayfasında gösteriliyor." });
+    else if (d.hata) toast.error("Doğrulama e-postası gönderilemedi", { description: d.hata });
     bitir();
   };
 
   /* ── 3. İki adımlı doğrulama ── */
   const kodGonder = async (deger = kod) => {
-    if (kilitKalan) return;
-    const k = useHesap.getState().getir(email);
-    if (!k.ikiAdim) return;
+    if (kilitKalan || yukleniyor === "kod") return;
     setYukleniyor("kod");
-    if (yedekMod) {
-      const g = deger.trim().toLowerCase().replace(/\s/g, "");
-      const y = k.ikiAdim.yedekler.find((x) => !x.kullanildi && x.kod === (g.includes("-") ? g : `${g.slice(0, 4)}-${g.slice(4)}`));
-      if (!y) return hataliDeneme("kod", "Bu yedek kod geçersiz ya da daha önce kullanılmış.");
-      useHesap.getState().guncelle(email, (h) => ({ ...h, ikiAdim: h.ikiAdim && { ...h.ikiAdim, yedekler: h.ikiAdim.yedekler.map((x) => (x.kod === y.kod ? { ...x, kullanildi: Date.now() } : x)) } }));
-      olayYaz(email, "yedek-kod");
-    } else if (!(await totpDogrula(k.ikiAdim.sir, deger))) { setKod(""); return hataliDeneme("kod", "Kod hatalı ya da süresi geçti. Uygulamadaki güncel kodu gir."); }
-    girisYap(email.trim());
-    oturumBaslat(email, yedekMod ? "Şifre + yedek kod" : "Şifre + doğrulama uygulaması");
+    const r = await H.ikiAdimGiris(deger.trim(), bekleyen ?? undefined);
+    if (!r.ok) {
+      if (r.kod === "bekleyen") {
+        setKod(""); setBekleyen(null); setOauthIkiAdim(null); setYedekMod(false);
+        git(email ? "sifre" : "basla", false);
+        return hataGoster(email ? "sifre" : "sosyal", r.hata);
+      }
+      if (!yedekMod) setKod("");
+      return sunucuHatasi("kod", r);
+    }
+    benUygula(r);
+    if (oauthIkiAdim?.yeni) { davetIsle(r.kullanici.ad); onboardingBaslat(); }
     bitir();
+  };
+
+  /* ── Şifre sıfırlama ── */
+  const sifirlaGonder = async () => {
+    setYukleniyor("sifirla");
+    const r = await H.sifirlamaIste(email.trim());
+    if (!r.ok) return sunucuHatasi("sifirla", r);
+    setYukleniyor(null);
+    setGelistirmeBaglantisi(r.gelistirmeBaglantisi ?? null);
+    setSifirlaGonderildi(true);
   };
 
   /* ── Başlıklar ── */
   const ust: Record<Adim, { b: string; a: string }> = {
     basla: { b: baslik ?? (niyet === "kayit" ? "Vayra'ya katıl" : "Vayra'ya giriş yap"), a: altBaslik ?? (niyet === "kayit" ? "Ücretsiz hesap aç, saniyeler içinde üretmeye başla." : "Giriş yap ya da ücretsiz hesap aç.") },
-    sifre: { b: "Tekrar hoş geldin", a: "Devam etmek için şifreni gir." },
+    sifre: { b: "Tekrar hoş geldin", a: sosyalIpucu ? "Bu hesap sosyal girişle açılmış." : "Devam etmek için şifreni gir." },
     kayit: { b: "Hesabını oluştur", a: "Bu e-postayla hesap yok. Bir dakikada açalım." },
     ikiAdim: { b: "İki adımlı doğrulama", a: yedekMod ? "Kaydettiğin yedek kodlardan birini gir. Her kod bir kez çalışır." : "Doğrulama uygulamandaki 6 haneli kodu gir." },
     sifirla: { b: "Şifreni sıfırla", a: "Sıfırlama bağlantısını e-posta adresine gönderelim." },
   };
-  const geriGit = adim === "basla" ? null : () => { setSifre(""); setKod(""); setYedekMod(false); git(adim === "ikiAdim" || adim === "sifirla" ? "sifre" : "basla", false); };
+  const geriGit = adim === "basla" ? null : () => {
+    setSifre(""); setKod(""); setYedekMod(false);
+    if (adim === "ikiAdim") { setBekleyen(null); setOauthIkiAdim(null); }
+    git(adim === "ikiAdim" ? (email ? "sifre" : "basla") : adim === "sifirla" ? "sifre" : "basla", false);
+  };
+  const sosyalDugmeler = (liste: SaglayiciKimligi[]) => liste.map((s) => (
+    <SosyalDugme key={s} ad={`${SAGLAYICI_AD[s]} ile devam et`} ikon={IKON[s]} kurulu={kurulu ? kurulu[s] : null} yukleniyor={yukleniyor === s} kapali={!!yukleniyor} onClick={() => sosyal(s)} />
+  ));
 
   return (
     <div className="relative w-full">
@@ -219,15 +259,17 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
           <motion.div animate={titre}>
             {adim === "basla" && (
               <>
-                <div className="space-y-2.5">
-                  <SosyalDugme ad="Google ile devam et" ikon={GoogleIcon} yukleniyor={yukleniyor === "google"} kapali={!!yukleniyor} onClick={() => sosyal("google")} />
-                  <SosyalDugme ad="Apple ile devam et" ikon={AppleIcon} yukleniyor={yukleniyor === "apple"} kapali={!!yukleniyor} onClick={() => sosyal("apple")} />
-                  <SosyalDugme ad="Microsoft ile devam et" ikon={MicrosoftIcon} yukleniyor={yukleniyor === "microsoft"} kapali={!!yukleniyor} onClick={() => sosyal("microsoft")} />
-                </div>
+                {bilgi && (
+                  <p className="mb-4 flex items-start gap-2.5 rounded-[14px] bg-[#55d6fd]/[0.07] px-4 py-3 text-[13.5px] leading-snug text-white/80 ring-1 ring-inset ring-[#55d6fd]/20">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#55d6fd]" />{bilgi}
+                  </p>
+                )}
+                <div className="space-y-2.5">{sosyalDugmeler(["google", "apple", "microsoft"])}</div>
+                <HataSatiri metin={hata?.alan === "sosyal" ? hata.metin : undefined} />
                 <div className="my-5 flex items-center gap-3"><span className="h-px flex-1 bg-white/[0.08]" /><span className="text-[12.5px] text-white/40">ya da</span><span className="h-px flex-1 bg-white/[0.08]" /></div>
                 <form onSubmit={epostaDevam} noValidate className="space-y-3">
                   <Alan etiket="E-posta adresi" tip="email" deger={email} onChange={(v) => { setEmail(v); if (hata) setHata(null); }} otoTamamla="email" otoOdak hata={hata?.alan === "email" ? hata.metin : undefined} />
-                  <AnaDugme yukleniyor={yukleniyor === "email"} kapali={!!yukleniyor}>E-posta ile devam et</AnaDugme>
+                  <AnaDugme yukleniyor={yukleniyor === "email" || yukleniyor === "oauth"} kapali={!!yukleniyor || !!kilitKalan}>{kilitKalan ? `${kilitKalan} sn bekle` : "E-posta ile devam et"}</AnaDugme>
                 </form>
               </>
             )}
@@ -236,11 +278,11 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
               sosyalIpucu ? (
                 <div className="space-y-3">
                   <p className="rounded-[14px] bg-white/[0.04] px-4 py-3 text-[13.5px] leading-snug text-white/70 ring-1 ring-inset ring-white/[0.08]">
-                    Bu hesap {buyukHarf(sosyalIpucu)} ile açılmış. Aynı düğmeyle devam et.
+                    Bu hesap {sosyalIpucu.map((s) => SAGLAYICI_AD[s]).join(" ya da ")} ile açılmış. Aynı düğmeyle devam et.
                   </p>
-                  {sosyalIpucu === "google" && <SosyalDugme ad="Google ile devam et" ikon={GoogleIcon} yukleniyor={yukleniyor === "google"} kapali={!!yukleniyor} onClick={() => sosyal("google")} />}
-                  {sosyalIpucu === "apple" && <SosyalDugme ad="Apple ile devam et" ikon={AppleIcon} yukleniyor={yukleniyor === "apple"} kapali={!!yukleniyor} onClick={() => sosyal("apple")} />}
-                  {sosyalIpucu === "microsoft" && <SosyalDugme ad="Microsoft ile devam et" ikon={MicrosoftIcon} yukleniyor={yukleniyor === "microsoft"} kapali={!!yukleniyor} onClick={() => sosyal("microsoft")} />}
+                  {sosyalDugmeler(sosyalIpucu)}
+                  <HataSatiri metin={hata?.alan === "sosyal" || hata?.alan === "sifre" ? hata.metin : undefined} />
+                  <button type="button" onClick={() => { setSifirlaGonderildi(false); git("sifirla"); }} className="mx-auto block pt-1 text-[13px] font-medium text-white/60 transition-colors hover:text-white">E-postayla şifre belirle</button>
                 </div>
               ) : (
                 <form onSubmit={girisGonder} noValidate className="space-y-3">
@@ -281,7 +323,8 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
                     {sifre && <span className="ml-auto text-[12.5px] font-medium text-white/60">{guc.etiket}</span>}
                   </div>
                 </div>
-                <div className="pt-1"><AnaDugme yukleniyor={yukleniyor === "kayit"} kapali={!!yukleniyor}>Hesap oluştur</AnaDugme></div>
+                <HataSatiri metin={hata?.alan === "kayit" ? hata.metin : undefined} />
+                <div className="pt-1"><AnaDugme yukleniyor={yukleniyor === "kayit"} kapali={!!yukleniyor || !!kilitKalan}>{kilitKalan ? `${kilitKalan} sn bekle` : "Hesap oluştur"}</AnaDugme></div>
               </form>
             )}
 
@@ -307,14 +350,23 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
                 <div className="rounded-[16px] bg-white/[0.04] p-4 text-center ring-1 ring-inset ring-white/[0.08]">
                   <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-emerald-400/15 text-emerald-300"><Mail className="h-5 w-5" /></span>
                   <p className="mt-3 text-[15px] font-semibold text-white">E-postanı kontrol et</p>
-                  <p className="mt-1 text-[13.5px] leading-snug text-white/55">Hesap kayıtlıysa sıfırlama bağlantısı birkaç dakika içinde gelir. Bu sürümde e-posta gönderimi henüz bağlı değil.</p>
+                  <p className="mt-1 text-[13.5px] leading-snug text-white/55">Hesap kayıtlıysa sıfırlama bağlantısı birkaç dakika içinde gelir. Bağlantı 1 saat geçerli.</p>
+                  {gelistirmeBaglantisi && (
+                    <div className="mt-4 rounded-[12px] bg-amber-300/[0.07] p-3 text-left ring-1 ring-inset ring-amber-300/20">
+                      <p className="text-[12.5px] font-semibold text-amber-200">Geliştirme ortamı</p>
+                      <p className="mt-0.5 text-[12.5px] leading-snug text-white/60">E-posta servisi bu sunucuda kurulu değil. Bağlantı yalnız burada gösteriliyor.</p>
+                      <a href={gelistirmeBaglantisi} className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#55d6fd] hover:underline">Sıfırlama sayfasını aç<ExternalLink className="h-3.5 w-3.5" /></a>
+                    </div>
+                  )}
                   <button type="button" onClick={() => git("sifre", false)} className="mt-4 text-[13.5px] font-medium text-[#55d6fd] hover:underline">Girişe dön</button>
                 </div>
               ) : (
-                <AnaDugme yukleniyor={yukleniyor === "sifirla"} kapali={!!yukleniyor}
-                  onClick={() => { setYukleniyor("sifirla"); setTimeout(() => { setYukleniyor(null); setSifirlaGonderildi(true); }, 600); }}>
-                  Sıfırlama bağlantısı gönder
-                </AnaDugme>
+                <div className="space-y-2">
+                  <AnaDugme yukleniyor={yukleniyor === "sifirla"} kapali={!!yukleniyor || !!kilitKalan} onClick={() => void sifirlaGonder()}>
+                    {kilitKalan ? `${kilitKalan} sn bekle` : "Sıfırlama bağlantısı gönder"}
+                  </AnaDugme>
+                  <HataSatiri metin={hata?.alan === "sifirla" ? hata.metin : undefined} />
+                </div>
               )
             )}
           </motion.div>
@@ -331,17 +383,22 @@ export function AuthAkis({ niyet = "giris", onTamam, baslik, altBaslik }: {
 
 /* ── Parçalar ── */
 
-function SosyalDugme({ ad, ikon: Ikon, onClick, yukleniyor, kapali }: { ad: string; ikon: (p: { className?: string }) => React.ReactNode; onClick: () => void; yukleniyor: boolean; kapali: boolean }) {
+function SosyalDugme({ ad, ikon: Ikon, onClick, yukleniyor, kapali, kurulu }: { ad: string; ikon: (p: { className?: string }) => React.ReactNode; onClick: () => void; yukleniyor: boolean; kapali: boolean; kurulu: boolean | null }) {
+  const yok = kurulu === false;
   return (
-    <button type="button" onClick={onClick} disabled={kapali}
-      className="relative flex h-12 w-full items-center justify-center gap-3 rounded-[14px] bg-white/[0.05] text-[15px] font-medium text-white ring-1 ring-inset ring-white/[0.1] transition-[background-color,transform,opacity] hover:bg-white/[0.09] active:scale-[0.985] disabled:opacity-60 disabled:active:scale-100">
-      {yukleniyor ? <Loader2 className="h-5 w-5 animate-spin text-white/80" /> : <Ikon className="h-5 w-5" />}
-      {ad}
+    <button type="button" onClick={onClick} disabled={kapali} aria-disabled={yok}
+      className={cn("relative flex h-12 w-full items-center justify-center gap-3 rounded-[14px] bg-white/[0.05] text-[15px] font-medium text-white ring-1 ring-inset ring-white/[0.1] transition-[background-color,transform,opacity] active:scale-[0.985] disabled:opacity-60 disabled:active:scale-100",
+        yok ? "cursor-help bg-white/[0.025] text-white/55 ring-white/[0.06] hover:bg-white/[0.04]" : "hover:bg-white/[0.09]")}>
+      {yukleniyor ? <Loader2 className="h-5 w-5 animate-spin text-white/80" /> : <span className={cn(yok && "opacity-45 grayscale")}><Ikon className="h-5 w-5" /></span>}
+      <span className="flex flex-col items-start leading-tight">
+        {ad}
+        {yok && <span className="text-[11.5px] font-normal text-white/40">Bu sunucuda kurulu değil</span>}
+      </span>
     </button>
   );
 }
 
-function AnaDugme({ children, yukleniyor, kapali, onClick }: { children: React.ReactNode; yukleniyor: boolean; kapali?: boolean; onClick?: () => void }) {
+export function AnaDugme({ children, yukleniyor, kapali, onClick }: { children: React.ReactNode; yukleniyor: boolean; kapali?: boolean; onClick?: () => void }) {
   return (
     <button type={onClick ? "button" : "submit"} onClick={onClick} disabled={kapali}
       className="flex h-12 w-full items-center justify-center gap-2 rounded-[14px] bg-white text-[15px] font-semibold text-[#0b0b0d] transition-[background-color,transform,opacity] hover:bg-white/90 active:scale-[0.985] disabled:opacity-50 disabled:active:scale-100">
@@ -350,7 +407,7 @@ function AnaDugme({ children, yukleniyor, kapali, onClick }: { children: React.R
   );
 }
 
-function HataSatiri({ metin }: { metin?: string }) {
+export function HataSatiri({ metin }: { metin?: string }) {
   return (
     <AnimatePresence initial={false}>
       {metin && (
@@ -386,7 +443,7 @@ function Alan({ etiket, tip, deger, onChange, otoTamamla, otoOdak, hata, sag }: 
   );
 }
 
-function SifreAlani({ etiket, deger, onChange, otoTamamla, hata, otoOdak = true }: { etiket: string; deger: string; onChange: (v: string) => void; otoTamamla: string; hata?: string; otoOdak?: boolean }) {
+export function SifreAlani({ etiket, deger, onChange, otoTamamla, hata, otoOdak = true }: { etiket: string; deger: string; onChange: (v: string) => void; otoTamamla: string; hata?: string; otoOdak?: boolean }) {
   const [goster, setGoster] = useState(false);
   const [caps, setCaps] = useState(false);
   return (

@@ -62,7 +62,7 @@ export function GorselPanel({ c, gorseller, onSec, onDuzenle, kredi }: {
     <div className="flex h-full flex-col bg-[#0a0d12]">
       <div className="flex h-11 shrink-0 items-center gap-1 border-b border-white/[0.06] px-3">
         <button onClick={() => setOlcek((o) => Math.max(0.5, +(o - 0.25).toFixed(2)))} aria-label="Uzaklaştır" className={ikon}><Minus className="h-3.5 w-3.5" /></button>
-        <span className="w-12 text-center text-[12px] tabular-nums text-[var(--sc-metin-2)]">%{Math.round(olcek * 100)}</span>
+        <span className="min-w-12 whitespace-nowrap text-center text-[12px] tabular-nums text-[var(--sc-metin-2)]">yüzde {Math.round(olcek * 100)}</span>
         <button onClick={() => setOlcek((o) => Math.min(4, +(o + 0.25).toFixed(2)))} aria-label="Yakınlaştır" className={ikon}><Plus className="h-3.5 w-3.5" /></button>
         <button onClick={() => setOlcek(1)} aria-label="Sığdır" title="Sığdır" className={ikon}><Maximize className="h-3.5 w-3.5" /></button>
         {onDuzenle && url && (

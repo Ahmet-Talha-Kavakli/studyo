@@ -33,6 +33,11 @@ import { DerinEgitim, useLoraTakip } from "./DerinEgitim";
 import { KenarTutamac, useKenarGenisligi } from "@/components/ui/KenarTutamac";
 import { MenuKart } from "@/components/kitaplik/Katmanlar";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi as gorunumSutun } from "@/lib/galeri/gorunum";
+import { useProjeler } from "@/store/useProjeler";
+import { mesaj } from "@/lib/mesaj";
 
 const VARSAYILAN_MODEL = "Nano Banana Pro";
 const LORA_MODEL = "Vayra Karakter LoRA";
@@ -125,15 +130,17 @@ export function KarakterUret({ id }: { id?: string }) {
   const sonuclar = useAracUretimleri(useMemo(() => (u: { meta?: { elementler?: { ad: string }[] } }) => !!ad && !!u.meta?.elementler?.some((x) => x.ad.toLocaleLowerCase("tr") === ad.toLocaleLowerCase("tr")), [ad]));
   const surer = sonuclar.filter((u) => u.durum === "kuyrukta" || u.durum === "isleniyor").length;
   /** Akış: günlere göre kartlar (Görsel stüdyosundaki galeriyle aynı dil); en yeni başta. */
+  const [gorunum] = useGorunum("karakter");
   const gruplar = useMemo(() => {
     const gun = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
     const h = new Map<number, Uretim[]>();
-    for (const u of [...sonuclar].sort((a, c) => c.olusturma - a.olusturma)) { const k = gun(u.olusturma); h.set(k, [...(h.get(k) ?? []), u]); }
+    const yon = gorunum.siralama === "eski" ? -1 : 1;
+    for (const u of [...sonuclar].sort((a, c) => yon * (c.olusturma - a.olusturma))) { const k = gun(u.olusturma); h.set(k, [...(h.get(k) ?? []), u]); }
     const bugun = gun(Date.now());
-    return [...h.entries()].sort((a, c) => c[0] - a[0]).map(([k, l]) => ({
+    return [...h.entries()].sort((a, c) => yon * (c[0] - a[0])).map(([k, l]) => ({
       k: String(k), l, ad: k === bugun ? "Bugün" : k === bugun - 86_400_000 ? "Dün" : new Date(k).toLocaleDateString("tr-TR", { day: "numeric", month: "long", weekday: "long" }),
     }));
-  }, [sonuclar]);
+  }, [sonuclar, gorunum.siralama]);
 
   // Komut kutusu yüksekliği → içerik altta o kadar pay bırakır.
   const komutRef = useRef<HTMLDivElement>(null);
@@ -205,6 +212,7 @@ export function KarakterUret({ id }: { id?: string }) {
     }
     setTimeout(() => setGonderiliyor(false), 500);
     if (!n) return;
+    if (istemTemizlensinMi("karakter")) setIstem("");
     toast(pk ? `${pk.ad} üretiliyor` : n > 1 ? `${n} görsel üretiliyor` : "Görsel üretiliyor", { description: `@${ad} · ${model} · ${demo ? "Kredi düşmez." : `${krediYaz(birim * n)} kredi.`}` });
   };
 
@@ -544,6 +552,7 @@ export function KarakterUret({ id }: { id?: string }) {
   /* ── Akış ── */
   const akis = (
     <div className={cn("mx-auto max-w-[1240px] space-y-3 px-5", masaustu ? "pt-3" : "pt-4")}>
+      {gruplar.length > 0 && <div className="flex justify-end"><GorunumAyari sayfa="karakter" /></div>}
       <AnimatePresence initial={false}>
         {gruplar.map(({ k, l, ad: gunAd }) => {
           const surenler = l.filter((u) => u.durum === "kuyrukta" || u.durum === "isleniyor").length;
@@ -557,7 +566,7 @@ export function KarakterUret({ id }: { id?: string }) {
                 <span className="flex-1" />
                 {tamam.length > 1 && <button onClick={() => void topluIndir(`vayra-${ad}`, tamam)} className="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-[12.5px] text-metin transition hover:bg-white/[0.12] active:scale-95"><Download className="h-3.5 w-3.5" />Tümünü indir</button>}
               </div>
-              <div className={cn("grid gap-1 p-1", masaustu ? "grid-cols-4 2xl:grid-cols-5" : "grid-cols-2")}>
+              <div className="grid gap-1 p-1" style={{ gridTemplateColumns: `repeat(${gorunumSutun(masaustu ? 1180 : 360, gorunum)}, minmax(0, 1fr))` }}>
                 <AnimatePresence initial={false}>
                   {l.map((u) => {
                     const sr = u.durum === "kuyrukta" || u.durum === "isleniyor";
@@ -565,10 +574,12 @@ export function KarakterUret({ id }: { id?: string }) {
                     return (
                       <motion.div key={u.id} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.25 }}>
                         {sr ? (
-                          <div className="relative overflow-hidden rounded-[14px] bg-[#121214]" style={{ aspectRatio: `${w || 3} / ${h || 4}` }}>
+                          <div className="relative overflow-hidden rounded-[14px] bg-[#121214]" style={{ aspectRatio: String(kartOrani(gorunum, (w || 3) / (h || 4))) }}>
                             <UretimYukleniyor u={u} siraNo={uretimSirasi(u.id) || undefined} onIptal={() => uretimIptal(u.id)} />
                           </div>
-                        )   : <SonucKarti u={u} onAc={() => setSecili(u.id)} demoGizle />}
+                        )   : <SonucKarti u={u} onAc={() => setSecili(u.id)} demoGizle oran={gorunum.yerlesim === "ozgun" ? undefined : kartOrani(gorunum, 1)}
+                          onYenidenKullan={() => { setIstem(String(u.meta?.hamIstem ?? "").replace(/@\S*/g, "").trim().slice(0, 800)); istemRef.current?.focus(); }}
+                          onSil={() => { useProjeler.getState().sil(u.id); mesaj.silindi("Üretim", () => useProjeler.setState((s) => ({ uretimler: [u, ...s.uretimler] }))); }} />}
                       </motion.div>
                     );
                   })}

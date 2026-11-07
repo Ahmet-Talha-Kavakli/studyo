@@ -196,8 +196,8 @@ export default function GelistiriciPage() {
               <div className="mt-6 grid gap-6 sm:grid-cols-3">
                 {[
                   { n: 1, b: "Vayra MCP adresini kopyala", a: "Sonraki adımda gerekecek." },
-                  { n: 2, b: `${istemci} → Ayarlar → Bağlayıcılar`, a: `Özel bağlayıcı ekle, adını "Vayra" koy ve adresi yapıştır.` },
-                  { n: 3, b: "Bağlan ve giriş yap", a: `Ekle → Bağlan; Vayra hesabınla giriş yap. Artık ${istemci} içinden üret.` },
+                  { n: 2, b: `${istemci} › Ayarlar › Bağlayıcılar`, a: `Özel bağlayıcı ekle, adını "Vayra" koy ve adresi yapıştır.` },
+                  { n: 3, b: "Bağlan ve giriş yap", a: `Ekle, ardından Bağlan; Vayra hesabınla giriş yap. Artık ${istemci} içinden üret.` },
                 ].map((s) => (
                   <div key={s.n}>
                     <span className="flex h-8 w-8 items-center justify-center rounded-full border border-white/15 text-sm font-semibold text-white/70">{s.n}</span>

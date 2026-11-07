@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { istemHazir, sesMetniGelistir } from "@/lib/saglayicilar/istem";
 import { icerikDenetle } from "@/lib/moderasyon";
 
@@ -11,6 +12,9 @@ export function GET() {
 
 /** { metin } → { metin } — kelimeler korunur, yalnız ses etiketleri eklenir. Kredi düşmez. */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   if (!istemHazir()) return NextResponse.json({ ok: false, hata: "Yazım yardımcısı (Gemini) bağlı değil." }, { status: 503 });
   const { metin } = (await req.json().catch(() => ({}))) as { metin?: string };
   const t = (metin ?? "").trim();

@@ -157,7 +157,7 @@ function KartGorsel({ id, secili }: { id: string; secili: boolean }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/gercek/galeri/sinematik2.webp" alt="" className="h-full w-full object-cover opacity-80 transition-transform duration-700 group-hover:scale-[1.05]" />
       <div className="absolute inset-x-2.5 bottom-2.5 rounded-[11px] bg-black/55 px-2.5 py-2 backdrop-blur-md">
-        <div className="flex justify-between text-[11.5px] font-medium text-white"><span>Video üretiliyor</span><span className="tabular-nums text-white/80">%90</span></div>
+        <div className="flex justify-between text-[11.5px] font-medium text-white"><span>Video üretiliyor</span><span className="tabular-nums text-white/80">yüzde 90</span></div>
         <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/15">
           <motion.div initial={{ width: "20%" }} whileInView={{ width: "90%" }} viewport={{ once: true }} transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }} className="h-full rounded-full bg-[#55d6fd]" />
         </div>
@@ -183,7 +183,7 @@ function KartGorsel({ id, secili }: { id: string; secili: boolean }) {
         ))}
       </div>
       <div>
-        <div className="flex justify-between text-[10.5px] text-white/65"><span>Ortak kredi havuzu</span><span className="tabular-nums">%64</span></div>
+        <div className="flex justify-between text-[10.5px] text-white/65"><span>Ortak kredi havuzu</span><span className="tabular-nums">yüzde 64</span></div>
         <div className="mt-1 h-1 rounded-full bg-white/10"><motion.div initial={{ width: 0 }} whileInView={{ width: "64%" }} viewport={{ once: true }} transition={{ duration: 1.2 }} className="h-full rounded-full bg-white" /></div>
       </div>
     </div>

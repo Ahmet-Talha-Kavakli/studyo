@@ -6,8 +6,9 @@
  * - `apiIstek`: /api/v1'e gerçek HTTP isteği atar, süresini ölçer, Konsol /
  *   Oyun alanı günlüğüne yazar.
  * - `senkronize`: her anahtarın ayarını ve hesap webhook'larını sunucuya
- *   yükler (PUT /v1/keys/self); yanıttaki üretimleri ve teslimleri aynalar;
- *   tamamlanan canlı üretimlerin kredisini hesaptan düşer. Panel açıkken
+ *   yükler (PUT /v1/keys/self; oturum açıkken canlı anahtar hesaba bağlanır);
+ *   yanıttaki üretimleri ve teslimleri aynalar. Kredi sunucuda, anahtarın sahibi olan
+ *   hesabın defterinden kesilir; burada yalnız ekrandaki bakiye sunucudan tazelenir. Panel açıkken
  *   periyodik çalışır; dışarıdan (curl, SDK) yapılan çağrılar da böylece
  *   panele ve bakiyeye yansır.
  */
@@ -121,14 +122,13 @@ async function senkronIc() {
   s2.uretimleriBirlestir(toplananUretim);
   s2.teslimleriBirlestir(toplananTeslim);
 
-  // Kredi tahsilatı: tamamlanan canlı üretimler, bir kez
+  // Kredi sunucuda kesildi (anahtarın sahibi olan hesaptan). Yeni tamamlanan canlı üretim varsa bakiye sunucudan
+  // tazelenir; istemci ayrıca düşmez (çift düşme olmasın).
   const tahsil = toplananUretim.filter((u) => u.environment === "live" && u.status === "succeeded" && u.credits > 0 && !faturaSet.has(u.id));
   if (tahsil.length && kullanici) {
-    const toplam = tahsil.reduce((t, u) => t + u.credits, 0);
-    const k = useAuth.getState().kullanici!;
-    useAuth.setState({ kullanici: { ...k, krediler: Math.max(0, k.krediler - toplam) } });
     s2.faturalandi(tahsil.map((u) => u.id));
-    const kalan = Math.max(0, k.krediler - toplam);
+    await useAuth.getState().esitle();
+    const kalan = useAuth.getState().kullanici?.krediler ?? 0;
     if (dusukBakiyeEsigi !== null && kalan <= dusukBakiyeEsigi) {
       useBildirim.getState().ekleTek({ anahtar: "api-kredi-dusuk", kategori: "hesap", tur: "uyari", baslik: "API bakiyen azaldı", mesaj: `Kalan ${kalan} kredi; belirlediğin eşik ${dusukBakiyeEsigi}.`, eylem: { ad: "Kredi yükle", link: "/panel/api/faturalama" } }, 6 * 3600_000);
     }

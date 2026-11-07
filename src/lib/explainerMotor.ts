@@ -72,7 +72,7 @@ export function rakamBul(metin: string): { deger: string; etiket: string } | nul
   const yuzde = metin.match(/yüzde\s?(\d+(?:[.,]\d+)?)/i);
   const m = yuzde ?? metin.match(/(%\s?\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s?(?:%|milyar|milyon|bin|kat|kişi|dakika|saat|gün|yıl|TL|dolar|€|\$)(?:\s?\w+)?)/i);
   if (!m || m.index === undefined) return null;
-  const deger = yuzde ? `%${yuzde[1]}` : m[0].replace(/\s+/g, " ").trim();
+  const deger = yuzde ? `yüzde ${yuzde[1]}` : m[0].replace(/\s+/g, " ").trim().replace(/^%\s?(\S+)$/, "yüzde $1").replace(/^(\S+)\s?%$/, "yüzde $1");
   // Etiket: rakamın geçtiği cümlenin rakamsız, kısaltılmış hali
   const cumle = metin.split(/(?<=[.!?])\s+/).find((c) => c.includes(m[0])) ?? metin;
   const etiket = cumle.replace(m[0], "").replace(/\s+/g, " ").replace(/^[\s,.-]+|[\s,.-]+$/g, "").split(" ").slice(0, 9).join(" ");
@@ -201,7 +201,7 @@ export function explainerMontaj(p: ExProje, ek: { marka?: MontajMarka; sfxUrl?: 
       const l = (s.maddeler ?? []).filter(Boolean).slice(0, 4);
       l.forEach((m, j) => maddeler.push(klip({ ad: m.slice(0, 30), tur: "metin", metin: `${j + 1}  ${m}`, baslangic: t + 0.6 + j * 0.7, sure: Math.max(1, d - 0.75 - j * 0.7), metinStil: "altbaslik", metinBoyut: dikey ? 52 : 54, metinKonum: "orta", konumY: (j - (l.length - 1) / 2) * (dikey ? 9 : 13), metinAnim: "yukari", metinFont: font, metinRenk: "#ffffff", metinArka: true, metinKutuRenk: j % 2 ? "#0b0d10" : "#111827", metinCikis: "fade" })));
     } else if (s.tur === "istatistik") {
-      yk({ metin: s.deger || "%0", metinStil: "baslik", metinBoyut: dikey ? 190 : 210, metinKonum: "orta", konumY: -6, metinAnim: "pop", metinRenk: vurgu, metinKontur: 0 });
+      yk({ metin: s.deger || "yüzde 0", metinStil: "baslik", metinBoyut: dikey ? 190 : 210, metinKonum: "orta", konumY: -6, metinAnim: "pop", metinRenk: vurgu, metinKontur: 0 });
       if (s.etiket) yk({ metin: s.etiket, metinStil: "altbaslik", metinBoyut: dikey ? 44 : 46, metinKonum: "orta", konumY: dikey ? 11 : 16, metinAnim: "yukari" }, 0.7);
     } else if (s.tur === "alinti") {
       yk({ metin: `“${s.baslik.replace(/^["“]|["”]$/g, "")}”`, metinStil: "alinti", metinBoyut: dikey ? 72 : 78, metinKonum: "orta", metinAnim: "fade", metinFont: font === "caveat" ? "caveat" : "playfair" });

@@ -37,7 +37,7 @@ export function DavetKarsilama({ kod }: { kod: string }) {
           Hayal ettiğini dakikalar içinde üret.
         </h1>
         <p className="mt-5 max-w-[480px] text-[16px] leading-relaxed text-metin-2">
-          Görsel, video, ses ve müzik için dünyanın en iyi yapay zekâ modelleri tek yerde. Davetle katıldığın için ilk plan ödemende <b className="font-semibold text-white">%{Math.round(DAVET_INDIRIM * 100)} indirim</b> seni bekliyor.
+          Görsel, video, ses ve müzik için dünyanın en iyi yapay zekâ modelleri tek yerde. Davetle katıldığın için ilk plan ödemende <b className="font-semibold text-white">yüzde {Math.round(DAVET_INDIRIM * 100)} indirim</b> seni bekliyor.
         </p>
         <div className="mt-7 flex flex-wrap items-center gap-3">
           {hazir && girisli ? (

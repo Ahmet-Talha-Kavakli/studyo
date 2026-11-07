@@ -1,5 +1,6 @@
 "use client";
 
+import { Iskelet } from "@/components/ui/Iskelet";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Check, ChevronRight, Pause, Play, Search, Trash2, Mic, Wand2, Globe2, Library, Loader2, Users, Sparkles, Heart, Info, Lock, Languages, Headphones, SlidersHorizontal, MoreHorizontal, Shuffle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -353,7 +354,14 @@ function Topluluk({ secili, onSec, gercek, izgara }: { secili?: string; onSec?: 
             );
           })}
           {yukleniyor && Array.from({ length: sayfa === 0 ? 6 : 3 }, (_, i) => (
-            <div key={"y" + i} className="panel-ic h-[84px] animate-pulse rounded-2xl" />
+            <div key={"y" + i} aria-hidden className="panel-ic flex items-center gap-3 rounded-2xl p-2.5 pr-3">
+              <Iskelet className="h-12 w-12 shrink-0 rounded-full" />
+              <span className="min-w-0 flex-1">
+                <Iskelet className="h-3.5 w-28 rounded-full" />
+                <Iskelet className="mt-2 h-3 w-40 max-w-full rounded-full" />
+                <span className="mt-2 flex gap-1">{[40, 52, 36].map((w) => <Iskelet key={w} className="h-4 rounded" style={{ width: w }} />)}</span>
+              </span>
+            </div>
           ))}
         </div>
       )}

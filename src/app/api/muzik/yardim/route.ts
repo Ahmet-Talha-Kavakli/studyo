@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { istemHazir, muzikIstemGelistir, sozYaz } from "@/lib/saglayicilar/istem";
 import { icerikDenetle } from "@/lib/moderasyon";
 
@@ -16,6 +17,9 @@ export function GET() {
  * Kredi düşmez; yalnız sağlayıcı bağlıyken çalışır.
  */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   if (!istemHazir()) return NextResponse.json({ ok: false, hata: "Yazım yardımcısı (Gemini) bağlı değil." }, { status: 503 });
   const g = (await req.json().catch(() => ({}))) as { islem?: string; istem?: string; stiller?: string[]; dil?: string; mevcut?: string; devam?: boolean };
   const istem = (g.istem ?? "").trim().slice(0, 1000);

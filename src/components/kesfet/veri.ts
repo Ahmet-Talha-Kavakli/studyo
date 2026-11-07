@@ -197,14 +197,6 @@ export const PRESETLER: { ad: string; video: string }[] = [
   { ad: "Karton Maket", video: `${G}/preset-video/cardboard-cutout.mp4` },
 ];
 
-/* ── Vayra Originals ── */
-export const ORIGINALS: { ad: string; tur: string; ozet: string; gorsel: string; href: string }[] = [
-  { ad: "Kök Börü", tur: "Tarihî dram · 2 bölüm", ozet: "Bozkırın ortasında bir kadın, kayıp bir sürü ve unutulmuş bir yemin. Tamamen Vayra ile üretildi.", gorsel: `${G}/orig/orig-kokboru-oynatici.webp`, href: "/panel/originals" },
-  { ad: "Mork", tur: "Bilim kurgu · Kısa film", ozet: "Derin uzayda tek başına kalan bir mühendis ve onunla konuşmaya başlayan gemi.", gorsel: `${G}/orig/orig-mork-oynatici.webp`, href: "/panel/originals" },
-  { ad: "Zephyr", tur: "Fantastik · Animasyon", ozet: "Bulutların üstünde yüzen bir krallık ve rüzgârı yönetebilen son çocuk.", gorsel: `${G}/orig/orig-zephyr-oynatici.webp`, href: "/panel/originals" },
-  { ad: "Neonmancer", tur: "Siberpunk · Seri", ozet: "Hiç uyumayan bir şehirde, ışıkla büyü yapan bir kurye.", gorsel: `${G}/orig/banner-neonmancer.webp`, href: "/panel/originals" },
-];
-
 /* ── Ekip maketlerindeki kişiler (arşivdeki üretilmiş portreler) ── */
 export const AVATAR = {
   elif: `${G}/gorsel/gorsel-karakter-Aria.webp`,
@@ -237,7 +229,7 @@ export const SSS: { s: string; c: string }[] = [
 /* ── Footer ── */
 export const FOOTER_KOLONLAR: { baslik: string; linkler: [string, string][] }[] = [
   { baslik: "Üret", linkler: [["Görsel", "/panel/gorsel"], ["Video", "/panel/video"], ["Ses", "/panel/ses"], ["Müzik", "/panel/muzik"], ["3D", "/panel/3d"], ["Canvas", "/panel/canvas"]] },
-  { baslik: "Stüdyolar", linkler: [["Sinema Stüdyosu", "/panel/sinema"], ["Pazarlama Stüdyosu", "/panel/pazarlama"], ["Uzun Video", "/panel/uzun-video"], ["Montaj", "/panel/montaj"], ["Viral Presetler", "/panel/presetler"], ["Originals", "/panel/originals"]] },
+  { baslik: "Stüdyolar", linkler: [["Sinema Stüdyosu", "/panel/sinema"], ["Pazarlama Stüdyosu", "/panel/pazarlama"], ["Uzun Video", "/panel/uzun-video"], ["Montaj", "/panel/montaj"], ["Viral Presetler", "/panel/presetler"]] },
   { baslik: "Platform", linkler: [["Modeller", "/modeller"], ["Fiyatlandırma", "/fiyatlandirma"], ["Kurumsal", "/kurumsal"], ["Güvenlik", "/guvenlik"], ["API & MCP", "/gelistirici"], ["Entegrasyonlar", "/entegrasyonlar"], ["Vayra Earn", "/earn"], ["Sistem durumu", "/durum"], ["Uygulamalar", "/indir"]] },
   { baslik: "Şirket", linkler: [["Hakkımızda", "/hakkinda"], ["Müşteriler", "/referanslar"], ["Kariyer", "/kariyer"], ["Blog", "/blog"], ["Basın", "/basin"], ["İş ortaklığı", "/partner"], ["İletişim", "/iletisim"]] },
   { baslik: "Yasal", linkler: [["Yasal merkez", "/yasal"], ["Gizlilik", "/gizlilik"], ["Kullanım şartları", "/sartlar"], ["KVKK", "/veri-koruma"], ["Çerezler", "/cerezler"], ["İade & iptal", "/iade"], ["SSS", "/sss"]] },

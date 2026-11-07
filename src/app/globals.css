@@ -1111,6 +1111,26 @@ body::-webkit-scrollbar {
   .iskelet-parca { animation: none; }
 }
 
+/* ============================================================
+   Medya bekleme (kabuk/MedyaBekleme.tsx): yüklenmemiş görsel ve video kendi kartının
+   yerinde gizlenir, kabına aynı şekil ve boyutta yumuşak bir parıltı çizilir; gelince belirir.
+   ============================================================ */
+img[data-yer="bekliyor"], video[data-yer="bekliyor"] { opacity: 0 !important; }
+img[data-yer="geldi"], video[data-yer="geldi"] { animation: yer-belir 0.5s cubic-bezier(.2,.9,.25,1) backwards; }
+:where(*):has(> img[data-yer="bekliyor"], > video[data-yer="bekliyor"]) {
+  background-color: rgba(255, 255, 255, 0.045);
+  background-image: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.075) 45%, rgba(255, 255, 255, 0.11) 50%, rgba(255, 255, 255, 0.075) 55%, transparent 70%);
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: yer-parla 1.5s ease-in-out infinite;
+}
+@keyframes yer-parla { from { background-position: 130% 0; } to { background-position: -30% 0; } }
+@keyframes yer-belir { from { opacity: 0; filter: blur(6px); transform: scale(1.015); } to { opacity: 1; filter: blur(0); transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  :where(*):has(> img[data-yer="bekliyor"], > video[data-yer="bekliyor"]) { animation: none; }
+  img[data-yer="geldi"], video[data-yer="geldi"] { animation-duration: 0.01ms; }
+}
+
 /* ══════════════ PAZARLAMA STÜDYOSU ══════════════ */
 /* Üretim ızgarasındaki kart-boyutu kaydırıcısı — referansta beyaz yuvarlak topuz. */
 .paz-kaydirici::-webkit-slider-thumb {
@@ -1281,6 +1301,8 @@ body::-webkit-scrollbar {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* Izgara hücreleri içeriklerinin (geniş tablo) en küçük genişliğine büyümesin; tablo kendi içinde kayar. */
+.admin-kapsam .grid > * { min-width: 0; }
 .admin-kapsam .ad-ince-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 .admin-kapsam .ad-ince-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 8px; }
 .admin-kapsam .ad-ince-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -2307,9 +2329,18 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 @keyframes rgb-don { to { --rgb-aci: 360deg; } }
 @media (prefers-reduced-motion: reduce) { .rgb-cerceve, .rgb-rozet { animation: none; } }
 
-/* Masaüstü üst çubuk yüksekliği (UstNav). Ekran yüksekliği hesapları ve yapışkan şeritler bunu kullanır. */
 :root { --ust-nav: 56px; }
 @media (min-width: 640px) { :root { --ust-nav: 64px; } }
+
+/* Komut navigasyonu: Yükselt düğmesinin üzerinden geçen ışık ve vitrin kartındaki yavaş yakınlaşma. */
+.nav-yukselt { position: relative; overflow: hidden; color: #03141b; background: linear-gradient(180deg, #8ee8ff, #40c2ea); }
+.nav-yukselt::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.55) 50%, transparent 65%); transform: translateX(-120%); animation: nav-parla 4.5s ease-in-out infinite 1.5s; pointer-events: none; }
+@keyframes nav-parla { 0%, 70% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+.nav-one-gorsel { animation: nav-yakinlas 14s ease-in-out infinite alternate; }
+@keyframes nav-yakinlas { from { transform: scale(1); } to { transform: scale(1.08); } }
+.nav-serit { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 24px), transparent); mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 24px), transparent); scrollbar-width: none; }
+.nav-serit::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) { .nav-yukselt::after, .nav-one-gorsel { animation: none; } }
 
 
 /* Ana sayfa hero: dönen kelimede camgöbeği degrade + üzerinden geçen ışık. */
@@ -2397,6 +2428,17 @@ input::-ms-reveal, input::-ms-clear { display: none; }
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     inset 0 0 0 1px rgba(255, 255, 255, 0.17),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Galeri popover ve menüleri (görünüm ayarı, indirme, süzgeç, takvim): buzlu cam, ince kenar,
+   üstte ışık çizgisi. Arkasında koyu gölge ya da hale yok; sayfadan kenarlıkla ayrılır. */
+.galeri-cam {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.02) 40%, rgba(255, 255, 255, 0.03) 100%),
+    rgba(30, 31, 35, 0.86);
+  -webkit-backdrop-filter: blur(26px) saturate(1.7);
+  backdrop-filter: blur(26px) saturate(1.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 /* Sıvı cam (Apple Liquid Glass): arkasında içerik olmasa da cam okunur. Işığı sol üstten yakalayan degrade kenar,
@@ -2490,3 +2532,38 @@ input::-ms-reveal, input::-ms-clear { display: none; }
 }
 html.hareket-azalt .yk-ciz { animation: none; clip-path: none; }
 html.hareket-azalt .yk-bant, html.hareket-azalt .yk-parilti, html.hareket-azalt .yk-taban, html.hareket-azalt .yk-cizgi { animation: none; }
+
+/* ── Vayra Build ── */
+.build-parilti {
+  background: linear-gradient(90deg, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.95) 45%, rgba(255,255,255,0.45) 90%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: build-parilti 1.8s linear infinite;
+}
+@keyframes build-parilti { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.build-nokta { width: 7px; height: 7px; border-radius: 999px; background: #55d6fd; animation: build-nabiz 1.2s ease-in-out infinite; }
+@keyframes build-nabiz { 0%, 100% { opacity: 0.35; transform: scale(0.85); } 50% { opacity: 1; transform: scale(1); } }
+.build-md-akiyor > :last-child::after, .build-imlec {
+  content: ""; display: inline-block; width: 7px; height: 1.05em; margin-left: 2px; vertical-align: -0.15em;
+  border-radius: 2px; background: rgba(255,255,255,0.7); animation: build-imlec 1s steps(2, start) infinite;
+}
+@keyframes build-imlec { to { visibility: hidden; } }
+.build-iskelet > * { animation: build-nabiz 1.6s ease-in-out infinite; }
+.build-iskelet > *:nth-child(2) { animation-delay: 0.2s; }
+.build-iskelet > *:nth-child(3) { animation-delay: 0.4s; }
+@media (prefers-reduced-motion: reduce) {
+  .build-parilti, .build-nokta, .build-iskelet > *, .build-md-akiyor > :last-child::after, .build-imlec { animation: none; }
+}
+/* Vayra Build kod düzenleyici: saydam textarea + arkada renkli kod */
+.kod-alan { color: transparent; -webkit-text-fill-color: transparent; caret-color: #fff; }
+.kod-alan::selection { background: rgba(85, 214, 253, 0.3); }
+.kod-renk .vk-yorum { color: #6b7280; font-style: italic; }
+.kod-renk .vk-dizge { color: #a5e3a1; }
+.kod-renk .vk-sayi { color: #f7b267; }
+.kod-renk .vk-anahtar { color: #c792ea; }
+.kod-renk .vk-islev { color: #82aaff; }
+.kod-renk .vk-ozellik { color: #f0c674; }
+.kod-renk .vk-etiket { color: #55d6fd; }
+.kod-renk .vk-secici { color: #ff9cac; }

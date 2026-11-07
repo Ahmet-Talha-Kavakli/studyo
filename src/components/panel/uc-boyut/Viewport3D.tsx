@@ -211,7 +211,7 @@ export function Viewport3D({
             <div className="h-1.5 w-56 overflow-hidden rounded-full bg-white/10">
               <div className="h-full rounded-full bg-aksan transition-all" style={{ width: `${Math.max(6, model.ilerleme)}%` }} />
             </div>
-            <span className="text-xs text-metin-3">%{Math.round(model.ilerleme)}</span>
+            <span className="text-xs text-metin-3">yüzde {Math.round(model.ilerleme)}</span>
           </div>
         ) : (
         <div className="relative w-full max-w-md">

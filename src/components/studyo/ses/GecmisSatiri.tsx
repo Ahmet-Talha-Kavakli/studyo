@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clock, Copy, Download, Eraser, FileText, Heart, Loader2, MoreHorizontal, Pause, Play, RefreshCw, RotateCcw, Trash2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Clock, Eraser, FileText, FolderInput, Loader2, MoreHorizontal, Pause, Play, Quote, RefreshCw, RotateCcw, Star, Trash2, X } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiListesi } from "@/components/galeri/Klasorler";
 import { ModelLogo } from "@/components/kitaplik/Simgeler";
 import { cn } from "@/lib/utils";
 import { useProjeler, type Uretim } from "@/store/useProjeler";
@@ -35,6 +38,7 @@ export function GecmisSatiri({ u, onAc, onBegen, onIndir, onAyar, onYenidenDene,
 }) {
   const cal = useCalici();
   const [menu, setMenu] = useState(false);
+  const [klasorGor, setKlasorGor] = useState(false);
   const bitti = u.durum === "tamam";
   const hata = u.durum === "hata";
   const suruyor = u.durum === "kuyrukta" || u.durum === "isleniyor";
@@ -79,7 +83,7 @@ export function GecmisSatiri({ u, onAc, onBegen, onIndir, onAyar, onYenidenDene,
           {suruyor ? (
             <>
               <span className="flex items-center gap-1 text-[12px] font-medium tabular-nums text-aksan">
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />{u.durum === "kuyrukta" ? (sira > 0 ? `Sırada · ${sira}.` : "Sırada") : `Üretiliyor · %${ilerleme}`}
+                <Loader2 className="h-2.5 w-2.5 animate-spin" />{u.durum === "kuyrukta" ? (sira > 0 ? `Sırada · ${sira}.` : "Sırada") : `Üretiliyor · yüzde ${ilerleme}`}
               </span>
               {onIptal && (
                 <span role="button" tabIndex={0} onClick={(e) => { e.stopPropagation(); onIptal(); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onIptal(); } }}
@@ -97,6 +101,7 @@ export function GecmisSatiri({ u, onAc, onBegen, onIndir, onAyar, onYenidenDene,
               <span className={cip}><ModelLogo ad={u.model} boyut={10} />{m?.ses ?? MOD_AD[m?.mod ?? "seslendirme"]}</span>
               {sureEtiket && <span className={cip}><Clock className="h-2.5 w-2.5" />{sureEtiket}</span>}
               <span className={cip} title={new Date(u.olusturma).toLocaleString("tr-TR")}>{goreliZaman(u.olusturma)}</span>
+              {u.favori && <Star aria-label="Favori" className="h-3 w-3 shrink-0 fill-aksan text-aksan" />}
             </>
           )}
         </span>
@@ -110,20 +115,41 @@ export function GecmisSatiri({ u, onAc, onBegen, onIndir, onAyar, onYenidenDene,
           <button onClick={onYenidenDene} className="bg-white/[0.075] ring-1 ring-inset ring-white/[0.08] transition-colors hover:bg-white/[0.1] flex h-7 items-center gap-1 rounded-full px-2.5 text-[11.5px] font-medium text-metin"><RotateCcw className="h-3 w-3" />Tekrar dene</button>
         )}
         {bitti && (
-          <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"} className={cn(eylem, u.favori && "text-rose-300 hover:text-rose-300")}>
-            <Heart className={cn("h-3.5 w-3.5", u.favori && "fill-current")} />
-          </button>
+          <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top">
+            <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} className={u.favori ? eylem.replace("text-metin-2 hover:text-metin", "text-aksan") : eylem}>
+              <Star className={cn("h-3.5 w-3.5", u.favori && "fill-current")} />
+            </button>
+          </Tooltip>
         )}
-        {bitti && u.sesUrl && <button onClick={onIndir} aria-label="İndir" className={eylem}><Download className="h-3.5 w-3.5" /></button>}
+        {bitti && u.sesUrl && <IndirDugmesi u={u} side="top" className={eylem} ikonSinif="h-3.5 w-3.5" />}
+        {bitti && (
+          <Tooltip label="Yeniden kullan" side="top">
+            <button onClick={onAyar} aria-label="Yeniden kullan" className={eylem}><Quote className="h-3.5 w-3.5" /></button>
+          </Tooltip>
+        )}
         <div className="relative">
-          <button onClick={() => setMenu((v) => !v)} aria-label="Eylemler" aria-expanded={menu} className={eylem}><MoreHorizontal className="h-4 w-4" /></button>
-          <Yuzen acik={menu} onKapat={() => setMenu(false)} yerlesim="alt-sag" bosluk={6} etiket="Eylemler" className="w-56 rounded-[16px] border border-white/[0.09] bg-[#1b1c1f] p-1.5">
+          <Tooltip label="Daha fazla" side="top">
+            <button onClick={() => { setMenu((v) => !v); setKlasorGor(false); }} aria-label="Daha fazla" aria-expanded={menu} className={eylem}><MoreHorizontal className="h-4 w-4" /></button>
+          </Tooltip>
+          <Yuzen acik={menu} onKapat={() => { setMenu(false); setKlasorGor(false); }} yerlesim="alt-sag" bosluk={6} etiket="Eylemler" className="galeri-cam w-60 rounded-[16px] border border-white/[0.09] p-1.5">
+            {klasorGor ? (
+              <>
+                <button onClick={() => setKlasorGor(false)} className="flex items-center gap-1.5 px-2 pb-0.5 pt-1 text-[12.5px] font-medium text-metin-2 hover:text-metin"><ChevronLeft className="h-3.5 w-3.5" />Geri</button>
+                <KlasoreTasiListesi uretimIdler={[u.id]} onBitti={() => { setMenu(false); setKlasorGor(false); }} />
+              </>
+            ) : (<>
             {hata && <Oge ikon={RotateCcw} ad="Tekrar dene" fn={() => { setMenu(false); onYenidenDene(); }} />}
             {bitti && onYenidenUret && <Oge ikon={RefreshCw} ad={ucretsizHak ? `Ücretsiz yeniden üret · ${ucretsizHak}` : "Yeniden üret"} fn={() => { setMenu(false); onYenidenUret(); }} />}
-            {bitti && <Oge ikon={Copy} ad="Bu ayarlarla üret" fn={() => { setMenu(false); onAyar(); }} />}
-            {bitti && u.sesUrl && <Oge ikon={Download} ad="İndir" fn={() => { setMenu(false); onIndir(); }} />}
+            {bitti && <Oge ikon={Quote} ad="Yeniden kullan" fn={() => { setMenu(false); onAyar(); }} />}
+            {bitti && <Oge ikon={Star} ad={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} fn={() => { setMenu(false); onBegen(); }} />}
+            {bitti && (
+              <button onClick={() => setKlasorGor(true)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left text-[13px] text-metin transition-colors hover:bg-white/[0.075]">
+                <FolderInput className="h-4 w-4 shrink-0 text-metin-2" /><span className="flex-1">Klasöre taşı</span><ChevronRight className="h-3.5 w-3.5 text-metin-2" />
+              </button>
+            )}
             {suruyor && onIptal && <Oge ikon={X} ad="Üretimi iptal et" fn={() => { setMenu(false); onIptal(); }} />}
             <Oge ikon={Trash2} ad="Sil" tehlike fn={() => { setMenu(false); onSil(); }} />
+            </>)}
           </Yuzen>
         </div>
       </div>

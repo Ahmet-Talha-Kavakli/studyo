@@ -8,13 +8,16 @@ import { toast } from "@/lib/toast";
 import { neden } from "@/components/studyo/bildirim";
 import { mesaj } from "@/lib/mesaj";
 import { useAuth } from "@/store/useAuth";
+import { krediliIstek } from "@/lib/krediIstek";
+import { SABIT_KREDI } from "@/lib/krediTarife";
 import { useOzelSesler } from "@/store/useOzelSesler";
 import { yerelDepo } from "@/lib/yerelDepo";
 import { sesCalici, useCalici, sureYaz } from "@/lib/sesCalici";
 import { AnahtarKart, KartBolum } from "@/components/studyo/hf";
 import { useOdakTuzagi } from "@/hooks/useOdakTuzagi";
 
-export const KLON_KREDI = 40;
+/** Klonlama bedeli: tek kaynak lib/krediTarife (sunucu da bunu keser). */
+export const KLON_KREDI = SABIT_KREDI.sesKlon;
 const MIN_SN = 10;
 const MAX_SN = 120;
 const MAX_MB = 10;
@@ -216,17 +219,17 @@ export function KlonModal({ onKapat, gercek, onKlonlandi, klonlanacak }: {
     if ((kullanici?.krediler ?? 0) < KLON_KREDI) return void mesaj.yetersizKredi(KLON_KREDI, kullanici?.krediler ?? 0);
     setGonderiliyor(true);
     try {
-      const yanit = await fetch("/api/ses/klon", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // Kredi sunucuda kesilir; klon oluşmazsa sunucuda iade edilir. Ekrandaki bakiye yanıtla eşitlenir.
+      const s = await krediliIstek<{ sesId?: string }>("/api/ses/klon", {
+        kredi: KLON_KREDI,
+        json: {
           ad: temizAd, aciklama: aciklama.trim() || undefined, etiketler, gurultuTemizle: gurultu,
           ornekler: await Promise.all(ornekler.map(async (o) => ({ veri: await blobDataUrl(o.blob), ad: o.ad }))),
-        }),
+        },
       });
-      const j = (await yanit.json()) as { ok: boolean; sesId?: string; hata?: string };
-      if (!j.ok || !j.sesId) throw new Error(j.hata ?? "Klonlama başarısız.");
-      // Kredi yalnız klon gerçekten oluşunca düşer.
-      useAuth.getState().krediDus(KLON_KREDI);
+      if (s.durum === 401 || s.durum === 402) return;
+      const j = s.j;
+      if (!j?.ok || !j.sesId) throw new Error(j?.hata ?? "Klonlama başarısız.");
       const anahtar = klonlanacak?.ornekAnahtar ?? `ornek-${Date.now().toString(36)}`;
       await yerelDepo.yaz(anahtar, anaOrnek.blob);
       const ek = { ...(aciklama.trim() ? { aciklama: aciklama.trim() } : {}), ...(Object.keys(etiketler).length ? { etiketler } : {}) };

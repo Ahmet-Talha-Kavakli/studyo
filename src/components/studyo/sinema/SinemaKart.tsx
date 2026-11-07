@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { KrediYildiz } from "@/components/ui/KrediHap";
-import { Rewind, Clapperboard, Download, FastForward, Heart, Play, RotateCcw, SwitchCamera, Trash2, Wand2, XCircle, Maximize2, ListPlus, ListCheck } from "lucide-react";
+import { Rewind, Clapperboard, FastForward, Star, Play, Quote, RotateCcw, SwitchCamera, Trash2, XCircle, Maximize2, ListPlus, ListCheck, ArrowUpRight } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KartDahaMenusu, type DahaEylem } from "@/components/galeri/KartEylemleri";
 import { cn, saltUrl } from "@/lib/utils";
 import type { Uretim } from "@/store/useProjeler";
 import { uretimIptal, uretimSirasi } from "@/lib/uretimMotoru";
@@ -17,8 +19,10 @@ import { kameraOzet, kurulumTamamla } from "./veri";
  * ve hazır durumları var. Karede asıl eylem "Canlandır", çekimde "Son kareden devam".
  * Bütün eylemler gerçek düğmedir; klavye odağında da görünür.
  */
-export function SinemaKart({ u, secili, secimModu, sahnede, onAc, onSecim, onBegen, onIndir, onKurulum, onCanlandir, onAcilar, onDevam, onOncesi, onBuyut, onSahne, onSonHal, sonHalKredi, onYenidenDene, onSil }: {
+export function SinemaKart({ u, secili, secimModu, sahnede, onAc, onSecim, onBegen, onIndir: _onIndir, onKurulum, onCanlandir, onAcilar, onDevam, onOncesi, onBuyut, onSahne, onSonHal, sonHalKredi, onYenidenDene, onSil, oran }: {
   u: Uretim; secili: boolean; secimModu: boolean; sahnede: boolean;
+  /** Görünüm ayarının kart oranı (verilmezse çekimin kendi oranı). */
+  oran?: number;
   onAc: () => void; onSecim: () => void; onBegen: () => void; onIndir: () => void; onKurulum: () => void;
   onCanlandir?: () => void; onAcilar?: () => void; onDevam?: () => void; onBuyut?: () => void;
   onSahne: () => void; onOncesi?: () => void; onSonHal?: () => void; sonHalKredi?: string;
@@ -36,9 +40,16 @@ export function SinemaKart({ u, secili, secimModu, sahnede, onAc, onSecim, onBeg
   const kurulum = kz && kz !== "Oto" ? kz : null;
   const taslak = !!u.meta?.taslak;
   const goster = "opacity-0 transition-opacity duration-200 group-focus-within/kart:opacity-100 group-hover/kart:opacity-100 max-md:opacity-100";
+  const daha: DahaEylem[] = [
+    { ad: "Aç", ikon: ArrowUpRight, fn: onAc },
+    ...(onAcilar ? [{ ad: "Başka açılardan çek", ikon: SwitchCamera, fn: onAcilar }] : []),
+    ...(onOncesi ? [{ ad: "Öncesini çek", ikon: Rewind, fn: onOncesi }] : []),
+    ...(onDevam ? [{ ad: "Son kareden devam", ikon: FastForward, fn: onDevam }] : []),
+    ...(onBuyut ? [{ ad: "Büyüt", ikon: Maximize2, fn: onBuyut }] : []),
+  ];
 
   return (
-    <div className="group/kart relative overflow-hidden rounded-[16px] bg-[#111113] ring-1 ring-inset ring-white/[0.06]" style={{ aspectRatio: String(oranDegeri(u.meta?.oran)) }}
+    <div className="group/kart relative overflow-hidden rounded-[16px] bg-[#111113] ring-1 ring-inset ring-white/[0.06]" style={{ aspectRatio: String(oran ?? oranDegeri(u.meta?.oran)) }}
       onPointerEnter={(e) => { if (e.pointerType === "mouse") setOynat(true); }} onPointerLeave={() => setOynat(false)}>
       {suruyor && (
         <>
@@ -122,19 +133,18 @@ export function SinemaKart({ u, secili, secimModu, sahnede, onAc, onSecim, onBeg
               <Tooltip label={sahnede ? "Sahneden çıkar" : "Sahneye ekle"} side="bottom">
                 <button onClick={onSahne} aria-pressed={sahnede} className={cn(ikonBtn, sahnede && "bg-white text-[#0a0a0b] hover:bg-white/90")} aria-label={sahnede ? "Sahneden çıkar" : "Sahneye ekle"}>{sahnede ? <ListCheck className="h-3.5 w-3.5" /> : <ListPlus className="h-3.5 w-3.5" />}</button>
               </Tooltip>
-              <Tooltip label="Bu kurulumla üret" side="bottom"><button onClick={onKurulum} className={ikonBtn} aria-label="Bu kurulumla üret"><Wand2 className="h-3.5 w-3.5" /></button></Tooltip>
-              {onAcilar && <Tooltip label="Başka açılardan çek" side="bottom"><button onClick={onAcilar} className={ikonBtn} aria-label="Başka açılardan çek"><SwitchCamera className="h-3.5 w-3.5" /></button></Tooltip>}
-              {onOncesi && <Tooltip label="Öncesini çek" side="bottom"><button onClick={onOncesi} className={ikonBtn} aria-label="Öncesini çek"><Rewind className="h-3.5 w-3.5" /></button></Tooltip>}
-              {onDevam && <Tooltip label="Son kareden devam" side="bottom"><button onClick={onDevam} className={ikonBtn} aria-label="Son kareden devam"><FastForward className="h-3.5 w-3.5" /></button></Tooltip>}
-              {onBuyut && <Tooltip label="Büyüt" side="bottom"><button onClick={onBuyut} className={ikonBtn} aria-label="Büyüt"><Maximize2 className="h-3.5 w-3.5" /></button></Tooltip>}
-              <Tooltip label="İndir" side="bottom"><button onClick={onIndir} className={ikonBtn} aria-label="İndir"><Download className="h-3.5 w-3.5" /></button></Tooltip>
             </span>
-            <Tooltip label={u.favori ? "Beğeniyi kaldır" : "Beğen"} side="bottom">
-              <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"}
-                className={cn(ikonBtn, !u.favori && "opacity-0 focus-visible:opacity-100 group-hover/kart:opacity-100")}>
-                <Heart className={cn("h-3.5 w-3.5", u.favori && "fill-rose-400 text-rose-400")} />
+            <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="bottom">
+              <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"}
+                className={cn(ikonBtn, !u.favori && "opacity-0 focus-visible:opacity-100 group-focus-within/kart:opacity-100 group-hover/kart:opacity-100 max-md:opacity-100")}>
+                <Star className={cn("h-3.5 w-3.5", u.favori && "fill-aksan text-aksan")} />
               </button>
             </Tooltip>
+            <span className={cn("flex items-center gap-1.5", goster)}>
+              <IndirDugmesi u={u} side="bottom" className={ikonBtn} ikonSinif="h-3.5 w-3.5" />
+              <Tooltip label="Yeniden kullan" side="bottom"><button onClick={onKurulum} className={ikonBtn} aria-label="Yeniden kullan"><Quote className="h-3.5 w-3.5" /></button></Tooltip>
+              <KartDahaMenusu u={u} side="bottom" boyut="kucuk" className={ikonBtn} eylemler={daha} onSil={onSil} />
+            </span>
           </span>
         </>
       )}

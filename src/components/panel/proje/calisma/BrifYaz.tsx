@@ -4,7 +4,7 @@
  * Brif yazım yardımcısı paneli (Notion AI gibi). İki kullanım:
  *  1. "/" menüsünden: devam et, sayfayı özetle, fikir üret, yapılacakları çıkar ya da serbest istek; sonuç blok olarak eklenir.
  *  2. Biçim çubuğundan seçili metinle: düzelt, kısalt, uzat, profesyonelleştir, çevir, maddele; sonuç seçimin yerine geçer ya da altına eklenir.
- * Akışlı yanıt (/api/proje/yaz). Claude bağlı değilken yerel örnek sonuç üretilir ve "Demo" diye işaretlenir.
+ * Akışlı yanıt (/api/proje/yaz). Claude bağlı değilken açık hata gösterilir; yerel kalıp metin üretilmez.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -31,20 +31,7 @@ const SAYFA_ISLEMLERI: { id: YazIslem; ad: string; ikon: React.ElementType }[] =
 ];
 const ad = (i: YazIslem) => [...SECIM_ISLEMLERI, ...SAYFA_ISLEMLERI].find((x) => x.id === i)?.ad ?? "Serbest istek";
 
-/** Bağlantı yokken dürüst yerel sonuç: yapılabileni yapar, yapamayacağını söyler. */
-function demoSonuc(islem: YazIslem, metin: string, sayfa: string): string {
-  const cumleler = (s: string) => s.replace(/\s+/g, " ").split(/(?<=[.!?])\s+/).map((x) => x.trim()).filter(Boolean);
-  const satirlar = sayfa.split("\n").map((x) => x.trim()).filter((x) => x && !x.startsWith("#"));
-  switch (islem) {
-    case "duzelt": { const t = metin.replace(/\s+/g, " ").trim(); return t ? t[0].toLocaleUpperCase("tr") + t.slice(1) + (/[.!?]$/.test(t) ? "" : ".") : ""; }
-    case "kisalt": { const c = cumleler(metin); return c.slice(0, Math.max(1, Math.ceil(c.length / 2))).join(" "); }
-    case "maddele": return cumleler(metin).map((c) => `- ${c.replace(/[.]$/, "")}`).join("\n");
-    case "ozetle": return satirlar.slice(0, 5).map((s) => `- ${cumleler(s)[0] ?? s}`).join("\n") || "- Sayfada özetlenecek metin yok.";
-    case "eylem": return satirlar.filter((s) => /^-\s\[\s\]/.test(s)).slice(0, 6).join("\n") || "- [ ] Bağlam bölümünü doldur\n- [ ] Hedef kitleyi netleştir\n- [ ] Teslim tarihini belirle";
-    default: return "";
-  }
-}
-
+/** Yazım yardımcısı paneli: sonuç yalnız sunucudaki dil modelinden gelir. */
 export function YazPaneli({ islemIlk, secim, sayfa, proje, onEkle, onDegistir, onKapat }: {
   islemIlk?: YazIslem; secim?: string; sayfa: string; proje: string;
   onEkle: (metin: string) => void; onDegistir?: (metin: string) => void; onKapat: () => void;
@@ -54,14 +41,13 @@ export function YazPaneli({ islemIlk, secim, sayfa, proje, onEkle, onDegistir, o
   const [sonuc, setSonuc] = useState("");
   const [durum, setDurum] = useState<"bos" | "yaziyor" | "bitti" | "hata">("bos");
   const [hata, setHata] = useState("");
-  const [demo, setDemo] = useState(false);
   const iptal = useRef<AbortController | null>(null);
   const girdi = useRef<HTMLInputElement>(null);
 
   const calistir = useCallback(async (i: YazIslem, serbest?: string) => {
     iptal.current?.abort();
     const ac = new AbortController(); iptal.current = ac;
-    setIslem(i); setSonuc(""); setHata(""); setDemo(false); setDurum("yaziyor");
+    setIslem(i); setSonuc(""); setHata(""); setDurum("yaziyor");
     try {
       const r = await fetch("/api/proje/yaz", { method: "POST", headers: { "Content-Type": "application/json" }, signal: ac.signal,
         body: JSON.stringify({ islem: i, metin: secim, istek: serbest, sayfa, proje }) });
@@ -86,13 +72,8 @@ export function YazPaneli({ islemIlk, secim, sayfa, proje, onEkle, onDegistir, o
       }
       const v = await r.json();
       if (!v.ok) { setHata(v.hata ?? "Yanıt alınamadı."); setDurum("hata"); return; }
-      if (v.demo) {
-        setDemo(true);
-        const m = demoSonuc(i, secim ?? "", sayfa);
-        if (!m) { setHata("Claude bağlı değil; bu işlem için yazım yardımcısının bağlanması gerekiyor."); setDurum("hata"); return; }
-        for (const k of m.split(/(?<=\s)/)) { if (ac.signal.aborted) return; setSonuc((x) => x + k); await new Promise((z) => setTimeout(z, 18)); }
-        setDurum("bitti");
-      }
+      // Yapay zekâ bağlı değilse yerel kalıp metin "yazıldı" diye gösterilmez.
+      if (v.demo) { setHata("Yazım yardımcısı (Claude) bu sunucuda bağlı değil; metin yazılamadı."); setDurum("hata"); }
     } catch (e) {
       if ((e as Error).name !== "AbortError") { setHata("Bağlantı koptu. Yeniden dene."); setDurum("hata"); }
     }

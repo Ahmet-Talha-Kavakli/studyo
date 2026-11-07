@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, Heart, Maximize2, Pause, Play, Repeat, SkipBack, SkipForward, Volume2, VolumeX, X } from "lucide-react";
+import { Download, Heart, Star, Quote, Maximize2, Pause, Play, Repeat, SkipBack, SkipForward, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModelLogo } from "@/components/kitaplik/Simgeler";
 import { Rozet } from "@/components/studyo/hf";
@@ -101,8 +101,8 @@ export function MuzikCubugu({ liste, onAc, onIndir, onBegen, tekrar, onTekrar }:
                   {cal.calisiyor ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
                 </button>
                 <button onClick={() => git(1)} disabled={i < 0 || i >= liste.length - 1} aria-label="Sonraki parça (K)" className={ikonDugme}><SkipForward className="h-3.5 w-3.5 fill-current" /></button>
-                <button onClick={() => onBegen(p)} aria-pressed={p.begeni === 1} aria-label={p.begeni === 1 ? "Beğeniyi kaldır" : "Beğen"} className={cn(ikonDugme, p.begeni === 1 && "text-rose-300")}>
-                  <Heart className={cn("h-3.5 w-3.5", p.begeni === 1 && "fill-current")} />
+                <button onClick={() => onBegen(p)} aria-pressed={p.begeni === 1} title={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"} aria-label={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"} className={cn(ikonDugme, p.begeni === 1 && "!text-aksan")}>
+                  <Star className={cn("h-3.5 w-3.5", p.begeni === 1 && "fill-current")} />
                 </button>
               </div>
               <div className="flex w-full max-w-xl items-center gap-2.5">
@@ -124,7 +124,7 @@ export function MuzikCubugu({ liste, onAc, onIndir, onBegen, tekrar, onTekrar }:
                 <button onClick={() => sesCalici.duzey(cal.duzey > 0 ? 0 : 1)} aria-label={cal.duzey > 0 ? "Sesi kapat" : "Sesi aç"} className="flex h-6 w-6 items-center justify-center rounded-full text-metin-2 hover:text-metin">
                   {cal.duzey > 0 ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
                 </button>
-                <input type="range" min={0} max={1} step={0.05} value={cal.duzey} onChange={(e) => sesCalici.duzey(Number(e.target.value))} aria-label="Ses düzeyi" aria-valuetext={`%${Math.round(cal.duzey * 100)}`}
+                <input type="range" min={0} max={1} step={0.05} value={cal.duzey} onChange={(e) => sesCalici.duzey(Number(e.target.value))} aria-label="Ses düzeyi" aria-valuetext={`yüzde ${Math.round(cal.duzey * 100)}`}
                   className="h-1 w-20 cursor-pointer appearance-none rounded-full bg-white/15 accent-[var(--color-aksan)]" />
               </span>
               <button onClick={() => onIndir(p)} aria-label="İndir" title="İndir" className={ikonDugme}><Download className="h-3.5 w-3.5" /></button>

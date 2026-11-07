@@ -11,7 +11,15 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import { ArrowRight, Check, ChevronDown, Clock, Download, FileText, Heart, Loader2, Search, SlidersHorizontal, Trash2, Upload, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Download, EyeOff, FileText, Loader2, Search, SlidersHorizontal, Star, Trash2, Upload, X } from "lucide-react";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { kartOrani, sutunSayisi } from "@/lib/galeri/gorunum";
+import { SuzgecCubugu, suzgecEtkin, suzgecUygula, useKlasorIdleri, useSuzgec } from "@/components/galeri/SuzgecCubugu";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { oranSayi } from "@/components/panel/UretimKarti";
+import { oranDegeri } from "@/components/studyo/video/veri";
 import { useProje, type Proje } from "@/store/useSinema";
 import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { useAyarKopru } from "@/store/useAyarKopru";
@@ -28,8 +36,6 @@ import { Yuzen } from "@/components/ui/Yuzen";
 import { ProjeStudyoPaneli } from "@/components/panel/proje/ProjeStudyoPaneli";
 import { Hap, KART, MENU, MSATIR, MacKlasor, ease, yay } from "./ortak";
 
-const TURLER: [string, string][] = [["hepsi", "Tümü"], ["gorsel", "Görsel"], ["video", "Video"], ["ses", "Ses"], ["muzik", "Müzik"], ["3d", "3D"]];
-const TARIH: [number, string][] = [[0, "Tüm zamanlar"], [1, "Bugün"], [7, "Son 7 gün"], [30, "Son 30 gün"]];
 const gorselAdresiOf = (u: Uretim) => u.gorselUrl?.startsWith("data:") || /^(https?:|\/)/.test(u.gorselUrl ?? "") ? u.gorselUrl : u.thumbnailUrl;
 const suruyor = (u: Uretim) => u.durum === "kuyrukta" || u.durum === "isleniyor";
 
@@ -47,12 +53,13 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
   const router = useRouter();
   const { projeKlasoreAt, uretimBagla } = useProje.getState();
   const uretimEkle = useProjeler((s) => s.ekle);
-  const [tur, setTur] = useState("hepsi");
+  /* Süzgeç çubuğu (Favoriler, klasörler, tür, tarih aralığı, sıralama) ve görünüm ayarı: kitaplıkla aynı bileşenler. */
+  const [sz, szAyarla] = useSuzgec();
+  const klasorIdleri = useKlasorIdleri(sz.klasor);
+  const [g] = useGorunum("proje-varlik");
   const [q, setQ] = useState("");
   const [model, setModel] = useState<string | null>(null);
-  const [gun, setGun] = useState(0);
   const [hataGizle, setHataGizle] = useState(false);
-  const [eskiOnce, setEskiOnce] = useState(false);
   const [acik, setAcik] = useState<string | null>(ilkAcik ?? null);
   useEffect(() => { if (ilkAcik) setAcik(ilkAcik); }, [ilkAcik]);
   const [studyo, setStudyo] = useState("gorsel");
@@ -77,20 +84,20 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const sutun = en < 640 ? 2 : Math.max(2, Math.round(en / 290));
+  const sutun = sutunSayisi(en, g);
+  const oranOf = (u: Uretim) => { const t = uretimTuru(u); return kartOrani(g, t === "ses" || t === "muzik" ? 4 / 3 : t === "video" ? oranDegeri(u.meta?.oran) : oranSayi(u)); };
 
   const havuz = useMemo(() => (klasor ? varliklar.filter((u) => (klasor.uretimIdler ?? []).includes(u.id)) : varliklar), [varliklar, klasor]);
   const liste = useMemo(() => {
     const t = q.trim().toLocaleLowerCase("tr");
-    const esik = gun ? Date.now() - gun * 86_400_000 : 0;
-    const l = havuz.filter((u) => (tur === "hepsi" || uretimTuru(u) === tur) && (!model || u.model === model) && (!esik || u.olusturma >= esik)
-      && (!hataGizle || u.durum !== "hata") && (!t || `${u.baslik} ${u.prompt} ${u.model}`.toLocaleLowerCase("tr").includes(t)));
-    return eskiOnce ? [...l].sort((a, b) => a.olusturma - b.olusturma) : l;
-  }, [havuz, tur, model, gun, hataGizle, q, eskiOnce]);
+    const l = havuz.filter((u) => (!model || u.model === model) && (!hataGizle || u.durum !== "hata") && (!t || `${u.baslik} ${u.prompt} ${u.model}`.toLocaleLowerCase("tr").includes(t)));
+    return suzgecUygula(l, sz, klasorIdleri);
+  }, [havuz, model, hataGizle, q, sz, klasorIdleri]);
   const surenler = liste.filter(suruyor);
   const gruplar = useMemo(() => {
     const simdi = Date.now();
     const m: { anahtar: string; etiket: string; ogeler: Uretim[] }[] = [];
+    if (sz.siralama === "ozel") return [{ anahtar: "hepsi", etiket: "", ogeler: liste.filter((u) => !suruyor(u)) }];
     for (const u of liste) {
       if (suruyor(u)) continue;
       const g = tarihGrubu(u.olusturma, simdi);
@@ -98,11 +105,11 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
       if (son?.anahtar === g.anahtar) son.ogeler.push(u); else m.push({ ...g, ogeler: [u] });
     }
     return m;
-  }, [liste]);
-  const sayi = (t: string) => (t === "hepsi" ? havuz.length : havuz.filter((u) => uretimTuru(u) === t).length);
+  }, [liste, sz.siralama]);
+  const turSayilari = useMemo(() => { const s: Record<string, number> = {}; for (const u of havuz) s[uretimTuru(u)] = (s[uretimTuru(u)] ?? 0) + 1; return s; }, [havuz]);
   const modeller = useMemo(() => Array.from(new Set(havuz.map((u) => u.model))).sort((a, b) => a.localeCompare(b, "tr")), [havuz]);
-  const suzgec = tur !== "hepsi" || !!model || !!gun || hataGizle || !!q.trim();
-  const temizle = () => { setTur("hepsi"); setQ(""); setModel(null); setGun(0); setHataGizle(false); };
+  const suzgec = suzgecEtkin(sz) || !!model || hataGizle || !!q.trim();
+  const temizle = () => { szAyarla({ favori: false, klasor: null, tur: null, tarih: {} }); setQ(""); setModel(null); setHataGizle(false); };
 
   const olay: GaleriOlaylari = useMemo(() => ({
     onAc: (u) => (uretimTuru(u) === "3d" ? router.push(ucBoyutAdresi(u)) : setAcik(u.id)), onMenu: () => {},
@@ -165,7 +172,8 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
             {(kapat) => <>{(p.klasorler ?? []).map((k) => <button key={k.id} onClick={() => { kapat(); secimKlasore(k.id); }} className={MSATIR}><MacKlasor renk={k.renk ?? "#4aa8f0"} kapali className="h-3.5 w-[18px]" /><span className="flex-1 truncate">{k.ad}</span></button>)}</>}
           </Acilir>
         )}
-        <button onClick={() => { const fav = !seciliUretimler.every((u) => u.favori); favoriYap(secim, fav); toast.success(fav ? `${secim.length} varlık favorilere eklendi` : "Favorilerden çıkarıldı"); }} title="Favori" className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] text-white/80 transition hover:bg-white/[0.08] hover:text-white"><Heart className="h-4 w-4" /><span className="hidden sm:inline">Favori</span></button>
+        <KlasoreTasiDugmesi uretimIdler={secim} onBitti={() => setSecim([])} etiketSinif="hidden sm:inline" className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] text-white/80 transition hover:bg-white/[0.08] hover:text-white" />
+        <button onClick={() => { const fav = !seciliUretimler.every((u) => u.favori); favoriYap(secim, fav); toast.success(fav ? `${secim.length} varlık favorilere eklendi` : "Favorilerden çıkarıldı"); }} title={seciliUretimler.every((u) => u.favori) ? "Favorilerden çıkar" : "Favorilere ekle"} className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] text-white/80 transition hover:bg-white/[0.08] hover:text-white"><Star className={cn("h-4 w-4", seciliUretimler.length > 0 && seciliUretimler.every((u) => u.favori) && "fill-aksan text-aksan")} /><span className="hidden sm:inline">Favori</span></button>
         <button onClick={() => { seciliUretimler.filter((u) => u.durum === "tamam").forEach((u) => uretimIndir(u)); }} title="İndir" className="flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[14px] text-white/80 transition hover:bg-white/[0.08] hover:text-white"><Download className="h-4 w-4" /><span className="hidden sm:inline">İndir</span></button>
         <button onClick={() => { const n = secim.length; copeTasi(secim); setSecim([]); toast.success(`${n} varlık çöpe taşındı`, { description: "Kitaplıktaki çöpten 30 gün içinde geri alabilirsin." }); }} aria-label="Çöpe taşı" title="Çöpe taşı" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/80 transition hover:bg-rose-500/15 hover:text-rose-200"><Trash2 className="h-4 w-4" /></button>
         <span className="mx-0.5 h-6 w-px shrink-0 bg-white/10" />
@@ -178,9 +186,16 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
   const kart = (u: Uretim) => (
     <div key={u.id} className="mb-1 break-inside-avoid" draggable={u.durum === "tamam"}
       onDragStart={(e) => { e.dataTransfer.setData("application/x-vayra-uretim", u.id); e.dataTransfer.effectAllowed = "copy"; }}>
-      <GaleriKart u={u} secili={secim.includes(u.id)} secimModu={secim.length > 0} calan={false} ilerleme={0} o={olay} />
+      <GaleriKart u={u} oran={g.yerlesim === "ozgun" ? undefined : kartOrani(g, 1)} secili={secim.includes(u.id)} secimModu={secim.length > 0} calan={false} ilerleme={0} o={olay} />
     </div>
   );
+  /* Masonry: her öğe en kısa sütuna (sıra soldan sağa korunur). */
+  const izgara = (ogeler: Uretim[]) => {
+    const cols: Uretim[][] = Array.from({ length: sutun }, () => []);
+    const boy = new Array(sutun).fill(0);
+    for (const u of ogeler) { let i = 0; for (let k = 1; k < sutun; k++) if (boy[k] < boy[i] - 0.02) i = k; cols[i].push(u); boy[i] += 1 / Math.max(0.2, oranOf(u)) + 0.02; }
+    return <div className="flex items-start gap-1">{cols.map((c, i) => <div key={i} className="min-w-0 flex-1">{c.map(kart)}</div>)}</div>;
+  };
   const baslangic = (b: (typeof BASLANGIC)[number]) => {
     if (window.innerWidth < 640) { useAyarKopru.getState().gonder({ tur: b.studyo, prompt: b.istem }); router.push(`/panel/${b.studyo}?proje=${p.id}`); return; }
     setStudyo(b.studyo);
@@ -194,7 +209,7 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
 
       {/* Araç çubuğu */}
       <div className="sticky top-[var(--ust-nav)] z-20 -mx-4 bg-[#0b0b0c]/90 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6">
-        <div className="gizli-scroll flex items-center gap-2 overflow-x-auto">
+        <div className="gizli-scroll flex items-center gap-2 overflow-x-auto sm:flex-wrap sm:overflow-visible">
           <h1 className="mr-1 flex shrink-0 items-center gap-2 text-[22px] font-semibold tracking-[-0.02em] text-white">
             {klasor ? <><MacKlasor renk={klasor.renk ?? "#4aa8f0"} className="h-[18px] w-6" kapali />{klasor.ad}</> : "Varlıklar"}
             {havuz.length > 0 && <motion.span key={havuz.length} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}><Hap>{havuz.length}</Hap></motion.span>}
@@ -204,16 +219,6 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
           )}
           {havuz.length > 0 && (
             <>
-              <LayoutGroup id="varlik-tur">
-                <div role="tablist" aria-label="Tür" className="flex shrink-0 gap-0.5 rounded-full bg-white/[0.05] p-1 ring-1 ring-inset ring-white/[0.06]">
-                  {TURLER.filter(([t]) => t === "hepsi" || sayi(t) > 0 || tur === t).map(([t, ad]) => (
-                    <button key={t} role="tab" aria-selected={tur === t} onClick={() => setTur(t)} className={cn("relative flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors", tur === t ? "text-black" : "text-white/75 hover:text-white")}>
-                      {tur === t && <motion.span layoutId="varlik-tur-z" className="absolute inset-0 rounded-full bg-white" transition={yay} />}
-                      <span className="relative">{ad}</span>
-                    </button>
-                  ))}
-                </div>
-              </LayoutGroup>
               <label className="flex h-10 w-[190px] shrink-0 items-center gap-2 rounded-full bg-white/[0.05] px-3.5 ring-1 ring-inset ring-white/[0.06] transition focus-within:bg-white/[0.08]">
                 <Search className="h-4 w-4 shrink-0 text-white/50" />
                 <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setQ("")} placeholder="İstemde ara" className="min-w-0 flex-1 bg-transparent text-[13.5px] text-white outline-none placeholder:text-white/40" />
@@ -221,27 +226,23 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
               </label>
               <Acilir etiket={model ?? "Model"} aktif={!!model}>
                 {(kapat) => <>
-                  <button onClick={() => { setModel(null); kapat(); }} className={cn(MSATIR, "justify-between")}>Tüm modeller{!model && <Check className="h-4 w-4" />}</button>
-                  {modeller.map((m) => <button key={m} onClick={() => { setModel(m); kapat(); }} className={MSATIR}><ModelLogo ad={m} boyut={14} /><span className="flex-1 truncate">{m}</span>{model === m && <Check className="h-4 w-4" />}</button>)}
+                  <button onClick={() => { setModel(null); kapat(); }} className={cn(MSATIR, !model && "bg-white/[0.08] ring-1 ring-inset ring-white/40")}>Bütün modeller</button>
+                  {modeller.map((m) => <button key={m} onClick={() => { setModel(m); kapat(); }} className={cn(MSATIR, model === m && "bg-white/[0.08] ring-1 ring-inset ring-white/40")}><ModelLogo ad={m} boyut={14} /><span className="flex-1 truncate">{m}</span></button>)}
                 </>}
               </Acilir>
-              <Acilir etiket={TARIH.find(([g]) => g === gun)![1]} aktif={!!gun}>
-                {(kapat) => TARIH.map(([g, ad]) => <button key={g} onClick={() => { setGun(g); kapat(); }} className={MSATIR}><Clock className="h-4 w-4 text-white/55" /><span className="flex-1">{ad}</span>{gun === g && <Check className="h-4 w-4" />}</button>)}
-              </Acilir>
+              <SuzgecCubugu d={sz} ayarla={szAyarla} sayilar={turSayilari} seciliIdler={secim.length ? secim : undefined} className="overflow-visible max-sm:overflow-visible" />
               <AnimatePresence>{suzgec && <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} onClick={temizle} aria-label="Süzgeçleri temizle" title="Süzgeçleri temizle" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/[0.07] text-white/80 hover:bg-white/[0.12]"><X className="h-4 w-4" /></motion.button>}</AnimatePresence>
             </>
           )}
           <span className="flex-1" />
           <button onClick={() => dosyaRef.current?.click()} className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white/[0.07] px-3.5 text-[13px] font-medium text-white/90 transition hover:bg-white/[0.12]"><Upload className="h-4 w-4" />Yükle</button>
           {havuz.length > 0 && (
-            <Acilir simge etiket="Görünüm" aktif={hataGizle || eskiOnce}>
-              {() => <>
-                <button onClick={() => setHataGizle((v) => !v)} className={MSATIR}><span className="flex-1">Başarısızları gizle</span><Anahtar a={hataGizle} /></button>
-                <div className="my-1 h-px bg-white/[0.08]" />
-                <button onClick={() => setEskiOnce(false)} className={MSATIR}><span className="flex-1">En yeni önce</span>{!eskiOnce && <Check className="h-4 w-4" />}</button>
-                <button onClick={() => setEskiOnce(true)} className={MSATIR}><span className="flex-1">En eski önce</span>{eskiOnce && <Check className="h-4 w-4" />}</button>
-              </>}
-            </Acilir>
+            <>
+              <Tooltip label={hataGizle ? "Başarısızları göster" : "Başarısızları gizle"} side="bottom">
+                <button onClick={() => setHataGizle((v) => !v)} aria-pressed={hataGizle} aria-label="Başarısızları gizle" className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1 ring-inset transition active:scale-95", hataGizle ? "bg-white text-black ring-white" : "bg-white/[0.05] text-white/85 ring-white/[0.06] hover:bg-white/[0.09]")}><EyeOff className="h-4 w-4" /></button>
+              </Tooltip>
+              <GorunumAyari sayfa="proje-varlik" istemVar={false} siralamaVar={false} dugmeSinif="h-10 w-10" />
+            </>
           )}
         </div>
       </div>
@@ -261,13 +262,13 @@ export function Varliklar({ p, varliklar, aktifKlasor, onKlasorTemizle, onBolum,
             {surenler.length > 0 && (
               <section className="mb-5">
                 <h2 className="flex items-center gap-2 px-1 pb-2.5 pt-2 text-[15px] font-semibold tracking-[-0.01em] text-white"><Loader2 className="h-4 w-4 animate-spin text-[#55d6fd]" />Sürüyor<Hap>{surenler.length}</Hap></h2>
-                <div className="[column-fill:balance]" style={{ columnCount: sutun, columnGap: 4 }}>{surenler.map(kart)}</div>
+                {izgara(surenler)}
               </section>
             )}
-            {gruplar.map((g) => (
-              <section key={g.anahtar} className="mb-5">
-                <h2 className="flex items-center gap-2 px-1 pb-2.5 pt-2 text-[15px] font-semibold tracking-[-0.01em] text-white">{g.etiket}<Hap>{g.ogeler.length}</Hap></h2>
-                <div className="[column-fill:balance]" style={{ columnCount: sutun, columnGap: 4 }}>{g.ogeler.map(kart)}</div>
+            {gruplar.map((gr) => (
+              <section key={gr.anahtar} className="mb-5">
+                {gr.etiket && <h2 className="flex items-center gap-2 px-1 pb-2.5 pt-2 text-[15px] font-semibold tracking-[-0.01em] text-white">{gr.etiket}<Hap>{gr.ogeler.length}</Hap></h2>}
+                {izgara(gr.ogeler)}
               </section>
             ))}
           </>

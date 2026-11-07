@@ -104,6 +104,16 @@ export async function uretimYonlendir(istek: SaglayiciIstek): Promise<SaglayiciS
   return saglayiciSec(istek.tur, istek.model).uret(istek);
 }
 
+/**
+ * Bu istek gerçek bir sağlayıcıda çalışabilir mi (kredi kesilmeden önce sorulur). false ise çıktı örnek olur
+ * ve kredi kesilmez. Görselde yönlendirme işleme göre değiştiği için herhangi bir görsel sağlayıcısının bağlı
+ * olması yeter; çıktı yine de örnek dönerse rota krediyi iade eder.
+ */
+export function gercekUretimMumkun(tur: UretimTuru, model?: string): boolean {
+  if (tur === "gorsel") return Object.values(gorselHazir).some((f) => f());
+  return saglayiciSec(tur, model).ad !== "simulasyon";
+}
+
 /** Her türün o an hangi sağlayıcıyla (gerçek/simülasyon) çalışacağının haritası. */
 export function saglayiciDurumu(): Record<UretimTuru, { saglayici: string; gercek: boolean }> {
   const turler: UretimTuru[] = ["gorsel", "video", "ses", "3d"];

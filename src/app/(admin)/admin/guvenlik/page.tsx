@@ -1,192 +1,129 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  Lock, Users, ShieldCheck, History, Globe, Smartphone, KeyRound, Check, X, Plus, Loader2,
-} from "lucide-react";
+import Link from "next/link";
+import { Lock, ScrollText, Crown, ShieldCheck, ShieldAlert, KeyRound, Download } from "lucide-react";
 import { RotaGuard } from "@/components/admin/RotaGuard";
-import { BolumBaslik, MetrikKart, Kart, Sekmeler, Rozet, Dugme, AD, DurumNokta } from "@/components/admin/ui/temel";
-import { QRKod } from "@/components/admin/guvenlik/QRKod";
-import { useAdminOturum } from "@/store/admin/useAdminOturum";
-import { ROL_ADI, ROL_YETKI, type Rol } from "@/lib/admin/guvenlik/roller";
-import { secretUret, otpauthUri, totpDogrula } from "@/lib/admin/guvenlik/totp";
-import { goreceZaman, tarihSaat } from "@/lib/admin/cekirdek";
-import { toast } from "@/lib/toast";
+import { AD, AramaKutu, BolumBaslik, Bos, FiltreCip, HataKutusu, Kart, KartBaslik, MetrikKart, Rozet, Sekmeler, Yukleniyor } from "@/components/admin/ui/temel";
+import { BasitTablo, hucre, satirSinif } from "@/components/admin/ui/BasitTablo";
+import { useAdminVeri, sayi, tarih, tarihSaat, gorece } from "@/lib/admin/istemci";
 import { cn } from "@/lib/utils";
 
+interface Kayit { id: string; zaman: number; admin: { uid: string; email: string }; eylem: string; tur: string; hedef?: { uid?: string; email?: string; kimlik?: string }; ayrinti?: string; onem: "bilgi" | "uyari" | "kritik"; ip?: string }
+interface Rapor {
+  kayitlar: Kayit[];
+  adminler: { uid: string; email: string; ad: string; ikiAdim: boolean; kayitli: boolean; olusturma: number; sonGiris: number | null; oturum: number }[];
+  olay: { kilit: number; hatali: number; ikiAdimKapat: number; sifirla: number };
+  riskli: { zaman: number; tur: string; uid: string; email: string; ayrinti?: string }[];
+  listeAdmin: number; ben: string;
+}
+const TUR_AD: Record<string, string> = {
+  "kredi-ekle": "Kredi ekleme", "kredi-dus": "Kredi düşme", plan: "Plan", "askiya-al": "Askıya alma", "askidan-cikar": "Askı kaldırma", "oturum-kapat": "Oturum kapatma",
+  "dogrulama-gonder": "Doğrulama e-postası", "hesap-sil": "Hesap silme", "veri-dokumu": "Veri dökümü", destek: "Destek", icerik: "İçerik", panel: "Panel girişi",
+};
+const OLAY_AD: Record<string, string> = { kilit: "Kilit ya da askı", "giris-hatali": "Hatalı giriş", "2fa-kapat": "İki adım kapatıldı", sifirla: "Şifre sıfırlandı", sifre: "Şifre değişti", eposta: "E-posta değişikliği" };
+
 export default function Guvenlik() {
-  const oturum = useAdminOturum();
-  const [sekme, setSekme] = useState("roller");
-  const [kurulumSecret, setKurulumSecret] = useState<string | null>(null);
-  const [dogrulaKod, setDogrulaKod] = useState("");
-  const [dogrulaniyor, setDogrulaniyor] = useState(false);
-  const [yeniIp, setYeniIp] = useState("");
-
-  const aktifHesap = oturum.hesaplar.find((h) => h.kullaniciAdi === oturum.aktifAdmin);
-
-  const denetle = (eylem: string, onem: "bilgi" | "uyari" | "kritik") =>
-    oturum.denetle({ admin: oturum.aktifAdmin ?? "admin", rol: oturum.aktifRol!, eylem, onem, arac: "manuel" });
-
-  const start2fa = () => { setKurulumSecret(secretUret()); setDogrulaKod(""); };
-  const dogrula2fa = async () => {
-    if (!kurulumSecret || !aktifHesap) return;
-    setDogrulaniyor(true);
-    const ok = await totpDogrula(kurulumSecret, dogrulaKod, Date.now());
-    setDogrulaniyor(false);
-    if (!ok) { toast.error("Doğrulama kodu hatalı", { description: "Uygulamadaki güncel kodu gir; telefonunun saati doğru olmalı." }); return; }
-    oturum.hesapGuncelle(aktifHesap.kullaniciAdi, { totpSecret: kurulumSecret, iki2faAktif: true });
-    denetle("2FA (TOTP) etkinleştirildi", "kritik");
-    toast.success("İki adımlı doğrulama açıldı", { description: "Sonraki girişte uygulamadaki kod istenecek." });
-    setKurulumSecret(null);
+  const { veri: r, hata, yenile } = useAdminVeri<Rapor>("/api/admin/guvenlik", 60_000);
+  const [sekme, setSekme] = useState("denetim");
+  const [q, setQ] = useState("");
+  const [tur, setTur] = useState("hepsi");
+  const [onem, setOnem] = useState("hepsi");
+  const l = useMemo(() => {
+    if (!r) return [];
+    const s = q.trim().toLocaleLowerCase("tr");
+    return r.kayitlar.filter((k) => (tur === "hepsi" || k.tur === tur) && (onem === "hepsi" || k.onem === onem)
+      && (!s || k.eylem.toLocaleLowerCase("tr").includes(s) || k.admin.email.includes(s) || (k.hedef?.email ?? "").includes(s) || (k.ayrinti ?? "").toLocaleLowerCase("tr").includes(s)));
+  }, [r, q, tur, onem]);
+  const turler = useMemo(() => (r ? [...new Set(r.kayitlar.map((k) => k.tur))] : []), [r]);
+  const indir = () => {
+    const blob = new Blob([l.map((k) => JSON.stringify(k)).join("\n")], { type: "application/x-ndjson" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `vayra-denetim-${new Date().toISOString().slice(0, 10)}.ndjson`; a.click(); URL.revokeObjectURL(a.href);
   };
-  const kaldir2fa = () => {
-    if (!aktifHesap) return;
-    oturum.hesapGuncelle(aktifHesap.kullaniciAdi, { totpSecret: undefined, iki2faAktif: false });
-    denetle("2FA kaldırıldı", "kritik");
-    toast.success("İki adımlı doğrulama kapatıldı");
-  };
-  const ipEkle = () => {
-    if (!yeniIp.trim()) return;
-    denetle(`IP whitelist'e eklendi: ${yeniIp}`, "uyari");
-    toast.success("IP izin listesine eklendi", { description: yeniIp });
-    setYeniIp("");
-  };
-
-  const auditKritik = oturum.audit.filter((a) => a.onem === "kritik").length;
-  const sekmeler = [
-    { id: "roller", ad: "Roller & Yetki", sayi: 4 },
-    { id: "2fa", ad: "2FA (TOTP)" },
-    { id: "audit", ad: "Audit Log", sayi: oturum.audit.length },
-    { id: "ip", ad: "IP Whitelist" },
-    { id: "cihaz", ad: "Cihazlar & Oturum" },
-  ];
-
-  const roller: Rol[] = ["super", "finans", "moderator", "destek"];
 
   return (
     <RotaGuard modul="guvenlik">
-      <BolumBaslik baslik="Güvenlik" ozet="Roller, 2FA, audit log ve erişim kontrolü" ikon={Lock} />
+      <BolumBaslik baslik="Güvenlik" ozet="Yönetici işlemlerinin denetim günlüğü, yönetici hesapları ve son yedi günün riskli hesap olayları." ikon={Lock} />
+      {hata && <HataKutusu hata={hata} yenile={yenile} />}
+      {!r && !hata && <Yukleniyor satir={4} />}
+      {r && (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetrikKart etiket="Yönetici" deger={sayi(r.adminler.length)} ikon={Crown} alt={`${sayi(r.adminler.filter((a) => !a.ikiAdim).length)} tanesinde iki adım kapalı`} />
+            <MetrikKart etiket="Denetim kaydı" deger={sayi(r.kayitlar.length)} ikon={ScrollText} alt={`${sayi(r.kayitlar.filter((k) => k.onem === "kritik").length)} kritik`} />
+            <MetrikKart etiket="Hatalı giriş, 7 gün" deger={sayi(r.olay.hatali)} ikon={ShieldAlert} alt={`${sayi(r.olay.kilit)} kilit`} />
+            <MetrikKart etiket="İki adım kapatma, 7 gün" deger={sayi(r.olay.ikiAdimKapat)} ikon={KeyRound} alt={`${sayi(r.olay.sifirla)} şifre sıfırlama`} />
+          </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetrikKart etiket="Admin hesap" deger={String(oturum.hesaplar.length)} ikon={Users} />
-        <MetrikKart etiket="2FA aktif" deger={aktifHesap?.iki2faAktif ? "Evet" : "Hayır"} ikon={ShieldCheck} renk={aktifHesap?.iki2faAktif ? "basari" : "uyari"} />
-        <MetrikKart etiket="Audit kaydı" deger={String(oturum.audit.length)} ikon={History} renk="aksan" />
-        <MetrikKart etiket="Kritik işlem" deger={String(auditKritik)} ikon={KeyRound} renk="tehlike" />
-      </div>
+          <div className="my-4"><Sekmeler aktif={sekme} sec={setSekme} sekmeler={[{ id: "denetim", ad: "Denetim günlüğü", sayi: r.kayitlar.length }, { id: "admin", ad: "Yöneticiler", sayi: r.adminler.length }, { id: "risk", ad: "Riskli olaylar", sayi: r.riskli.length }]} /></div>
 
-      <div className="mb-3"><Sekmeler sekmeler={sekmeler} aktif={sekme} sec={setSekme} /></div>
-
-      {/* Roller */}
-      {sekme === "roller" && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {roller.map((rol) => {
-            const yetki = ROL_YETKI[rol];
-            return (
-              <Kart key={rol}>
-                <div className="mb-3 flex items-center gap-2.5">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><ShieldCheck className="h-4 w-4" /></span>
-                  <div><div className={cn("font-semibold", AD.metin)}>{ROL_ADI[rol]}</div><div className={cn("text-[11px]", AD.metin3)}>{yetki === "hepsi" ? "Tüm modüller" : `${yetki.length} modül`}</div></div>
+          {sekme === "denetim" && (
+            <>
+              <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center">
+                <AramaKutu deger={q} degis={setQ} yer="İşlem, yönetici ya da hesap ara" className="lg:w-80" />
+                <div className="flex gap-2 overflow-x-auto pb-1 ad-ince-scroll">
+                  {(["hepsi", "kritik", "uyari", "bilgi"] as const).map((o) => <FiltreCip key={o} aktif={onem === o} onClick={() => setOnem(o)}>{o === "hepsi" ? "Bütün önem" : o === "kritik" ? "Kritik" : o === "uyari" ? "Uyarı" : "Bilgi"}</FiltreCip>)}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {yetki === "hepsi" ? <Rozet ton="basari">Tam yetki (14 modül)</Rozet> : yetki.map((m) => <Rozet key={m} ton="notr">{m}</Rozet>)}
-                </div>
+                {l.length > 0 && <button onClick={indir} className="ad-btn-glass inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold lg:ml-auto"><Download className="h-4 w-4" /> İndir</button>}
+              </div>
+              <div className="mb-4 flex gap-2 overflow-x-auto pb-1 ad-ince-scroll">
+                <FiltreCip aktif={tur === "hepsi"} onClick={() => setTur("hepsi")}>Bütün işlemler</FiltreCip>
+                {turler.map((t) => <FiltreCip key={t} aktif={tur === t} onClick={() => setTur(t)}>{TUR_AD[t] ?? t}</FiltreCip>)}
+              </div>
+              {l.length === 0 ? <Bos ikon={ScrollText} baslik={r.kayitlar.length ? "Bu süzgeçle kayıt yok" : "Henüz yönetici işlemi yok"} ozet="Kredi, plan, askı, oturum, silme ve destek işlemleri buraya yazılır." /> : (
+                <BasitTablo baslik={["Zaman", "Yönetici", "İşlem", "Hedef", "Ayrıntı", "IP"]} enAz={940}>
+                  {l.map((k) => (
+                    <tr key={k.id} className={satirSinif}>
+                      <td className={cn(hucre, "whitespace-nowrap", AD.metin2)}>{tarihSaat(k.zaman)}</td>
+                      <td className={cn(hucre, AD.metin2)}>{k.admin.email}</td>
+                      <td className={hucre}><span className={cn(k.onem === "kritik" ? "text-rose-300" : k.onem === "uyari" ? "text-amber-300" : AD.metin)}>{k.eylem}</span><div className={cn("text-[11px]", AD.metin3)}>{TUR_AD[k.tur] ?? k.tur}</div></td>
+                      <td className={hucre}>{k.hedef?.uid ? <Link href={`/admin/kullanicilar/${k.hedef.uid}`} className="text-[color:var(--ad-aksan)] hover:underline">{k.hedef.email ?? k.hedef.uid}</Link> : <span className={AD.metin3}>{k.hedef?.email ?? k.hedef?.kimlik ?? ""}</span>}</td>
+                      <td className={cn(hucre, AD.metin3)}><div className="max-w-[260px] truncate" title={k.ayrinti}>{k.ayrinti ?? ""}</div></td>
+                      <td className={cn(hucre, "font-mono text-[12px]", AD.metin3)}>{k.ip ?? ""}</td>
+                    </tr>
+                  ))}
+                </BasitTablo>
+              )}
+              <p className={cn("mt-3 text-[12px]", AD.metin3)}>Günlük yalnız sona eklenir, panelden silinemez. Son 1000 kayıt gösterilir.</p>
+            </>
+          )}
+
+          {sekme === "admin" && (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
+                {r.adminler.map((a) => (
+                  <Kart key={a.uid} className="!p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <Link href={`/admin/kullanicilar/${a.uid}`} className={cn("block truncate font-semibold hover:underline", AD.metin)}>{a.ad || a.email}{a.uid === r.ben && <span className={cn("ml-2 text-[12px] font-normal", AD.metin3)}>sen</span>}</Link>
+                        <div className={cn("truncate text-[13px]", AD.metin3)}>{a.email}</div>
+                      </div>
+                      {a.ikiAdim ? <Rozet ton="basari"><ShieldCheck className="h-3 w-3" /> İki adım açık</Rozet> : <Rozet ton="uyari"><ShieldAlert className="h-3 w-3" /> İki adım kapalı</Rozet>}
+                    </div>
+                    <div className={cn("mt-2 text-[12px]", AD.metin3)}>{a.kayitli ? "Hesapta kayıtlı yönetici" : "VAYRA_ADMIN_EPOSTALARI listesinden"} · kayıt {tarih(a.olusturma)} · son giriş {gorece(a.sonGiris)} · {a.oturum} açık oturum</div>
+                  </Kart>
+                ))}
+              </div>
+              <Kart className="mt-4">
+                <KartBaslik ikon={KeyRound}>Yönetici nasıl eklenir</KartBaslik>
+                <p className={cn("text-[13px] leading-relaxed", AD.metin2)}>Yöneticiler VAYRA_ADMIN_EPOSTALARI ortam değişkeniyle belirlenir (şu an {r.listeAdmin} adres). Listedeki adres e-postasını doğruladığında yönetici olur ve rol hesaba kalıcı yazılır. Yöneticiler Ayarlar, Güvenlik bölümünden iki adımlı doğrulamayı açmalı.</p>
               </Kart>
-            );
-          })}
-        </div>
-      )}
-
-      {/* 2FA */}
-      {sekme === "2fa" && (
-        <Kart className="max-w-lg">
-          <h3 className={cn("mb-1 text-sm font-bold", AD.metin)}>İki adımlı doğrulama (TOTP)</h3>
-          <p className={cn("mb-4 text-[13px]", AD.metin3)}>Google Authenticator / Authy ile gerçek RFC-6238 TOTP. Hesap: <b className={AD.metin}>{aktifHesap?.kullaniciAdi}</b></p>
-
-          {aktifHesap?.iki2faAktif ? (
-            <div className="flex items-center justify-between rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-4">
-              <div className="flex items-center gap-2.5"><ShieldCheck className="h-5 w-5 text-emerald-400" /><span className={cn("text-[14px] font-semibold", AD.metin)}>2FA etkin</span></div>
-              <Dugme boyut="sm" tur="tehlike" onClick={kaldir2fa}>Kaldır</Dugme>
-            </div>
-          ) : kurulumSecret ? (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-3">
-                <QRKod metin={otpauthUri(kurulumSecret, aktifHesap?.kullaniciAdi ?? "admin")} boyut={180} />
-                <p className={cn("text-center text-[12px]", AD.metin3)}>Authenticator uygulamasında bu QR'ı tara, sonra 6 haneli kodu gir.</p>
-                <code className="rounded-lg bg-white/[0.05] px-3 py-1.5 font-mono text-[12px] text-[color:var(--ad-metin-2)]">{kurulumSecret}</code>
-              </div>
-              <div className="flex gap-2">
-                <input value={dogrulaKod} onChange={(e) => setDogrulaKod(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" className="h-11 flex-1 rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] text-center font-mono text-lg tracking-widest text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50" />
-                <Dugme onClick={dogrula2fa} disabled={dogrulaKod.length < 6 || dogrulaniyor}>{dogrulaniyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Doğrula</Dugme>
-              </div>
-              <button onClick={() => setKurulumSecret(null)} className={cn("w-full text-center text-[12px]", AD.metin3)}>Vazgeç</button>
-            </div>
-          ) : (
-            <Dugme onClick={start2fa} ikon={ShieldCheck}>2FA'yı etkinleştir</Dugme>
+            </>
           )}
-        </Kart>
-      )}
 
-      {/* Audit */}
-      {sekme === "audit" && (
-        <Kart className="!p-0 overflow-hidden">
-          {oturum.audit.length === 0 ? <p className={cn("py-10 text-center text-sm", AD.metin3)}>Henüz audit kaydı yok. İşlem yaptıkça burada listelenir.</p> : (
-            <div className="max-h-[600px] overflow-y-auto ad-ince-scroll">
-              {oturum.audit.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 border-b border-[color:var(--ad-kenar)] px-4 py-3 last:border-0">
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: a.onem === "kritik" ? "var(--ad-tehlike)" : a.onem === "uyari" ? "var(--ad-uyari)" : "var(--ad-aksan)" }} />
-                  <div className="min-w-0 flex-1">
-                    <div className={cn("text-[13px]", AD.metin)}>{a.eylem}{a.hedef && <span className={AD.metin3}> · {a.hedef}</span>}</div>
-                    {a.detay && <div className={cn("text-[11px]", AD.metin3)}>{a.detay}</div>}
-                  </div>
-                  {a.arac === "ai" && <Rozet ton="mor">AI</Rozet>}
-                  <span className={cn("text-[11px]", AD.metin3)}>{a.admin} · {tarihSaat(a.zaman)}</span>
-                </div>
+          {sekme === "risk" && (r.riskli.length === 0 ? <Bos ikon={ShieldCheck} baslik="Son yedi günde riskli olay yok" /> : (
+            <BasitTablo baslik={["Zaman", "Olay", "Hesap", "Ayrıntı"]} enAz={680}>
+              {r.riskli.map((o, i) => (
+                <tr key={i} className={satirSinif}>
+                  <td className={cn(hucre, "whitespace-nowrap", AD.metin2)}>{tarihSaat(o.zaman)}</td>
+                  <td className={hucre}><Rozet ton={o.tur === "kilit" || o.tur === "giris-hatali" ? "tehlike" : "uyari"}>{OLAY_AD[o.tur] ?? o.tur}</Rozet></td>
+                  <td className={hucre}><Link href={`/admin/kullanicilar/${o.uid}`} className="text-[color:var(--ad-aksan)] hover:underline">{o.email}</Link></td>
+                  <td className={cn(hucre, AD.metin3)}>{o.ayrinti ?? ""}</td>
+                </tr>
               ))}
-            </div>
-          )}
-        </Kart>
-      )}
-
-      {/* IP whitelist */}
-      {sekme === "ip" && (
-        <Kart className="max-w-lg">
-          <h3 className={cn("mb-1 text-sm font-bold", AD.metin)}>IP Whitelist</h3>
-          <p className={cn("mb-4 text-[13px]", AD.metin3)}>Yalnızca bu IP'lerden admin girişine izin ver (opsiyonel katman).</p>
-          <div className="mb-3 flex gap-2">
-            <input value={yeniIp} onChange={(e) => setYeniIp(e.target.value)} placeholder="192.168.1.1" className="h-10 flex-1 rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] px-3 font-mono text-sm text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50" />
-            <Dugme ikon={Plus} onClick={ipEkle}>Ekle</Dugme>
-          </div>
-          <div className="space-y-1.5">
-            {["85.34.12.9 (mevcut)", "213.74.55.101"].map((ip) => (
-              <div key={ip} className="flex items-center justify-between rounded-lg border border-[color:var(--ad-kenar)] px-3 py-2">
-                <span className={cn("flex items-center gap-2 font-mono text-[13px]", AD.metin)}><Globe className="h-3.5 w-3.5 text-[color:var(--ad-aksan)]" /> {ip}</span>
-                <button className="text-[color:var(--ad-metin-3)] hover:text-rose-400"><X className="h-4 w-4" /></button>
-              </div>
-            ))}
-          </div>
-        </Kart>
-      )}
-
-      {/* Cihazlar */}
-      {sekme === "cihaz" && (
-        <Kart className="max-w-2xl">
-          <h3 className={cn("mb-4 text-sm font-bold", AD.metin)}>Bilinen cihazlar & aktif oturumlar</h3>
-          <div className="space-y-2">
-            {[
-              { cihaz: "Chrome · macOS", ip: "85.34.12.9", konum: "İstanbul, TR", aktif: true, son: Date.now() },
-              { cihaz: "Safari · iOS", ip: "213.74.55.101", konum: "Ankara, TR", aktif: false, son: Date.now() - 86400000 },
-            ].map((c, i) => (
-              <div key={i} className="flex items-center gap-3 rounded-xl border border-[color:var(--ad-kenar)] p-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--ad-aksan)]/12 text-[color:var(--ad-aksan)]"><Smartphone className="h-4 w-4" /></span>
-                <div className="min-w-0 flex-1"><div className={cn("flex items-center gap-2 text-[13px] font-medium", AD.metin)}>{c.cihaz}{c.aktif && <Rozet ton="basari">bu oturum</Rozet>}</div><div className={cn("text-[11px]", AD.metin3)}>{c.ip} · {c.konum} · {goreceZaman(c.son)}</div></div>
-                {!c.aktif && <button className="text-[13px] text-rose-400">Sonlandır</button>}
-              </div>
-            ))}
-          </div>
-          <div className={cn("mt-4 flex items-center gap-2 rounded-xl border border-[color:var(--ad-kenar)] p-3 text-[12px]", AD.metin3)}>
-            <DurumNokta ton="basari" /> Yeni cihazdan girişte otomatik bildirim + audit kaydı. Idle timeout: 15 dakika.
-          </div>
-        </Kart>
+            </BasitTablo>
+          ))}
+        </>
       )}
     </RotaGuard>
   );

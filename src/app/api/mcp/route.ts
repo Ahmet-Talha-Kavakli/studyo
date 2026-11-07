@@ -34,11 +34,14 @@ function kokAdres(req: NextRequest) {
   return `${proto}://${host}`;
 }
 
-/** /api/v1'e aynı kimlikle iç istek. */
-async function v1(req: NextRequest, yontem: "GET" | "POST", yol: string, govde?: unknown) {
+/**
+ * /api/v1'e aynı kimlikle iç istek. Kredi /api/v1'de anahtarın sahibinden kesilir; ek başlıklar üretimde
+ * işlem anahtarını (Idempotency-Key) taşır: aynı araç çağrısı yeniden gelirse ikinci kez kesilmez.
+ */
+async function v1(req: NextRequest, yontem: "GET" | "POST", yol: string, govde?: unknown, ek: Record<string, string> = {}) {
   const r = await fetch(`${kokAdres(req)}/api/v1${yol}`, {
     method: yontem,
-    headers: { authorization: req.headers.get("authorization") ?? "", "content-type": "application/json", "user-agent": "vayra-mcp/1.0" },
+    headers: { authorization: req.headers.get("authorization") ?? "", "content-type": "application/json", "user-agent": "vayra-mcp/1.0", ...ek },
     body: govde === undefined ? undefined : JSON.stringify(govde),
     cache: "no-store",
   });
@@ -80,7 +83,10 @@ async function aracCalistir(req: NextRequest, ad: string, a: Record<string, unkn
       return aracSonucu(j, `${j!.name} (${j!.id}) — girdi şeması aşağıda.`);
     }
     case "generate": {
-      const { durum, j } = await v1(req, "POST", "/generations", { model: a.model, input: a.input ?? {}, sync: a.wait !== false, ...(a.metadata ? { metadata: a.metadata } : {}) });
+      const islem = req.headers.get("idempotency-key") ?? req.headers.get("x-islem-anahtari") ?? (typeof a.idempotency_key === "string" ? a.idempotency_key : null);
+      const sahte = req.headers.get("x-vayra-sahte-saglayici");
+      const { durum, j } = await v1(req, "POST", "/generations", { model: a.model, input: a.input ?? {}, sync: a.wait !== false, ...(a.metadata ? { metadata: a.metadata } : {}) },
+        { ...(islem ? { "idempotency-key": islem } : {}), ...(sahte ? { "x-vayra-sahte-saglayici": sahte } : {}) });
       if (durum !== 200 && durum !== 201) return v1Hata(j);
       return aracSonucu(j, uretimOzeti(j!), j!.status === "failed");
     }

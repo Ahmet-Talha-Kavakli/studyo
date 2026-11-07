@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { Star } from "lucide-react";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { kopyala } from "@/lib/gercekEylem";
 import { cn, saltUrl } from "@/lib/utils";
@@ -75,7 +78,7 @@ export function InfoSekmesi({
   const m = uretim?.meta;
   const tarih = uretim ? new Date(uretim.olusturma).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : null;
   const satirlar: [string, string][] = uretim ? [
-    ["Model", m?.cozulenModel ? `${uretim.model} → ${m.cozulenModel}` : uretim.model],
+    ["Model", m?.cozulenModel ? `${uretim.model}, çalışan model ${m.cozulenModel}` : uretim.model],
     ...(m?.apiModel ? [["Sağlayıcı modeli", m.apiModel] as [string, string]] : []),
     ...(m?.oran && uretim.gercek !== false ? [["Oran", m.oran] as [string, string]] : []),
     ...(m?.cozunurluk && uretim.gercek !== false ? [["Çözünürlük", m.cozunurluk] as [string, string]] : []),
@@ -187,11 +190,19 @@ export function InfoSekmesi({
         <div className="flex items-center justify-between gap-1.5">
           {onYenidenUret && <Tooltip label="Yeniden üret" side="top"><IkonAksiyon ikon={RefreshCw} etiket="Yeniden üret" onClick={onYenidenUret} /></Tooltip>}
           {uretim && <Tooltip label="Referans olarak ekle" side="top"><IkonAksiyon ikon={ImagePlus} etiket="Referans olarak ekle" onClick={onReferans} /></Tooltip>}
-          <Tooltip label="İndir" side="top"><IkonAksiyon ikon={Download} etiket="İndir" onClick={onIndir} /></Tooltip>
-          {onBegen && <Tooltip label={begenili ? "Beğeniyi kaldır" : "Beğen"} side="top"><IkonAksiyon ikon={Heart} etiket={begenili ? "Beğeniyi kaldır" : "Beğen"} onClick={onBegen} aktif={begenili} /></Tooltip>}
+          {uretim ? (
+            <IndirDugmesi u={uretim} side="top" yerlesim="ust-sag" className="flex h-10 w-[42px] items-center justify-center rounded-full bg-white/[0.085] text-metin-2 transition-colors hover:bg-white/[0.14] hover:text-metin active:scale-95" />
+          ) : <Tooltip label="İndir" side="top"><IkonAksiyon ikon={Download} etiket="İndir" onClick={onIndir} /></Tooltip>}
+          {onBegen && <Tooltip label={begenili ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><IkonAksiyon ikon={Star} etiket={begenili ? "Favorilerden çıkar" : "Favorilere ekle"} onClick={onBegen} aktif={begenili} /></Tooltip>}
+          {uretim && (
+            <Tooltip label="Klasöre taşı" side="top" className="flex [&>div]:flex">
+              <KlasoreTasiDugmesi uretimIdler={[uretim.id]} etiket="Klasöre taşı" etiketSinif="sr-only" yerlesim="ust-sag"
+                className="flex h-10 w-[42px] items-center justify-center rounded-full bg-white/[0.085] text-metin-2 transition-colors hover:bg-white/[0.14] hover:text-metin active:scale-95" />
+            </Tooltip>
+          )}
           <Tooltip label="Paylaş" side="top"><IkonAksiyon ikon={Share2} etiket="Paylaş" onClick={() => void gorseliPaylas()} /></Tooltip>
           <div className="relative">
-            <IkonAksiyon ikon={MoreHorizontal} etiket="Daha fazla" onClick={() => setDahaAcik((v) => !v)} />
+            <Tooltip label="Daha fazla" side="top"><IkonAksiyon ikon={MoreHorizontal} etiket="Daha fazla" onClick={() => setDahaAcik((v) => !v)} /></Tooltip>
             <AnimatePresence>
               <Yuzen acik={!!(dahaAcik)} onKapat={() => setDahaAcik(false)} alt={44} sag={0} bosluk={0}><motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }}
                     className="menu-surface w-48 overflow-hidden rounded-xl p-1">
@@ -230,7 +241,7 @@ function DetayIkon({ k, v }: { k: string; v: string }) {
 function IkonAksiyon({ ikon: Ikon, etiket, onClick, aktifSinif = "hover:text-metin", aktif }: { ikon: typeof Heart; etiket: string; onClick: () => void; aktifSinif?: string; aktif?: boolean }) {
   return (
     <button onClick={onClick} aria-label={etiket} aria-pressed={aktif}
-      className={cn("flex h-10 w-[52px] items-center justify-center rounded-full bg-white/[0.085] transition-colors hover:bg-white/[0.14] active:scale-95", aktif ? "text-rose-400" : "text-metin-2", aktifSinif)}>
+      className={cn("flex h-10 w-[42px] items-center justify-center rounded-full bg-white/[0.085] transition-colors hover:bg-white/[0.14] active:scale-95", aktif ? "text-aksan" : "text-metin-2", aktifSinif)}>
       <Ikon className={cn("h-4 w-4", aktif && "fill-current")} />
     </button>
   );

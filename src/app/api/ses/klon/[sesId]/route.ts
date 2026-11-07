@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { sesSil } from "@/lib/saglayicilar/eleven";
 
 export const runtime = "nodejs";
 
 /** Kullanıcının kendi sesini (klon ya da tasarım) sağlayıcıdan siler. */
-export async function DELETE(_: Request, { params }: { params: Promise<{ sesId: string }> }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ sesId: string }> }) {
+  // Oturum gerekir: sağlayıcıdaki ses misafir isteğiyle silinemesin.
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   const { sesId } = await params;
   if (!/^[A-Za-z0-9]{10,40}$/.test(sesId)) return NextResponse.json({ ok: false, hata: "Geçersiz ses." }, { status: 400 });
   if (!process.env.ELEVENLABS_API_KEY) return NextResponse.json({ ok: false, hata: "Ses sağlayıcısı bağlı değil." }, { status: 503 });

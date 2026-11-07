@@ -1,242 +1,142 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Coins, RefreshCcw, ArrowUpDown, Ban, UserX, LogIn, Tag, StickyNote,
-  Mail, KeyRound, X, Plus, Minus,
-} from "lucide-react";
-import { useOnay } from "@/components/admin/ui/Onay";
-import { Dugme, AD } from "@/components/admin/ui/temel";
-import { useAdminAksiyon } from "@/store/admin/useAdminAksiyon";
-import { useAdminOturum } from "@/store/admin/useAdminOturum";
-import { aksiyonRisk } from "@/lib/admin/guvenlik/roller";
-import { PLAN_ADI } from "@/store/useAuth";
+import { Coins, MinusCircle, Repeat, Ban, Unlock, LogOut, MailCheck, Download, Trash2, Loader2 } from "lucide-react";
+import { Cekmece } from "@/components/admin/ui/tablo";
+import { AD } from "@/components/admin/ui/temel";
+import { adminIslem, PLAN_AD } from "@/lib/admin/istemci";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import type { AdminKullanici } from "@/lib/admin/seed";
 
-/* Kullanıcı aksiyon çubuğu — tüm işlemler kademeli onaydan geçer + audit'e düşer.
-   Risk seviyeleri roller.ts AKSIYON_RISK'ten gelir (tek doğruluk kaynağı). */
+/* Kullanıcı ayrıntısındaki yönetici işlemleri. Her işlem sağdan açılan panelde onaylanır, sunucuda uygulanır ve denetim günlüğüne yazılır. */
 
-const PLANLAR = ["baslangic", "arti", "ultra", "kurumsal"];
+type Islem = "kredi-ekle" | "kredi-dus" | "plan" | "askiya-al" | "askidan-cikar" | "oturum-kapat" | "dogrulama-gonder" | "hesap-sil";
 
-export function KullaniciAksiyonlar({ kullanici }: { kullanici: AdminKullanici }) {
-  const { onayIste } = useOnay();
-  const aks = useAdminAksiyon();
-  const oturum = useAdminOturum();
-  const admin = oturum.aktifAdmin ?? "admin";
-  const rol = oturum.aktifRol!;
+export interface AksiyonHesap { id: string; email: string; plan: string; askida: boolean; dogrulandi: boolean; admin: boolean; oturum: number; bakiye: number | null }
 
-  const [modal, setModal] = useState<null | "kredi" | "plan" | "etiket" | "not">(null);
-  const [krediMiktar, setKrediMiktar] = useState(100);
-  const [krediSebep, setKrediSebep] = useState("");
-  const [yeniPlan, setYeniPlan] = useState(kullanici.plan);
-  const [etiket, setEtiket] = useState("");
+const TANIM: Record<Islem, { ad: string; ikon: typeof Coins; tehlike?: boolean; aciklama: string }> = {
+  "kredi-ekle": { ad: "Kredi ekle", ikon: Coins, aciklama: "Süresi dolmayan kovaya eklenir. Neden kullanıcının kredi geçmişinde görünür." },
+  "kredi-dus": { ad: "Kredi düş", ikon: MinusCircle, aciklama: "Önce aylık kotadan, sonra ek krediden düşer. Bakiye eksiye inmez." },
+  plan: { ad: "Planı değiştir", ikon: Repeat, aciklama: "Yeni dönem hemen başlar ve yeni planın aylık kotası verilir. Ödeme alınmaz." },
+  "askiya-al": { ad: "Askıya al", ikon: Ban, tehlike: true, aciklama: "Kullanıcı giriş yapamaz, açık oturumları geçersiz olur. Veriler silinmez." },
+  "askidan-cikar": { ad: "Askıyı kaldır", ikon: Unlock, aciklama: "Kullanıcı yeniden giriş yapabilir." },
+  "oturum-kapat": { ad: "Oturumları kapat", ikon: LogOut, aciklama: "Bütün cihazlardaki oturumlar kapanır; kullanıcı yeniden giriş yapmalı." },
+  "dogrulama-gonder": { ad: "Doğrulama e-postası gönder", ikon: MailCheck, aciklama: "24 saat geçerli yeni bir doğrulama bağlantısı gönderilir." },
+  "hesap-sil": { ad: "Hesabı sil", ikon: Trash2, tehlike: true, aciklama: "Hesap, kredi defteri, oturumlar, medya ve Build projeleri kalıcı olarak silinir. Mali kayıtlar kimliksiz saklanır. Geri alınamaz." },
+};
+
+export function KullaniciAksiyonlar({ h, degisti, silindi }: { h: AksiyonHesap; degisti: () => void; silindi: () => void }) {
+  const [acik, setAcik] = useState<Islem | null>(null);
+  const [miktar, setMiktar] = useState("");
   const [not, setNot] = useState("");
+  const [plan, setPlan] = useState(h.plan);
+  const [zorla, setZorla] = useState(false);
+  const [onay, setOnay] = useState("");
+  const [calisiyor, setCalisiyor] = useState(false);
+  const [hata, setHata] = useState<string | null>(null);
+  const [baglanti, setBaglanti] = useState<string | null>(null);
 
-  const denetle = (eylem: string, onem: "bilgi" | "uyari" | "kritik", detay?: string) =>
-    oturum.denetle({ admin, rol, eylem, hedef: kullanici.ad, detay, onem, arac: "manuel" });
-
-  // ── Kredi ekle/çıkar ──
-  const krediUygula = async (isaret: 1 | -1) => {
-    if (!krediSebep.trim()) { toast.error("Sebep yazılmadı", { description: "Kredi düzeltmesi kayda geçtiği için bir sebep yaz." }); return; }
-    const miktar = krediMiktar * isaret;
-    const aksAd = isaret > 0 ? "kredi_ekle" : "kredi_cikar";
-    const risk = aksiyonRisk(aksAd);
-    const ok = await onayIste({
-      baslik: isaret > 0 ? `${krediMiktar} kredi ekle` : `${krediMiktar} kredi çıkar`,
-      aciklama: `${kullanici.ad} hesabına ${isaret > 0 ? "+" : "−"}${krediMiktar} kredi. Sebep: ${krediSebep}. Ledger'a "manuel düzeltme" olarak düşer.`,
-      risk: risk.risk, onayMetin: risk.onayMetin, eylemEtiket: "Uygula",
-    });
-    if (!ok) return;
-    aks.krediDuzelt(kullanici.id, miktar);
-    aks.ledgerEkle({ kullaniciId: kullanici.id, miktar, sebep: krediSebep, yapan: admin });
-    denetle(`Kredi ${isaret > 0 ? "eklendi" : "çıkarıldı"}: ${miktar}`, "kritik", krediSebep);
-    toast.success(miktar > 0 ? `${miktar} kredi eklendi` : `${-miktar} kredi çıkarıldı`, { description: `${kullanici.ad} hesabına işlendi.` });
-    setModal(null); setKrediSebep("");
+  const ac = (i: Islem) => { setAcik(i); setMiktar(""); setNot(""); setPlan(h.plan); setZorla(false); setOnay(""); setHata(null); setBaglanti(null); };
+  const uygula = async () => {
+    if (!acik) return;
+    setCalisiyor(true); setHata(null);
+    const r = await adminIslem(`/api/admin/kullanicilar/${h.id}/islem`, { islem: acik, miktar: Number(miktar), not, plan, zorla, onay });
+    setCalisiyor(false);
+    if (!r.ok) { setHata(r.hata); if (r.hata.includes("onay kutusunu")) setZorla(false); return; }
+    toast.success(String(r.veri.mesaj ?? "Uygulandı"));
+    if (r.veri.gelistirmeBaglantisi) { setBaglanti(String(r.veri.gelistirmeBaglantisi)); degisti(); return; }
+    if (acik === "hesap-sil") { setAcik(null); silindi(); return; }
+    setAcik(null); degisti();
   };
 
-  // ── Plan değiştir ──
-  const planUygula = async () => {
-    if (yeniPlan === kullanici.plan) { toast.error("Plan zaten bu", { description: "Kullanıcı bu planda. Değiştirmek için başka bir plan seç." }); return; }
-    const risk = aksiyonRisk("plan_degistir");
-    const ok = await onayIste({
-      baslik: "Plan değiştir",
-      aciklama: `${kullanici.ad} planı ${PLAN_ADI[kullanici.plan as keyof typeof PLAN_ADI]} → ${PLAN_ADI[yeniPlan as keyof typeof PLAN_ADI]}. Proration otomatik hesaplanır.`,
-      risk: risk.risk, eylemEtiket: "Değiştir",
-    });
-    if (!ok) return;
-    aks.planDegistir(kullanici.id, yeniPlan);
-    denetle(`Plan değiştirildi → ${PLAN_ADI[yeniPlan as keyof typeof PLAN_ADI]}`, "uyari");
-    toast.success("Plan değiştirildi", { description: `${kullanici.ad} artık ${PLAN_ADI[yeniPlan as keyof typeof PLAN_ADI]} planında.` });
-    setModal(null);
-  };
-
-  // ── İade ──
-  const iadeYap = async () => {
-    const risk = aksiyonRisk("iade_yap");
-    const ok = await onayIste({
-      baslik: "İade yap", aciklama: `${kullanici.ad} için son ödemenin iadesi. Ödeme sağlayıcısına iade çağrısı gönderilir.`,
-      risk: risk.risk, eylemEtiket: "İade et",
-    });
-    if (!ok) return;
-    denetle("İade yapıldı", "kritik");
-    toast.success("İade talebi oluşturuldu");
-  };
-
-  // ── Ban (ekstra-riskli, çift onay) ──
-  const banla = async () => {
-    const risk = aksiyonRisk("kullanici_banla");
-    const ok = await onayIste({
-      baslik: "Kullanıcıyı banla",
-      aciklama: `${kullanici.ad} kalıcı olarak banlanacak. Tüm oturumları kapatılır, üretim yapamaz. Bu işlem yüksek risklidir.`,
-      risk: risk.risk, onayMetin: risk.onayMetin, eylemEtiket: "BANLA",
-    });
-    if (!ok) return;
-    aks.durumDegistir(kullanici.id, "banli");
-    denetle("Kullanıcı banlandı", "kritik");
-    toast.success("Kullanıcı banlandı", { description: `${kullanici.ad} artık üretim yapamaz.` });
-  };
-
-  // ── Anonimleştir (KVKK, ekstra-riskli) ──
-  const anonimlestir = async () => {
-    const risk = aksiyonRisk("hesap_anonimlestir");
-    const ok = await onayIste({
-      baslik: "Hesabı anonimleştir (KVKK)",
-      aciklama: `${kullanici.ad} kişisel verileri (ad, e-posta, IP) kalıcı olarak silinir. Finansal kayıtlar yasal saklama için kalır. GERİ ALINAMAZ.`,
-      risk: risk.risk, onayMetin: risk.onayMetin, eylemEtiket: "ANONİMLEŞTİR",
-    });
-    if (!ok) return;
-    aks.durumDegistir(kullanici.id, "silinme_talebi");
-    denetle("Hesap anonimleştirildi (KVKK)", "kritik");
-    toast.success("Hesap anonimleştirildi");
-  };
-
-  // ── Impersonate (ekstra-riskli) ──
-  const impersonate = async () => {
-    const risk = aksiyonRisk("impersonate");
-    const ok = await onayIste({
-      baslik: "Kullanıcı olarak giriş yap",
-      aciklama: `${kullanici.ad} olarak 15 dakikalık geçici oturum açılır. Kullanıcıya bildirim gider, audit'e düşer. Yasal sorumluluk sende.`,
-      risk: risk.risk, onayMetin: risk.onayMetin, eylemEtiket: "GİRİŞ",
-    });
-    if (!ok) return;
-    denetle("Impersonate oturumu açıldı (15dk)", "kritik");
-    toast.success("Geçici oturum açıldı", { description: "Oturum 15 dakika sonra kendiliğinden kapanır." });
-  };
-
-  // ── Basit aksiyonlar ──
-  const sifreSifirla = async () => {
-    const ok = await onayIste({ baslik: "Şifre sıfırlama maili gönder", aciklama: `${kullanici.email} adresine şifre sıfırlama bağlantısı gönderilir.`, risk: 0, eylemEtiket: "Gönder" });
-    if (!ok) return;
-    denetle("Şifre sıfırlama maili gönderildi", "bilgi");
-    toast.success("Şifre sıfırlama e-postası gönderildi", { description: `${kullanici.email} adresine gitti.` });
-  };
-  const oturumlariKapat = async () => {
-    const ok = await onayIste({ baslik: "Tüm oturumları kapat", aciklama: `${kullanici.ad} tüm cihazlardaki oturumları sonlandırılır.`, risk: 1, eylemEtiket: "Kapat" });
-    if (!ok) return;
-    denetle("Tüm oturumlar kapatıldı", "uyari");
-    toast.success("Oturumlar kapatıldı", { description: `${kullanici.ad} tüm cihazlarda çıkış yaptı.` });
-  };
-  const etiketUygula = () => {
-    if (!etiket.trim()) return;
-    aks.etiketEkle(kullanici.id, etiket.trim());
-    denetle(`Etiket eklendi: ${etiket}`, "bilgi");
-    toast.success("Etiket eklendi");
-    setEtiket(""); setModal(null);
-  };
-  const notUygula = () => {
-    if (!not.trim()) return;
-    aks.notEkle(kullanici.id, not.trim(), admin);
-    denetle("Admin notu eklendi", "bilgi");
-    toast.success("Not eklendi");
-    setNot(""); setModal(null);
-  };
-
-  const alan = "h-10 w-full rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] px-3 text-sm text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50";
+  const liste: Islem[] = ["kredi-ekle", "kredi-dus", "plan", "oturum-kapat", ...(h.dogrulandi ? [] : ["dogrulama-gonder" as Islem]), h.askida ? "askidan-cikar" : "askiya-al", "hesap-sil"];
+  const t = acik ? TANIM[acik] : null;
+  const notGerekli = acik === "kredi-ekle" || acik === "kredi-dus" || acik === "askiya-al" || acik === "hesap-sil";
+  const gecerli = !!acik && (acik !== "kredi-ekle" && acik !== "kredi-dus" || (Number.isInteger(Number(miktar)) && Number(miktar) > 0)) && (!notGerekli || not.trim().length >= 3)
+    && (acik !== "hesap-sil" || onay.trim().toLowerCase() === h.email) && (acik !== "plan" || plan !== h.plan);
+  const giris = "w-full rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] px-3 text-sm text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50";
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        <Dugme boyut="sm" ikon={Coins} onClick={() => setModal("kredi")}>Kredi</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={ArrowUpDown} onClick={() => setModal("plan")}>Plan</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={RefreshCcw} onClick={iadeYap}>İade</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={LogIn} onClick={impersonate}>Impersonate</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={Mail} onClick={sifreSifirla}>Şifre sıfırla</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={KeyRound} onClick={oturumlariKapat}>Oturumları kapat</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={Tag} onClick={() => setModal("etiket")}>Etiket</Dugme>
-        <Dugme boyut="sm" tur="glass" ikon={StickyNote} onClick={() => setModal("not")}>Not</Dugme>
-        <Dugme boyut="sm" tur="tehlike" ikon={Ban} onClick={banla}>Banla</Dugme>
-        <Dugme boyut="sm" tur="tehlike" ikon={UserX} onClick={anonimlestir}>Anonimleştir</Dugme>
+        {liste.map((i) => {
+          const d = TANIM[i];
+          const kapali = (i === "askiya-al" || i === "hesap-sil") && h.admin;
+          return (
+            <button key={i} onClick={() => ac(i)} disabled={kapali} title={kapali ? "Yönetici hesabında yapılamaz" : undefined}
+              className={cn("inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[13px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+                d.tehlike ? "border-rose-400/30 text-rose-300 hover:bg-rose-500/10" : "border-[color:var(--ad-kenar)] text-[color:var(--ad-metin)] hover:bg-white/[0.05]")}>
+              <d.ikon className="h-4 w-4" /> {d.ad}
+            </button>
+          );
+        })}
+        <a href={`/api/admin/kullanicilar/${h.id}/dokum`} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[color:var(--ad-kenar)] px-3 text-[13px] font-semibold text-[color:var(--ad-metin)] hover:bg-white/[0.05]">
+          <Download className="h-4 w-4" /> Veri dökümü
+        </a>
       </div>
 
-      {/* Modaller */}
-      <AnimatePresence>
-        {modal && (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setModal(null)} className="perde absolute inset-0 bg-black/70 backdrop-blur-sm" />
-            <motion.div initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }}
-              className="ad-panel relative w-full max-w-sm p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <h3 className={cn("font-bold", AD.metin)}>
-                  {modal === "kredi" ? "Kredi düzelt" : modal === "plan" ? "Plan değiştir" : modal === "etiket" ? "Etiket ekle" : "Admin notu"}
-                </h3>
-                <button onClick={() => setModal(null)} className="text-[color:var(--ad-metin-3)]"><X className="h-5 w-5" /></button>
+      <Cekmece acik={!!acik} kapat={() => setAcik(null)} baslik={t?.ad} genislik="max-w-md">
+        {t && acik && (
+          <div className="space-y-4">
+            <p className={cn("text-sm leading-relaxed", AD.metin2)}>{t.aciklama}</p>
+            <div className={cn("rounded-xl border border-[color:var(--ad-kenar)] px-3 py-2 text-[13px]", AD.metin2)}>
+              Hesap: <span className={AD.metin}>{h.email}</span>{h.bakiye !== null && <> · bakiye <span className={AD.metin}>{h.bakiye}</span></>}{acik === "oturum-kapat" && <> · {h.oturum} açık oturum</>}
+            </div>
+            {(acik === "kredi-ekle" || acik === "kredi-dus") && (
+              <div>
+                <label htmlFor="ad-miktar" className={cn("mb-1.5 block text-[13px] font-semibold", AD.metin2)}>Miktar (kredi)</label>
+                <input id="ad-miktar" inputMode="numeric" value={miktar} onChange={(e) => setMiktar(e.target.value.replace(/[^\d]/g, "").slice(0, 7))} className={cn(giris, "h-10")} placeholder="ör. 500" autoFocus />
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[50, 100, 500, 1000, 5000].map((m) => <button key={m} onClick={() => setMiktar(String(m))} className="rounded-lg border border-[color:var(--ad-kenar)] px-2.5 py-1 text-[12px] text-[color:var(--ad-metin-2)] hover:text-[color:var(--ad-metin)]">{m}</button>)}
+                </div>
               </div>
-
-              {modal === "kredi" && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <button onClick={() => setKrediMiktar((m) => Math.max(0, m - 50))} className="ad-btn-glass flex h-10 w-10 items-center justify-center rounded-xl"><Minus className="h-4 w-4" /></button>
-                    <input type="number" value={krediMiktar} onChange={(e) => setKrediMiktar(Math.max(0, +e.target.value))} className={cn(alan, "text-center tabular-nums")} />
-                    <button onClick={() => setKrediMiktar((m) => m + 50)} className="ad-btn-glass flex h-10 w-10 items-center justify-center rounded-xl"><Plus className="h-4 w-4" /></button>
-                  </div>
-                  <input value={krediSebep} onChange={(e) => setKrediSebep(e.target.value)} placeholder="Sebep (zorunlu)…" className={alan} />
-                  <div className="flex gap-2">
-                    <Dugme className="flex-1" onClick={() => krediUygula(1)} ikon={Plus}>Ekle</Dugme>
-                    <Dugme className="flex-1" tur="tehlike" onClick={() => krediUygula(-1)} ikon={Minus}>Çıkar</Dugme>
-                  </div>
+            )}
+            {acik === "plan" && (
+              <div>
+                <span className={cn("mb-1.5 block text-[13px] font-semibold", AD.metin2)}>Yeni plan</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(PLAN_AD).map(([k, v]) => (
+                    <button key={k} onClick={() => setPlan(k)} disabled={k === h.plan}
+                      className={cn("rounded-xl border px-3 py-2.5 text-left text-sm transition-colors disabled:opacity-40", plan === k && k !== h.plan ? "border-white ring-1 ring-white" : "border-[color:var(--ad-kenar)] hover:bg-white/[0.04]")}>
+                      <span className={AD.metin}>{v}</span>{k === h.plan && <span className={cn("block text-[11px]", AD.metin3)}>Şu anki plan</span>}
+                    </button>
+                  ))}
                 </div>
-              )}
-
-              {modal === "plan" && (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    {PLANLAR.map((p) => (
-                      <button key={p} onClick={() => setYeniPlan(p)}
-                        className={cn("rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
-                          yeniPlan === p ? "border-[color:var(--ad-aksan)]/50 bg-[color:var(--ad-aksan)]/10 text-[color:var(--ad-aksan)]" : "border-[color:var(--ad-kenar)] text-[color:var(--ad-metin-2)]")}>
-                        {PLAN_ADI[p as keyof typeof PLAN_ADI]}
-                      </button>
-                    ))}
-                  </div>
-                  <Dugme className="w-full" onClick={planUygula}>Planı değiştir</Dugme>
-                </div>
-              )}
-
-              {modal === "etiket" && (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {["VIP", "Riskli", "Influencer", "Kurumsal", "Test"].map((e) => (
-                      <button key={e} onClick={() => setEtiket(e)} className={cn("rounded-full border px-3 py-1.5 text-[13px]", etiket === e ? "border-[color:var(--ad-aksan)]/50 text-[color:var(--ad-aksan)]" : "border-[color:var(--ad-kenar)] text-[color:var(--ad-metin-2)]")}>{e}</button>
-                    ))}
-                  </div>
-                  <input value={etiket} onChange={(e) => setEtiket(e.target.value)} placeholder="Özel etiket…" className={alan} />
-                  <Dugme className="w-full" onClick={etiketUygula}>Etiket ekle</Dugme>
-                </div>
-              )}
-
-              {modal === "not" && (
-                <div className="space-y-3">
-                  <textarea value={not} onChange={(e) => setNot(e.target.value)} rows={4} placeholder="Admin notu…" className="w-full resize-none rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] p-3 text-sm text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50" />
-                  <Dugme className="w-full" onClick={notUygula}>Not ekle</Dugme>
-                </div>
-              )}
-            </motion.div>
+                <label className={cn("mt-3 flex items-start gap-2 text-[13px]", AD.metin2)}>
+                  <input type="checkbox" checked={zorla} onChange={(e) => setZorla(e.target.checked)} className="mt-0.5" />
+                  Süren abonelik varsa da değiştir (abonelik ödeme sağlayıcısında sürer; bir sonraki yenilemede plan yeniden yazılabilir)
+                </label>
+              </div>
+            )}
+            {acik !== "dogrulama-gonder" && (
+              <div>
+                <label htmlFor="ad-not" className={cn("mb-1.5 block text-[13px] font-semibold", AD.metin2)}>{notGerekli ? "Neden (zorunlu)" : "Not (isteğe bağlı)"}</label>
+                <textarea id="ad-not" value={not} onChange={(e) => setNot(e.target.value.slice(0, 300))} rows={3} className={cn(giris, "py-2")} placeholder={acik === "hesap-sil" ? "ör. KVKK silme talebi, destek numarası" : "ör. Hatalı üretim için iade, destek talebi VYR-T-1A2B3C"} />
+              </div>
+            )}
+            {acik === "hesap-sil" && (
+              <div>
+                <label htmlFor="ad-onay" className={cn("mb-1.5 block text-[13px] font-semibold", AD.metin2)}>Onay için e-posta adresini yaz</label>
+                <input id="ad-onay" value={onay} onChange={(e) => setOnay(e.target.value)} className={cn(giris, "h-10")} placeholder={h.email} autoComplete="off" />
+              </div>
+            )}
+            {hata && <p className="rounded-xl border border-rose-400/25 bg-rose-500/[0.06] px-3 py-2 text-[13px] text-rose-200">{hata}</p>}
+            {baglanti && (
+              <div className="rounded-xl border border-amber-400/25 bg-amber-500/[0.06] px-3 py-2 text-[13px] text-amber-100">
+                E-posta servisi kurulu değil. Geliştirme bağlantısı:
+                <input readOnly value={baglanti} onFocus={(e) => e.currentTarget.select()} className={cn(giris, "mt-2 h-9 text-[12px]")} />
+              </div>
+            )}
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setAcik(null)} className="ad-btn-glass h-10 flex-1 rounded-xl text-sm font-semibold">Vazgeç</button>
+              <button onClick={uygula} disabled={!gecerli || calisiyor || !!baglanti}
+                className={cn("inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40", t.tehlike ? "bg-rose-500 text-white" : "ad-btn-aksan")}>
+                {calisiyor && <Loader2 className="h-4 w-4 animate-spin" />} {t.ad}
+              </button>
+            </div>
           </div>
         )}
-      </AnimatePresence>
+      </Cekmece>
     </>
   );
 }

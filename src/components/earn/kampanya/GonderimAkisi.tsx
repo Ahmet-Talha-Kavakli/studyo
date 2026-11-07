@@ -110,13 +110,13 @@ export function GonderimAkisi({ k, hesaplar }: { k: Kampanya; hesaplar: BagliHes
   const gonderBas = () => {
     if (!hazir || !platform || kontrol.d !== "tamam") return;
     gonder({ kampanyaId: k.id, platform, link: temiz, uretimId: secili.id, uretimGorsel: saltUrl(secili.gorselUrl ?? secili.thumbnailUrl), kontrol: kontrol.kontrol });
-    toast.success("Gönderin alındı", { description: `${KURALLAR.incelemeSaat} saat içinde incelenip sonucu bildirilecek.` });
+    toast.success("Gönderin alındı", { description: "Gönderin incelemede. Vayra ekibi inceleyip sonucu bildirim olarak gönderecek." });
     setLink(""); setOnay(false); setUretimId(null); setKontrol({ d: "bos" });
   };
 
   return (
     <div id="gonder" className={cn(yuzey, "scroll-mt-24 p-5 sm:p-6")}>
-      <p className="text-[13.5px] text-white/60">{KURALLAR.incelemeSaat} saatte incelenir; onayda ilk ödeme cüzdana yazılır.</p>
+      <p className="text-[13.5px] text-white/60">Gönderin incelemede. Onay ya da ret kararı bildirim olarak gelir.</p>
 
       <div className="mt-5 space-y-6">
         <Basamak no={1} baslik="Hesap" tamam={!!platform}>

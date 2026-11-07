@@ -70,6 +70,7 @@ export function PlatformLogo({ id, boyut = 16 }: { id: Platform; boyut?: number 
 /* ── Durum ── */
 export const DURUM: Record<GonderiDurum, { ad: string; sinif: string }> = {
   inceleme: { ad: "İncelemede", sinif: "bg-amber-400/12 text-amber-200 ring-amber-300/20" },
+  onaylandi: { ad: "Onaylandı", sinif: "bg-emerald-400/12 text-emerald-300 ring-emerald-300/20" },
   kazaniyor: { ad: "Kazanıyor", sinif: "bg-vurgu/15 text-vurgu ring-vurgu/25" },
   bekleme: { ad: "Beklemede", sinif: "bg-white/[0.07] text-white/80 ring-white/10" },
   cekilebilir: { ad: "Çekilebilir", sinif: "bg-emerald-400/12 text-emerald-300 ring-emerald-300/20" },
@@ -82,19 +83,19 @@ export function DurumRozet({ durum }: { durum: GonderiDurum }) {
   return <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-medium ring-1 ring-inset", d.sinif)}>{d.ad}</span>;
 }
 
-/** Gönderi zaman çizelgesi: Gönderildi → İnceleme → Kazanma → Bekleme → Çekilebilir. */
+/** Gönderi çizelgesi: Gönderildi, İnceleme, Karar. Aşamalar yalnız sunucudaki inceleme kararıyla ilerler. */
 export function DurumCizelgesi({ durum, tur, ilerleme }: { durum: GonderiDurum; tur: Kampanya["tur"]; ilerleme: number }) {
-  const asamalar = tur === "goruntulenme"
-    ? [{ id: "inceleme", ad: "İnceleme", sure: `${KURALLAR.incelemeSaat} sa` }, { id: "kazaniyor", ad: "Kazanma", sure: `${KURALLAR.kazanmaGun} gün` }, { id: "bekleme", ad: "Bekleme", sure: `${KURALLAR.beklemeGun} gün` }, { id: "cekilebilir", ad: "Çekilebilir", sure: "" }]
-    : tur === "gorev"
-      ? [{ id: "inceleme", ad: "İnceleme", sure: `${KURALLAR.incelemeSaat} sa` }, { id: "bekleme", ad: "Bekleme", sure: `${KURALLAR.beklemeGun} gün` }, { id: "cekilebilir", ad: "Çekilebilir", sure: "" }]
-      : [{ id: "degerlendirme", ad: "Jüri", sure: "" }, { id: "bekleme", ad: "Bekleme", sure: `${KURALLAR.beklemeGun} gün` }, { id: "cekilebilir", ad: "Çekilebilir", sure: "" }];
-  const aktif = asamalar.findIndex((a) => a.id === durum);
+  void ilerleme;
+  const asamalar = tur === "yarisma"
+    ? [{ id: "gonderildi", ad: "Gönderildi", sure: "" }, { id: "degerlendirme", ad: "Jüri", sure: "" }, { id: "sonuclandi", ad: "Sonuç", sure: "" }]
+    : [{ id: "gonderildi", ad: "Gönderildi", sure: "" }, { id: "inceleme", ad: "İnceleme", sure: "" }, { id: "onaylandi", ad: "Onay", sure: "" }];
+  const son = durum === "onaylandi" || durum === "sonuclandi";
+  const aktif = son ? asamalar.length - 1 : asamalar.findIndex((a) => a.id === durum);
   return (
     <ol className="flex w-full items-start">
       {asamalar.map((a, i) => {
-        const bitti = durum === "cekilebilir" ? true : i < aktif;
-        const simdi = i === aktif && durum !== "cekilebilir";
+        const bitti = son ? true : i < aktif;
+        const simdi = i === aktif && !son;
         return (
           <li key={a.id} className="flex min-w-0 flex-1 flex-col">
             <div className="flex items-center">
@@ -104,7 +105,7 @@ export function DurumCizelgesi({ durum, tur, ilerleme }: { durum: GonderiDurum; 
               </span>
               {i < asamalar.length - 1 && (
                 <span className="relative mx-1.5 h-[3px] flex-1 overflow-hidden rounded-full bg-white/[0.07]">
-                  <span className="absolute inset-y-0 left-0 rounded-full bg-vurgu" style={{ width: bitti ? "100%" : simdi ? `${Math.round(ilerleme * 100)}%` : "0%" }} />
+                  <span className="absolute inset-y-0 left-0 rounded-full bg-vurgu" style={{ width: bitti ? "100%" : "0%" }} />
                 </span>
               )}
             </div>
@@ -171,15 +172,14 @@ export function NasilKazanilir({ adimlar }: { adimlar: { ad: string; alt: string
         <div className="relative aspect-[9/16] w-[118px] shrink-0 overflow-hidden rounded-[20px] ring-1 ring-white/15 sm:w-[140px]">
           <video src={ORTAK_HERO.video} poster={ORTAK_HERO.poster} autoPlay muted loop playsInline className="h-full w-full object-cover" />
           <div className="absolute inset-x-1.5 bottom-1.5 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10.5px] text-white backdrop-blur">
-            <PlatformLogo id="tiktok" boyut={10} /><span>@sen</span><Eye className="ml-auto h-3 w-3" /><Sayac hedef={48200} sure={2600} bicim={(n) => kisaSayi(Math.round(n))} />
+            <PlatformLogo id="tiktok" boyut={10} /><span>@sen</span>
           </div>
         </div>
         <svg width="56" height="10" aria-hidden className="hidden shrink-0 sm:block"><motion.line x1="0" y1="5" x2="56" y2="5" stroke="var(--vurgu-renk)" strokeWidth="2" strokeDasharray="4 6" animate={{ strokeDashoffset: [0, -20] }} transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }} /></svg>
         <div className="rounded-[18px] bg-white/[0.04] p-4 ring-1 ring-white/[0.1]">
-          <p className="text-[12.5px] text-metin-2">Bu gönderiden</p>
-          <p className="mt-1 text-[24px] font-semibold tabular-nums tracking-[-0.02em] text-white sm:text-[28px]"><Sayac hedef={2892} sure={2600} bicim={(n) => tl(Math.round(n))} /></p>
-          <p className="mt-1.5 text-[12px] text-vurgu">24. saat bonusu +%{Math.round(KURALLAR.bonus24 * 100)}</p>
-          <p className="mt-0.5 text-[11.5px] text-metin-2">Örnek hesap</p>
+          <p className="text-[12.5px] text-metin-2">Başvurun</p>
+          <p className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-white sm:text-[22px]">Vayra ekibi inceler</p>
+          <p className="mt-1.5 max-w-[180px] text-[12px] leading-snug text-metin-2">Onay ve ret kararı bildirim olarak gelir.</p>
         </div>
       </div>
       <ol className="bg-[#0d0e10] p-5 sm:p-7">
@@ -228,42 +228,29 @@ export function GonderiSatiri({ g, simdi, bonus = 0, kompakt }: { g: Gonderi; si
           </p>
         </div>
         <div className="shrink-0 text-right">
-          {h.durum === "inceleme" || h.durum === "degerlendirme" || h.durum === "sonuclandi" ? (
-            <>
-              <p className="text-[17px] font-semibold text-metin-2">—</p>
-              <p className="text-[11.5px] text-metin-2">{k.tur === "goruntulenme" ? `Onayda ${tl(k.sabitOdeme ?? 0)}` : k.tur === "gorev" ? `Onayda ${tl(k.odul ?? 0)}` : h.durum === "sonuclandi" ? "Ödül yok" : "Sonuç bekleniyor"}</p>
-            </>
-          ) : <p className={cn("text-[17px] font-semibold tabular-nums", h.durum === "reddedildi" ? "text-metin-2 line-through" : "text-white")}>{tl(h.kazanc, true)}</p>}
-          {k.tur === "goruntulenme" && h.durum !== "inceleme" && h.durum !== "reddedildi" && (
-            <p className="flex items-center justify-end gap-1 text-[11.5px] tabular-nums text-metin-2" title={h.gercekVeri ? "Platformdan okunan görüntülenme" : "Tahmini görüntülenme"}><Eye className="h-3 w-3" />{h.gercekVeri ? "" : "tahmini "}{kisaSayi(h.goruntulenme)}</p>
+          <p className="text-[12px] text-metin-2">{h.durum === "inceleme" ? (g.sunucuId ? "Gönderin incelemede" : g.senkronHata ? "Kaydedilemedi" : "Kaydediliyor") : h.durum === "onaylandi" ? "İnceleme tamam" : h.durum === "degerlendirme" ? "Sonuç bekleniyor" : h.durum === "sonuclandi" ? "Yarışma bitti" : ""}</p>
+          {k.tur === "goruntulenme" && h.gercekVeri && h.durum !== "reddedildi" && (
+            <p className="flex items-center justify-end gap-1 text-[11.5px] tabular-nums text-metin-2" title="Platformdan okunan görüntülenme"><Eye className="h-3 w-3" />{kisaSayi(h.goruntulenme)}</p>
           )}
           {k.tur === "yarisma" && g.derece && h.durum !== "degerlendirme" && <p className="text-[11.5px] text-amber-300">{g.derece}. sıra</p>}
         </div>
       </div>
       {!kompakt && h.durum !== "reddedildi" && h.durum !== "sonuclandi" && <div className="mt-4"><DurumCizelgesi durum={h.durum} tur={k.tur} ilerleme={h.ilerleme} /></div>}
-      {!kompakt && h.durum === "kazaniyor" && (
-        <p className="mt-3 text-[12px] text-metin-2">
-          Sabit {tl(h.sabit)} · görüntülenme {tl((h.goruntulenme / 1000) * (k.oran ?? 0), true)}{h.bonus24 > 0 && <> · 24. saat bonusu {tl(h.bonus24, true)}</>}
-          <span className="text-metin-2"> · 7. gün bonusu ve kesin tutar kazanma süresi bitince eklenir</span>
-          <span className="mt-1 block text-[11.5px] text-metin-2">
-            {h.gercekVeri && g.istatistik
-              ? <>Görüntülenme platformdan okunuyor · son güncelleme {new Date(g.istatistik.zaman).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</>
-              : <>Görüntülenme tahminidir; platform API&apos;si bağlandığında gerçek veriyle güncellenir.</>}
-          </span>
-        </p>
+      {!kompakt && h.durum === "onaylandi" && (
+        <p className="mt-3 text-[12px] text-metin-2">Başvurun kampanya kurallarına uygun bulundu. Kazanç tutarı henüz sistemde hesaplanmıyor; ödeme açıldığında bu gönderi için yazılacak.</p>
       )}
+      {g.senkronHata && <p className="mt-3 text-[12px] text-amber-200">Başvurun sunucuya kaydedilemedi: {g.senkronHata}</p>}
       {!kompakt && h.durum === "inceleme" && g.kontrol?.sahibiMi === null && (
         <p className="mt-3 text-[12px] text-metin-2">Platform gönderi sahibini bildirmediği için sahiplik incelemede elle kontrol edilecek.</p>
       )}
-      {h.durum === "sonuclandi" && <p className="mt-3 text-[12px] text-metin-2">Yarışma sonuçlandı; bu başvuru ödül sıralamasına giremedi. Katılımın için teşekkürler.</p>}
-      {h.minAltinda && <p className="mt-3 text-[12px] text-amber-200">Gönderi minimum ödemeye ({tl(k.minOdeme ?? 0)}) ulaşmadı; ödeme yapılmaz.</p>}
+      {h.durum === "sonuclandi" && <p className="mt-3 text-[12px] text-metin-2">Yarışma sona erdi. Jüri kararı açıklandığında bildirim alacaksın.</p>}
       {h.durum === "reddedildi" && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-rose-500/[0.06] px-3 py-2.5 text-[12.5px] text-rose-200">
           <span className="flex items-start gap-1.5"><X className="mt-0.5 h-3.5 w-3.5 shrink-0" />{g.red}</span>
           <ItirazButonu g={g} />
         </div>
       )}
-      {g.itiraz === "inceleniyor" && <p className="mt-3 text-[12px] text-amber-200">İtirazın inceleniyor. Sonuç 48 saat içinde bildirilecek.</p>}
+      {g.itiraz === "inceleniyor" && <p className="mt-3 text-[12px] text-amber-200">İtirazın inceleniyor. Karar verilince bildirim alacaksın.</p>}
     </motion.div>
   );
 }

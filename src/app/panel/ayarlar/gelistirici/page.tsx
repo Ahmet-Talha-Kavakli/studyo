@@ -52,15 +52,6 @@ export default function Gelistirici() {
           </Satir>
         ))}
       </Grup>
-
-      <Grup baslik="Bağlı uygulamalar" aciklama="Üretimlerini doğrudan bulut depolamana gönder.">
-        {[{ ad: "Google Drive", logo: "/marka/renkli/google-drive.svg" }, { ad: "Dropbox", logo: "/marka/renkli/dropbox.svg" }].map((u) => (
-          <Satir key={u.ad} on={<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] bg-white"><img src={u.logo} alt={`${u.ad} logosu`} className="h-[22px] w-[22px] object-contain" /></span>}
-            ad={<span className="flex items-center gap-2">{u.ad}<Hap>Yakında</Hap></span>} alt="Bitince otomatik yükle, klasör seç">
-            <button type="button" disabled className={dugme.ikincil}>Bağla</button>
-          </Satir>
-        ))}
-      </Grup>
     </Sayfa>
   );
 }

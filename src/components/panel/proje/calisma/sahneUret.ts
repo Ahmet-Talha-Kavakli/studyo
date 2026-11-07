@@ -51,7 +51,11 @@ export function useSahneIzleyici(p?: Proje) {
       const uid = c.surumler?.[0]?.uretimId;
       const u = uid ? uretimler.find((x) => x.id === uid) : undefined;
       if (!u) continue;
-      if (u.durum === "tamam") {
+      if (u.durum === "tamam" && !u.gercek) {
+        // Sağlayıcı bağlı değilken gelen hazır stok klip sahnenin yeni sürümü diye yazılmaz.
+        cekimGuncelle(p.id, c.id, { durum: (c.surumler?.length ?? 0) > 1 ? "tamam" : "taslak", surumler: (c.surumler ?? []).slice(1) });
+        toast.error(`"${c.baslik}" üretilemedi`, { description: "Video sağlayıcısı bağlı değil. Kredi düşmedi." });
+      } else if (u.durum === "tamam") {
         const gorsel = u.gorselUrl && /^(https?:|data:image|blob:|\/)/.test(u.gorselUrl) ? u.gorselUrl : u.meta?.demoKlip?.poster ?? u.thumbnailUrl;
         const video = u.videoUrl ?? u.meta?.demoKlip?.video;
         cekimGuncelle(p.id, c.id, { durum: "tamam", gorselUrl: gorsel, videoUrl: video, surumler: (c.surumler ?? []).map((s, i) => (i === 0 ? { ...s, gorselUrl: gorsel, videoUrl: video } : s)) });

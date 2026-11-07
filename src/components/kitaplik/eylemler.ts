@@ -111,7 +111,7 @@ export function copeTasi(idler: string[]) {
 export function yayinla(idler: string[], deger: boolean) {
   const g = useProjeler.getState().guncelle;
   idler.forEach((id) => g(id, { yayinda: deger }));
-  toast.success(deger ? `${idler.length} varlık Keşfet'te yayınlandı` : `${idler.length} varlık yayından kaldırıldı`);
+  toast.success(deger ? `${idler.length} varlık yayında olarak işaretlendi` : `${idler.length} varlık yayından kaldırıldı`, deger ? { description: "Keşfet'te senin hesabında görünür; başka kullanıcılarla henüz paylaşılmaz." } : undefined);
 }
 
 export function favoriYap(idler: string[], deger: boolean) {

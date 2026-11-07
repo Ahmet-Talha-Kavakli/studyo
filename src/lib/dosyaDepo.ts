@@ -7,7 +7,11 @@ import path from "path";
  * yazılmaz — birkaç dakikalık ses localStorage kotasını doldururdu. Dosya burada saklanır,
  * istemciye kısa ve kalıcı bir URL döner (/api/dosya/<klasör>/<ad>).
  */
-export const DEPO_KOK = path.join(process.cwd(), ".veri");
+/**
+ * Kalıcı veri klasörü. Üretimde kalıcı bir diske bağlanır (VAYRA_VERI_DIZINI, örn. Docker'da /veri birimi);
+ * tanımlı değilse proje kökündeki .veri kullanılır (geliştirme).
+ */
+export const DEPO_KOK = process.env.VAYRA_VERI_DIZINI ? path.resolve(process.env.VAYRA_VERI_DIZINI) : path.join(process.cwd(), ".veri");
 
 const UZANTI: Record<string, string> = {
   "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp",

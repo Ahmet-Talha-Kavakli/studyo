@@ -54,15 +54,9 @@ export function VideoOynatici({
     return () => { v.removeEventListener("timeupdate", gun); v.removeEventListener("loadedmetadata", yuk); v.removeEventListener("ended", bit); };
   }, [videoUrl]);
 
-  // Demo mod: oynarken sahte ilerleme (10 sn döngü).
-  useEffect(() => {
-    if (gercek || !oynat) return;
-    const t = setInterval(() => setIlerleme((p) => (p >= 100 ? 0 : p + 1)), 100);
-    return () => clearInterval(t);
-  }, [gercek, oynat]);
-
+  // Video dosyası yoksa oynatılıyormuş gibi ilerleme çubuğu yürütülmez.
   const cal = () => {
-    if (!gercek) { setOynat((v) => !v); return; }
+    if (!gercek) return void toast.error("Oynatılacak video yok", { description: "Bu üretimin video dosyası bulunmuyor." });
     const v = ref.current; if (!v) return;
     if (oynat) { v.pause(); setOynat(false); }
     else { v.play().catch(() => toast.error("Video oynatılamadı", { description: "Tarayıcı oynatmayı engelledi ya da dosyaya ulaşılamadı. Yeniden dene." })); setOynat(true); }

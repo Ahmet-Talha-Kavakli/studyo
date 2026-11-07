@@ -9,7 +9,10 @@
 
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { Box, Download, Heart, Info, MoreHorizontal, Pause, Play, RotateCcw, Trash2, XCircle } from "lucide-react";
+import { Box, Info, MoreHorizontal, Pause, Play, RotateCcw, Star, Trash2, XCircle } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi } from "@/components/galeri/KartEylemleri";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { Uretim } from "@/store/useProjeler";
 import { uretimIptal, uretimSirasi } from "@/lib/uretimMotoru";
 import { INDIRME_FORMATLARI, gorseliFormatlaIndir, cn } from "@/lib/utils";
@@ -46,8 +49,10 @@ const SecimKutusu = ({ secili, onClick }: { secili: boolean; onClick: (e: React.
   </button>
 );
 
-export const GaleriKart = memo(function GaleriKart({ u, secili, secimModu, calan, ilerleme, copKalan, o }: {
+export const GaleriKart = memo(function GaleriKart({ u, secili, secimModu, calan, ilerleme, copKalan, o, oran }: {
   u: Uretim; secili: boolean; secimModu: boolean; calan: boolean; ilerleme: number; copKalan?: number; o: GaleriOlaylari;
+  /** Görünüm ayarının kart oranı (yatay ya da dikey); verilmezse üretimin kendi oranı. */
+  oran?: number;
 }) {
   const tur = uretimTuru(u);
   const bitti = u.durum === "tamam";
@@ -61,7 +66,7 @@ export const GaleriKart = memo(function GaleriKart({ u, secili, secimModu, calan
   if (tur === "video" && (bitti || hata)) {
     return (
       <div data-varlik={u.id} onContextMenu={sag} onClickCapture={(e) => { if (secimModu || e.shiftKey || e.metaKey || e.ctrlKey) { e.stopPropagation(); e.preventDefault(); sec(e); } }} className="relative">
-        <VideoKart u={u} secili={secili} secimModu={secimModu} demoGizle
+        <VideoKart u={u} oran={oran} secili={secili} secimModu={secimModu} demoGizle
           onAc={() => o.onAc(u)} onSecim={() => o.onSec(u, { shiftKey: false } as React.MouseEvent)} onBegen={() => o.onBegen(u)} onIndir={() => o.onIndir(u)} onAyar={() => o.onStudyo(u)}
           onYenidenDene={() => o.onStudyo(u)} onSil={() => o.onSil(u)} />
         {secili && <span className="pointer-events-none absolute inset-0 z-20 rounded-[16px] ring-2 ring-inset ring-white" />}
@@ -80,7 +85,7 @@ export const GaleriKart = memo(function GaleriKart({ u, secili, secimModu, calan
       onContextMenu={sag} className="group relative block overflow-hidden rounded-[4px]">
       <button type="button" onClick={tikla} disabled={!bitti && !hata}
         className={cn("relative block w-full", bitti ? "cursor-pointer" : "cursor-default")}
-        style={{ aspectRatio: String(sesli ? 4 / 3 : oranSayi(u)), background: hata ? "linear-gradient(135deg,#181818,#0f1113)" : sesli ? undefined : arka }}
+        style={{ aspectRatio: String(oran ?? (sesli ? 4 / 3 : oranSayi(u))), background: hata ? "linear-gradient(135deg,#181818,#0f1113)" : sesli ? undefined : arka }}
         aria-label={bitti ? `${u.baslik} aç` : hata ? "Üretim başarısız" : "Üretiliyor"}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {kapak && !sesli && !hata && <img src={kapak} alt="" loading="lazy" decoding="async" draggable={false} className="absolute inset-0 h-full w-full object-cover" />}
@@ -116,14 +121,14 @@ export const GaleriKart = memo(function GaleriKart({ u, secili, secimModu, calan
         <>
           <span className="uretim-vignette" />
           {tur === "3d" && <span className="pointer-events-none absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10.5px] font-medium text-white backdrop-blur group-hover:opacity-0"><Box className="h-3 w-3" />3D</span>}
-          {u.favori && !secimModu && <Heart className="pointer-events-none absolute bottom-2 right-2 z-10 h-4 w-4 fill-rose-500 text-rose-500 transition-opacity group-hover:opacity-0" />}
+          {u.favori && !secimModu && sesli && <Star className="pointer-events-none absolute bottom-2 right-2 z-10 h-4 w-4 fill-aksan text-aksan transition-opacity group-hover:opacity-0" />}
           <SecimKutusu secili={secili} onClick={sec} />
           {sesli ? (
             <span className="absolute right-2 top-2 z-10 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-              <button onClick={(e) => { e.stopPropagation(); o.onCal(u); }} aria-label={calan ? "Duraklat" : "Oynat"} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#111] transition-transform hover:scale-105">{calan ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="ml-0.5 h-3.5 w-3.5 fill-current" />}</button>
-              <button onClick={(e) => { e.stopPropagation(); o.onBegen(u); }} aria-label="Beğen" className="glass-cip flex h-8 w-8 items-center justify-center rounded-full text-white"><Heart className={cn("h-3.5 w-3.5", u.favori && "fill-rose-500 text-rose-500")} /></button>
-              <button onClick={(e) => { e.stopPropagation(); o.onIndir(u); }} aria-label="İndir" className="glass-cip flex h-8 w-8 items-center justify-center rounded-full text-white"><Download className="h-3.5 w-3.5" /></button>
-              <button onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); o.onMenu(u, r.right - 220, r.bottom + 4); }} aria-label="Diğer" className="glass-cip flex h-8 w-8 items-center justify-center rounded-full text-white"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+              <button onClick={(e) => { e.stopPropagation(); o.onCal(u); }} title={calan ? "Duraklat" : "Oynat"} aria-label={calan ? "Duraklat" : "Oynat"} className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#111] transition-transform hover:scale-105">{calan ? <Pause className="h-3.5 w-3.5 fill-current" /> : <Play className="ml-0.5 h-3.5 w-3.5 fill-current" />}</button>
+              <FavoriDugmesi favori={!!u.favori} onClick={() => o.onBegen(u)} side="bottom" />
+              <IndirDugmesi u={u} side="bottom" className="glass-cip flex h-8 w-8 items-center justify-center rounded-full text-white" ikonSinif="h-3.5 w-3.5" />
+              <Tooltip label="Daha fazla" side="bottom"><button onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); o.onMenu(u, r.right - 220, r.bottom + 4); }} aria-label="Daha fazla" className="glass-cip flex h-8 w-8 items-center justify-center rounded-full text-white"><MoreHorizontal className="h-3.5 w-3.5" /></button></Tooltip>
             </span>
           ) : !secimModu && (
             <KartAraclari
@@ -132,7 +137,7 @@ export const GaleriKart = memo(function GaleriKart({ u, secili, secimModu, calan
               onReferans={kapak ? () => o.onReferans(u) : undefined} onAnimate={kapak ? () => o.onAnimate(u) : undefined}
               on3d={kapak && tur !== "3d" ? () => o.on3d(u) : undefined} onElement={kapak ? () => o.onElement(u) : undefined}
               onYayinla={() => o.onYayinla(u)} onSil={() => o.onSil(u)}
-              klasorAdi="proje" klasorler={o.projeler} onKlasoreEkle={(id) => o.onProjeyeEkle(u, id)} onYeniKlasor={() => o.onYeniProje(u)}
+              uretim={u} klasorAdi="proje" klasorler={o.projeler} onKlasoreEkle={(id) => o.onProjeyeEkle(u, id)} onYeniKlasor={() => o.onYeniProje(u)}
               indirmeFormatlari={kapak ? [...INDIRME_FORMATLARI] : undefined} onFormatIndir={kapak ? (f) => void gorseliFormatlaIndir(kapak, u.baslik || "vayra-gorsel", f) : undefined}
             />
           )}

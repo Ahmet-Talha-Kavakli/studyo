@@ -1,48 +1,58 @@
-/**
- * READ tool executor'ları — seed verisinden okur, JSON döner.
- * Hem sunucu (route) hem client (fallback) kullanabilir.
- */
-import { veri, ozet } from "@/lib/admin/seed";
-import { modelStatlar } from "@/lib/admin/seed/marj";
-import { enCokHarcayan } from "@/lib/admin/seed/panolar";
-import { para, yuzde } from "@/lib/admin/cekirdek";
+import "server-only";
+import { hesapOku } from "@/lib/hesap/depo";
+import { finansRaporu } from "@/lib/admin/sunucu/finans";
+import { jobListesi } from "@/lib/admin/sunucu/joblar";
+import { kullaniciAyrinti, kullaniciListesi } from "@/lib/admin/sunucu/kullanicilar";
+import { analitikRaporu, panoOzeti } from "@/lib/admin/sunucu/raporlar";
+import { yayinHazirligi } from "@/lib/admin/sunucu/yayin";
 
-export function readToolCalistir(name: string, girdi: Record<string, unknown>): unknown {
-  const evren = veri();
+/**
+ * Yönetim asistanının okuma araçları: depodaki gerçek veriden okur. Tutarlar kuruş/sent yerine ana birimde, para birimi başına ayrı döner.
+ */
+const tl = (k: number) => Math.round(k) / 100;
+
+export async function readToolCalistir(name: string, girdi: Record<string, unknown>, req: Request): Promise<unknown> {
   switch (name) {
     case "kullanici_bul": {
-      const q = String(girdi.sorgu ?? "").toLowerCase();
-      const durum = girdi.durum ? String(girdi.durum) : null;
-      const sonuc = evren.kullanicilar.filter((k) =>
-        (!durum || k.durum === durum) &&
-        (k.ad.toLowerCase().includes(q) || k.email.toLowerCase().includes(q) || k.id.includes(q)),
-      ).slice(0, 8).map((k) => ({ id: k.id, ad: k.ad, email: k.email, plan: k.plan, durum: k.durum, kredi: k.krediBakiye, guven: k.guvenSkoru }));
-      return { bulunan: sonuc.length, kullanicilar: sonuc };
+      const l = await kullaniciListesi({ q: String(girdi.sorgu ?? ""), durum: (String(girdi.durum ?? "hepsi") as never), boyut: 10 });
+      return { bulunan: l.toplam, kullanicilar: l.satirlar.map((k) => ({ id: k.id, ad: k.ad, email: k.email, plan: k.plan, kredi: k.bakiye, askida: k.askida, dogrulandi: k.dogrulandi, kayit: new Date(k.olusturma).toISOString().slice(0, 10) })) };
     }
     case "kullanici_detay": {
-      const k = evren.kullanicilar.find((x) => x.id === girdi.kullaniciId);
-      if (!k) return { hata: "Kullanıcı bulunamadı" };
-      return { id: k.id, ad: k.ad, email: k.email, plan: k.plan, durum: k.durum, kredi: k.krediBakiye, toplamHarcanan: k.toplamHarcanan, toplamOdenen: k.toplamOdenen, guvenSkoru: k.guvenSkoru, ulke: k.ulke, jobSayisi: k.jobSayisi, vip: k.vip };
+      const h = await hesapOku(String(girdi.kullaniciId ?? ""));
+      if (!h) return { hata: "Kullanıcı bulunamadı" };
+      const a = await kullaniciAyrinti(h);
+      return {
+        id: h.uid, ad: a.hesap.ad, email: a.hesap.email, plan: a.hesap.plan, kredi: a.defter?.bakiye ?? null, askida: a.hesap.askida, dogrulandi: a.hesap.dogrulandi,
+        harcananKredi: a.kredi.harcanan, uretimSayisi: a.kredi.uretim, siparisSayisi: a.odeme.siparisler.length, abonelik: a.odeme.abonelik ? { plan: a.odeme.abonelik.plan, durum: a.odeme.abonelik.durum } : null,
+        acikOturum: a.oturumlar.length, buildProje: a.build?.sayi ?? null,
+      };
     }
     case "gelir_ozet": {
-      const o = ozet();
-      return { mrr: para(o.mrr), arr: para(o.arr), netKar30: para(o.kar30), marj: yuzde(o.karMarji), churn: yuzde(o.churnOran), arpu: para(o.arpu), ltvCac: o.ltvCac.toFixed(1) + "x", aktifAbone: o.aktifAbone };
+      const f = await finansRaporu({});
+      const cevir = (m: Record<string, number>) => Object.fromEntries(Object.entries(m).map(([p, v]) => [p, tl(v)]));
+      return {
+        donem: "son 30 gün", paraBirimleri: f.paralar, brut: cevir(f.gelir.brut), iade: cevir(f.gelir.iade), aylikYinelenen: cevir(f.gelir.mrr),
+        ulkeler: f.ulkeler.slice(0, 10).map((u) => ({ ulke: u.ulke, siparis: u.siparis, gelir: cevir(u.gelir) })),
+        odenenSiparis: f.sayilar.odenen, etkinAbonelik: f.sayilar.etkinAbonelik, not: "Tutarlar para birimi başına ayrıdır, çevrim yapılmaz. Deneme ödemeleri gelire katılmaz.",
+      };
     }
     case "job_ozet": {
-      const o = ozet();
-      return { toplamJob: o.toplamJob, job24: o.job24, basariOran: yuzde(o.basariOran), kuyruk: o.kuyruk, isleniyor: o.isleniyor, ortSureSn: o.ortSureSn.toFixed(1) };
+      const j = await jobListesi({ boyut: 10 });
+      return { ...j.ozet, enCokKullanilan: j.kaynakDagilim.slice(0, 8) };
     }
-    case "model_marj": {
-      const stat = modelStatlar(evren, () => ({}));
-      const dusuk = stat.filter((s) => s.marj < 20).map((s) => ({ model: s.model.ad, marj: yuzde(s.marj), netKatki: para(s.netKatki) }));
-      const enIyi = stat.slice(0, 5).map((s) => ({ model: s.model.ad, marj: yuzde(s.marj), gelir: para(s.gelir) }));
-      return { dusukMarjli: dusuk, enCokGelir: enIyi };
+    case "kullanim_ozet": {
+      const a = await analitikRaporu(30);
+      return { aktif: a.aktif, huni: a.huni, kaynaklar: a.kaynaklar.slice(0, 10), planlar: a.planlar };
     }
     case "en_cok_harcayan": {
-      const adet = Number(girdi.adet ?? 10);
-      return { kullanicilar: enCokHarcayan(evren).slice(0, adet).map((h) => ({ id: h.id, ad: h.ad, plan: h.plan, harcanan: para(h.harcanan), ulke: h.ulke })) };
+      const p = await panoOzeti();
+      return { donem: "son 30 gün", kullanicilar: p.harcayan.slice(0, Math.min(20, Number(girdi.adet ?? 10))) };
+    }
+    case "yayin_durumu": {
+      const y = await yayinHazirligi(req);
+      return { genel: y.genel, sayi: y.sayi, eksikler: y.bolumler.flatMap((b) => b.maddeler.filter((m) => m.durum !== "hazir").map((m) => ({ baslik: m.baslik, durum: m.durum, ozet: m.ozet, yapilacak: m.yapilacak }))) };
     }
     default:
-      return { hata: `Bilinmeyen read tool: ${name}` };
+      return { hata: `Bilinmeyen araç: ${name}` };
   }
 }

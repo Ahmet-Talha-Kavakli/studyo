@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { falHam, falHazir } from "@/lib/saglayicilar/fal";
 import { gorselHazirla } from "@/lib/saglayicilar/video";
 import { ciktiKalicilastir } from "@/lib/dosyaDepo";
@@ -14,6 +15,9 @@ export function GET() {
  * { gorselUrl, noktalar?: [{x, y, ekle}] (piksel), metin? } → { ok, maskeUrl } (beyaz = seçili alan)
  */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   if (!falHazir()) return NextResponse.json({ ok: false, hata: "Akıllı seçim için fal.ai bağlantısı gerekli." }, { status: 503 });
   const g = (await req.json().catch(() => ({}))) as { gorselUrl?: string; noktalar?: { x: number; y: number; ekle?: boolean }[]; metin?: string };
   if (!g.gorselUrl?.startsWith("/api/dosya/")) return NextResponse.json({ ok: false, hata: "Önce görseli yükle." }, { status: 400 });

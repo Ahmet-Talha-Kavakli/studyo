@@ -66,7 +66,7 @@ export function UretimGoruntuleyici({ u, liste, onSec, onKapat, projeId }: {
   const altBaslik = `${u.model} · ${tarih(u.olusturma)}`;
   const adKaydet = (ad: string) => { guncelle(u.id, { baslik: ad }); toast.success("Ad değiştirildi", { description: `Artık “${ad}” olarak görünecek.` }); };
   const sil = () => { copeTasi([u.id]); const n = liste[i + 1] ?? liste[i - 1]; if (n) onSec(n.id); else onKapat(); };
-  const begen = () => { favoriToggle(u.id); toast.success(u.favori ? "Beğenilerden çıkarıldı" : "Beğenilere eklendi"); };
+  const begen = () => { favoriToggle(u.id); toast.success(u.favori ? "Favorilerden çıkarıldı" : "Favorilere eklendi"); };
   const studyo = turBul(tur).studyo;
   /** Aynı ayarlarla üretmek için ilgili stüdyoyu istemle açar. */
   const studyodaAc = () => { onKapat(); router.push(`${studyo}?istem=${encodeURIComponent(hamIstem(u))}`); };

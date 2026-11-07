@@ -191,7 +191,8 @@ export const seslendirmeAkisiMumkun = (meta?: SaglayiciIstek["meta"]) =>
  *   {"t":"son","veri":{ok,gercek,saglayici,ciktiUrl,detay}}   … /api/uretim'in normal yanıtıyla aynı biçim
  * Ses bitince parçalar birleştirilip depoya yazılır; kayıt, kredi ve iade akışı değişmez.
  */
-export function seslendirAkis(istek: SaglayiciIstek): ReadableStream<Uint8Array> {
+/** sonda: son satır yazılmadan önce çağrılır; kredi iadesi ve bakiye gibi alanları son satıra ekler. */
+export function seslendirAkis(istek: SaglayiciIstek, sonda?: (veri: { ok: boolean }) => Promise<Record<string, unknown> | void>): ReadableStream<Uint8Array> {
   const anahtar = process.env.ELEVENLABS_API_KEY!;
   const kod = new TextEncoder();
   return new ReadableStream<Uint8Array>({
@@ -236,13 +237,15 @@ export function seslendirAkis(istek: SaglayiciIstek): ReadableStream<Uint8Array>
         if (!parcalar.length) throw new Error("Sağlayıcı ses döndürmedi.");
         const bayt = Buffer.concat(parcalar);
         const kelimeler = kelimeZamanlari(hiza);
-        yaz({ t: "son", veri: {
+        const veri = {
           ok: true, gercek: true, saglayici: "eleven",
           ciktiUrl: await dosyaKaydet("ses", bayt.buffer.slice(bayt.byteOffset, bayt.byteOffset + bayt.byteLength) as ArrayBuffer, tip),
           detay: { voiceId, model: modelId, bytes: bayt.byteLength, akis: true, ...(kelimeler ? { kelimeler, sureSn: kelimeler[kelimeler.length - 1]?.s } : {}) },
-        } });
+        };
+        yaz({ t: "son", veri: { ...veri, ...(await sonda?.(veri).catch(() => undefined)) } });
       } catch (e) {
-        yaz({ t: "son", veri: { ok: false, hata: String(e instanceof Error ? e.message : e).slice(0, 300) } });
+        const veri = { ok: false, hata: String(e instanceof Error ? e.message : e).slice(0, 300) };
+        yaz({ t: "son", veri: { ...veri, ...(await sonda?.(veri).catch(() => undefined)) } });
       } finally {
         c.close();
       }

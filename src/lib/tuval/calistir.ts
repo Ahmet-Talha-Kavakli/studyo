@@ -3,6 +3,7 @@
 import { uretimBaslat } from "@/lib/uretimMotoru";
 import { useProjeler } from "@/store/useProjeler";
 import { useAuth } from "@/store/useAuth";
+import { krediliHata, krediliIstek } from "@/lib/krediIstek";
 import { yerelBuyut } from "@/lib/yerelBuyut";
 import { besteWavUrl } from "@/lib/muzikMotoru";
 import { gorselYukle } from "@/components/arac/kit";
@@ -163,10 +164,12 @@ async function tekCalistir(d: Dugum, g: Girdi[], oge: string): Promise<Surum[]> 
     const kredi = ayarKredi("muzik", model, a);
     const sg = await saglayiciDurum();
     if (sg.eleven && /^Eleven/.test(model ?? "")) {
-      if (!useAuth.getState().krediDus(kredi)) throw new Error(`Yetersiz kredi (${kredi})`);
-      const r = (await (await fetch("/api/muzik/uret", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model, istem: metin, sozler: a.enstrumantal ? "" : soz, stiller: [], haric: a.haric ? String(a.haric).split(",").map((x) => x.trim()).filter(Boolean) : [], enstrumantal: !!a.enstrumantal, sureSn }) })).json()) as { ok: boolean; sesUrl?: string; hata?: string };
-      if (!r.ok || !r.sesUrl) { useAuth.getState().krediEkle(kredi); throw new Error(r.hata ?? "Müzik üretilemedi; kredi iade edildi"); }
-      useProjeler.getState().ekle({ baslik: metin.slice(0, 40), tur: "muzik", model: model!, prompt: metin, durum: "tamam", ilerleme: 100, kredi, arac: "Canvas", sesUrl: r.sesUrl, gercek: true, saglayici: "eleven" });
+      // Kredi sunucuda kesilir ve hata olursa sunucuda iade edilir; ekrandaki bakiye yanıtla eşitlenir.
+      const ks = await krediliIstek<{ sesUrl?: string }>("/api/muzik/uret", { kredi, json: { model, istem: metin, sozler: a.enstrumantal ? "" : soz, stiller: [], haric: a.haric ? String(a.haric).split(",").map((x) => x.trim()).filter(Boolean) : [], enstrumantal: !!a.enstrumantal, sureSn, kredi } });
+      const r = ks.j;
+      if (ks.durum === 401 || ks.durum === 402) throw new Error(krediliHata(ks, ""));
+      if (!r?.ok || !r.sesUrl) throw new Error(r?.hata ? `${r.hata}; kredi düşmedi` : "Müzik üretilemedi; kredi düşmedi");
+      useProjeler.getState().ekle({ baslik: metin.slice(0, 40), tur: "muzik", model: model!, prompt: metin, durum: "tamam", ilerleme: 100, kredi: ks.kesilen || kredi, arac: "Canvas", sesUrl: r.sesUrl, gercek: true, saglayici: "eleven" });
       yeni({ tip: "ses", url: r.sesUrl, metin });
     } else {
       // Sağlayıcı yok: tarayıcıda gerçek bir enstrümantal sentezlenir (kredi düşmez, "demo" işaretli).
@@ -229,15 +232,21 @@ async function tekCalistir(d: Dugum, g: Girdi[], oge: string): Promise<Surum[]> 
       yeni({ tip: "gorsel", url: await gorselYukle(r.url).catch(() => r.url), metin: `${r.w}×${r.h} · tarayıcıda büyütüldü`, demo: true });
     } else {
       const kredi = ayarKredi(d.tur, model, a);
-      if (!useAuth.getState().krediDus(kredi)) throw new Error(`Yetersiz kredi (${kredi})`);
       const { olcek: _o, ...ayar } = a; void _o;
-      const j = await fetch("/api/upscale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model, kaynakUrl: new URL(kaynak, location.href).href, olcek, ayar }) }).then((x) => x.json()) as { ok: boolean; jeton?: string; hata?: string };
-      if (!j.ok || !j.jeton) { useAuth.getState().krediEkle(kredi); throw new Error(j.hata ?? "Büyütme başlatılamadı; kredi iade edildi"); }
+      // Kredi iş başlarken sunucuda kesilir; iş sonradan başarısız olursa durum sorgusunda sunucuda iade edilir.
+      const ks = await krediliIstek<{ jeton?: string }>("/api/upscale", { kredi, json: { model, kaynakUrl: new URL(kaynak, location.href).href, olcek, ayar, kredi } });
+      const j = ks.j;
+      if (ks.durum === 401 || ks.durum === 402) throw new Error(krediliHata(ks, ""));
+      if (!j?.ok || !j.jeton) throw new Error(j?.hata ? `${j.hata}; kredi düşmedi` : "Büyütme başlatılamadı; kredi düşmedi");
       for (let i = 0; i < 400; i++) {
         await new Promise((z) => setTimeout(z, 3000));
-        const q = await fetch(`/api/upscale?jeton=${encodeURIComponent(j.jeton)}`).then((x) => x.json()).catch(() => ({ durum: "isleniyor" })) as { durum: string; url?: string; hata?: string; genislik?: number; yukseklik?: number };
+        const q = await fetch(`/api/upscale?jeton=${encodeURIComponent(j.jeton)}`).then((x) => x.json()).catch(() => ({ durum: "isleniyor" })) as { durum: string; url?: string; hata?: string; genislik?: number; yukseklik?: number; kredi?: { bakiye?: number } };
         if (q.durum === "tamam" && q.url) { yeni({ tip: d.tur === "aiBuyut" ? "gorsel" : "video", url: q.url, metin: q.genislik ? `${q.genislik}×${q.yukseklik}` : `${olcek}×` }); break; }
-        if (q.durum === "hata") { useAuth.getState().krediEkle(kredi); throw new Error(q.hata ?? "Büyütme başarısız; kredi iade edildi"); }
+        if (q.durum === "hata") {
+          // Sunucu kesintiyi iade etti: ekrandaki bakiye sunucununkine eşitlenir.
+          if (typeof q.kredi?.bakiye === "number") useAuth.getState().krediEsitle(q.kredi.bakiye); else void useAuth.getState().esitle();
+          throw new Error(q.hata ? `${q.hata}; kredi iade edildi` : "Büyütme başarısız; kredi iade edildi");
+        }
       }
       if (!s.length) throw new Error("Büyütme zaman aşımına uğradı");
     }

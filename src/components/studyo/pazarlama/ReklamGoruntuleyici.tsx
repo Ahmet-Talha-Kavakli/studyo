@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { KenarTutamac, useKenarStili } from "@/components/ui/KenarTutamac";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Clapperboard, Download, FileText, MapPin, UserRound, Zap, Heart, Loader2, Package, Pause, Play, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { ChevronLeft, ChevronRight, Clapperboard, Download, FileText, MapPin, UserRound, Zap, Star, Loader2, Package, Pause, Play, Plus, Trash2, Volume2, VolumeX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useOdakTuzagi } from "@/hooks/useOdakTuzagi";
 import type { Uretim } from "@/store/useProjeler";
@@ -111,9 +112,13 @@ export function ReklamGoruntuleyici({ u, grup, urunAd, urunGorsel, tarif, teknik
         </div>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 [scrollbar-width:thin]">
           <div className="flex items-center gap-1.5">
-            <motion.button whileTap={{ scale: 0.97 }} onClick={onIndir} disabled={!u.videoUrl} title={u.videoUrl ? "Videoyu indir" : "Video hazır olunca indirilebilir"}
-              className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[13.5px] font-semibold text-[#0b0c0e] transition hover:bg-white/90 disabled:bg-white/[0.085] disabled:text-metin-3"><Download className="h-4 w-4" />V{no} indir</motion.button>
-            <button onClick={onBegen} aria-pressed={!!u.favori} aria-label="Beğen" title={u.favori ? "Beğeniden çıkar" : "Beğen"} className={cn(eylem, "h-10 w-10", u.favori && "text-rose-300 ring-rose-400/30")}><Heart className={cn("h-4 w-4", u.favori && "fill-current")} /></button>
+            {u.videoUrl ? (
+              <span className="flex flex-1 [&>span]:flex-1"><IndirDugmesi u={u} side="top" yerlesim="ust-sol" etiket="İndir seçenekleri" className="flex h-10 w-full items-center justify-center gap-1.5 rounded-full bg-white text-[13.5px] font-semibold text-[#0b0c0e] transition hover:bg-white/90"><Download className="h-4 w-4" />V{no} indir</IndirDugmesi></span>
+            ) : (
+              <motion.button whileTap={{ scale: 0.97 }} onClick={onIndir} disabled title="Video hazır olunca indirilebilir"
+                className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-white/[0.085] text-[13.5px] font-semibold text-metin-3"><Download className="h-4 w-4" />V{no} indir</motion.button>
+            )}
+            <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} title={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} className={cn(eylem, "h-10 w-10", u.favori && "text-aksan ring-aksan/30")}><Star className={cn("h-4 w-4", u.favori && "fill-current")} /></button>
             <button onClick={onSil} aria-label="Sil" title="Bu varyantı sil" className={cn(eylem, "h-10 w-10 hover:text-rose-300")}><Trash2 className="h-4 w-4" /></button>
           </div>
 
@@ -128,7 +133,7 @@ export function ReklamGoruntuleyici({ u, grup, urunAd, urunGorsel, tarif, teknik
                     {hazir && <span className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.05]" style={{ background: x.gorselUrl }} />}
                     {!hazir && <span className="absolute inset-0 flex items-center justify-center">{x.durum === "hata" ? <X className="h-4 w-4 text-rose-300" /> : <Loader2 className="h-4 w-4 animate-spin text-metin-2" />}</span>}
                     <span className="absolute left-1 top-1 rounded-full bg-black/60 px-1.5 text-[10px] font-bold leading-[16px] text-white">V{i + 1}</span>
-                    {x.favori && <Heart className="absolute bottom-1 right-1 h-3 w-3 fill-rose-400 text-rose-400" />}
+                    {x.favori && <Star className="absolute bottom-1 right-1 h-3 w-3 fill-aksan text-aksan" />}
                     <span className={cn("pointer-events-none absolute inset-0 rounded-[11px] ring-inset", sec ? "ring-2 ring-white" : "ring-1 ring-white/[0.1] group-hover:ring-white/30")} />
                   </button>
                 );

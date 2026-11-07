@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { hareketYaz } from "@/store/useHesap";
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -15,6 +14,7 @@ import { METIN_RENK, type RenkTuru } from "@/lib/renk";
 import { useAuth } from "@/store/useAuth";
 import { useTercih } from "@/store/useTercih";
 import { toast } from "@/lib/toast";
+import { odemeyeGec } from "@/components/fiyat/OdemePenceresi";
 import { cn } from "@/lib/utils";
 import type { FiyatModu } from "./Planlar";
 
@@ -32,7 +32,6 @@ const YETER_SATIR: { id: keyof typeof ORNEK_MALIYET; ikon: LucideIcon; renk: Ren
 const KDV = 0.2;
 
 export function KrediPaketleri({ mod }: { mod: FiyatModu }) {
-  const ekKrediEkle = useAuth((s) => s.ekKrediEkle);
   const [secili, setSecili] = useState(() => KREDI_PAKETLERI.findIndex((p) => p.populer));
   const p = KREDI_PAKETLERI[secili];
   const ilk = KREDI_PAKETLERI[0];
@@ -47,11 +46,7 @@ export function KrediPaketleri({ mod }: { mod: FiyatModu }) {
   const planBirim = aylikFiyat(arti, "yillik") / arti.kredi;
   const planIleUcuz = Math.round((1 - planBirim / birim) * 100);
 
-  const satinAl = () => {
-    ekKrediEkle(p.kredi);
-    hareketYaz({ tur: "kredi", aciklama: `${sayi(p.kredi)} kredi paketi`, kredi: p.kredi, tutar: p.fiyat, kdv, belge: true });
-    toast.success(`${sayi(p.kredi)} kredi eklendi`, { description: `${tl(p.fiyat)} · Gerçek ödeme alınmadı.` });
-  };
+  const satinAl = () => odemeyeGec({ tur: "kredi", urun: String(p.kredi) });
   const kaydir = (yon: 1 | -1) => setSecili((i) => {
     const y = Math.min(KREDI_PAKETLERI.length - 1, Math.max(0, i + yon));
     requestAnimationFrame(() => document.getElementById(`kredi-paket-${y}`)?.focus());
@@ -80,7 +75,7 @@ export function KrediPaketleri({ mod }: { mod: FiyatModu }) {
                 </span>
                 {x.populer
                   ? <span className="rounded-full bg-vurgu px-2 py-0.5 text-[10.5px] font-semibold text-vurgu-ust">En çok alınan</span>
-                  : t > 0 && <span className="rounded-full bg-tur-3d/12 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-tur-3d">%{t} tasarruf</span>}
+                  : t > 0 && <span className="rounded-full bg-tur-3d/12 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-tur-3d">yüzde {t} tasarruf</span>}
               </span>
               {/* Paket büyüklüğü: üst üste kredi katmanları */}
               <span aria-hidden className="mt-5 flex h-[30px] flex-col-reverse gap-[3px]">
@@ -149,7 +144,7 @@ export function KrediPaketleri({ mod }: { mod: FiyatModu }) {
             {tasarrufTl > 0 && (
               <div className="flex justify-between gap-3"><dt className="text-metin-2">{sayi(ilk.kredi)}&apos;lük paketlere göre</dt><dd className="tabular-nums font-medium text-tur-3d">{tl(tasarrufTl)} daha ucuz</dd></div>
             )}
-            <div className="flex justify-between gap-3"><dt className="text-metin-2">KDV (%20)</dt><dd className="tabular-nums text-white">{tl(kdv)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-metin-2">KDV, yüzde 20</dt><dd className="tabular-nums text-white">{tl(kdv)}</dd></div>
             <div className="flex items-baseline justify-between gap-3 border-t border-white/[0.06] pt-3">
               <dt className="font-semibold text-white">Toplam</dt>
               <dd className="text-[22px] font-semibold tabular-nums tracking-[-0.02em] text-white">{tl(p.fiyat + kdv)}</dd>
@@ -175,7 +170,7 @@ export function KrediPaketleri({ mod }: { mod: FiyatModu }) {
           <a href="#planlar" className="group flex items-center gap-4 rounded-[20px] border border-white/[0.07] bg-yuzey px-5 py-4 transition-colors hover:border-white/20">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tur-3d/12 text-tur-3d"><RefreshCw className="h-[18px] w-[18px]" /></span>
             <span className="min-w-0 flex-1 text-[13.5px] leading-snug text-metin-2">
-              Düzenli mi üretiyorsun? <b className="font-semibold text-white">{arti.ad}</b> planında kredi {tlKurus(planBirim)}; bu paketten <b className="font-semibold text-tur-3d">%{planIleUcuz} daha ucuz</b>.
+              Düzenli mi üretiyorsun? <b className="font-semibold text-white">{arti.ad}</b> planında kredi {tlKurus(planBirim)}; bu paketten <b className="font-semibold text-tur-3d">yüzde {planIleUcuz} daha ucuz</b>.
             </span>
             <ArrowRight className="h-4 w-4 shrink-0 text-metin-3 transition-transform group-hover:translate-x-0.5 group-hover:text-white" />
           </a>
@@ -192,7 +187,7 @@ export function KrediPaketleri({ mod }: { mod: FiyatModu }) {
   );
 }
 
-/* ── Otomatik yükleme (yalnız panel) ── */
+/* ── Yükleme hatırlatması (yalnız panel): kayıtlı kartla ödemesiz yükleme yok, bakiye düşünce hatırlatır ── */
 export function OtomatikYukleme() {
   const acik = useTercih((s) => s.otomatikYukleme);
   const toggle = useTercih((s) => s.otomatikYuklemeToggle);
@@ -203,12 +198,12 @@ export function OtomatikYukleme() {
           <RefreshCw className="h-4 w-4 text-white/85" />
         </span>
         <span>
-          <span className="block text-[14.5px] font-semibold text-white">Otomatik yükleme</span>
-          <span className="block text-[13px] text-metin-3">{acik ? `Açık — bakiye 100'ün altına inince ${useTercih.getState().otoPaket.toLocaleString("tr-TR")} kredi yüklenir.` : "Kapalı — bakiyen bitince üretim durur."}</span>
+          <span className="block text-[14.5px] font-semibold text-white">Yükleme hatırlatması</span>
+          <span className="block text-[13px] text-metin-3">{acik ? `Açık: bakiye 100'ün altına inince ${useTercih.getState().otoPaket.toLocaleString("tr-TR")} kredilik paketi yüklemen için hatırlatırız.` : "Kapalı: bakiyen bitince üretim durur."}</span>
         </span>
       </span>
-      <button role="switch" aria-checked={acik} aria-label="Otomatik yükleme"
-        onClick={() => { const y = toggle(); toast.success(y ? "Otomatik yükleme açıldı" : "Otomatik yükleme kapatıldı"); }}
+      <button role="switch" aria-checked={acik} aria-label="Yükleme hatırlatması"
+        onClick={() => { const y = toggle(); toast.success(y ? "Yükleme hatırlatması açıldı" : "Yükleme hatırlatması kapatıldı"); }}
         className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", acik ? "bg-white" : "bg-white/15")}>
         <span className={cn("absolute top-0.5 h-5 w-5 rounded-full transition-all", acik ? "left-[22px] bg-zemin" : "left-0.5 bg-white")} />
       </button>

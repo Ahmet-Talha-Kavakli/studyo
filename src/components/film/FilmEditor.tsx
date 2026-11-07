@@ -20,6 +20,9 @@ import { cn, saltUrl } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import { useMasaustu } from "@/hooks/useMasaustu";
@@ -355,7 +358,14 @@ export function FilmEditor({ p }: { p: FilmProje }) {
               <span className="leading-tight"><span className="block text-[14px] font-semibold text-white">Henüz kare yok</span><span className="mt-1 block text-[12.5px] text-white/55">Önce {KARE_KREDI} kredilik bir taslak kare çek, beğenirsen videoya çevir.</span></span>
             </span>
           )}
-          {gosterilen && <button onClick={() => setAcikTake(gosterilen)} aria-label="Büyük aç" className="absolute left-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-inset ring-white/15 backdrop-blur-xl transition hover:bg-black/65 active:scale-90"><Maximize2 className="h-3.5 w-3.5" /></button>}
+          {gosterilen?.durum === "tamam" && (
+            <span className="absolute right-2.5 top-2.5 z-10 flex items-center gap-1.5">
+              <FavoriDugmesi favori={!!gosterilen.favori} onClick={() => useProjeler.getState().favoriToggle(gosterilen.id)} side="bottom" />
+              <IndirDugmesi u={gosterilen} side="bottom" className={eylemDugmesi("orta")} />
+              <Tooltip label="Klasöre taşı" side="bottom"><KlasoreTasiDugmesi uretimIdler={[gosterilen.id]} etiketSinif="sr-only" yerlesim="alt-sag" className={eylemDugmesi("orta")} /></Tooltip>
+            </span>
+          )}
+          {gosterilen && <button onClick={() => setAcikTake(gosterilen)} title="Büyük aç" aria-label="Büyük aç" className="absolute left-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white ring-1 ring-inset ring-white/15 backdrop-blur-xl transition hover:bg-black/65 active:scale-90"><Maximize2 className="h-3.5 w-3.5" /></button>}
           {takeler.length > 0 && (
             <span className="absolute bottom-2 left-2 flex max-w-[calc(100%-16px)] gap-1 overflow-x-auto">
               {takeler.slice(-5).map(({ t, u }) => {

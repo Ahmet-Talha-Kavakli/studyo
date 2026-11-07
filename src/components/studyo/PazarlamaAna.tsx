@@ -7,7 +7,7 @@ import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import {
   Check, Plus, PenLine, ChevronLeft, ChevronRight, Clapperboard, Megaphone, FileText, ImagePlus, Link2, Loader2, MapPin, Package, Play, Repeat, Settings2,
   Sparkles, Trash2, UserRound, Wand2, X, Zap,
-  ChevronDown, Heart, Search, ArrowRight,
+  ChevronDown, Star, Search, ArrowRight,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
@@ -826,7 +826,7 @@ export function PazarlamaAna({ gomulu, projeId, onUretildi, baslangic = "olustur
         <motion.span initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ ...YAY, delay: 0.25 }}
           className="absolute -bottom-2 left-1/2 z-20 -ml-6 flex h-12 w-12 items-center justify-center rounded-full text-white ring-4 ring-[#141517]"
           style={{ background: fav ? "linear-gradient(140deg,#fda4af,#f43f5e)" : "linear-gradient(140deg,#a5f3fc,#0891b2)" }}>
-          {fav ? <Heart className="h-5 w-5 fill-current" /> : <Megaphone className="h-5 w-5" />}
+          {fav ? <Star className="h-5 w-5 fill-current" /> : <Megaphone className="h-5 w-5" />}
         </motion.span>
       </div>
       <h2 className="mt-9 text-[24px] font-semibold tracking-[-0.02em] text-metin">{fav ? "Henüz beğendiğin reklam yok" : "Henüz reklam üretmedin"}</h2>

@@ -10,7 +10,6 @@ import {
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { StudyoKabuk } from "@/components/panel/StudyoKabuk";
-import { UcBoyutYakinda } from "@/components/panel/uc-boyut/UcBoyutYakinda";
 import { CreatePanel, type UretimAyar } from "@/components/panel/uc-boyut/CreatePanel";
 import { AjanPaneli } from "@/components/panel/uc-boyut/AjanPaneli";
 import { AnimasyonPaneli } from "@/components/panel/uc-boyut/AnimasyonPaneli";
@@ -20,6 +19,7 @@ import { Model3DKarti, IndirmeModal } from "@/components/panel/uc-boyut/Model3DK
 import { WorkspacePaneli } from "@/components/panel/uc-boyut/WorkspacePaneli";
 import { RAY_MODLARI, SANAT_STILLERI, MODEL_TURLERI, POZLAR, LISANSLAR, UC_BOYUT_MODELLERI } from "@/lib/uc-boyut";
 import { MODELLER } from "@/lib/catalog";
+import { ARAC_KREDI_3D } from "@/components/studyo/ucboyut/veri";
 import { uretimBaslat, uretimHataToast } from "@/lib/uretimMotoru";
 import { useRouter } from "next/navigation";
 import { useAktifProje } from "@/lib/useAktifProje";
@@ -27,7 +27,6 @@ import {
   MobilComposerKabuk, MobilIstemKutusu, MobilUretButonu, MobilYukleAlani, MobilAyarCekmecesi, MobilCip,
 } from "@/components/panel/MobilComposer";
 import { useProjeler } from "@/store/useProjeler";
-import { useAuth } from "@/store/useAuth";
 import { GirdiModal } from "@/components/panel/uc-boyut/GirdiModal";
 import { cn } from "@/lib/utils";
 import { baglantiyiKopyala } from "@/lib/gercekEylem";
@@ -44,21 +43,14 @@ const modelIdMap: Record<string, string> = {
 };
 
 /**
- * 3D Stüdyo — GEÇİCİ olarak "Yakında" ekranı gösteriliyor (kullanıcı kararı).
- * ÖNEMLİ: Aşağıdaki UcBoyutStudyoOrijinal fonksiyonu SİLİNMEDİ — tüm 3D üretim
- * mantığı korunuyor. Betaya/yayına almak için export default'u geri değiştir:
- *   export default UcBoyutStudyoOrijinal;
- *
- * Bekleme ekranı (2026-07-30): ortak YakindaSayfa yerine 3D'ye özel
- * UcBoyutYakinda — içinde kendi motorumuzla üretilmiş GERÇEK bir GLB döner.
- * (YakindaSayfa hâlâ originals/canvas/eklentiler sayfalarında kullanılıyor.)
+ * 3D Stüdyo — UcBoyutStudyo bileşeni. Eski bekleme ekranı (UcBoyutYakinda) 2026-11-07'de silindi.
+ * Aşağıdaki UcBoyutStudyoOrijinal eski tam sayfa düzenidir; yalnız başvuru için duruyor.
  */
 export default function UcBoyutStudyoSayfa() {
   return <div className="ses-kapsam contents"><Suspense fallback={null}><UcBoyutStudyo /></Suspense></div>;
 }
-void UcBoyutYakinda;
 
-// ⛔ SİLME — 3D Stüdyonun tam çalışan orijinali. Yakında→yayın için yukarıda kullan.
+// ⛔ SİLME — 3D Stüdyonun eski tam sayfa düzeni (başvuru için).
 function UcBoyutStudyoOrijinal() {
   const { aktifProjeId } = useAktifProje();
   const router = useRouter();
@@ -119,7 +111,6 @@ function UcBoyutStudyoOrijinal() {
   const eklUretim = useProjeler((s) => s.ekle);
   const guncelle = useProjeler((s) => s.guncelle);
   const sil = useProjeler((s) => s.sil);
-  const krediDus = useAuth((s) => s.krediDus);
   const uretimler = tumUretimler.filter((u) => u.tur === "3d");
   const aktif = uretimler.find((u) => u.id === aktifId) ?? null;
 
@@ -223,7 +214,7 @@ function UcBoyutStudyoOrijinal() {
   const pozUygula = (poz: string) => {
     if (!aktif) return;
     guncelle(aktif.id, { poz });
-    toast.success("Poz uygulandı", { description: poz });
+    toast("Poz seçildi", { description: `${poz}. Model yeniden pozlanmadı; poz bir sonraki üretimde kullanılır.` });
   };
 
   // Yeniden adlandır — gerçek: başlığı store'da değiştirir.
@@ -253,25 +244,19 @@ function UcBoyutStudyoOrijinal() {
   // Topluluğa yayınla — gerçek: yayinda bayrağını açar (Keşfet galerisinde görünür).
   const yayinla = (id: string) => {
     guncelle(id, { yayinda: true });
-    toast.success("Model topluluğa yayınlandı", { description: "Artık Keşfet'te görünüyor." });
+    toast.success("Model yayında olarak işaretlendi", { description: "Keşfet'te senin hesabında görünür; başka kullanıcılarla paylaşılmaz." });
   };
 
   // Modeli GLB/OBJ olarak dışa aktar (DCC/Sketchfab/indir ortak yardımcı).
-  const modelDisaAktar = (id: string, hedef: string, uzanti = "gltf") => {
+  // Modeli GLB olarak indir (DCC/Sketchfab ortak). Dosyası olmayan modelde sahte dosya üretilmez.
+  const modelDisaAktar = (id: string): boolean => {
     const u = uretimler.find((x) => x.id === id);
-    if (!u) return;
-    if (u.glbUrl) {
-      const a = document.createElement("a");
-      a.href = u.glbUrl; a.download = `${u.baslik.slice(0, 40).replace(/[^\w\s-]/g, "")}.${uzanti}`; a.target = "_blank";
-      document.body.appendChild(a); a.click(); a.remove();
-    } else {
-      const icerik = JSON.stringify({ vayra3d: true, ad: u.baslik, hedef, topoloji: u.topoloji, animasyonlar: u.animasyonlar ?? [], poz: u.poz }, null, 2);
-      const url = URL.createObjectURL(new Blob([icerik], { type: "application/octet-stream" }));
-      const a = document.createElement("a");
-      a.href = url; a.download = `${u.baslik.slice(0, 40).replace(/[^\w\s-]/g, "")}.${uzanti}`;
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-    }
+    if (!u) return false;
+    if (!u.glbUrl) { toast.error("Dışa aktarılamadı", { description: "Bu modelin 3D dosyası yok." }); return false; }
+    const a = document.createElement("a");
+    a.href = u.glbUrl; a.download = `${u.baslik.slice(0, 40).replace(/[^\w\s-]/g, "")}.glb`; a.target = "_blank";
+    document.body.appendChild(a); a.click(); a.remove();
+    return true;
   };
 
   // Alt-menü aksiyonları (Düzenle: Remesh/Doku/Rig · Yazdır · DCC · Paylaş) — hepsi gerçek işlem.
@@ -280,10 +265,15 @@ function UcBoyutStudyoOrijinal() {
     if (!u) return;
     if (kategori === "duzenle") {
       if (oge === "Remesh") {
-        if (!krediDus(5)) return mesaj.yetersizKredi(5, useAuth.getState().kullanici?.krediler ?? 0);
-        const yeniPoli = u.topoloji ? Math.round(u.topoloji.poligon * 0.55) : 8000;
-        guncelle(id, { topoloji: { poligon: yeniPoli, tip: "quad", pbr: u.topoloji?.pbr ?? true } });
-        toast.success("Remesh tamamlandı", { description: `${yeniPoli.toLocaleString("tr")} dörtgen · 5 kredi düşüldü.` });
+        // Gerçek remesh sağlayıcıda (Meshy remesh) çalışır: kredi sunucuda kesilir, sağlayıcı yoksa örnek çıktı ve kesinti yok.
+        const kaynakGlb = u.gercek && u.glbUrl && u.glbUrl.startsWith("https://") ? u.glbUrl : undefined;
+        if (!kaynakGlb && !u.meta?.saglayiciGorev) return toast.error("Remesh yapılamadı", { description: "Bu modelin dosyası sağlayıcıya gönderilemiyor. Kredi düşmedi." });
+        const sonuc = uretimBaslat({
+          baslik: u.baslik, tur: "3d", model: "Vayra 3D Remesh", prompt: `${u.prompt} · Remesh`.slice(0, 600), kredi: ARAC_KREDI_3D.remesh, arac: "3D Stüdyo",
+          meta: { mod: "remesh", kaynakId: u.id, kurulum: { tip: "quad", poligon: u.topoloji ? Math.max(500, Math.round(u.topoloji.poligon * 0.55)) : 8000 }, ...(u.meta?.saglayiciGorev ? { kaynakGorev: u.meta.saglayiciGorev } : {}), ...(kaynakGlb ? { kaynakGlb } : {}) },
+        });
+        if (!sonuc.ok) return uretimHataToast(sonuc);
+        if (sonuc.id) setAktifId(sonuc.id);
       } else if (oge === "Rig & Vinç") {
         setAktifId(id); setMod("canlandir");
       } else if (oge === "Doku düzenle" || oge === "Yeniden dokuma") {
@@ -293,14 +283,12 @@ function UcBoyutStudyoOrijinal() {
       setAktifId(id); setMod("yazdir");
     } else if (kategori === "dcc") {
       const hedef = oge.replace(/'a gönder$/, "");
-      modelDisaAktar(id, hedef, "gltf");
-      toast.success(`${hedef} için dışa aktarıldı`, { description: "GLTF dosyası indirildi; uygulamada içe aktarabilirsin." });
+      if (modelDisaAktar(id)) toast.success(`${hedef} için GLB indiriliyor`, { description: "Uygulamada içe aktarabilirsin." });
     } else if (kategori === "paylas") {
       if (oge === "Bağlantı paylaş") {
         void baglantiyiKopyala(`/panel/kitaplik?model=${id}`);
       } else if (oge === "Sketchfab'da yayınla") {
-        modelDisaAktar(id, "Sketchfab", "gltf");
-        toast.success("Sketchfab için GLTF hazırlandı", { description: "Dosya indirildi; Sketchfab'a yükleyebilirsin." });
+        if (modelDisaAktar(id)) toast.success("GLB indiriliyor", { description: "Sketchfab'a kendin yükleyebilirsin." });
       }
     }
   };
@@ -557,7 +545,7 @@ function UcBoyutStudyoOrijinal() {
                     onPoz={pozUygula}
                     onYenidenUret={() => { setPrompt(aktif.prompt.split(" · ")[0]); setMod("metin"); toast("İstem yüklendi", { description: "Düzenleyip yeniden üretebilirsin." }); }}
                     onRemesh={() => altAksiyon(aktif.id, "duzenle", "Remesh")}
-                    onUV={() => { if (!krediDus(5)) return mesaj.yetersizKredi(5, useAuth.getState().kullanici?.krediler ?? 0); toast.success("UV atlası açıldı", { description: "5 kredi düşüldü." }); }}
+                    onUV={() => toast.error("UV açma yapılamadı", { description: "Bu işlem için sağlayıcı bağlı değil. Kredi düşmedi." })}
                     onDCC={(hedef) => altAksiyon(aktif.id, "dcc", `${hedef}'a gönder`)}
                     onBaglantiPaylas={() => altAksiyon(aktif.id, "paylas", "Bağlantı paylaş")}
                     onYayinla={() => yayinla(aktif.id)} />

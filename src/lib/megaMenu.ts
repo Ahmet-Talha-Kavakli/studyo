@@ -19,7 +19,7 @@ export const MEGA_MENULER: Record<"gorsel" | "video" | "ses", MegaMenu> = {
     ozellikler: [
       { ad: "Görsel Üret", ozet: "Metinden AI görsel", href: "/panel/gorsel", ikon: "image" },
       { ad: "Sinematik Kamera", ozet: "Kamera kontrollü görsel", href: "/panel/sinema", ikon: "camera", rozet: "Top" },
-      { ad: "Akış (Canvas)", ozet: "Tekrarlanabilir görsel akış", href: "/panel/akis-canvas", ikon: "layers", rozet: "Yeni" },
+      { ad: "Akış (Canvas)", ozet: "Tekrarlanabilir görsel akış", href: "/panel/canvas", ikon: "layers", rozet: "Yeni" },
       { ad: "Karakterler", ozet: "Kendi karakterini eğit", href: "/panel/karakter", ikon: "user-round" },
       { ad: "Yeniden Işıklandır", ozet: "Işık, renk, parlaklık", href: "/panel/uygulamalar", ikon: "sun" },
       { ad: "Inpaint", ozet: "Alan seç, değiştir", href: "/panel/uygulamalar", ikon: "layers" },
@@ -40,7 +40,7 @@ export const MEGA_MENULER: Record<"gorsel" | "video" | "ses", MegaMenu> = {
       { ad: "Video Üret", ozet: "Metinden AI video", href: "/panel/video", ikon: "video" },
       { ad: "Sinema Stüdyosu", ozet: "AI Yönetmen ile video", href: "/panel/sinema", ikon: "clapperboard", rozet: "Top" },
       { ad: "Açıklayıcı", ozet: "Konuyu videoya çevir", href: "/panel/uygulamalar", ikon: "graduation-cap", rozet: "Yeni" },
-      { ad: "Akış (Canvas)", ozet: "Görsel workflow", href: "/panel/akis-canvas", ikon: "layers", rozet: "Yeni" },
+      { ad: "Akış (Canvas)", ozet: "Görsel workflow", href: "/panel/canvas", ikon: "layers", rozet: "Yeni" },
       { ad: "Video Düzenle", ozet: "Sahne, çekim düzenle", href: "/panel/uygulamalar", ikon: "scissors" },
       { ad: "Tıkla Reklam Ol", ozet: "URL'den video reklam", href: "/panel/pazarlama", ikon: "link" },
       { ad: "Lip-Sync Stüdyo", ozet: "Konuşan klipler", href: "/panel/ses", ikon: "mic" },

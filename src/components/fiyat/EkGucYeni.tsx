@@ -15,13 +15,12 @@ import { MODELLER } from "@/lib/catalog";
 import { ModelLogo } from "@/components/kitaplik/Simgeler";
 import { useAuth } from "@/store/useAuth";
 import { aktifSinirsizlar, useEkler, type HizSeviye } from "@/store/useEkler";
-import { hareketYaz } from "@/store/useHesap";
-import { hesapBildirimi } from "@/lib/bildirimler";
 import { toast } from "@/lib/toast";
 import {
   EK_ESZAMANLI, ESZAMANLI, HIZ_BEKLEME, HIZ_SEVIYELERI, PLAN_SINIRSIZ, SINIRSIZ_GUNLER, SINIRSIZ_TEKLIFLER,
   planBul, sinirsizFiyat, tl, type KartPlanId, type SinirsizTeklif,
 } from "@/lib/fiyat";
+import { odemeyeGec } from "@/components/fiyat/OdemePenceresi";
 import { cn } from "@/lib/utils";
 import { yonelme } from "./PlanSinema";
 
@@ -56,7 +55,6 @@ const TURLER = [{ id: "tumu", ad: "Tümü" }, { id: "gorsel", ad: "Görsel" }, {
 function SinirsizPanel({ t, planda, aktifBitis, onKapat }: { t: SinirsizTeklif; planda?: string; aktifBitis?: number; onKapat: () => void }) {
   const m = model(t.model);
   const girisli = useAuth((s) => s.girisYapildi);
-  const ekle = useEkler((s) => s.sinirsizEkle);
   const [k, setK] = useState(0);
   const [g, setG] = useState(1);
   const [isliyor, setIsliyor] = useState(false);
@@ -72,18 +70,7 @@ function SinirsizPanel({ t, planda, aktifBitis, onKapat }: { t: SinirsizTeklif; 
     addEventListener("keydown", f); return () => removeEventListener("keydown", f);
   }, [onKapat]);
 
-  const al = () => {
-    if (!girisli) return toast.error("Önce giriş yap", { description: "Satın almak için hesabınla giriş yapman gerekiyor." });
-    setIsliyor(true);
-    setTimeout(() => {
-      const kalite = t.kaliteler[k].ad, gun = SINIRSIZ_GUNLER[g].gun;
-      ekle(t.model, kalite, gun);
-      hareketYaz({ tur: "sinirsiz", aciklama: `${m.ad} ${kalite} · ${gun} gün sınırsız`, kredi: 0, tutar: fiyat, kdv, belge: true });
-      hesapBildirimi(`Sınırsız ${m.ad} etkin`, `${kalite} · ${gun} gün boyunca bu modelde kredi düşmez.`, { ad: "Hemen üret", link: m.tur === "video" ? "/panel/video" : m.tur === "ses" ? "/panel/ses" : "/panel/gorsel" });
-      toast.success(`Sınırsız ${m.ad} etkin`, { description: `${kalite} · ${gun} gün. Gerçek ödeme alınmadı.` });
-      setIsliyor(false); onKapat();
-    }, 650);
-  };
+  const al = () => { setIsliyor(true); odemeyeGec({ tur: "sinirsiz", urun: `${t.model}|${t.kaliteler[k].ad}|${SINIRSIZ_GUNLER[g].gun}` }); setTimeout(() => setIsliyor(false), 600); };
 
   return createPortal(
     <motion.div key="perde" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}
@@ -309,15 +296,10 @@ export function HizGosterge() {
   ], [sv, hiz, parti, kazanc, esz, ek]);
 
   const uygula = () => {
-    if (!girisli) return toast.error("Önce giriş yap", { description: "Hızı değiştirmek için hesabınla giriş yapman gerekiyor." });
-    setIsliyor(true);
-    setTimeout(() => {
-      hizAyarla(hiz, ek);
-      if (toplam) hareketYaz({ tur: "hiz", aciklama: `${sv.ad} hız${ek ? ` · +${ek} eşzamanlı` : ""} (aylık)`, kredi: 0, tutar: toplam, kdv: Math.round(toplam * KDV), belge: true });
-      hesapBildirimi(`${sv.ad} hız etkin`, `Aynı anda ${esz.video + ek} video, ${esz.gorsel + ek} görsel · yoğun saatte ${HIZ_BEKLEME[hiz] ? `bekleme ${sureYaz(HIZ_BEKLEME[hiz]).toLocaleLowerCase("tr-TR")}` : "beklemesiz"}.`);
-      toast.success(`${sv.ad} hız etkin`, { description: `${ek ? `+${ek} eşzamanlı iş. ` : ""}${toplam ? `${tl(toplam)} / ay, makbuz Faturalar'da.` : "Ek ücret yok."}` });
-      setIsliyor(false);
-    }, 600);
+    // Ücretli hız 30 günlük süreli haktır ve ödemeyle açılır; standarda dönmek ücretsizdir.
+    if (toplam) return odemeyeGec({ tur: "hiz", urun: `${hiz}:${ek}` });
+    hizAyarla(hiz, ek);
+    toast.success("Standart hıza dönüldü", { description: "Ek ücret yok." });
   };
 
   return (

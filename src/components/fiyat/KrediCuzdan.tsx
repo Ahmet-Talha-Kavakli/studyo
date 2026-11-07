@@ -4,7 +4,7 @@
  * /panel/kredi?sekme=kredi — "Cüzdan doldurma" (2026-11-04 kullanıcı seçimi; önceki yedi deneme reddedildi).
  * Revolut / Apple Cash dili: ortada dev, yazılabilir tutar; hızlı ekle çipleri ve paket çipleri; bir üst
  * fiyat kademesine ne kadar kaldığı; sağda bakiyenle büyüyen cüzdan kartı (fareyle hafif eğilir) ve ödeme.
- * Fiyat kademeli: miktara eşit ya da altındaki en büyük paketin kredi başı fiyatı. Satın alma demo.
+ * Fiyat kademeli: miktara eşit ya da altındaki en büyük paketin kredi başı fiyatı. Ödeme gerçek: OdemePenceresi.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -12,12 +12,11 @@ import { AnimatePresence, animate, motion, useMotionValue, useSpring, useTransfo
 import { ArrowRight, Infinity as Sonsuz, Loader2, Lock, RefreshCw, RotateCcw, Sparkles, Zap } from "lucide-react";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import { useAuth } from "@/store/useAuth";
-import { hareketYaz } from "@/store/useHesap";
 import { useTercih } from "@/store/useTercih";
-import { hesapBildirimi } from "@/lib/bildirimler";
 import { toast } from "@/lib/toast";
 import { KREDI_PAKETLERI, ORNEK_MALIYET, SINIRSIZ_TEKLIFLER, krediBasina, planBul, sayi, sinirsizFiyat, tl, tlKurus } from "@/lib/fiyat";
 import type { KrediSekme } from "@/store/useKrediModal";
+import { odemeyeGec } from "@/components/fiyat/OdemePenceresi";
 import { cn } from "@/lib/utils";
 
 const KDV = 0.2;
@@ -82,7 +81,6 @@ function CuzdanKarti({ ad, bakiye, eklenecek }: { ad: string; bakiye: number; ek
 
 export function KrediCuzdan({ onSekme }: { onSekme: (s: KrediSekme) => void }) {
   const kullanici = useAuth((s) => s.kullanici);
-  const ekKrediEkle = useAuth((s) => s.ekKrediEkle);
   const oto = useTercih((s) => s.otomatikYukleme);
   const otoToggle = useTercih((s) => s.otomatikYuklemeToggle);
   const [kredi, setKredi] = useState(KREDI_PAKETLERI.find((p) => p.populer)?.kredi ?? 2500);
@@ -113,17 +111,8 @@ export function KrediCuzdan({ onSekme }: { onSekme: (s: KrediSekme) => void }) {
     if (n) setKredi(sinirla(n));
     setYaziyor(false);
   };
-  const satinAl = () => {
-    if (!kullanici) return toast.error("Önce giriş yap", { description: "Kredi yüklemek için hesabınla giriş yapman gerekiyor." });
-    setIsliyor(true);
-    setTimeout(() => {
-      ekKrediEkle(kredi);
-      hareketYaz({ tur: "kredi", aciklama: `${sayi(kredi)} kredi`, kredi, tutar: ara, kdv, belge: true });
-      hesapBildirimi(`${sayi(kredi)} kredi yüklendi`, `Demo satın alma (${tl(ara + kdv)}), gerçek ödeme alınmadı. Yeni bakiyen ${sayi(bakiye + kredi)} kredi.`, { ad: "Faturaları gör", link: "/panel/ayarlar/faturalar" });
-      toast.success(`${sayi(kredi)} kredi yüklendi`, { description: `${tl(ara + kdv)} · Gerçek ödeme alınmadı.` });
-      setIsliyor(false);
-    }, 700);
-  };
+  // Tutar sunucuda yeniden hesaplanır; kredi ödeme onaylanınca sunucuda eklenir.
+  const satinAl = () => odemeyeGec({ tur: "kredi", urun: String(kredi) });
 
   return (
     <div className="space-y-3">
@@ -214,8 +203,8 @@ export function KrediCuzdan({ onSekme }: { onSekme: (s: KrediSekme) => void }) {
       <div className="grid gap-3 md:grid-cols-3">
         <div className="flex items-center gap-3 rounded-[22px] bg-[#111113] p-4 ring-1 ring-inset ring-white/[0.08]">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-white/[0.06]"><RefreshCw className="h-[18px] w-[18px] text-white/75" /></span>
-          <span className="min-w-0 flex-1"><span className="block text-[14px] font-semibold text-white">Otomatik yükleme</span><span className="block truncate text-[12px] text-white/50">{oto ? `Bakiye 100'ün altına inince ${sayi(useTercih.getState().otoPaket)} kredi` : "Kapalı: bakiye bitince üretim durur"}</span></span>
-          <button type="button" role="switch" aria-checked={oto} aria-label="Otomatik yükleme" onClick={() => { const y = otoToggle(); toast.success(y ? "Otomatik yükleme açıldı" : "Otomatik yükleme kapatıldı"); }}
+          <span className="min-w-0 flex-1"><span className="block text-[14px] font-semibold text-white">Yükleme hatırlatması</span><span className="block truncate text-[12px] text-white/50">{oto ? `Bakiye 100'ün altına inince ${sayi(useTercih.getState().otoPaket)} kredi için hatırlatma` : "Kapalı: bakiye bitince üretim durur"}</span></span>
+          <button type="button" role="switch" aria-checked={oto} aria-label="Yükleme hatırlatması" onClick={() => { const y = otoToggle(); toast.success(y ? "Yükleme hatırlatması açıldı" : "Yükleme hatırlatması kapatıldı"); }}
             className={cn("relative h-7 w-11 shrink-0 rounded-full transition-colors", oto ? "bg-[#55d6fd]" : "bg-white/15")}>
             <motion.span layout transition={yay} className={cn("absolute top-[3px] h-[22px] w-[22px] rounded-full bg-white", oto ? "right-[3px]" : "left-[3px]")} />
           </button>

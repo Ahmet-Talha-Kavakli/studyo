@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import {
-  AlertTriangle, Clock, Download, GitBranch, Heart, Layers, ListMusic, Loader2, Mic, MoreHorizontal, Piano, RefreshCw, RotateCcw, Trash2, XCircle,
+  AlertTriangle, ChevronLeft, ChevronRight, Clock, Download, FolderInput, GitBranch, Layers, ListMusic, Loader2, Mic, MoreHorizontal, Piano, Quote, RefreshCw, RotateCcw, Star, Trash2, XCircle,
 } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { useProjeler } from "@/store/useProjeler";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiListesi } from "@/components/galeri/Klasorler";
 import { cn } from "@/lib/utils";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { ModelLogo } from "@/components/kitaplik/Simgeler";
@@ -38,6 +42,8 @@ export function ParcaMenusu({ p, e, acik, onKapat, yerlesim = "alt-sag" }: {
   p: Parca; e: ParcaEylemleri; acik: boolean; onKapat: () => void; yerlesim?: "alt-sag" | "ust-sol" | "alt-sol";
 }) {
   const bitti = p.durum === "tamam";
+  const [klasorGor, setKlasorGor] = useState(false);
+  const kapat = () => { setKlasorGor(false); onKapat(); };
   const ogeler = ([
     [ListMusic, "Ayarları yeniden kullan", "Formu bu şarkıyla doldur", e.onYenidenKullan, true, "cyan"],
     [GitBranch, "Bölümleri düzenle", "Yapı, süre ve sözler", e.onPlan, !!e.onPlan && bitti, "gok"],
@@ -47,18 +53,32 @@ export function ParcaMenusu({ p, e, acik, onKapat, yerlesim = "alt-sag" }: {
   ] as const).filter((o) => o[4]);
   return (
     <AnimatePresence>
-      <Yuzen acik={acik} onKapat={onKapat} yerlesim={yerlesim} bosluk={6} etiket="Şarkı eylemleri" className="rounded-[16px] border border-white/[0.09] bg-[#1b1c1f] w-[250px] rounded-[16px] p-1.5">
+      <Yuzen acik={acik} onKapat={kapat} yerlesim={yerlesim} bosluk={6} etiket="Şarkı eylemleri" className="galeri-cam w-[260px] rounded-[16px] border border-white/[0.09] p-1.5">
+        {klasorGor && p.uretimId ? (
+          <>
+            <button onClick={() => setKlasorGor(false)} className="flex items-center gap-1.5 px-2 pb-0.5 pt-1 text-[12.5px] font-medium text-metin-2 hover:text-metin"><ChevronLeft className="h-3.5 w-3.5" />Geri</button>
+            <KlasoreTasiListesi uretimIdler={[p.uretimId]} onBitti={kapat} />
+          </>
+        ) : (<>
         {ogeler.map(([I, ad, alt, fn, , renk]) => (
           <button key={ad} onClick={() => { onKapat(); fn?.(); }} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.075]">
             <I className="h-4 w-4 shrink-0 text-metin-2" />
             <span className="min-w-0"><span className="block text-[13px] font-medium text-metin">{ad}</span><span className="block truncate text-[11px] text-metin-3">{alt}</span></span>
           </button>
         ))}
+        {bitti && p.uretimId && (
+          <button onClick={() => setKlasorGor(true)} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors hover:bg-white/[0.075]">
+            <FolderInput className="h-4 w-4 shrink-0 text-metin-2" />
+            <span className="min-w-0 flex-1"><span className="block text-[13px] font-medium text-metin">Klasöre taşı</span><span className="block truncate text-[11px] text-metin-3">Kitaplıkta düzenle</span></span>
+            <ChevronRight className="h-3.5 w-3.5 text-metin-2" />
+          </button>
+        )}
         <div className="my-1 h-px bg-white/8" />
         <button onClick={() => { onKapat(); e.onSil(); }} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors hover:bg-rose-500/10">
           <Trash2 className="h-4 w-4 shrink-0 text-rose-300" />
           <span className="text-[13px] font-medium text-rose-300">Sil</span>
         </button>
+        </>)}
       </Yuzen>
     </AnimatePresence>
   );
@@ -77,6 +97,8 @@ const ikonDugme = "flex h-8 w-8 items-center justify-center rounded-full text-me
 export function ParcaSatiri({ p, varyant, secili, ...e }: { p: Parca; varyant?: string; secili?: boolean } & ParcaEylemleri) {
   const cal = useCalici();
   const [menu, setMenu] = useState(false);
+  /* Kitaplıktaki karşılığı: indirme menüsü (filigran, biçim) ve klasör bunun üstünden çalışır. */
+  const uretim = useProjeler((s) => (p.uretimId ? s.uretimler.find((x) => x.id === p.uretimId) : undefined));
   const benim = cal.id === p.id;
   const calisiyor = benim && cal.calisiyor;
   const oran = benim && cal.toplam ? cal.an / cal.toplam : 0;
@@ -103,7 +125,7 @@ export function ParcaSatiri({ p, varyant, secili, ...e }: { p: Parca; varyant?: 
           <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
             <span className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-aksan/50 to-aksan transition-[width] duration-700" style={{ width: `${Math.max(6, p.ilerleme)}%` }} />
           </span>
-          <span className="bg-white/[0.075] rounded-full px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-aksan">%{Math.round(p.ilerleme)}</span>
+          <span className="bg-white/[0.075] rounded-full px-2 py-0.5 text-[10.5px] font-semibold tabular-nums text-aksan">yüzde {Math.round(p.ilerleme)}</span>
         </span>
         <span className="mt-1.5 flex items-center gap-1 text-[11px] text-metin-3"><ModelLogo ad={p.model} boyut={11} />{modelKisa(p.model)} · besteleniyor{p.saglayici === "demo" ? " (demo)" : ""}</span>
       </div>
@@ -152,15 +174,24 @@ export function ParcaSatiri({ p, varyant, secili, ...e }: { p: Parca; varyant?: 
         )}
         {bitti && (
           <>
-            <button onClick={e.onBegen} aria-pressed={p.begeni === 1} aria-label={p.begeni === 1 ? "Beğeniyi kaldır" : "Beğen"}
-              className={cn(ikonDugme, p.begeni === 1 ? "text-rose-300" : gizliEylem)}>
-              <Heart className={cn("h-3.5 w-3.5", p.begeni === 1 && "fill-current")} />
-            </button>
-            <button onClick={e.onIndir} aria-label="İndir" className={cn(ikonDugme, "hidden sm:flex", gizliEylem)}><Download className="h-3.5 w-3.5" /></button>
+            <Tooltip label={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"} side="top">
+              <button onClick={e.onBegen} aria-pressed={p.begeni === 1} aria-label={p.begeni === 1 ? "Favorilerden çıkar" : "Favorilere ekle"}
+                className={cn(ikonDugme, p.begeni === 1 ? "!text-aksan" : gizliEylem)}>
+                <Star className={cn("h-3.5 w-3.5", p.begeni === 1 && "fill-current")} />
+              </button>
+            </Tooltip>
+            {uretim && p.sesUrl ? (
+              <span className={cn("hidden sm:flex", gizliEylem)}><IndirDugmesi u={uretim} side="top" className={ikonDugme} ikonSinif="h-3.5 w-3.5" /></span>
+            ) : (
+              <Tooltip label="İndir" side="top"><button onClick={e.onIndir} aria-label="İndir" className={cn(ikonDugme, "hidden sm:flex", gizliEylem)}><Download className="h-3.5 w-3.5" /></button></Tooltip>
+            )}
+            <Tooltip label="Yeniden kullan" side="top">
+              <button onClick={e.onYenidenKullan} aria-label="Yeniden kullan" className={cn(ikonDugme, "hidden sm:flex", gizliEylem)}><Quote className="h-3.5 w-3.5" /></button>
+            </Tooltip>
           </>
         )}
         <div className="relative">
-          <button onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-label="Diğer eylemler" className={cn(ikonDugme, !menu && gizliEylem, menu && "text-aksan ring-1 ring-aksan")}><MoreHorizontal className="h-4 w-4" /></button>
+          <Tooltip label="Daha fazla" side="top"><button onClick={() => setMenu((v) => !v)} aria-expanded={menu} aria-label="Daha fazla" className={cn(ikonDugme, !menu && gizliEylem, menu && "text-aksan ring-1 ring-aksan")}><MoreHorizontal className="h-4 w-4" /></button></Tooltip>
           <ParcaMenusu p={p} e={e} acik={menu} onKapat={() => setMenu(false)} />
         </div>
       </div>

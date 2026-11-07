@@ -1,7 +1,9 @@
 "use client";
 
 import { memo, useRef, useState } from "react";
-import { AlertTriangle, Check, Download, Heart, Loader2, MoreHorizontal, Pause, Play, RefreshCw, Upload } from "lucide-react";
+import { AlertTriangle, Check, Star, Loader2, MoreHorizontal, Pause, Play, RefreshCw, Upload } from "lucide-react";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { Uretim } from "@/store/useProjeler";
 import { IKON_KARO } from "@/lib/renk";
 import { aracFiltresi, dalga, kartArka, turBul, uretimTuru } from "./yardimci";
@@ -77,7 +79,7 @@ export const VarlikKarti = memo(function VarlikKarti({ u, secili, secimModu, cal
       {suruyor && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/55 backdrop-blur-[2px]">
           <Loader2 className="h-6 w-6 animate-spin text-white" />
-          <span className="text-[12px] font-semibold tabular-nums text-white">{u.durum === "kuyrukta" ? "Sırada" : `%${Math.round(u.ilerleme)}`}</span>
+          <span className="text-[12px] font-semibold tabular-nums text-white">{u.durum === "kuyrukta" ? "Sırada" : `yüzde ${Math.round(u.ilerleme)}`}</span>
           <div className="h-1 w-2/3 overflow-hidden rounded-full bg-white/20"><div className="h-full rounded-full bg-vurgu transition-[width]" style={{ width: `${u.ilerleme}%` }} /></div>
         </div>
       )}
@@ -121,14 +123,14 @@ export const VarlikKarti = memo(function VarlikKarti({ u, secili, secimModu, cal
       {/* Alt köşe eylemleri */}
       {!hata && !suruyor && !secimModu && (
         <div className="absolute bottom-2.5 right-2.5 z-10 flex gap-1 opacity-0 transition-opacity group-hover/k:opacity-100">
-          <button onClick={(e) => { e.stopPropagation(); o.onFavori(u); }} aria-label={u.favori ? "Favoriden çıkar" : "Favorile"} className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white backdrop-blur hover:bg-black/75">
-            <Heart className={cn("h-3.5 w-3.5", u.favori && "fill-rose-500 text-rose-500")} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); o.onIndir(u); }} aria-label="İndir" className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white backdrop-blur hover:bg-black/75"><Download className="h-3.5 w-3.5" /></button>
-          <button onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); o.onMenu(u, r.right - 220, r.top - 8); }} aria-label="Diğer" className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white backdrop-blur hover:bg-black/75"><MoreHorizontal className="h-3.5 w-3.5" /></button>
+          <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><button onClick={(e) => { e.stopPropagation(); o.onFavori(u); }} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white backdrop-blur hover:bg-black/75">
+            <Star className={cn("h-3.5 w-3.5", u.favori && "fill-aksan text-aksan")} />
+          </button></Tooltip>
+          <IndirDugmesi u={u} side="top" className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white backdrop-blur hover:bg-black/75" ikonSinif="h-3.5 w-3.5" />
+          <Tooltip label="Daha fazla" side="top"><button onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); o.onMenu(u, r.right - 220, r.top - 8); }} aria-label="Daha fazla" className="flex h-7 w-7 items-center justify-center rounded-lg bg-black/55 text-white backdrop-blur hover:bg-black/75"><MoreHorizontal className="h-3.5 w-3.5" /></button></Tooltip>
         </div>
       )}
-      {u.favori && !ustunde && !secili && !hata && !suruyor && <Heart className="pointer-events-none absolute bottom-2.5 right-2.5 h-4 w-4 fill-rose-500 text-rose-500" />}
+      {u.favori && !ustunde && !secili && !hata && !suruyor && <Star className="pointer-events-none absolute bottom-2.5 right-2.5 h-4 w-4 fill-aksan text-aksan" />}
     </div>
   );
 });
@@ -163,7 +165,7 @@ export const VarlikSatiri = memo(function VarlikSatiri({ u, secili, secimModu, c
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-medium text-white">{u.meta?.hamIstem || u.prompt || u.baslik}</p>
         <p className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-metin-3">
-          <T.ikon className="h-3 w-3 shrink-0" />{u.model}{u.arac ? ` · ${u.arac}` : ""}{u.favori && <Heart className="h-3 w-3 shrink-0 fill-rose-500 text-rose-500" />}
+          <T.ikon className="h-3 w-3 shrink-0" />{u.model}{u.arac ? ` · ${u.arac}` : ""}{u.favori && <Star className="h-3 w-3 shrink-0 fill-aksan text-aksan" />}
         </p>
       </div>
       {sesli && <div className="hidden w-[220px] shrink-0 lg:block"><SesDalgasi u={u} ilerleme={calan ? ilerleme : 0} kucuk /></div>}
@@ -171,9 +173,9 @@ export const VarlikSatiri = memo(function VarlikSatiri({ u, secili, secimModu, c
       <span className="hidden w-[64px] shrink-0 text-right text-[12.5px] tabular-nums text-metin-3 md:block">{u.meta?.sure ?? "—"}</span>
       <span className="hidden w-[96px] shrink-0 text-right text-[12.5px] tabular-nums text-metin-3 sm:block">{tarih.toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}</span>
       <div className="flex shrink-0 gap-0.5 opacity-0 transition-opacity group-hover/s:opacity-100">
-        <button onClick={(e) => { e.stopPropagation(); o.onFavori(u); }} aria-label="Favori" className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.06] hover:text-white"><Heart className={cn("h-4 w-4", u.favori && "fill-rose-500 text-rose-500")} /></button>
-        <button onClick={(e) => { e.stopPropagation(); o.onIndir(u); }} aria-label="İndir" className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.06] hover:text-white"><Download className="h-4 w-4" /></button>
-        <button onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); o.onMenu(u, r.right - 220, r.bottom + 4); }} aria-label="Diğer" className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.06] hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
+        <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><button onClick={(e) => { e.stopPropagation(); o.onFavori(u); }} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.06] hover:text-white"><Star className={cn("h-4 w-4", u.favori && "fill-aksan text-aksan")} /></button></Tooltip>
+        <IndirDugmesi u={u} side="top" className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.06] hover:text-white" />
+        <button onClick={(e) => { e.stopPropagation(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); o.onMenu(u, r.right - 220, r.bottom + 4); }} title="Daha fazla" aria-label="Daha fazla" className="flex h-8 w-8 items-center justify-center rounded-lg text-metin-2 hover:bg-white/[0.06] hover:text-white"><MoreHorizontal className="h-4 w-4" /></button>
       </div>
     </div>
   );

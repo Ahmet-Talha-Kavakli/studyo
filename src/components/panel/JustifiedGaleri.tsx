@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { UretimKarti, oranSayi } from "./UretimKarti";
 import type { Uretim } from "@/store/useProjeler";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { kartOrani, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 
 // Higgsfield "Last viewed": en son detayı açılan kart ortada rozetle işaretlenir.
 // Kart bileşeni detay açarken bu olayı yayar; galeri dinler.
@@ -17,13 +19,19 @@ const SON_BAKILAN_OLAY = "vayra-son-bakilan";
  */
 export function JustifiedGaleri({
   uretimler,
-  hedefYukseklik,
+  hedefYukseklik: hedefHam,
   bosluk = 4,
+  sayfa = "ana",
 }: {
   uretimler: Uretim[];
   hedefYukseklik: number;
   bosluk?: number;
+  /** Görünüm ayarı anahtarı (yerleşim, boyut, sıralama). */
+  sayfa?: string;
 }) {
+  const [g] = useGorunum(sayfa);
+  // Boyut: küçük satırlar kısa, büyük satırlar uzun; özelde sütun sayısına göre.
+  const hedefYukseklik = g.boyut === "kucuk" ? hedefHam * 0.7 : g.boyut === "buyuk" ? hedefHam * 1.5 : g.boyut === "ozel" ? Math.max(120, hedefHam * (5 / g.sutun) * 1.1) : hedefHam;
   const kapRef = useRef<HTMLDivElement>(null);
   const [genislik, setGenislik] = useState(0);
   const [sonBakilanId, setSonBakilanId] = useState<string | null>(null);
@@ -49,7 +57,7 @@ export function JustifiedGaleri({
   // container'ı aşınca satırı kapat. Sonra satırı tam genişliğe ölçekle (justified).
   const satirlar = useMemo(() => {
     if (genislik === 0) return [] as { u: Uretim; oran: number }[][];
-    const items = uretimler.map((u) => ({ u, oran: oranSayi(u) }));
+    const items = zamanaGoreSirala(uretimler, g.siralama).map((u) => ({ u, oran: kartOrani(g, oranSayi(u)) }));
     const rows: { u: Uretim; oran: number }[][] = [];
     let satir: { u: Uretim; oran: number }[] = [];
     let toplamOran = 0;
@@ -68,7 +76,7 @@ export function JustifiedGaleri({
     }
     if (satir.length) rows.push(satir);
     return rows;
-  }, [uretimler, genislik, hedefYukseklik, bosluk]);
+  }, [uretimler, genislik, hedefYukseklik, bosluk, g]);
 
   return (
     <div ref={kapRef} className="w-full">

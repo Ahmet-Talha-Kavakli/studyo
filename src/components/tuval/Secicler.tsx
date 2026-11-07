@@ -45,7 +45,7 @@ export function ModelSecici({ deger, modeller, onSec, kucuk }: { deger: string; 
   const [acik, setAcik] = useState(false);
   const [q, setQ] = useState("");
   const tetik = useRef<HTMLButtonElement>(null);
-  const liste = useMemo(() => { const k = q.trim().toLocaleLowerCase("tr"); return modeller.filter((m) => m.not !== "Yakında" && videoErisim(m.ad).durum !== "kapandi" && (!k || `${m.ad} ${m.alt}`.toLocaleLowerCase("tr").includes(k))); }, [q, modeller]);
+  const liste = useMemo(() => { const k = q.trim().toLocaleLowerCase("tr"); return modeller.filter((m) => m.not !== "Bağlı değil" && videoErisim(m.ad).durum !== "kapandi" && (!k || `${m.ad} ${m.alt}`.toLocaleLowerCase("tr").includes(k))); }, [q, modeller]);
   const gruplar = [...new Set(liste.map((m) => m.grup))];
   const secili = modeller.find((m) => m.ad === deger);
   return (

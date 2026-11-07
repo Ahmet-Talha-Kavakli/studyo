@@ -85,9 +85,9 @@ export const MODELLER: AIModel[] = [
 
   // ---- 3D (Vayra 3D — Meshy motoru üstüne) ----
   { id: "meshy-metin3d", ad: "Vayra 3D · Metin", saglayici: "Vayra", tur: "3d", kredi: 25, rozet: "Vayra",
-    aciklama: "Metinden dokulu, üretime hazır 3D model (GLB/FBX).", yetenekler: ["Metin→3D", "PBR doku", "Rig'e hazır"] },
+    aciklama: "Metinden dokulu, üretime hazır 3D model (GLB/FBX).", yetenekler: ["Metinden 3D", "PBR doku", "Rig'e hazır"] },
   { id: "meshy-gorsel3d", ad: "Vayra 3D · Görsel", saglayici: "Vayra", tur: "3d", kredi: 30, rozet: "Vayra",
-    aciklama: "Tek görselden 3D mesh çıkarımı.", yetenekler: ["Görsel→3D", "Otomatik topoloji"] },
+    aciklama: "Tek görselden 3D mesh çıkarımı.", yetenekler: ["Görselden 3D", "Otomatik topoloji"] },
   { id: "meshy-doku", ad: "Vayra 3D · Dokulama", saglayici: "Vayra", tur: "3d", kredi: 15,
     aciklama: "Mevcut mesh'e AI ile PBR doku üret.", yetenekler: ["Retexture", "PBR"] },
   { id: "meshy-animasyon", ad: "Vayra 3D · Rig & Animasyon", saglayici: "Vayra", tur: "3d", kredi: 20, rozet: "Yeni",
@@ -222,7 +222,7 @@ export const PLANLAR: Plan[] = [
     ozellikler: ["1.000 kredi / ay", "Tüm modeller", "6 paralel video · 8 görsel", "3D & Ses stüdyosu", "Ruh ID (5 kimlik)", "Öncelikli kuyruk"] },
   { id: "ultra", ad: "Ultra", fiyatUSD: 129, yillikUSD: 99, fiyatTRY: 3299, kredi: 3000, rozet: "deger",
     ozet: "Stüdyolar ve yoğun kullanım için.", cta: "Ultra'ya geç",
-    ozellikler: ["3.000 kredi (9.000'e kadar)", "En düşük kredi maliyeti (%60↓)", "8 paralel video · 8 görsel", "Sınırsız Ruh ID", "4K çıktı · Topaz upscale", "API & MCP erişimi"] },
+    ozellikler: ["3.000 kredi (9.000'e kadar)", "En düşük kredi maliyeti (yüzde 60 daha ucuz)", "8 paralel video · 8 görsel", "Sınırsız Ruh ID", "4K çıktı · Topaz upscale", "API & MCP erişimi"] },
   { id: "kurumsal", ad: "Kurumsal", fiyatUSD: 0, fiyatTRY: 0, kredi: 0,
     ozet: "Ekipler ve markalar için özel çözüm.", cta: "Bize ulaşın",
     ozellikler: ["Özel kredi havuzu", "SSO & ekip yönetimi", "Özel model eğitimi", "SLA & özel destek", "Marka güvenliği filtreleri"] },

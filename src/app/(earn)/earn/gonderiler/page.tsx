@@ -18,13 +18,11 @@ import { GonderiTablosu } from "@/components/earn/kampanya/GonderiTablosu";
 import { KampanyaAvatar } from "@/components/earn/kampanya/OdemeKartlari";
 import { Sayac, Segment, ease } from "@/components/earn/kampanya/parcalar";
 
-type Filtre = "hepsi" | "inceleme" | "kazaniyor" | "bekleme" | "cekilebilir" | "reddedildi";
+type Filtre = "hepsi" | "inceleme" | "onaylandi" | "reddedildi";
 const FILTRE: { id: Exclude<Filtre, "hepsi">; ad: string; d: GonderiDurum[] }[] = [
   { id: "inceleme", ad: "İncelemede", d: ["inceleme", "degerlendirme"] },
-  { id: "kazaniyor", ad: "Kazanıyor", d: ["kazaniyor"] },
-  { id: "bekleme", ad: "Bekleme", d: ["bekleme"] },
-  { id: "cekilebilir", ad: "Cüzdanda", d: ["cekilebilir"] },
-  { id: "reddedildi", ad: "Reddedilen", d: ["reddedildi", "sonuclandi"] },
+  { id: "onaylandi", ad: "Onaylanan", d: ["onaylandi", "sonuclandi"] },
+  { id: "reddedildi", ad: "Reddedilen", d: ["reddedildi"] },
 ];
 
 export default function GonderilerSayfasi() {
@@ -35,15 +33,14 @@ export default function GonderilerSayfasi() {
   const liste = useMemo(() => s.gonderiler.map((g) => ({ g, h: gonderiHesap(g, simdi, c.seviye.bonus) })).sort((a, b) => b.g.tarih - a.g.tarih), [s.gonderiler, simdi, c.seviye.bonus]);
   const say = (f: (typeof FILTRE)[number]) => liste.filter((x) => f.d.includes(x.h.durum)).length;
   const gorunen = filtre === "hepsi" ? liste : liste.filter((x) => FILTRE.find((f) => f.id === filtre)!.d.includes(x.h.durum));
-  const gonderiKazanci = liste.filter((x) => x.h.durum !== "reddedildi").reduce((a, x) => a + x.h.kazanc, 0);
-  const cekilebilirGonderi = liste.filter((x) => x.h.durum === "cekilebilir").reduce((a, x) => a + x.h.kazanc, 0);
   const gonderHref = s.katilimlar[0] ? `/earn/kampanyalar/${s.katilimlar[0]}#gonder` : "/earn/kampanyalar";
   const oneri = useMemo(() => kampanyalar(simdi).filter((k) => !bittiMi(k, simdi)).sort((a, b) => Number(!!b.oneCikan) - Number(!!a.oneCikan) || b.katilimci - a.katilimci).slice(0, 3), [simdi]);
 
+  // Sayılar sunucudaki inceleme durumlarından; para tutarı yok (kazanç defteri açılmadı).
   const ozet: { ad: string; deger: number; renk: string; alt: string }[] = [
-    { ad: "Cüzdanda", deger: cekilebilirGonderi, renk: "#34d399", alt: "Güvenlik beklemesi bitti" },
-    { ad: "Bekleyen", deger: c.bekleyen, renk: "#55d6fd", alt: `Kazanma ve ${KURALLAR.beklemeGun} gün bekleme` },
-    { ad: "Toplam", deger: gonderiKazanci, renk: "#ffffff", alt: `${liste.length} gönderi, reddedilenler hariç` },
+    { ad: "İncelemede", deger: liste.filter((x) => x.h.durum === "inceleme" || x.h.durum === "degerlendirme").length, renk: "#fcd34d", alt: "Vayra ekibinin kararını bekliyor" },
+    { ad: "Onaylanan", deger: liste.filter((x) => x.h.durum === "onaylandi").length, renk: "#34d399", alt: "Kurallara uygun bulundu" },
+    { ad: "Toplam", deger: liste.length, renk: "#ffffff", alt: "Gönderdiğin bağlantılar" },
   ];
 
   return (
@@ -51,7 +48,7 @@ export default function GonderilerSayfasi() {
       <motion.header initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease }} className="flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-[30px] font-semibold tracking-[-0.035em] text-white sm:text-[36px]">Gönderilerim</h1>
-          <p className="mt-1 max-w-[620px] text-[15px] text-white/60">{KURALLAR.incelemeSaat} saatte incelenir, {KURALLAR.kazanmaGun} gün izlenme sayılır, {KURALLAR.beklemeGun} gün sonra cüzdana geçer.</p>
+          <p className="mt-1 max-w-[620px] text-[15px] text-white/60">Her gönderi Vayra ekibince elle incelenir; durum yalnız inceleme kararıyla değişir. Kazanç tutarları ödeme sistemi açılınca yazılacak.</p>
         </div>
         <Link href={gonderHref} className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-[14px] font-semibold text-black transition hover:bg-white/90 active:scale-[0.97]"><Send className="h-4 w-4" />Bağlantı gönder</Link>
       </motion.header>
@@ -66,7 +63,7 @@ export default function GonderilerSayfasi() {
                   <p className="flex items-center gap-2 text-[13px] text-white/55"><span className="h-1.5 w-1.5 rounded-full" style={{ background: o.renk }} />{o.ad}</p>
                   <p className="mt-1 hidden text-[12px] text-white/40 sm:block">{o.alt}</p>
                 </div>
-                <p className="text-[22px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white sm:mt-3 sm:text-[28px]"><Sayac hedef={o.deger} bicim={(v) => tl(v, true)} /></p>
+                <p className="text-[22px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white sm:mt-3 sm:text-[28px]"><Sayac hedef={o.deger} bicim={(v) => String(Math.round(v))} /></p>
               </div>
             ))}
           </motion.section>
@@ -77,7 +74,7 @@ export default function GonderilerSayfasi() {
             {gorunen.length ? <GonderiTablosu satirlar={gorunen.map((x) => x.g)} simdi={simdi} bonus={c.seviye.bonus} />
               : <p className="rounded-[20px] bg-white/[0.025] px-5 py-4 text-[14px] text-white/55 ring-1 ring-white/[0.07]">Bu aşamada gönderin yok.</p>}
           </div>
-          <p className="mt-3 text-[12.5px] text-white/40">Ayrıntı, kazanç dökümü ve itiraz için satıra tıkla.</p>
+          <p className="mt-3 text-[12.5px] text-white/40">Ayrıntı ve itiraz için satıra tıkla.</p>
         </>
       ) : (
         <>

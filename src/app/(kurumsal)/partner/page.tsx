@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "İş ortaklığı",
-  description: "Vayra ortaklık programları: kreatörler için %30'a varan tekrarlayan komisyon, ajanslar için yeniden satış ve marj, teknoloji ortakları için API, eğitim kurumları için indirim.",
+  description: "Vayra ortaklık programları: kreatörler için yüzde 30'a varan tekrarlayan komisyon, ajanslar için yeniden satış ve marj, teknoloji ortakları için API, eğitim kurumları için indirim.",
 };
 
 const enYuksek = Math.round(Math.max(...KOMISYON_KADEMELERI.map((k) => k.oran)) * 100);
@@ -20,13 +20,13 @@ const PROGRAMLAR = [
   {
     ikon: Sparkles, renk: "text-tur-ses bg-tur-ses/12", ad: "Kreatör ortaklığı", kime: "YouTuber'lar, eğitmenler, sosyal medya üreticileri",
     gorsel: "/gercek/gorsel/gorsel-karakter-Sofia.webp",
-    maddeler: [`%${Math.round(KOMISYON_KADEMELERI[0].oran * 100)}–%${enYuksek} tekrarlayan komisyon, ${KOMISYON_SURE_AY} ay`, `Takipçilerine %${Math.round(DAVET_INDIRIM * 100)} ilk ödeme indirimi`, "Kampanyalara erken erişim ve ücretsiz Ultra plan", "Özel kupon kodu ve canlı panel"],
+    maddeler: [`Yüzde ${Math.round(KOMISYON_KADEMELERI[0].oran * 100)}–${enYuksek} tekrarlayan komisyon, ${KOMISYON_SURE_AY} ay`, `Takipçilerine yüzde ${Math.round(DAVET_INDIRIM * 100)} ilk ödeme indirimi`, "Kampanyalara erken erişim ve ücretsiz Ultra plan", "Özel kupon kodu ve canlı panel"],
     eylem: { ad: "Davet panelini aç", href: "/earn/davet" },
   },
   {
     ikon: Building2, renk: "text-tur-gorsel bg-tur-gorsel/12", ad: "Ajans ortaklığı", kime: "Reklam, sosyal medya ve prodüksiyon ajansları",
     gorsel: "/gercek/galeri/sinematik2.webp",
-    maddeler: ["Müşterilerine yeniden satışta %20 marj", "Çoklu müşteri çalışma alanı ve marka kitleri", "Ortak satış görüşmeleri ve demo desteği", "Ajans dizinimizde yer al"],
+    maddeler: ["Müşterilerine yeniden satışta yüzde 20 marj", "Çoklu müşteri çalışma alanı ve marka kitleri", "Ortak satış görüşmeleri ve demo desteği", "Ajans dizinimizde yer al"],
     eylem: { ad: "Ajans olarak başvur", href: "#basvuru" },
   },
   {
@@ -38,7 +38,7 @@ const PROGRAMLAR = [
   {
     ikon: GraduationCap, renk: "text-tur-muzik bg-tur-muzik/12", ad: "Eğitim kurumu", kime: "Üniversiteler, akademiler, kurs platformları",
     gorsel: "/gercek/explainer-video/ex-claymotion.webp",
-    maddeler: ["Öğrenci ve eğitmenlere %50 indirim", "Sınıf çalışma alanları ve kredi havuzu", "Müfredat için hazır ders materyalleri", "Atölye ve konuk eğitmen desteği"],
+    maddeler: ["Öğrenci ve eğitmenlere yüzde 50 indirim", "Sınıf çalışma alanları ve kredi havuzu", "Müfredat için hazır ders materyalleri", "Atölye ve konuk eğitmen desteği"],
     eylem: { ad: "Kurum olarak başvur", href: "#basvuru" },
   },
 ];
@@ -47,16 +47,16 @@ export default function Partner() {
   return (
     <>
       <SirketHero ust="İş ortaklığı" baslik={<>Vayra&apos;yı anlat, birlikte büyüyelim.</>}
-        alt={`Kreatörler için %${enYuksek}'a varan, ${KOMISYON_SURE_AY} ay boyunca tekrarlayan komisyon. Ajanslar, teknoloji şirketleri ve eğitim kurumları için ayrı programlar.`}>
+        alt={`Kreatörler için yüzde ${enYuksek}'a varan, ${KOMISYON_SURE_AY} ay boyunca tekrarlayan komisyon. Ajanslar, teknoloji şirketleri ve eğitim kurumları için ayrı programlar.`}>
         <a href="#basvuru" className={butonSinif("beyaz")}>Başvur <ArrowRight className="h-4 w-4" /></a>
         <a href="#programlar" className={butonSinif("ikincil")}>Programlar</a>
       </SirketHero>
 
       <Kap className="pt-14 sm:pt-20">
         <SayiSeridi ogeler={[
-          { deger: `%${enYuksek}`, etiket: "kademeye göre en yüksek komisyon" },
+          { deger: `yüzde ${enYuksek}`, etiket: "kademeye göre en yüksek komisyon" },
           { deger: `${KOMISYON_SURE_AY} ay`, etiket: "tekrarlayan gelir" },
-          { deger: `%${Math.round(DAVET_INDIRIM * 100)}`, etiket: "kitlene ilk ödeme indirimi" },
+          { deger: `yüzde ${Math.round(DAVET_INDIRIM * 100)}`, etiket: "kitlene ilk ödeme indirimi" },
           { deger: "3–5 gün", etiket: "başvuru değerlendirme süresi" },
         ]} />
       </Kap>
@@ -91,7 +91,7 @@ export default function Partner() {
           {KOMISYON_KADEMELERI.map((k, i) => (
             <div key={k.ad} className={cn("rounded-[22px] border p-6", i === KOMISYON_KADEMELERI.length - 1 ? "border-vurgu/40 bg-[color-mix(in_oklab,var(--vurgu-renk)_12%,#111113)]" : "border-white/[0.07] bg-yuzey")}>
               <p className="text-[14px] font-semibold text-white">{k.ad}</p>
-              <p className="mt-4 text-[44px] font-semibold leading-none tracking-[-0.04em] text-white">%{Math.round(k.oran * 100)}</p>
+              <p className="mt-4 text-[44px] font-semibold leading-none tracking-[-0.04em] text-white">yüzde {Math.round(k.oran * 100)}</p>
               <p className="mt-3 text-[13.5px] text-metin-2">{k.minAylik ? `Davetlilerin aylık ödemeleri ₺${k.minAylik.toLocaleString("tr-TR")} ve üzeri` : "Başlangıç kademesi"}</p>
             </div>
           ))}

@@ -120,7 +120,7 @@ export function PresetKart({ p, olay, kullandin = 0, genislik, buyuk, className,
               {(!p.yazar || y?.dogrulanmis) && <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-white" />}
             </span>
             <span className="flex shrink-0 items-center gap-1 tabular-nums">
-              {kullandin > 0 ? <>{kullandin} kez kullandın</> : <><Play className="h-3 w-3 fill-current" />{sayiKisa(p.kullanimSayi ?? 0)}</>}
+              {kullandin > 0 ? <>{kullandin} kez kullandın</> : p.kullanimSayi ? <><Play className="h-3 w-3 fill-current" />{sayiKisa(p.kullanimSayi)}</> : null}
             </span>
           </span>
         </span>
@@ -136,10 +136,6 @@ export function PresetKart({ p, olay, kullandin = 0, genislik, buyuk, className,
       </Link>
       {p.yazar && !benim && <button type="button" onClick={() => olay.onYaratici(p.yazar!)} aria-label={`${y?.ad ?? p.yazar} presetleri`} className={cn("absolute left-3 h-6 w-[45%] transition-transform duration-300 ease-out [@media(hover:hover)]:group-hover:-translate-y-[46px] [@media(hover:hover)]:group-focus-within:-translate-y-[46px]", buyuk ? "bottom-4 left-4" : "bottom-3")} />}
       <div className="absolute right-2 top-2 z-[2] flex gap-1">
-        <button type="button" onClick={() => { const v = begeniDegis(p.slug); if (v) toast.success("Beğendin", { description: p.ad }); }} aria-pressed={begendi} aria-label={begendi ? `${p.ad} beğeniyi geri al` : `${p.ad} beğen`}
-          className={cn(dugme, begendi ? "bg-white text-rose-500" : "bg-black/40 text-white opacity-0 ring-1 ring-inset ring-white/15 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:hidden")}>
-          <motion.span key={String(begendi)} initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={yay}><Heart className={cn("h-3.5 w-3.5", begendi && "fill-current")} /></motion.span>
-        </button>
         <button type="button" onClick={() => { const v = kayitDegis(p.slug); toast.success(v ? "Kaydedilenlere eklendi" : "Kaydedilenlerden çıkarıldı", { description: p.ad }); }} aria-pressed={kaydetti} aria-label={kaydetti ? `${p.ad} kayıtlılardan çıkar` : `${p.ad} kaydet`}
           className={cn(dugme, kaydetti ? "bg-white text-black" : "bg-black/40 text-white opacity-0 ring-1 ring-inset ring-white/15 hover:bg-black/70 focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:hidden")}>
           <motion.span key={String(kaydetti)} initial={{ scale: 0.5 }} animate={{ scale: 1 }} transition={yay}><Bookmark className={cn("h-3.5 w-3.5", kaydetti && "fill-current")} /></motion.span>
@@ -229,7 +225,7 @@ export function GirisKarti({ vitrin, toplam, enUygun, yeni, foto, onAc, sag }: {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={p.slug} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="absolute inset-x-3 bottom-3 z-[4]">
                   <span lang="en" className="block truncate text-[15px] font-semibold text-white sm:text-[17px]">{p.ad}</span>
-                  <span className="mt-0.5 flex items-center gap-1 text-[12px] text-white/70"><Play className="h-3 w-3 fill-current" />{sayiKisa(p.kullanimSayi ?? 0)} kullanım</span>
+                  {!!p.kullanimSayi && <span className="mt-0.5 flex items-center gap-1 text-[12px] text-white/70"><Play className="h-3 w-3 fill-current" />{sayiKisa(p.kullanimSayi)} kullanım</span>}
                 </motion.span>
               </AnimatePresence>
             </button>
@@ -268,7 +264,7 @@ export function OnluRaf({ liste, olay }: { liste: (k: "hepsi" | "vayra" | "toplu
     <Raf baslik="Bu haftanın 10'u" ikon={Flame10} govde="pt-4 sm:pt-5" sag={<>
       <LayoutGroup id="on-kaynak">
         <div role="radiogroup" aria-label="Kaynak" className="flex h-9 items-center gap-0.5 rounded-full bg-white/[0.06] p-0.5">
-          {([["hepsi", "Hepsi"], ["vayra", "Vayra"], ["topluluk", "Topluluk"]] as const).map(([id, a]) => (
+          {([["hepsi", "Hepsi"], ["vayra", "Vayra"]] as const).map(([id, a]) => (
             <button key={id} role="radio" aria-checked={k === id} onClick={() => setK(id)} className={cn("relative h-8 rounded-full px-2.5 text-[12.5px] sm:px-3 font-medium transition-colors active:scale-[0.97]", k === id ? "text-black" : "text-white/60 hover:text-white")}>
               {k === id && <motion.span layoutId="on-kaynak-z" className="absolute inset-0 rounded-full bg-white" transition={yay} />}<span className="relative">{a}</span>
             </button>
@@ -335,7 +331,7 @@ export function YaraticiRafi({ akis, takip, onTakip, onSec, baslik = "Topluluğu
                 <span className="block truncate text-[12.5px] text-white/50">{y.kullanici} · {y.bio}</span>
               </button>
               <span className="mt-3 flex items-center gap-3.5 text-[12.5px] text-white/50">
-                {([[String(ps.length), "preset"], [sayiKisa(kullanim), "kullanım"], [sayiKisa(y.takipci + (t ? 1 : 0)), "takipçi"]] as const).map(([n, a]) => (
+                {([[String(ps.length), "preset"], ...(kullanim > 0 ? [[sayiKisa(kullanim), "kullanım"] as const] : [])] as const).map(([n, a]) => (
                   <span key={a} className="whitespace-nowrap"><b className="mr-1 text-[14px] font-semibold tabular-nums text-white">{n}</b>{a}</span>
                 ))}
               </span>
@@ -397,12 +393,11 @@ export function YayinlaKarti() {
     <div className="flex aspect-[9/14] flex-col overflow-hidden rounded-[20px] bg-[radial-gradient(120%_70%_at_0%_0%,rgba(85,214,253,0.18),transparent_60%),#141518] ring-1 ring-inset ring-white/[0.09]">
       <div className="min-h-0 flex-1 overflow-hidden p-4">
         <span className="flex h-11 w-11 items-center justify-center rounded-[13px] bg-white text-black"><Wand2 className="h-5 w-5" /></span>
-        <p className="mt-4 text-[15px] font-semibold leading-snug tracking-[-0.015em] text-white sm:text-[17px]">Kendi efektini yayınla, her kullanımda kazan</p>
-        <p className="mt-2 text-[13px] leading-relaxed text-white/55 max-sm:hidden">Hareketi tarif et, farklı yüzlerle test et ve paylaş. Koyduğun ek fiyatın yarısı her kullanımda sana kalır.</p>
+        <p className="mt-4 text-[15px] font-semibold leading-snug tracking-[-0.015em] text-white sm:text-[17px]">Kendi efektini oluştur</p>
+        <p className="mt-2 text-[13px] leading-relaxed text-white/55 max-sm:hidden">Hareketi tarif et, farklı yüzlerle test et ve galerine ekle.</p>
       </div>
       <div className="flex flex-col gap-1.5 border-t border-white/[0.07] p-2.5">
         <Link href="/panel/presetler/olustur" className="flex h-10 items-center justify-center gap-1.5 rounded-full bg-white text-[13px] font-semibold text-black active:scale-[0.97]"><Plus className="h-4 w-4" />Preset oluştur</Link>
-        <Link href="/earn/marketplace" className="flex h-10 items-center justify-center gap-1.5 rounded-full bg-white/[0.07] text-[13px] font-medium text-white/85 transition hover:bg-white/[0.12] max-sm:hidden"><Wallet className="h-4 w-4" />Kazancını gör</Link>
       </div>
     </div>
   );

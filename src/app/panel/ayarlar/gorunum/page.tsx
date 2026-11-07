@@ -87,10 +87,9 @@ export default function GorunumAyarlari() {
       </Grup>
 
       <Grup baslik="Dil ve bölge">
-        <Satir id="dil" ad="Arayüz dili">
+        <Satir id="dil" ad="Arayüz dili" alt="Arayüz şu an yalnız Türkçe.">
           <Secici deger={b.dil} onSec={(v) => setB({ dil: v })} genislik={220} secenekler={[
             { deger: "tr", ad: "Türkçe", on: <span className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-white/[0.08] text-[10.5px] font-semibold text-white/80">TR</span> },
-            { deger: "en", ad: "English", alt: "Yakında", kapali: true, on: <span className="flex h-6 w-6 items-center justify-center rounded-[7px] bg-white/[0.08] text-[10.5px] font-semibold text-white/80">EN</span> },
           ]} />
         </Satir>
         <Satir id="saat-dilimi" ad="Saat dilimi" alt="Üretim geçmişi, makbuzlar ve bildirimlerdeki saatler.">

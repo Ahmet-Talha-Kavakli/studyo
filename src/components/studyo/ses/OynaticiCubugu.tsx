@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, Pause, Play, RotateCcw, RotateCw, X } from "lucide-react";
+import { Pause, Play, RotateCcw, RotateCw, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Uretim } from "@/store/useProjeler";
 import { SESLER } from "@/lib/sesVeri";
@@ -9,6 +9,7 @@ import { sesCalici, useCalici, sureYaz } from "@/lib/sesCalici";
 import { uretimKaynagi } from "./SesGoruntuleyici";
 import { SesAvatar } from "./ortak";
 import { sesBasligi } from "./GecmisSatiri";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
 
 const HIZLAR = [0.75, 1, 1.25, 1.5, 2];
 const DUGME = "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-metin-2 transition-colors hover:bg-white/[0.085] hover:text-metin";
@@ -51,7 +52,7 @@ export function OynaticiCubugu({ uretimler, onAc, onIndir, haric }: { uretimler:
               <button onClick={() => { const i = HIZLAR.indexOf(cal.hiz); sesCalici.hiz(HIZLAR[(i + 1) % HIZLAR.length]); }} aria-label={`Oynatma hızı ${cal.hiz}×`}
                 className="h-7 rounded-full px-2 text-[12px] font-semibold tabular-nums text-metin-2 transition-colors hover:bg-white/[0.085] hover:text-metin">{cal.hiz}×</button>
             )}
-            {u.sesUrl && <button onClick={() => onIndir(u)} aria-label="İndir" className={DUGME}><Download className="h-4 w-4" /></button>}
+            {u.sesUrl && <IndirDugmesi u={u} side="top" yerlesim="ust-sag" className={DUGME} />}
             <button onClick={() => sesCalici.durdur()} aria-label="Oynatıcıyı kapat" className={DUGME}><X className="h-4 w-4" /></button>
           </div>
           <div className="mt-2 flex items-center gap-2">

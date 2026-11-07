@@ -7,6 +7,7 @@ import { useProjeler } from "@/store/useProjeler";
 import { JustifiedGaleri } from "@/components/panel/JustifiedGaleri";
 import { kesfetFont } from "@/components/kesfet/font";
 import { cn } from "@/lib/utils";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
 
 /**
  * Mobil öncelikli araç stüdyoları (Yükselt, Reframe, Inpaint, Çiz, Konuştur, UGC …) için
@@ -55,7 +56,10 @@ function AracGecmisi({ arac, ad, aciklama }: { arac: string; ad: string; aciklam
           {hazir && liste.length > 0 && <span className="text-[12.5px] font-normal tabular-nums text-metin-3">{liste.length}</span>}
           {suren > 0 && <span className="inline-flex items-center gap-1.5 rounded-full bg-vurgu/15 px-2 py-0.5 text-[11.5px] font-medium text-vurgu-acik"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-vurgu" />{suren} sürüyor</span>}
         </p>
-        <Link href="/panel/kitaplik" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-metin-2 hover:text-white">Kitaplıkta aç<ArrowUpRight className="h-3.5 w-3.5" /></Link>
+        <span className="flex items-center gap-3">
+          <Link href="/panel/kitaplik" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-metin-2 hover:text-white">Kitaplıkta aç<ArrowUpRight className="h-3.5 w-3.5" /></Link>
+          <GorunumAyari sayfa="ana" istemVar={false} />
+        </span>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-4 [scrollbar-width:thin]">
         {!hazir ? (
@@ -63,7 +67,7 @@ function AracGecmisi({ arac, ad, aciklama }: { arac: string; ad: string; aciklam
             {[[1.5, 1, 0.75, 1.78], [1, 1.5, 1]].map((s, i) => <div key={i} className="flex gap-1.5">{s.map((o, j) => <div key={j} className="iskelet-parca h-[220px] rounded-xl" style={{ flexGrow: o, flexBasis: 0 }} />)}</div>)}
           </div>
         ) : biten.length || suren ? (
-          <JustifiedGaleri uretimler={liste.filter((u) => u.durum !== "hata")} hedefYukseklik={240} bosluk={6} />
+          <JustifiedGaleri sayfa="ana" uretimler={liste.filter((u) => u.durum !== "hata")} hedefYukseklik={240} bosluk={6} />
         ) : (
           <div className="flex h-full flex-col items-center justify-center px-6 text-center">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-vurgu/12 text-vurgu-acik ring-1 ring-inset ring-vurgu/25"><Sparkles className="h-6 w-6" /></span>

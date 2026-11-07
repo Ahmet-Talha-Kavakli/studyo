@@ -263,7 +263,7 @@ function KomutaKarti({ uretimler, anahtarlar }: { uretimler: ApiUretim[]; anahta
         <div className="border-t border-white/[0.06] p-5 sm:p-6 lg:border-l lg:border-t-0">
           <div className="flex items-center justify-between">
             <p className="text-[13px] text-white/60">API nabzı</p>
-            <span className="text-[12.5px] tabular-nums text-white/50">{ayakta === null ? "ölçülüyor" : `%${Math.round(ayakta * 100)} erişilebilir`}</span>
+            <span className="text-[12.5px] tabular-nums text-white/50">{ayakta === null ? "ölçülüyor" : `yüzde ${Math.round(ayakta * 100)} erişilebilir`}</span>
           </div>
           <p className="mt-2 flex items-baseline gap-1"><span className="text-[28px] font-semibold leading-none tabular-nums tracking-[-0.03em] text-white">{sonMs ?? "…"}</span><span className="text-[12.5px] text-white/50">ms</span></p>
           <div className="mt-3"><Nabiz olcumler={nabiz} renk="#55d6fd" /></div>
@@ -320,7 +320,7 @@ function TurGrafigi({ liste, aralik, canli, genislet }: { liste: ApiUretim[]; ar
   const fark = v.onceki ? Math.round(((v.bu - v.onceki) / v.onceki) * 100) : null;
   const bos = v.bu === 0;
   const kpi: [string, string, string?][] = [
-    ["Başarı oranı", v.oz.oran === null ? "Veri yok" : `%${(v.oz.oran * 100).toFixed(1).replace(".", ",").replace(",0", "")}`],
+    ["Başarı oranı", v.oz.oran === null ? "Veri yok" : `yüzde ${(v.oz.oran * 100).toFixed(1).replace(".", ",").replace(",0", "")}`],
     ["Medyan süre", v.oz.p50 === null ? "Veri yok" : sureMetin(v.oz.p50)],
     ["p95 süre", v.oz.p95 === null ? "Veri yok" : sureMetin(v.oz.p95)],
     ["Başarısız", sayi(v.oz.basarisiz), v.oz.basarisiz ? "text-rose-300" : undefined],
@@ -334,7 +334,7 @@ function TurGrafigi({ liste, aralik, canli, genislet }: { liste: ApiUretim[]; ar
             <p className="text-[13px] text-white/65">{olcu === "kredi" ? "Harcanan kredi" : "İstek"} · {a.uzun}</p>
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
               <Sayac deger={v.bu} className="text-[44px] font-semibold leading-none tabular-nums tracking-[-0.04em] text-white" />
-              {fark !== null && fark !== 0 && <span className={cn("rounded-full px-2.5 py-1 text-[12.5px] font-medium tabular-nums", fark > 0 ? "bg-white/[0.08] text-white" : "bg-white/[0.05] text-white/70")}>{fark > 0 ? "▲" : "▼"} %{Math.abs(fark)} önceki döneme göre</span>}
+              {fark !== null && fark !== 0 && <span className={cn("rounded-full px-2.5 py-1 text-[12.5px] font-medium tabular-nums", fark > 0 ? "bg-white/[0.08] text-white" : "bg-white/[0.05] text-white/70")}>{fark > 0 ? "▲" : "▼"} yüzde {Math.abs(fark)} önceki döneme göre</span>}
               {v.onceki === 0 && v.bu > 0 && <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[12.5px] text-white/70">İlk dönem</span>}
             </div>
           </div>
@@ -507,7 +507,7 @@ function Saglik({ liste, aralik }: { liste: ApiUretim[]; aralik: Aralik }) {
     const sure = (tur: string) => yuzdelik(liste.filter((u) => u.type === tur && u.status === "succeeded" && zamani(u) >= t0).map((u) => u.metrics.run_ms).filter((x): x is number => typeof x === "number"), 50);
     return { satirlar: [{ ad: "Üretim başarısı", dilim: uretim, oran: oran(uretim) }, { ad: "Webhook teslimi", dilim: teslim, oran: oran(teslim) }, { ad: "API erişimi", dilim: api, oran: oran(api) }], gorsel: sure("image"), video: sure("video") };
   }, [liste, teslimler, olcumler, aralik]);
-  const yuzde = (x: number | null) => (x === null ? "Veri yok" : `%${(x * 100).toFixed(x === 1 ? 0 : 1).replace(".", ",")}`);
+  const yuzde = (x: number | null) => (x === null ? "Veri yok" : `yüzde ${(x * 100).toFixed(x === 1 ? 0 : 1).replace(".", ",")}`);
   return (
     <section className={cn(kart, "p-5")}>
       <div className="flex items-center justify-between">
@@ -665,7 +665,7 @@ function Modellerin({ liste, aralik }: { liste: ApiUretim[]; aralik: Aralik }) {
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
                       <span className="truncate text-[13.5px] font-medium text-white">{m?.ad ?? id}</span>
-                      <span className="shrink-0 text-[12.5px] tabular-nums text-white/65">{n} istek · %{Math.round((n / top) * 100)}</span>
+                      <span className="shrink-0 text-[12.5px] tabular-nums text-white/65">{n} istek · yüzde {Math.round((n / top) * 100)}</span>
                     </span>
                     <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
                       <motion.span initial={{ width: 0 }} animate={{ width: `${(n / top) * 100}%` }} transition={{ delay: i * 0.06, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}

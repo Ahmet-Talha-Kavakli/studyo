@@ -83,13 +83,6 @@ function kisaSayi(n: number) {
   return n >= 1000 ? (n / 1000).toFixed(1).replace(".0", "") + "b" : String(n);
 }
 
-// Vayra Originals — editöryel öne çıkan yapımlar
-const originals = [
-  { baslik: "Gölgelerin Şehri", altbaslik: "Kısa film · Vayra Sinema ekibi", ozet: "Tamamı Vayra ile üretilen 3 dakikalık neo-noir kısa film. AI Yönetmen + Ruh ID karakter tutarlılığı.", tohum: "orig-1", etiket: "Kısa Film" },
-  { baslik: "Sesin Rengi", altbaslik: "Müzik videosu · @studio.vayra", ozet: "ElevenLabs ses + Seedance görsel senkronizasyonuyla üretilmiş deneysel müzik videosu.", tohum: "orig-2", etiket: "Müzik" },
-  { baslik: "Antik Dünyalar", altbaslik: "3D koleksiyon · Meshy Lab", ozet: "Metinden üretilen 40 parçalık antik mimari 3D varlık koleksiyonu.", tohum: "orig-3", etiket: "3D Koleksiyon" },
-];
-
 const filtreler = [
   { id: "tumu", ad: "Tümü" }, { id: "video", ad: "Video" },
   { id: "gorsel", ad: "Görsel" }, { id: "3d", ad: "3D" }, { id: "ses", ad: "Ses" },
@@ -173,29 +166,6 @@ export default function KesfetPage() {
         baslik="Toplulukla üretilenler"
         aciklama="Vayra yaratıcılarının en iyi işleri. İlham al, remixle, kendi versiyonunu üret."
       />
-
-      {/* Vayra Originals — editöryel yapımlar */}
-      <section className="mx-auto max-w-7xl px-4 pb-10">
-        <div className="mb-4 flex items-center gap-2">
-          <h2 className="text-lg font-bold">Vayra Originals</h2>
-          <span className="rounded-full bg-gradient-to-r from-cyan-glow/20 to-blue-500/20 px-2 py-0.5 text-[11px] font-semibold text-cyan-glow">Editöryel</span>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          {originals.map((o, i) => (
-            <motion.div key={o.baslik} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-              className="group relative overflow-hidden rounded-3xl border border-white/10">
-              <div className="relative aspect-[4/5] transition-transform duration-700 group-hover:scale-105" style={{ background: kesfetArka(o.tohum, "portre") }} />
-              <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/40 to-transparent" />
-              <span className="absolute left-4 top-4 rounded-full bg-ink-950/60 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm">{o.etiket}</span>
-              <div className="absolute inset-x-5 bottom-5">
-                <h3 className="text-xl font-bold">{o.baslik}</h3>
-                <p className="mt-0.5 text-xs font-medium text-cyan-glow">{o.altbaslik}</p>
-                <p className="mt-2 text-sm leading-relaxed text-white/70">{o.ozet}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
 
       {/* Öne çıkanlar — Vayra Seçkileri */}
       <section className="mx-auto max-w-7xl px-4 pb-10">

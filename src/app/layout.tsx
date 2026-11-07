@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { MedyaBekleme } from "@/components/kabuk/MedyaBekleme";
 import { PerdeGozcusu } from "@/components/ui/PerdeGozcusu";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
@@ -118,6 +119,8 @@ export default function RootLayout({
           HİÇ görünmüyordu (sessiz kayıp). Artık tek merkezde. */}
       <body className="antialiased">
         <TercihSaglayici>{children}</TercihSaglayici>
+        {/* Medya bekleme: bütün sayfalarda görsel ve video kendi kartının yerinde parıltıyla bekler. */}
+        <MedyaBekleme />
         <VayraToaster />
         <PerdeGozcusu />
         <CerezBandi />

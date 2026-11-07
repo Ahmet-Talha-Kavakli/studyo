@@ -125,7 +125,7 @@ export function ModelSecici({ model, onSec, saglayicilar, favoriler, onFavori }:
         </Kutu>
       )}
       {kapali.length > 0 && !q && !suzgec.length && (
-        <Kutu baslik="Yakında ve kapanan" sag={
+        <Kutu baslik="Bağlı olmayan ve kapanan" sag={
           <button onClick={() => setKapaliAcik((v) => !v)} aria-expanded={kapaliAcik} className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-medium text-metin-2 transition-colors hover:bg-white/[0.06] hover:text-metin">
             {kapaliAcik ? "Gizle" : `${kapali.length} model`}<ChevronDown className={cn("h-3.5 w-3.5 transition-transform", kapaliAcik && "rotate-180")} />
           </button>}>
@@ -135,7 +135,7 @@ export function ModelSecici({ model, onSec, saglayicilar, favoriler, onFavori }:
                 <div key={k.ad} className="flex items-center gap-3 rounded-[12px] px-2 py-1.5 opacity-60" title={k.neden}>
                   <MarkaKare ad={k.ad} boyut={28} />
                   <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] text-metin-2">{k.ad}</span><span className="block text-[11px] leading-snug text-metin-3">{k.neden}</span></span>
-                  <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-semibold", k.durum === "kapandi" ? "bg-rose-500/15 text-rose-300" : "bg-white/10 text-metin-2")}>{k.durum === "kapandi" ? "Kapandı" : "Yakında"}</span>
+                  <span className={cn("shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-semibold", k.durum === "kapandi" ? "bg-rose-500/15 text-rose-300" : "bg-white/10 text-metin-2")}>{k.durum === "kapandi" ? "Kapandı" : "Bağlı değil"}</span>
                 </div>
               ))}
             </div>

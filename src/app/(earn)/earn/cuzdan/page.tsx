@@ -105,7 +105,7 @@ function EarnAyrinti({ c, ucret, hakMetni, onerilen, yontemEkle }: { c: ReturnTy
           ))}
         </dl>
         <div className="mt-5">
-          <div className="flex items-center justify-between text-[12.5px]"><span className="font-medium text-white/80">{c.seviye.ad}{c.seviye.bonus > 0 && <span className="text-[#8fe6ff]"> +%{Math.round(c.seviye.bonus * 100)}</span>}</span><span className="text-white/45">{c.sonraki ? `${tl(Math.max(0, c.sonraki.minKazanc - c.seviyeKazanc))} daha kazanınca ${c.sonraki.ad}` : "En üst seviye"}</span></div>
+          <div className="flex items-center justify-between text-[12.5px]"><span className="font-medium text-white/80">{c.seviye.ad}{c.seviye.bonus > 0 && <span className="text-[#8fe6ff]"> · yüzde {Math.round(c.seviye.bonus * 100)} ek</span>}</span><span className="text-white/45">{c.sonraki ? `${tl(Math.max(0, c.sonraki.minKazanc - c.seviyeKazanc))} daha kazanınca ${c.sonraki.ad}` : "En üst seviye"}</span></div>
           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]"><motion.div initial={{ width: 0 }} animate={{ width: `${Math.max(3, oran * 100)}%` }} transition={{ duration: 1, delay: 0.15, ease }} className="h-full rounded-full bg-gradient-to-r from-[#55d6fd] to-[#a5ecff]" /></div>
         </div>
       </div>

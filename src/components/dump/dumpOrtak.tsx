@@ -13,6 +13,10 @@ import { useProjeler, type Uretim } from "@/store/useProjeler";
 import { uretimBaslat, uretimHataToast, uretimIptal, uretimSirasi } from "@/lib/uretimMotoru";
 import { KrediYildiz } from "@/components/ui/KrediHap";
 import { UretimYukleniyor } from "@/components/studyo/UretimYukleniyor";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { kartOrani, sutunSayisi as gorunumSutun } from "@/lib/galeri/gorunum";
+import { mesaj } from "@/lib/mesaj";
 import { SonucKarti, SonucGoruntuleyici, useAracUretimleri, useGorselBaglanti, gorselModelBul, modelKredi, krediYaz, uretimGorseli, topluIndir } from "@/components/arac/kit";
 
 /**
@@ -92,7 +96,7 @@ export function IgGonderi({ liste, avatar, metin, onAc }: { liste: Uretim[]; ava
       <IgBaslik avatar={avatar} />
       <div className="group relative">
         <div ref={ref} onScroll={(e) => setI(Math.round(e.currentTarget.scrollLeft / e.currentTarget.clientWidth))} className="gizli-scroll flex snap-x snap-mandatory overflow-x-auto">
-          {liste.map((u) => <div key={u.id} className="w-full shrink-0 snap-center [&>button]:!rounded-none [&>button]:!ring-0"><SonucKarti u={u} onAc={() => onAc(u.id)} demoGizle /></div>)}
+          {liste.map((u) => <div key={u.id} className="w-full shrink-0 snap-center [&_.hf-kart]:!rounded-none [&_.hf-kart]:!ring-0"><SonucKarti u={u} onAc={() => onAc(u.id)} demoGizle eylemsiz /></div>)}
         </div>
         <span className="pointer-events-none absolute right-3 top-3 rounded-full bg-black/60 px-2 py-0.5 text-[11.5px] font-medium tabular-nums text-white">{i + 1}/{liste.length}</span>
         {([[ChevronLeft, -1, "Önceki kare", "left-2.5"], [ChevronRight, 1, "Sonraki kare", "right-2.5"]] as const).map(([I, d, a, yer]) => {
@@ -136,7 +140,7 @@ export function IgProfil({ liste, avatar, baslik, onAc }: { liste: Uretim[]; ava
               <p className="mt-0.5 text-[13px] tabular-nums text-white/90"><b className="font-semibold">{liste.length}</b> gönderi</p>
             </div>
           </div>
-          <p className="px-4 pt-3 text-[13px] leading-snug text-white/90">{baslik} ✦ yeni döküm</p>
+          <p className="px-4 pt-3 text-[13px] leading-snug text-white/90">{baslik} · yeni döküm</p>
           <div className="flex gap-1.5 px-4 pt-3">
             {["Profili düzenle", "Profili paylaş"].map((t) => <span key={t} className="flex h-8 flex-1 items-center justify-center rounded-[8px] bg-white/[0.12] text-[13px] font-semibold text-white">{t}</span>)}
           </div>
@@ -197,6 +201,9 @@ export function DumpSetleri({ arac, setler, aktifId, onAktif, onSilindi, avatarY
   const uretimSil = useProjeler((s) => s.sil);
   const uretimGuncelle = useProjeler((s) => s.guncelle);
   const [gorunum, setGorunum] = useState<"izgara" | "gonderi" | "profil">("izgara");
+  const galeriSayfa = arac.toLocaleLowerCase("tr");
+  const [galeri] = useGorunum(galeriSayfa);
+  const [alanRef, alanEn] = useAlanGenisligi<HTMLDivElement>(1000);
   const [secili, setSecili] = useState<string | null>(null);
   const [metinNo, setMetinNo] = useState(0);
   const [silOnay, setSilOnay] = useState(false);
@@ -241,10 +248,11 @@ export function DumpSetleri({ arac, setler, aktifId, onAktif, onSilindi, avatarY
     return (
       <motion.div key={u.id} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.25, delay: Math.min(i, 10) * 0.02 }} className="relative">
         {suruyor ? (
-          <div className="relative overflow-hidden rounded-[16px] bg-[#121214] ring-1 ring-inset ring-white/[0.08]" style={{ aspectRatio: `${w || 4} / ${h || 5}` }}>
+          <div className="relative overflow-hidden rounded-[16px] bg-[#121214] ring-1 ring-inset ring-white/[0.08]" style={{ aspectRatio: String(kartOrani(galeri, (w || 4) / (h || 5))) }}>
             <UretimYukleniyor u={u} siraNo={uretimSirasi(u.id) || undefined} onIptal={() => uretimIptal(u.id)} etiket={`${String(i + 1).padStart(2, "0")} · ${kadraj}`} ozet="" />
           </div>
-        ) : <SonucKarti u={u} onAc={() => setSecili(u.id)} demoGizle />}
+        ) : <SonucKarti u={u} onAc={() => setSecili(u.id)} demoGizle oran={galeri.yerlesim === "ozgun" ? undefined : kartOrani(galeri, 1)}
+          onSil={() => { uretimSil(u.id); mesaj.silindi("Kare", () => useProjeler.setState((s) => ({ uretimler: [u, ...s.uretimler] }))); }} />}
         {!suruyor && <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full bg-black/60 px-2 py-0.5"><span className="text-[11px] font-semibold tabular-nums text-white/90">{String(i + 1).padStart(2, "0")}{kadraj && ` · ${kadraj}`}</span></span>}
         {i === 0 && u.durum === "tamam" && <span className="pointer-events-none absolute bottom-2 left-2 z-10 flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold text-[#0a0a0b]"><Star className="h-3 w-3" />{kapakEtiket}</span>}
       </motion.div>
@@ -270,6 +278,7 @@ export function DumpSetleri({ arac, setler, aktifId, onAktif, onSilindi, avatarY
           {sosyal && <Kayan id="gorunum" etiket="Görünüm" deger={gorunum} onDeger={setGorunum} secenekler={[
             { v: "izgara", a: <><LayoutGrid className="h-3.5 w-3.5" />Izgara</> }, { v: "gonderi", a: <><GalleryHorizontal className="h-3.5 w-3.5" />Gönderi</> }, { v: "profil", a: <><Grid3x3 className="h-3.5 w-3.5" />Profil</> },
           ]} />}
+          {gorunum === "izgara" && <GorunumAyari sayfa={galeriSayfa} istemVar={false} siralamaVar={false} />}
           <button onClick={() => void topluIndir(`vayra-${arac.toLocaleLowerCase("tr")}`, aktif.l)} disabled={!hazirSayi}
             className="flex h-9 items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-semibold text-[#0a0a0b] transition-colors active:scale-[0.97] disabled:bg-white/[0.06] disabled:text-metin-3 disabled:ring-1 disabled:ring-inset disabled:ring-white/[0.08]"><Download className="h-4 w-4" />ZIP indir</button>
           <button onClick={setiSil} onBlur={() => setSilOnay(false)} title="Seti sil"
@@ -277,7 +286,7 @@ export function DumpSetleri({ arac, setler, aktifId, onAktif, onSilindi, avatarY
             <Trash2 className="h-4 w-4" />{silOnay ? "Emin misin?" : <span className="sr-only">Seti sil</span>}
           </button>
         </div>
-        <div className="p-4">
+        <div className="p-4" ref={alanRef}>
           {gorunum === "izgara" ? (
             aktif.l.length <= 4 ? (
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -293,7 +302,7 @@ export function DumpSetleri({ arac, setler, aktifId, onAktif, onSilindi, avatarY
                 </aside>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"><AnimatePresence initial={false}>{aktif.l.map(kareKutusu)}</AnimatePresence></div>
+              <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${gorunumSutun(alanEn, galeri)}, minmax(0, 1fr))` }}><AnimatePresence initial={false}>{aktif.l.map(kareKutusu)}</AnimatePresence></div>
             )
           ) : (
             <div className="grid items-start justify-center gap-6 lg:grid-cols-[minmax(0,440px)_320px]">

@@ -21,7 +21,7 @@ export function Sparkline({ veri, renk = AKSAN, yukseklik = 32 }: { veri: number
   if (!veri.length) return null;
   const G = 100, Y = yukseklik;
   const { min, aralik } = normalize(veri);
-  const nokta = veri.map((v, i) => [(i / (veri.length - 1)) * G, Y - ((v - min) / aralik) * (Y - 4) - 2]);
+  const nokta = veri.map((v, i) => [(veri.length > 1 ? i / (veri.length - 1) : 0.5) * G, Y - ((v - min) / aralik) * (Y - 4) - 2]);
   const d = nokta.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   return (
     <svg viewBox={`0 0 ${G} ${Y}`} preserveAspectRatio="none" className="h-8 w-full" style={{ overflow: "visible" }}>
@@ -37,7 +37,7 @@ export function AlanGrafik({ veri, renk = AKSAN, yukseklik = 180, etiketler }: {
   if (!veri.length) return null;
   const G = 320, Y = yukseklik;
   const { min, aralik } = normalize(veri);
-  const nokta = veri.map((v, i) => [(i / (veri.length - 1)) * G, Y - ((v - min) / aralik) * (Y - 20) - 10]);
+  const nokta = veri.map((v, i) => [(veri.length > 1 ? i / (veri.length - 1) : 0.5) * G, Y - ((v - min) / aralik) * (Y - 20) - 10]);
   const cizgi = nokta.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   const alan = `${cizgi} L${G},${Y} L0,${Y} Z`;
   return (
@@ -78,7 +78,7 @@ export function CizgiGrafik({ seriler, yukseklik = 180 }: { seriler: { veri: num
           <line key={f} x1="0" y1={Y * f} x2={G} y2={Y * f} stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
         ))}
         {seriler.map((s, si) => {
-          const nokta = s.veri.map((v, i) => [(i / (s.veri.length - 1)) * G, Y - ((v - min) / aralik) * (Y - 20) - 10]);
+          const nokta = s.veri.map((v, i) => [(s.veri.length > 1 ? i / (s.veri.length - 1) : 0.5) * G, Y - ((v - min) / aralik) * (Y - 20) - 10]);
           const d = nokta.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
           return <motion.path key={si} d={d} fill="none" stroke={s.renk} strokeWidth="2" strokeLinecap="round"
             initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, delay: si * 0.1 }} />;
@@ -101,17 +101,23 @@ export function CubukGrafik({ veri, renk = AKSAN, yukseklik = 160 }: { veri: { e
   const max = Math.max(...veri.map((v) => v.deger), 1);
   return (
     <div className="w-full">
-      <div className="flex items-end gap-1.5" style={{ height: yukseklik }}>
+      <div className={veri.length > 30 ? "flex items-end gap-px" : "flex items-end gap-1.5"} style={{ height: yukseklik }}>
         {veri.map((v, i) => (
-          <div key={i} className="flex flex-1 flex-col items-center justify-end gap-1">
+          <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${v.etiket}: ${v.deger.toLocaleString("tr-TR")}`}>
             <motion.div className="w-full rounded-t-md" style={{ background: renk, minHeight: 2 }}
               initial={{ height: 0 }} animate={{ height: `${(v.deger / max) * 100}%` }} transition={{ duration: 0.6, delay: i * 0.03, ease: "easeOut" }} />
           </div>
         ))}
       </div>
-      <div className="mt-1.5 flex gap-1.5">
-        {veri.map((v, i) => <span key={i} className="flex-1 truncate text-center text-[10px] text-[color:var(--ad-metin-3)]">{v.etiket}</span>)}
-      </div>
+      {veri.length > 12 ? (
+        <div className="mt-1.5 flex justify-between text-[10px] text-[color:var(--ad-metin-3)]">
+          {[0, 0.25, 0.5, 0.75, 1].map((o) => Math.round(o * (veri.length - 1))).filter((x, i, l) => l.indexOf(x) === i).map((i) => <span key={i} className="whitespace-nowrap">{veri[i].etiket}</span>)}
+        </div>
+      ) : (
+        <div className="mt-1.5 flex gap-1.5">
+          {veri.map((v, i) => <span key={i} className="flex-1 truncate text-center text-[10px] text-[color:var(--ad-metin-3)]">{v.etiket}</span>)}
+        </div>
+      )}
     </div>
   );
 }
@@ -163,7 +169,8 @@ export function DonutGrafik({ veri, boyut = 160 }: { veri: { etiket: string; deg
           <div key={v.etiket} className="flex items-center gap-2 text-[13px]">
             <span className="h-2.5 w-2.5 rounded-sm" style={{ background: v.renk }} />
             <span className="text-[color:var(--ad-metin-2)]">{v.etiket}</span>
-            <span className="ml-auto tabular-nums font-semibold text-[color:var(--ad-metin)]">%{Math.round((v.deger / toplam) * 100)}</span>
+            <span className="ml-auto pl-2 tabular-nums font-semibold text-[color:var(--ad-metin)]">{v.deger.toLocaleString("tr-TR")}</span>
+            <span className="w-16 text-right tabular-nums text-[11px] text-[color:var(--ad-metin-3)]">yüzde {Math.round((v.deger / toplam) * 100)}</span>
           </div>
         ))}
       </div>
@@ -183,7 +190,7 @@ export function IlerlemeHalka({ deger, boyut = 72, renk = AKSAN, etiket }: { deg
           transition={{ duration: 1, ease: "easeOut" }} />
       </svg>
       <span className="absolute text-center text-[13px] font-bold tabular-nums text-[color:var(--ad-metin)]">
-        {Math.round(deger)}%{etiket && <span className="block text-[9px] font-normal text-[color:var(--ad-metin-3)]">{etiket}</span>}
+        {Math.round(deger)}{etiket && <span className="block text-[9px] font-normal text-[color:var(--ad-metin-3)]">{etiket}</span>}
       </span>
     </div>
   );

@@ -30,7 +30,7 @@ export interface SesUretimModeli {
   ozet: string;
   /** Tek üretimde en fazla karakter (sağlayıcının sınırı). */
   karakterSiniri: number;
-  /** Gerçek sağlayıcıda çalışıyor mu (anahtar girildiğinde). Yoksa "Yakında" — seçilemez. */
+  /** Gerçek sağlayıcıda çalışıyor mu (anahtar girildiğinde). Yoksa "Bağlı değil" — seçilemez. */
   saglayici?: "eleven";
   /** Satır içi ses etiketleri ([whispers] gibi) destekliyor mu. */
   etiketler?: boolean;
@@ -171,7 +171,7 @@ export const EFEKT_ORNEKLERI: { ad: string; tarif: string; aciklama: string; sn?
   { ad: "Şehir trafiği", tarif: "Busy city street traffic, distant car horns and footsteps", aciklama: "Kalabalık cadde, korna, adımlar", sn: 20, dongu: true },
 ];
 
-/** Ses üretim modelleri (ElevenLabs model belgesiyle doğrulandı). Sağlayıcısı olmayanlar "Yakında" — seçilemez. */
+/** Ses üretim modelleri (ElevenLabs model belgesiyle doğrulandı). Sağlayıcısı olmayanlar "Bağlı değil" — seçilemez. */
 export const SES_URETIM_MODELLERI: SesUretimModeli[] = [
   { ad: "Eleven v4", ozet: "En duygulu model; serbest ses etiketleri, 90+ dil", karakterSiniri: 10000, saglayici: "eleven", etiketler: true, dilZorla: true, diyalog: true, duraklama: "etiket", rozet: "Yeni", dilSayisi: 90 },
   { ad: "Eleven v4 Turbo", ozet: "v4 kalitesi, gerçek zamanlıya yakın hız", karakterSiniri: 10000, saglayici: "eleven", etiketler: true, dilZorla: true, diyalog: true, duraklama: "etiket", rozet: "Yeni", dilSayisi: 90, gecikmeMs: 100 },

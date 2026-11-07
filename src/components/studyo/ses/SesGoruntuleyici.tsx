@@ -5,7 +5,7 @@ import { KenarTutamac, useKenarStili } from "@/components/ui/KenarTutamac";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight, X, Pencil, Info, Wand2, MessageCircle, Play, Pause, RotateCcw, RotateCw,
-  Copy, RefreshCw, Download, Heart, Trash2, Volume2, VolumeX, FileText, AudioLines, Captions, Share2,
+  Copy, RefreshCw, Download, Heart, Star, Trash2, Volume2, VolumeX, FileText, AudioLines, Captions, Share2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { kopyala } from "@/lib/gercekEylem";
@@ -18,6 +18,7 @@ import { ModelLogo } from "@/components/kitaplik/Simgeler";
 import { sesCalici, useCalici, sureYaz, type CalKaynak } from "@/lib/sesCalici";
 import { Dalga, SesAvatar, altyaziUret, metinIndir, dosyaKoku, type Kelime } from "./ortak";
 import { useOdakTuzagi } from "@/hooks/useOdakTuzagi";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 
 const HIZLAR = [0.75, 1, 1.25, 1.5, 2];
 const MOD_AD: Record<string, string> = { seslendirme: "Seslendirme", diyalog: "Diyalog", efekt: "Ses efekti", sesdegistir: "Ses değiştirme", ceviri: "Çeviri", temizle: "Ses temizleme", transkript: "Transkript" };
@@ -113,11 +114,11 @@ export function SesGoruntuleyici({
     ...(m?.dil ? [["Dil", dilAd(m.dil) ?? m.dil] as [string, ReactNode]] : []),
     ...(m?.hedefDil ? [["Hedef dil", dilAd(m.hedefDil) ?? m.hedefDil] as [string, ReactNode]] : []),
     ...(typeof m?.hiz === "number" && m.hiz !== 1 ? [["Hız", `${m.hiz.toFixed(2).replace(/\.?0+$/, "").replace(".", ",")}×`] as [string, ReactNode]] : []),
-    ...(typeof m?.kararlilik === "number" ? [["Kararlılık", `%${Math.round(m.kararlilik * 100)}`] as [string, ReactNode]] : []),
-    ...(typeof m?.benzerlik === "number" ? [["Benzerlik", `%${Math.round(m.benzerlik * 100)}`] as [string, ReactNode]] : []),
-    ...(typeof m?.stil === "number" && m.stil > 0 ? [["Stil", `%${Math.round(m.stil * 100)}`] as [string, ReactNode]] : []),
+    ...(typeof m?.kararlilik === "number" ? [["Kararlılık", `yüzde ${Math.round(m.kararlilik * 100)}`] as [string, ReactNode]] : []),
+    ...(typeof m?.benzerlik === "number" ? [["Benzerlik", `yüzde ${Math.round(m.benzerlik * 100)}`] as [string, ReactNode]] : []),
+    ...(typeof m?.stil === "number" && m.stil > 0 ? [["Stil", `yüzde ${Math.round(m.stil * 100)}`] as [string, ReactNode]] : []),
     ...(m?.mod === "diyalog" && m.diyalog ? [["Konuşmacılar", [...new Set(m.diyalog.map((s) => s.ses ?? "?"))].join(", ")] as [string, ReactNode]] : []),
-    ...(m?.mod === "efekt" ? [["Süre", typeof m.efektSn === "number" ? `${String(m.efektSn).replace(".", ",")} sn` : "Otomatik"] as [string, ReactNode], ["Döngü", m.dongu ? "Açık" : "Kapalı"] as [string, ReactNode], ["İstem etkisi", `%${Math.round((m.istemEtkisi ?? 0.3) * 100)}`] as [string, ReactNode]] : []),
+    ...(m?.mod === "efekt" ? [["Süre", typeof m.efektSn === "number" ? `${String(m.efektSn).replace(".", ",")} sn` : "Otomatik"] as [string, ReactNode], ["Döngü", m.dongu ? "Açık" : "Kapalı"] as [string, ReactNode], ["İstem etkisi", `yüzde ${Math.round((m.istemEtkisi ?? 0.3) * 100)}`] as [string, ReactNode]] : []),
     ...(m?.bicim && !demo ? [["Biçim", m.bicim.replace(/_/g, " · ").replace("44100", "44,1 kHz").replace("48000", "48 kHz")] as [string, ReactNode]] : []),
     ...(typeof m?.tohum === "number" ? [["Tohum (seed)", String(m.tohum)] as [string, ReactNode]] : []),
     ...(m?.kaynakAd ? [["Kaynak dosya", m.kaynakAd] as [string, ReactNode]] : []),
@@ -202,9 +203,9 @@ export function SesGoruntuleyici({
           <span className="flex-1" />
           {sira && sira.n > 1 && (
             <span className="flex items-center gap-1">
-              <button onClick={() => onGez(-1)} disabled={sira.i === 0} className={cn(sahneIkon, "h-9 w-9 disabled:opacity-30")} aria-label="Önceki (←)"><ChevronLeft className="h-5 w-5" /></button>
+              <button onClick={() => onGez(-1)} disabled={sira.i === 0} className={cn(sahneIkon, "h-9 w-9 disabled:opacity-30")} aria-label="Önceki (sol ok tuşu)"><ChevronLeft className="h-5 w-5" /></button>
               <span className="min-w-[52px] text-center text-[13px] tabular-nums text-white/70">{sira.i + 1} / {sira.n}</span>
-              <button onClick={() => onGez(1)} disabled={sira.i >= sira.n - 1} className={cn(sahneIkon, "h-9 w-9 disabled:opacity-30")} aria-label="Sonraki (→)"><ChevronRight className="h-5 w-5" /></button>
+              <button onClick={() => onGez(1)} disabled={sira.i >= sira.n - 1} className={cn(sahneIkon, "h-9 w-9 disabled:opacity-30")} aria-label="Sonraki (sağ ok tuşu)"><ChevronRight className="h-5 w-5" /></button>
             </span>
           )}
         </div>
@@ -236,7 +237,7 @@ export function SesGoruntuleyici({
               </div>
               {dosya && <button onClick={() => sesCalici.atla(10)} disabled={!benim} aria-label="10 saniye ileri" className={cn(ikon, "max-md:hidden")}><RotateCw className="h-4 w-4" /></button>}
               <span className="shrink-0 text-[12.5px] tabular-nums text-white/60">
-                {dosya ? `${sureYaz(benim ? cal.an : 0)}${toplamSn !== null ? ` / ${sureYaz(toplamSn)}` : ""}` : benim && cal.toplam ? `%${Math.round(oran * 100)}` : toplamSn !== null ? `yaklaşık ${sureYaz(toplamSn)}` : ""}
+                {dosya ? `${sureYaz(benim ? cal.an : 0)}${toplamSn !== null ? ` / ${sureYaz(toplamSn)}` : ""}` : benim && cal.toplam ? `yüzde ${Math.round(oran * 100)}` : toplamSn !== null ? `yaklaşık ${sureYaz(toplamSn)}` : ""}
               </span>
               {dosya && (
                 <button onClick={() => { const i = HIZLAR.indexOf(cal.hiz); sesCalici.hiz(HIZLAR[(i + 1) % HIZLAR.length]); }} aria-label={`Oynatma hızı ${cal.hiz}×`} title="Oynatma hızı"
@@ -295,7 +296,7 @@ export function SesGoruntuleyici({
               <AnimatePresence>
                 <Yuzen acik={indirAcik} onKapat={() => setIndirAcik(false)} yerlesim="alt-sag" bosluk={8} etiket="İndir" className="w-56 rounded-[16px] border border-white/[0.09] bg-[#1b1c1f] p-1.5">
                   {indirSecenek.map(({ ad, I, f, kapali }) => (
-                    <button key={ad} role="menuitem" disabled={kapali} onClick={() => { f(); setIndirAcik(false); }} title={kapali ? "Örnek çıktı dosya değildir; indirilemez" : undefined}
+                    <button key={ad} role="menuitem" disabled={kapali} onClick={() => { f(); setIndirAcik(false); }} title={kapali ? "Bu kayıtta ses dosyası yok; indirilemez" : undefined}
                       className="flex w-full items-center gap-2.5 rounded-[10px] px-2.5 py-2 text-left text-[13px] text-metin transition-colors hover:bg-white/[0.065] disabled:cursor-not-allowed disabled:text-metin-3">
                       <I className="h-4 w-4 text-metin-2" />{ad}
                     </button>
@@ -304,11 +305,12 @@ export function SesGoruntuleyici({
               </AnimatePresence>
             </div>
           ) : (
-            <button onClick={onIndir} disabled={!u.sesUrl} aria-label="İndir" title={u.sesUrl ? "Ses dosyasını indir" : "Örnek çıktı dosya değildir; indirilemez"} className={ikon}><Download className="h-4 w-4" /></button>
+            <button onClick={onIndir} disabled={!u.sesUrl} aria-label="İndir" title={u.sesUrl ? "Ses dosyasını indir" : "Bu kayıtta ses dosyası yok; indirilemez"} className={ikon}><Download className="h-4 w-4" /></button>
           )}
           <button onClick={() => void paylas()} disabled={!paylasilir || paylasiliyor} aria-label="Paylaş" title={paylasilir ? "Herkese açık bağlantı oluştur ve kopyala" : "Yalnız sağlayıcıyla üretilmiş ses paylaşılabilir"} className={ikon}><Share2 className="h-4 w-4" /></button>
-          <motion.button whileTap={{ scale: 0.85 }} onClick={onBegen} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"} aria-pressed={!!u.favori} className={cn(ikon, u.favori && "text-rose-400 hover:text-rose-400")}>
-            <Heart className={cn("h-4 w-4", u.favori && "fill-current")} />
+          <KlasoreTasiDugmesi uretimIdler={[u.id]} etiketSinif="sr-only" yerlesim="alt-sag" className={ikon} />
+          <motion.button whileTap={{ scale: 0.85 }} onClick={onBegen} title={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} aria-pressed={!!u.favori} className={cn(ikon, u.favori && "!text-aksan")}>
+            <Star className={cn("h-4 w-4", u.favori && "fill-current")} />
           </motion.button>
           <button onClick={onSil} aria-label="Sil" title="Sil" className={cn(ikon, "hover:bg-rose-500/10 hover:text-rose-300")}><Trash2 className="h-4 w-4" /></button>
         </div>

@@ -4,6 +4,12 @@ import { icerikDenetle } from "@/lib/moderasyon";
 import { MODELLER } from "@/lib/catalog";
 import { hataBul } from "@/lib/api/hatalar";
 import { API_TUR, UST_ALANLAR, inputDogrula, krediHesapla, modelNesnesi, type AlanHatasi } from "@/lib/api/sema";
+import { gercekUretimMumkun, type UretimTuru } from "@/lib/saglayicilar";
+import { apiSahibi, apiSahipBagla } from "@/lib/hesap/apiSahip";
+import { hesapOku } from "@/lib/hesap/depo";
+import { krediOzeti } from "@/lib/hesap/kredi";
+import { krediKes, sahteSaglayici, type KrediIslemi } from "@/lib/hesap/krediKapi";
+import { oturumOku } from "@/lib/hesap/oturum";
 import {
   D, OLAYLAR, anahtarKimligi, ayarGetir, aylikHarcanan, genelUretim, hesapGuncelle, hesapKullanilabilir, hizKontrol, idemBak, idemKaydet,
   istekSirri, istekSirriKaydet, modelBul, rndHex, tekTeslim, teslimListele, teslimYenidenGonder, uretimIptal, uretimKaydi, uretimListele, uretimOlustur, wavOlustur,
@@ -32,6 +38,11 @@ export const runtime = "nodejs";
  *   GET    /v1/files/{id}/{n}               üretim dosyası (kimlik gerekmez)
  *
  * Eski yollar (text2image/{model} …) düz gövdeyle /v1/generations'a yönlenir.
+ *
+ * Kredi (canlı anahtar): anahtarın sahibi olan hesabın sunucu defterinden, üretim başlamadan kesilir.
+ * Sahip, panel oturum açıkken anahtar ayarlarını yüklediğinde (PUT /v1/keys/self) bağlanır; bağlı olmayan
+ * canlı anahtar üretim yapamaz (account_not_linked). Idempotency-Key aynı zamanda defterin işlem anahtarıdır:
+ * aynı anahtarla gelen ikinci istek yeniden kesilmez. Gerçek sağlayıcı bağlı değilse çıktı örnektir ve kesinti yapılmaz.
  */
 
 const CORS = {
@@ -123,18 +134,33 @@ async function uretimBaslat(req: NextRequest, b: Baglam, y: Yetki, govde: Record
     if (d.durum === "tekrar") { const g = genelUretim(d.id); if (g) return yanit(g, 200, b, { "idempotent-replayed": "true" }); }
   }
 
-  // Kredi ve harcama sınırı (yalnız canlı)
+  // Kredi ve harcama sınırı (yalnız canlı): anahtarın sahibinden, sağlayıcı çalışmadan önce kesilir.
+  const sahte = sahteSaglayici(req);
+  let fatura: KrediIslemi | null = null;
   if (y.ortam === "live") {
     const maliyet = krediHesapla(model, temiz);
-    const kalan = hesapKullanilabilir(y.ayar.account);
-    if (kalan !== null && kalan < maliyet) return hata(b, "insufficient_credits", { mesaj: `Bu üretim ${maliyet} kredi tutuyor; kullanılabilir bakiye ${kalan}.`, ek: { credits_required: maliyet, credits_available: kalan } });
+    const sahip = await apiSahibi(y.kid);
+    const hesap = sahip ? await hesapOku(sahip) : null;
+    if (!hesap) return hata(b, "account_not_linked");
     if (y.ayar.monthly_limit !== null) {
       const harcanan = Math.max(y.ayar.monthly_spent_base, aylikHarcanan(y.kid));
       if (harcanan + maliyet > y.ayar.monthly_limit) return hata(b, "spend_limit_reached", { mesaj: `Aylık sınır ${y.ayar.monthly_limit} kredi; bu ay ${harcanan} kredi harcandı.` });
     }
+    const ucretli = model.tur !== "muzik" && gercekUretimMumkun(model.tur as UretimTuru, model.id);
+    if ((ucretli || sahte) && maliyet > 0) {
+      const r = await krediKes({
+        uid: hesap.uid, plan: hesap.plan, kaynak: `api:${y.kid}`, aciklama: `API · ${model.ad}`, tutar: maliyet, sahte,
+        istemciAnahtari: idemAnahtar && /^[A-Za-z0-9_.:-]{8,80}$/.test(idemAnahtar) ? idemAnahtar : null,
+      });
+      if ("hata" in r) {
+        if (r.hata === "yetersiz") return hata(b, "insufficient_credits", { mesaj: `Bu üretim ${maliyet} kredi tutuyor; kullanılabilir bakiye ${r.bakiye ?? 0}.`, ek: { credits_required: maliyet, credits_available: r.bakiye ?? 0 } });
+        return hata(b, "idempotency_conflict", { mesaj: "Bu Idempotency-Key ile yapılan üretim zaten faturalandı; yeni bir anahtarla gönder." });
+      }
+      fatura = r;
+    }
   }
 
-  const gen = uretimOlustur({ kid: y.kid, ortam: y.ortam, model, input: temiz, webhook_url: (webhook as string) ?? null, metadata: metadata as Record<string, unknown>, origin, hesap: y.ayar.account });
+  const gen = uretimOlustur({ kid: y.kid, ortam: y.ortam, model, input: temiz, webhook_url: (webhook as string) ?? null, metadata: metadata as Record<string, unknown>, origin, hesap: y.ayar.account, fatura, sahte });
   if (idemAnahtar) idemKaydet(y.kid, idemAnahtar, ozet, gen.id);
 
   if (govde.sync === true) {
@@ -239,7 +265,9 @@ async function isle(req: NextRequest, yol: string[]) {
   // ── Hesap
   if (y0 === "account" && m === "GET") {
     const y = await yetkilendir(req, b, "okuma"); if (y instanceof NextResponse) return y;
-    const kalan = y.ortam === "live" ? hesapKullanilabilir(y.ayar.account) : null;
+    const sahip = y.ortam === "live" ? await apiSahibi(y.kid) : null;
+    const sahipHesap = sahip ? await hesapOku(sahip) : null;
+    const kalan = sahipHesap ? (await krediOzeti(sahipHesap.uid, sahipHesap.plan)).bakiye : y.ortam === "live" ? hesapKullanilabilir(y.ayar.account) : null;
     return yanit({
       object: "account",
       key: { id: y.kid, name: y.ayar.name || null, environment: y.ortam, scope: y.ayar.scope, expires_at: y.ayar.expires_at ? new Date(y.ayar.expires_at).toISOString() : null },
@@ -261,6 +289,11 @@ async function isle(req: NextRequest, yol: string[]) {
       if (govde === null || govde === "bos") return hata(b, "invalid_json");
       const yeni = ayarDogrula(govde, y.ayar);
       if (typeof yeni === "string") return hata(b, "parameter_invalid", { param: yeni, mesaj: `'${yeni}' alanı geçersiz.` });
+      // Canlı anahtar, panelde oturum açıkken ilk yüklendiğinde o hesaba bağlanır (kredi bu hesaptan kesilir).
+      if (y.ortam === "live") {
+        const ot = await oturumOku(req);
+        if (ot && (await apiSahipBagla(y.kid, ot.hesap.uid)) === "baska") return hata(b, "api_key_owner_mismatch");
+      }
       D.anahtarlar.set(y.kid, yeni);
       if (yeni.account && typeof govde.balance === "number") {
         hesapGuncelle(yeni.account, govde.balance, Array.isArray(govde.billed) ? (govde.billed as string[]) : [], typeof govde.low_balance_threshold === "number" ? govde.low_balance_threshold : null);

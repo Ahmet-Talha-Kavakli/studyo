@@ -28,6 +28,10 @@ import {
   gorselModelBul, modelKredi, krediYaz, dosyaOku, gorselOlcu, gorselYukle, uretimGorseli, GORSEL_TURLERI,
 } from "@/components/arac/kit";
 import { PanoMozaik } from "./PanoKitapligi";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi as gorunumSutun, zamanaGoreSirala, type Gorunum } from "@/lib/galeri/gorunum";
+import { useProjeler } from "@/store/useProjeler";
 
 type Ref = { id: string; url: string; durum: "yukleniyor" | "hazir" | "hata"; w: number; h: number; hata?: string };
 /** Parlaklık (0–1), sıcaklık (−1…1), doygunluk (0–1) ve kontrast (parlaklık sapması). */
@@ -221,7 +225,10 @@ export function PanoOlustur({ id }: { id?: string }) {
   const demo = b.bagli(m) === false;
   const birim = demo ? 0 : modelKredi(m);
   const panoAdi = ad.trim() || "Adsız pano";
-  const onizlemeler = useAracUretimleri(useMemo(() => (u: { arac?: string; meta?: { pano?: string } }) => u.arac === "Ruh Panosu" && (u.meta?.pano === panoAdi || u.meta?.pano === `${panoAdi} · panosuz`), [panoAdi]));
+  const [galeri] = useGorunum("moodboard");
+  const [deneRef, deneEn] = useAlanGenisligi<HTMLDivElement>(800);
+  const onizlemeHam = useAracUretimleri(useMemo(() => (u: { arac?: string; meta?: { pano?: string } }) => u.arac === "Ruh Panosu" && (u.meta?.pano === panoAdi || u.meta?.pano === `${panoAdi} · panosuz`), [panoAdi]));
+  const onizlemeler = useMemo(() => zamanaGoreSirala(onizlemeHam, galeri.siralama), [onizlemeHam, galeri.siralama]);
   const yukleniyor = refler.some((r) => r.durum === "yukleniyor");
   const kac = karsilastir ? 2 : 1;
   const degisti = !mevcut || anlik() !== kayitli;
@@ -250,6 +257,7 @@ export function PanoOlustur({ id }: { id?: string }) {
       meta: { islem: "uret", oran, hamIstem: istem.trim(), stilRefler: hazirlar.slice(0, STIL_REF_SINIRI).map((r) => r.url), stilGuc: guc, pano: panoAdi, ...(tarif.trim() ? { stilIstem: tarif.trim() } : {}), ...(kacin.trim() ? { negatif: kacin.trim() } : {}), ...(paletGonder && renkler.length ? { renkler, palet: panoAdi } : {}), ...coz },
     });
     if (!s.ok) return uretimHataToast(s);
+    if (istemTemizlensinMi("moodboard")) setIstem("");
     if (karsilastir) uretimBaslat({ ...ortak, baslik: `${panoAdi} · panosuz`, meta: { islem: "uret", oran, hamIstem: istem.trim(), pano: `${panoAdi} · panosuz`, ...coz } });
     toast.success(karsilastir ? "Panolu ve panosuz üretiliyor" : "Önizleme üretiliyor", { description: `${model} · ${demo ? "Kredi düşmez." : `${krediYaz(birim * kac)} kredi.`}` });
   };
@@ -429,8 +437,9 @@ export function PanoOlustur({ id }: { id?: string }) {
         <Sparkles className="h-4 w-4 text-metin-2" /><span className="text-[14px] font-semibold text-metin">Panoyu dene</span>
         {onizlemeler.length > 0 && <span className="rounded-full bg-white/[0.08] px-2 text-[11.5px] tabular-nums text-metin-2">{onizlemeler.length}</span>}
         <span className="ml-auto text-[12px] text-metin-2 max-sm:hidden">Kaydetmeden önce panonun bir konuya nasıl yansıdığını gör</span>
+        {onizlemeler.length > 0 && <GorunumAyari sayfa="moodboard" dugmeSinif="h-8 w-8" />}
       </div>
-      <div className="p-2.5">
+      <div className="p-2.5" ref={deneRef}>
         {onizlemeler.length === 0 ? (
           <div className={cn("grid gap-2", masaustu ? "grid-cols-[repeat(2,minmax(0,220px))]" : "grid-cols-2")}>
             {["Panolu", "Panosuz"].map((e, i) => (
@@ -445,9 +454,9 @@ export function PanoOlustur({ id }: { id?: string }) {
             ))}
           </div>
         ) : (
-          <div className={cn("grid gap-1.5", masaustu ? "grid-cols-4" : "grid-cols-2")}>
+          <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${gorunumSutun(deneEn, galeri, { enCok: 6 })}, minmax(0, 1fr))` }}>
             <AnimatePresence initial={false}>
-              {onizlemeler.map((u) => <OnizlemeKutusu key={u.id} u={u} panosuz={String(u.meta?.pano ?? "").endsWith("· panosuz")} onAc={() => setSecili(u.id)} />)}
+              {onizlemeler.map((u) => <OnizlemeKutusu key={u.id} u={u} g={galeri} panosuz={String(u.meta?.pano ?? "").endsWith("· panosuz")} onAc={() => setSecili(u.id)} onYenidenKullan={() => setIstem(String(u.meta?.hamIstem ?? u.prompt).slice(0, 400))} />)}
             </AnimatePresence>
           </div>
         )}
@@ -690,17 +699,17 @@ function ModelLogo({ ad, boyut = 26 }: { ad: string; boyut?: number }) {
 }
 
 /** Önizleme sonucu: sürerken yükleme kartı, bitince sonuç kartı; panolu ve panosuz etiketlenir. */
-function OnizlemeKutusu({ u, panosuz, onAc }: { u: Uretim; panosuz: boolean; onAc: () => void }) {
+function OnizlemeKutusu({ u, panosuz, onAc, g, onYenidenKullan }: { u: Uretim; panosuz: boolean; onAc: () => void; g: Gorunum; onYenidenKullan: () => void }) {
   const suruyor = u.durum === "kuyrukta" || u.durum === "isleniyor";
   const [w, h] = String(u.meta?.oran ?? "3:4").split(":").map(Number);
   return (
     <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.25 }} className="relative">
       {suruyor ? (
-        <div className="relative overflow-hidden rounded-[14px] bg-[#121214]" style={{ aspectRatio: `${w || 3} / ${h || 4}` }}>
+        <div className="relative overflow-hidden rounded-[14px] bg-[#121214]" style={{ aspectRatio: String(kartOrani(g, (w || 3) / (h || 4))) }}>
           <UretimYukleniyor u={u} siraNo={uretimSirasi(u.id) || undefined} onIptal={() => uretimIptal(u.id)} />
         </div>
-      ) : <SonucKarti u={u} onAc={onAc} demoGizle />}
-      <span className={cn("pointer-events-none absolute right-2 top-2 z-10 rounded-full px-2 py-0.5 text-[11px] font-medium", panosuz ? "bg-black/60 text-white/85 backdrop-blur" : "bg-white text-black")}>{panosuz ? "Panosuz" : "Panolu"}</span>
+      ) : <SonucKarti u={u} onAc={onAc} demoGizle oran={g.yerlesim === "ozgun" ? undefined : kartOrani(g, 1)} onYenidenKullan={onYenidenKullan} onSil={() => useProjeler.getState().sil(u.id)} />}
+      <span className={cn("pointer-events-none absolute left-2 top-2 z-10 rounded-full px-2 py-0.5 text-[11px] font-medium", panosuz ? "bg-black/60 text-white/85 backdrop-blur" : "bg-white text-black")}>{panosuz ? "Panosuz" : "Panolu"}</span>
     </motion.div>
   );
 }

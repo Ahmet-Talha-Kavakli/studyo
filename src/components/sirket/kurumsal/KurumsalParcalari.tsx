@@ -103,7 +103,7 @@ function UretGorunumu() {
           </span>
           <span className="flex h-8 items-center gap-1 rounded-full bg-emerald-400/[0.12] px-2.5 text-[12.5px] text-emerald-200"><Check className="h-3.5 w-3.5" />Ekipte izinli model</span>
           <span className="ml-auto flex h-8 items-center gap-2 rounded-full bg-white/[0.07] px-3 text-[12.5px] text-white/80">Pazarlama bütçesi
-            <span className="h-1.5 w-14 rounded-full bg-white/10"><motion.span initial={{ width: 0 }} animate={{ width: "62%" }} transition={{ duration: 1 }} className="block h-full rounded-full bg-[#55d6fd]" /></span>%62
+            <span className="h-1.5 w-14 rounded-full bg-white/10"><motion.span initial={{ width: 0 }} animate={{ width: "62%" }} transition={{ duration: 1 }} className="block h-full rounded-full bg-[#55d6fd]" /></span>yüzde 62
           </span>
         </div>
       </div>
@@ -279,7 +279,7 @@ export function YoneticiKartlari() {
         <div className="mt-5 space-y-3.5">
           {EKIP_BUTCE.map(([a, y, r], k) => (
             <div key={a}>
-              <div className="flex justify-between text-[13.5px]"><span className="text-white">{a}</span><span className="tabular-nums text-white/70">%{y}</span></div>
+              <div className="flex justify-between text-[13.5px]"><span className="text-white">{a}</span><span className="tabular-nums text-white/70">yüzde {y}</span></div>
               <div className="mt-1.5 h-1.5 rounded-full bg-white/[0.08]"><motion.div initial={{ width: 0 }} whileInView={{ width: `${y}%` }} viewport={{ once: true }} transition={{ duration: 1, delay: k * 0.08, ease: EASE }} className="h-full rounded-full" style={{ background: r }} /></div>
             </div>
           ))}
@@ -329,7 +329,7 @@ export function YoneticiKartlari() {
 const TAAHHUT = [
   "SAML SSO: Okta, Entra ID, Google, OneLogin", "SCIM ile otomatik üye yönetimi", "Denetim kaydı ve dışa aktarma",
   "Veri bölgesi: AB, ABD, Asya-Pasifik", "Verilerin eğitimde kullanılmaz, sözleşmede yazılı", "Fikrî mülkiyet tazminat güvencesi",
-  "GDPR md. 28 ve KVKK uyumlu DPA", "AES-256 depolama, TLS 1.3 aktarım", "%99,9 SLA, kredi iadeli",
+  "GDPR md. 28 ve KVKK uyumlu DPA", "AES-256 depolama, TLS 1.3 aktarım", "Yüzde 99,9 SLA, kredi iadeli",
 ];
 
 export function SatinAlmaListesi() {
@@ -351,7 +351,7 @@ export function SatinAlmaListesi() {
 const KARSI: [string, string | boolean, string | boolean][] = [
   ["Üye sayısı", "10'a kadar", "Sınırsız"], ["Ortak kredi havuzu", true, true], ["Tüm modeller ve stüdyolar", true, true], ["Üye bazında harcama limiti", true, true],
   ["Marka kiti ve onay akışı", true, true], ["SAML SSO ve SCIM", false, true], ["Denetim kaydı", false, true], ["Veri bölgesi seçimi", false, true],
-  ["Özel marka modeli", false, true], ["Ayrılmış GPU kapasitesi", false, true], ["SLA", false, "%99,9"], ["Destek", "Öncelikli", "Atanmış yönetici"], ["Ödeme", "Kart", "Fatura · e-fatura"],
+  ["Özel marka modeli", false, true], ["Ayrılmış GPU kapasitesi", false, true], ["SLA", false, "yüzde 99,9"], ["Destek", "Öncelikli", "Atanmış yönetici"], ["Ödeme", "Kart", "Fatura · e-fatura"],
 ];
 export function Karsilastirma() {
   return (

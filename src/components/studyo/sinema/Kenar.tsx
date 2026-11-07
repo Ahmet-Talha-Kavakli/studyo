@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowDownUp, ArrowUpRight, Pin, AtSign, ChevronsUpDown, Clapperboard, Film, Heart, Home, Images, Layers, PanelLeftClose, PanelLeftOpen, Plus, Search, Video, X, Scissors,
+  ArrowDownUp, ArrowUpRight, Pin, AtSign, ChevronsUpDown, Clapperboard, Film, Star, Home, Images, Layers, PanelLeftClose, PanelLeftOpen, Plus, Search, Video, X, Scissors,
 } from "lucide-react";
 import { cn, saltUrl } from "@/lib/utils";
 import { useProjeler } from "@/store/useProjeler";
@@ -60,7 +60,7 @@ export function Kenar({ sayfa, onSayfa, sayilar, projeler, onYeniProje, dar, onD
   const OGELER: { id: KenarSayfa; ad: string; ikon: typeof Home }[] = [
     { id: "ana", ad: "Ana sayfa", ikon: Home },
     { id: "element", ad: "Elementlerim", ikon: AtSign },
-    { id: "favori", ad: "Favorilerim", ikon: Heart },
+    { id: "favori", ad: "Favorilerim", ikon: Star },
     { id: "sahne", ad: "Sahne şeridi", ikon: Layers },
   ];
 

@@ -47,7 +47,7 @@ export const URUNLER: Record<string, UrunSayfa> = {
     renk: "from-amber-glow to-orange-500",
     vurgu: "text-amber-glow",
     ozellikler: [
-      { baslik: "URL → Reklam", aciklama: "Ürün sayfasından görsel ve metni otomatik çeker.", ikon: "link" },
+      { baslik: "URL'den reklam", aciklama: "Ürün sayfasından görsel ve metni otomatik çeker.", ikon: "link" },
       { baslik: "AI Avatarlar", aciklama: "Gerçekçi sunucularla UGC talking-head videolar.", ikon: "users" },
       { baslik: "Hazır Formatlar", aciklama: "UGC, CGI showcase, demo, unboxing tek tıkla.", ikon: "package" },
       { baslik: "Ses & Müzik", aciklama: "Otomatik seslendirme ve telifsiz müzik.", ikon: "music" },
@@ -69,8 +69,8 @@ export const URUNLER: Record<string, UrunSayfa> = {
     vurgu: "text-cyan-glow",
     fark: true,
     ozellikler: [
-      { baslik: "Metin → 3D", aciklama: "Açıklamandan tam 3D mesh oluştur.", ikon: "type" },
-      { baslik: "Görsel → 3D", aciklama: "Tek fotoğraftan hacimli model çıkar.", ikon: "image" },
+      { baslik: "Metinden 3D", aciklama: "Açıklamandan tam 3D mesh oluştur.", ikon: "type" },
+      { baslik: "Görselden 3D", aciklama: "Tek fotoğraftan hacimli model çıkar.", ikon: "image" },
       { baslik: "PBR Dokulama", aciklama: "4K gerçekçi malzeme ve doku üretimi.", ikon: "palette" },
       { baslik: "Çoklu Format", aciklama: "GLB, FBX, OBJ, USDZ, STL dışa aktarma.", ikon: "box" },
     ],
@@ -129,7 +129,7 @@ export const URUNLER: Record<string, UrunSayfa> = {
     slug: "akis",
     ustBaslik: "Akış · Görsel Workflow",
     baslik: "Özgürce inşa et, görsel otomatikleştir",
-    aciklama: "Düğüm tabanlı görsel akış editörü. Metin → görsel → video zincirini tek tuvalde kur, çıktıları birbirine bağla.",
+    aciklama: "Düğüm tabanlı görsel akış editörü. Metinden görsele, görselden videoya uzanan zinciri tek tuvalde kur, çıktıları birbirine bağla.",
     renk: "from-cyan-glow to-vayra-600",
     vurgu: "text-cyan-glow",
     fark: true,

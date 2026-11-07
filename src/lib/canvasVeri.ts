@@ -210,7 +210,7 @@ export const KISAYOLLAR: { baslik: string; ogeler: [string, string][] }[] = [
     baslik: "Gezinme",
     ogeler: [
       ["Yakınlaştır", "⌘="], ["Uzaklaştır", "⌘-"],
-      ["%100 Yakınlık", "⌘0"], ["Ekrana Sığdır", "⇧1"],
+      ["Yüzde 100 Yakınlık", "⌘0"], ["Ekrana Sığdır", "⇧1"],
     ],
   },
   {

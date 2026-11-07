@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { videodanMuzik } from "@/lib/saglayicilar/muzik";
 import { icerikDenetle } from "@/lib/moderasyon";
+import { krediAl, sahteSaglayici, saglayiciyla } from "@/lib/hesap/krediKapi";
+import { oturumGerekli } from "@/lib/hesap/yetki";
+import { videodanMuzikTutari } from "@/lib/krediTarife";
 
 export const runtime = "nodejs";
 
 const EN_FAZLA_MB = 200;
 
-/** Videodan müzik (multipart): videos[] (en çok 10, toplam 200 MB), aciklama, etiketler (JSON), model, efekt, ayriKanal, sesReferans, c2pa, bicim. */
+/**
+ * Videodan müzik (multipart): videos[] (en çok 10, toplam 200 MB), aciklama, etiketler (JSON), model, efekt, ayriKanal,
+ * sesReferans, c2pa, bicim, sureSn, kredi. Oturum gerekir; bedel toplam video süresine göre kesilir, hata olursa iade.
+ */
 export async function POST(req: NextRequest) {
-  if (!process.env.ELEVENLABS_API_KEY) return NextResponse.json({ ok: false, hata: "Videodan müzik için müzik sağlayıcısı bağlantısı gerekli." }, { status: 503 });
+  const o = await oturumGerekli(req);
+  if (o instanceof Response) return o;
+  if (!process.env.ELEVENLABS_API_KEY && !sahteSaglayici(req)) return NextResponse.json({ ok: false, hata: "Videodan müzik için müzik sağlayıcısı bağlantısı gerekli." }, { status: 503 });
   const f = await req.formData().catch(() => null);
   if (!f) return NextResponse.json({ ok: false, hata: "Geçersiz istek." }, { status: 400 });
   const videolar = f.getAll("videos").filter((v): v is File => v instanceof Blob);
@@ -21,10 +29,16 @@ export async function POST(req: NextRequest) {
   const d = icerikDenetle([aciklama, ...etiketler].join("\n"));
   if (!d.izin) return NextResponse.json({ ok: false, hata: d.mesaj }, { status: 422 });
   const evet = (a: string) => f.get(a) === "true";
+  const model = String(f.get("model") ?? "");
+  const k = await krediAl(req, { oturum: o, kaynak: "muzik/video", aciklama: "Videodan müzik", taban: videodanMuzikTutari(model, Number(f.get("sureSn"))), istemci: Number(f.get("kredi")), ucretli: true });
+  if (k instanceof Response) return k;
   try {
-    const s = await videodanMuzik(videolar, { aciklama, etiketler, model: String(f.get("model") ?? ""), efekt: evet("efekt"), ayriKanal: evet("ayriKanal"), sesReferans: evet("sesReferans"), c2pa: evet("c2pa"), bicim: String(f.get("bicim") ?? "") });
-    return NextResponse.json({ ok: true, ...s });
+    const s = await saglayiciyla(k,
+      () => videodanMuzik(videolar, { aciklama, etiketler, model, efekt: evet("efekt"), ayriKanal: evet("ayriKanal"), sesReferans: evet("sesReferans"), c2pa: evet("c2pa"), bicim: String(f.get("bicim") ?? "") }),
+      () => ({ sesUrl: "/brand/vayra-logo-320.webm" }));
+    return NextResponse.json({ ok: true, ...s, ...k.alanlar() });
   } catch (e) {
-    return NextResponse.json({ ok: false, hata: String(e instanceof Error ? e.message : e).slice(0, 300) }, { status: 502 });
+    await k.iade("Sağlayıcı hatası: kredi iade edildi");
+    return NextResponse.json({ ok: false, hata: String(e instanceof Error ? e.message : e).slice(0, 300), ...k.alanlar() }, { status: 502 });
   }
 }

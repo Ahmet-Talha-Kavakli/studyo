@@ -1,71 +1,36 @@
 /**
- * WRITE tool köprüsü — Claude bir write-tool çağırınca frontend'de çalışır:
- * kademeli onay iste → onaylanınca gerçek store aksiyonu + audit → sonuç döner.
+ * Yazma aracı köprüsü: asistan bir yazma aracı önerince arayüzde onay istenir, onaylanırsa gerçek yönetici işlemi ucu çağrılır.
+ * İşlem sunucuda denetim günlüğüne yazılır.
  */
 import type { OnayIstek } from "@/components/admin/ui/Onay";
-import { aksiyonRisk } from "@/lib/admin/guvenlik/roller";
-import { useAdminAksiyon } from "@/store/admin/useAdminAksiyon";
-import { useAdminKupon } from "@/store/admin/useAdminKupon";
-import { useAdminOturum } from "@/store/admin/useAdminOturum";
-import { veri } from "@/lib/admin/seed";
+import { adminIslem } from "@/lib/admin/istemci";
 
-export interface WriteSonuc {
-  onaylandi: boolean;
-  sonuc: string;
-}
+export interface WriteSonuc { onaylandi: boolean; sonuc: string }
 
-/** Bir write tool'u onaydan geçirip uygular. onayIste + toast dışarıdan gelir. */
-export async function writeToolUygula(
-  name: string,
-  girdi: Record<string, unknown>,
-  onayIste: (i: OnayIstek) => Promise<boolean>,
-): Promise<WriteSonuc> {
-  const aks = useAdminAksiyon.getState();
-  const kupon = useAdminKupon.getState();
-  const oturum = useAdminOturum.getState();
-  const admin = oturum.aktifAdmin ?? "ai";
-  const rol = oturum.aktifRol!;
-  const risk = aksiyonRisk(name);
-  const denetle = (eylem: string, onem: "bilgi" | "uyari" | "kritik", hedef?: string) =>
-    oturum.denetle({ admin, rol, eylem, hedef, onem, arac: "ai" });
-
-  const kulAd = (id: string) => veri().kullanicilar.find((k) => k.id === id)?.ad ?? id;
-
+export async function writeToolUygula(name: string, girdi: Record<string, unknown>, onayIste: (i: OnayIstek) => Promise<boolean>): Promise<WriteSonuc> {
+  const uid = String(girdi.kullaniciId ?? "");
+  const sebep = String(girdi.sebep ?? "").trim();
+  let onay: OnayIstek, govde: Record<string, unknown>;
   switch (name) {
-    case "kredi_ekle": {
-      const { kullaniciId, miktar, sebep } = girdi as { kullaniciId: string; miktar: number; sebep: string };
-      const ok = await onayIste({ baslik: `${miktar} kredi ekle`, aciklama: `AI önerisi: ${kulAd(kullaniciId)} hesabına ${miktar} kredi. Sebep: ${sebep}`, risk: risk.risk, eylemEtiket: "Uygula" });
-      if (!ok) return { onaylandi: false, sonuc: "Kullanıcı onaylamadı." };
-      aks.krediDuzelt(kullaniciId, miktar);
-      aks.ledgerEkle({ kullaniciId, miktar, sebep: `AI: ${sebep}`, yapan: admin });
-      denetle(`AI ile kredi eklendi: ${miktar}`, "kritik", kulAd(kullaniciId));
-      return { onaylandi: true, sonuc: `${kulAd(kullaniciId)} hesabına ${miktar} kredi eklendi.` };
+    case "kredi_ekle":
+    case "kredi_dus": {
+      const miktar = Number(girdi.miktar);
+      onay = { baslik: `${miktar} kredi ${name === "kredi_ekle" ? "ekle" : "düş"}`, aciklama: `Asistanın önerisi: ${uid} hesabı. Neden: ${sebep || "belirtilmedi"}.`, risk: name === "kredi_ekle" ? 0 : 1, eylemEtiket: "Uygula" };
+      govde = { islem: name === "kredi_ekle" ? "kredi-ekle" : "kredi-dus", miktar, not: `Asistan: ${sebep}` };
+      break;
     }
-    case "plan_degistir": {
-      const { kullaniciId, plan } = girdi as { kullaniciId: string; plan: string };
-      const ok = await onayIste({ baslik: "Plan değiştir", aciklama: `AI önerisi: ${kulAd(kullaniciId)} planı → ${plan}`, risk: risk.risk, eylemEtiket: "Değiştir" });
-      if (!ok) return { onaylandi: false, sonuc: "Kullanıcı onaylamadı." };
-      aks.planDegistir(kullaniciId, plan);
-      denetle(`AI ile plan değiştirildi → ${plan}`, "uyari", kulAd(kullaniciId));
-      return { onaylandi: true, sonuc: `${kulAd(kullaniciId)} planı ${plan} olarak değiştirildi.` };
-    }
-    case "kullanici_banla": {
-      const { kullaniciId } = girdi as { kullaniciId: string; sebep?: string };
-      const ok = await onayIste({ baslik: "Kullanıcıyı banla", aciklama: `AI önerisi: ${kulAd(kullaniciId)} banlanacak. YÜKSEK RİSK.`, risk: risk.risk, onayMetin: risk.onayMetin, eylemEtiket: "BANLA" });
-      if (!ok) return { onaylandi: false, sonuc: "Kullanıcı onaylamadı." };
-      aks.durumDegistir(kullaniciId, "banli");
-      denetle("AI ile kullanıcı banlandı", "kritik", kulAd(kullaniciId));
-      return { onaylandi: true, sonuc: `${kulAd(kullaniciId)} banlandı.` };
-    }
-    case "kupon_olustur": {
-      const { kod, tur, deger } = girdi as { kod: string; tur: string; deger: number };
-      const ok = await onayIste({ baslik: "Kupon oluştur", aciklama: `AI önerisi: ${kod} · ${tur} · ${deger}`, risk: risk.risk, eylemEtiket: "Oluştur" });
-      if (!ok) return { onaylandi: false, sonuc: "Kullanıcı onaylamadı." };
-      kupon.ekle({ kod: kod.toUpperCase(), tur: tur as "yuzde" | "bonus_kredi", deger, kullanimLimit: 1000, kisiBasiLimit: 1, baslangic: Date.now(), bitis: Date.now() + 30 * 86400000, planlar: "Tümü", yeniKullanici: false, aktif: true });
-      denetle(`AI ile kupon oluşturuldu: ${kod}`, "bilgi");
-      return { onaylandi: true, sonuc: `${kod} kuponu oluşturuldu.` };
-    }
+    case "plan_degistir":
+      onay = { baslik: "Planı değiştir", aciklama: `Asistanın önerisi: ${uid} hesabının planı ${String(girdi.plan)} olacak. Yeni dönem hemen başlar.`, risk: 1, eylemEtiket: "Değiştir" };
+      govde = { islem: "plan", plan: String(girdi.plan ?? ""), not: sebep ? `Asistan: ${sebep}` : "Asistan önerisi" };
+      break;
+    case "hesabi_askiya_al":
+      onay = { baslik: "Hesabı askıya al", aciklama: `Asistanın önerisi: ${uid} hesabı askıya alınacak; kullanıcı giriş yapamaz. Neden: ${sebep}.`, risk: 2, onayMetin: "ASKIYA AL", eylemEtiket: "Askıya al" };
+      govde = { islem: "askiya-al", not: `Asistan: ${sebep}` };
+      break;
     default:
-      return { onaylandi: false, sonuc: `Bilinmeyen write tool: ${name}` };
+      return { onaylandi: false, sonuc: `Bilinmeyen işlem: ${name}` };
   }
+  if (!(await onayIste(onay))) return { onaylandi: false, sonuc: "Onaylanmadı." };
+  const r = await adminIslem(`/api/admin/kullanicilar/${encodeURIComponent(uid)}/islem`, govde);
+  return r.ok ? { onaylandi: true, sonuc: String(r.veri.mesaj ?? "Uygulandı.") } : { onaylandi: false, sonuc: r.hata };
 }

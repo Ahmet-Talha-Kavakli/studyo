@@ -126,7 +126,7 @@ export const KARSILASTIRMA: { grup: string; satirlar: { ad: string; ipucu?: stri
       { ad: "Aylık kredi", d: [String(PLAN_KREDI.baslangic), "1.000", "3.000 – 9.000", "Özel havuz"] },
       { ad: "Kullanılmayan kredi devri", ipucu: "Bir sonraki aya devreder", d: [false, true, true, true] },
       { ad: "Ek kredi paketi alma", d: [true, true, true, true] },
-      { ad: "Kredi başına maliyet", d: ["Standart", "%20 daha düşük", "%60'a kadar düşük", "Sözleşmeye göre"] },
+      { ad: "Kredi başına maliyet", d: ["Standart", "yüzde 20 daha düşük", "yüzde 60'a kadar düşük", "Sözleşmeye göre"] },
     ],
   },
   {
@@ -189,8 +189,8 @@ export const FIYAT_SSS: { s: string; c: string }[] = [
   { s: "Kredi sistemi nasıl çalışır?", c: "Her üretim, seçtiğin modele, kaliteye ve süreye göre belirli bir kredi harcar. Maliyeti üretmeden önce görürsün. Planın her ay kredi yükler; gerekirse ek paket alırsın." },
   { s: "Kullanmadığım krediler ne olur?", c: "Artı ve üzeri planlarda kullanılmayan aylık kredi bir sonraki aya devreder. Tek seferlik paketlerle aldığın kredilerin süresi hiç dolmaz." },
   { s: "Planımı istediğim zaman değiştirebilir miyim?", c: "Evet. Yükseltme anında geçerli olur ve fark günlük olarak hesaplanır. Düşürme bir sonraki fatura döneminde başlar." },
-  { s: "Yıllık ödemede ne kazanırım?", c: "Yıllık ödemede aylık fiyat %20 düşer. Kredilerin yine her ay yenilenir." },
-  { s: "Hangi ödeme yöntemlerini kabul ediyorsunuz?", c: "Türk lirası ile kredi ve banka kartı. Kurumsal müşteriler için havale ve e-fatura seçenekleri var." },
+  { s: "Yıllık ödemede ne kazanırım?", c: "Yıllık ödemede aylık fiyat yüzde 20 düşer. Kredilerin yine her ay yenilenir." },
+  { s: "Hangi ödeme yöntemlerini kabul ediyorsunuz?", c: "Türkiye'den Türk lirası ile kredi ve banka kartı, iyzico güvenli ödeme sayfasında, 12 taksite kadar. Yurt dışından ABD doları ile kart, Stripe üzerinden. Kart bilgin Vayra'ya gelmez. Kurumsal müşterilerle ödeme sözleşmeyle ayarlanır." },
   { s: "Ürettiklerimi ticari olarak kullanabilir miyim?", c: "Evet. Tüm planlarda ürettiğin içerikleri reklam, ürün ve kampanyalarında ticari olarak kullanabilirsin." },
   { s: "İptal edersem ne olur?", c: "İstediğin an iptal edebilirsin. Dönem sonuna kadar planın ve kredilerin kullanılabilir kalır, otomatik yenileme durur." },
 ];

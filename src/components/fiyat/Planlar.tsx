@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { hareketYaz, useHesap } from "@/store/useHesap";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Building2, Check, CircleDollarSign, Infinity as InfinityIcon, Users, X } from "lucide-react";
@@ -12,15 +11,14 @@ import {
 } from "@/lib/fiyat";
 import { MODELLER } from "@/lib/catalog";
 import { useAuth } from "@/store/useAuth";
-import { toast } from "@/lib/toast";
-import { hesapBildirimi } from "@/lib/bildirimler";
+import { odemeyeGec } from "@/components/fiyat/OdemePenceresi";
 import { davetliFiyat } from "@/lib/earn/davet";
 import { cn } from "@/lib/utils";
 
 /**
  * Plan kartları — /fiyatlandirma, /panel/kredi, kredi modalı ve ana sayfa aynı bileşeni kullanır.
  *  mod="site":  4 kart (Ücretsiz dahil). CTA /panel/kredi?sekme=plan&plan=<id>'ye götürür.
- *  mod="panel": 3 ücretli kart. CTA planı doğrudan seçer (demo), mevcut plan işaretlenir.
+ *  mod="panel": 3 ücretli kart. CTA ödeme özetini açar (gerçek ödeme), mevcut plan işaretlenir.
  * Yoğunluk referansı: Higgsfield / Krea / Magnific fiyat kartları.
  */
 export type FiyatModu = "site" | "panel";
@@ -43,7 +41,7 @@ export function DonemSecici({ donem, setDonem }: { donem: Donem; setDonem: (d: D
         <span className={cn("absolute top-0.5 h-5 w-5 rounded-full transition-all duration-200", yillik ? "left-[22px] bg-white" : "left-0.5 bg-white")} />
       </button>
       <button onClick={() => setDonem("yillik")} className={cn("text-[13.5px] font-medium transition-colors", yillik ? "text-white" : "text-metin-3 hover:text-white")}>Yıllık</button>
-      <span className="rounded-full bg-emerald-400/12 px-2 py-1 text-[11px] font-bold text-emerald-300">%{Math.round(YILLIK_INDIRIM * 100)} tasarruf</span>
+      <span className="rounded-full bg-emerald-400/12 px-2 py-1 text-[11px] font-bold text-emerald-300">yüzde {Math.round(YILLIK_INDIRIM * 100)} tasarruf</span>
     </div>
   );
 }
@@ -80,7 +78,6 @@ const PANEL_CTA: Partial<Record<KartPlanId, string>> = { baslangic: "Başlangı�
 function PlanKart({ id, donem, mod, sira, odak }: { id: KartPlanId; donem: Donem; mod: FiyatModu; sira: number; odak?: boolean }) {
   const mevcut = useAuth((s) => s.kullanici?.plan);
   const girisli = useAuth((s) => s.girisYapildi);
-  const profilGuncelle = useAuth((s) => s.profilGuncelle);
   const davetIndirimi = useAuth((s) => s.kullanici?.davetIndirimi === "bekliyor");
   const [kademe, setKademe] = useState(0);
 
@@ -99,13 +96,8 @@ function PlanKart({ id, donem, mod, sira, odak }: { id: KartPlanId; donem: Donem
 
   const sec = () => {
     if (buPlan || !p) return;
-    // Davet bağlantısıyla gelen kullanıcının ilk plan ödemesinde indirim
-    const ilkOdeme = davetIndirimi ? davetliFiyat(fiyat) : fiyat;
-    profilGuncelle({ plan: id as PlanId, ...(davetIndirimi ? { davetIndirimi: "kullanildi" as const } : {}) });
-    hareketYaz({ tur: "plan", aciklama: `${p.ad} planı · ${donem === "yillik" ? "yıllık" : "aylık"}`, kredi: 0, tutar: ilkOdeme, kdv: Math.round(ilkOdeme * 0.2), belge: true });
-    { const em = useAuth.getState().kullanici?.email; if (em) useHesap.getState().guncelle(em, (h) => ({ ...h, abonelik: { donem: donem === "yillik" ? "yillik" : "aylik", baslangic: Date.now(), iptal: false, iptalTarihi: null } })); }
-    hesapBildirimi(`${p.ad} planına geçtin`, `Ayda ${sayi(kredi)} kredi · ${tl(fiyat)} / ay, ${donem === "yillik" ? "yıllık" : "aylık"} faturalandırılır.${davetIndirimi ? ` Davet indirimiyle ilk ödemen ${tl(ilkOdeme)}.` : ""}`, { ad: "Planını gör", link: "/panel/kredi?sekme=plan" });
-    toast.success(`${p.ad} planına geçtin`, { description: davetIndirimi ? `Davet indirimi uygulandı, ilk ödemen ${tl(ilkOdeme)}. Gerçek ödeme alınmadı.` : "Gerçek ödeme alınmadı." });
+    // Fiyat, davet indirimi ve kalan süre farkı sunucuda hesaplanır; ödeme sağlayıcının güvenli sayfasında yapılır.
+    odemeyeGec({ tur: "plan", urun: ultra && kredi !== ULTRA_KREDI_KADEMELERI[0] ? `ultra-${kredi}` : (id as PlanId), donem });
   };
 
   const ctaSinif = cn(
@@ -140,7 +132,7 @@ function PlanKart({ id, donem, mod, sira, odak }: { id: KartPlanId; donem: Donem
           <li className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={logo("nano-banana-pro").src} alt="" className="h-3.5 w-3.5" />
-            = {sayi(Math.floor(gorselKredi / ORNEK_MALIYET.gorsel.kredi))} Nano Banana Pro görseli{ucretsiz && " / gün"}
+            {sayi(Math.floor(gorselKredi / ORNEK_MALIYET.gorsel.kredi))} Nano Banana Pro görseli{ucretsiz && " / gün"}
           </li>
           <li className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}

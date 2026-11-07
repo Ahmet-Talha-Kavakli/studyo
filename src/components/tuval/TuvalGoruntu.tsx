@@ -63,7 +63,7 @@ export function TuvalGoruntu({ k }: { k: { id: string; ad: string; dugumler: unk
       <div data-ui className="absolute right-4 top-4"><button onClick={kopyaAc} className="flex h-9 items-center gap-1.5 rounded-full bg-white px-4 text-[13px] font-semibold text-black hover:brightness-110"><Copy className="h-3.5 w-3.5" />Kopyasını aç</button></div>
       <div data-ui className="absolute bottom-4 left-4 flex items-center gap-0.5 rounded-[12px] bg-[var(--tv-kart)]/92 p-1 ring-1 ring-white/[0.08]">
         <button onClick={() => setG((v) => ({ ...v, z: Math.max(0.15, v.z / 1.2) }))} aria-label="Uzaklaştır" className="flex h-7 w-7 items-center justify-center rounded-[8px] hover:bg-white/[0.075]"><Minus className="h-3.5 w-3.5" /></button>
-        <span className="w-11 text-center text-[12px] tabular-nums text-[var(--sc-metin-2)]">%{Math.round(g.z * 100)}</span>
+        <span className="min-w-11 whitespace-nowrap px-1 text-center text-[12px] tabular-nums text-[var(--sc-metin-2)]">yüzde {Math.round(g.z * 100)}</span>
         <button onClick={() => setG((v) => ({ ...v, z: Math.min(2.5, v.z * 1.2) }))} aria-label="Yakınlaştır" className="flex h-7 w-7 items-center justify-center rounded-[8px] hover:bg-white/[0.075]"><Plus className="h-3.5 w-3.5" /></button>
         <button onClick={sigdir} aria-label="Sığdır" className="flex h-7 w-7 items-center justify-center rounded-[8px] hover:bg-white/[0.075]"><Maximize className="h-3.5 w-3.5" /></button>
       </div>

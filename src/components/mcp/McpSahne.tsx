@@ -203,7 +203,7 @@ export function McpSahne({ istemci, setIstemci, sunucu, onBagla }: {
                     <div className="absolute inset-0 animate-[hf-shimmer_2.4s_linear_infinite] bg-[linear-gradient(110deg,transparent_30%,rgba(255,255,255,0.06)_50%,transparent_70%)] bg-[length:200%_100%]" />
                     <div className="relative flex flex-col items-center rounded-[20px] bg-black/45 px-6 py-4 backdrop-blur-md">
                       <VayraIsaret size={36} />
-                      <p className="mt-2.5 text-[14px] font-medium text-white">{a >= 5 ? <>Üretiliyor · %<Sayac key={sec} hedef={100} sure={SURE[5]} /></> : a >= 4 ? "Onayın bekleniyor" : a >= 1 ? "Ajan model seçiyor" : "İstek bekleniyor"}</p>
+                      <p className="mt-2.5 text-[14px] font-medium text-white">{a >= 5 ? <>Üretiliyor · yüzde <Sayac key={sec} hedef={100} sure={SURE[5]} /></> : a >= 4 ? "Onayın bekleniyor" : a >= 1 ? "Ajan model seçiyor" : "İstek bekleniyor"}</p>
                     </div>
                   </motion.div>
                 )}

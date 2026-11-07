@@ -3,25 +3,24 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Check, Download, Image as ImageIcon, PawPrint, Sparkles, Loader2 } from "lucide-react";
-import { AnimOnizleme } from "./AnimOnizleme";
 import { PozFigur } from "./Figur";
 import { cn } from "@/lib/utils";
 import { Segment, Kaydirici, AnahtarSatir } from "@/components/montaj/ui";
 import type { Uretim } from "@/store/useProjeler";
 import type { SahneBilgi } from "./Sahne";
-import { ANIMASYONLAR, ANIMASYON_KATEGORILERI, POLIGON_HAZIR, RIG_TURLERI, STILLER, TABANLAR, kisaSayi, type Arac } from "./veri";
+import { ARAC_KREDI_3D, POLIGON_HAZIR, RIG_TURLERI, STILLER, kisaSayi, type Arac } from "./veri";
 
 export type AracAyar =
   | { arac: "doku"; istem: string; stil: string; cozunurluk: "2K" | "4K"; pbr: boolean }
-  | { arac: "remesh"; tip: "quad" | "triangle"; poligon: number; simetri: boolean }
-  | { arac: "rig"; tur: string; boy: number; animasyonlar: string[] }
-  | { arac: "baski"; yukseklik: number; taban: string; cokRenk: boolean };
+  | { arac: "remesh"; tip: "quad" | "triangle"; poligon: number }
+  | { arac: "rig"; tur: string; boy: number }
+  | { arac: "baski"; yukseklik: number };
 
 export const ARAC_BILGI: Record<Arac, { ad: string; alt: string; kredi: number }> = {
-  doku: { ad: "Dokula", alt: "Modele yeni PBR doku giydir", kredi: 10 },
-  remesh: { ad: "Remesh", alt: "Topolojiyi ve poligon sayısını yeniden kur", kredi: 0 },
-  rig: { ad: "Rig ve animasyon", alt: "Otomatik iskelet, hazır hareketler", kredi: 20 },
-  baski: { ad: "3D baskı", alt: "Ölçü, taban ve dilimleyici dosyası", kredi: 10 },
+  doku: { ad: "Dokula", alt: "Modele yeni PBR doku giydir", kredi: ARAC_KREDI_3D.doku },
+  remesh: { ad: "Remesh", alt: "Topolojiyi ve poligon sayısını yeniden kur", kredi: ARAC_KREDI_3D.remesh },
+  rig: { ad: "Rig ve animasyon", alt: "Otomatik iskelet, yürüme ve koşu", kredi: ARAC_KREDI_3D.rig },
+  baski: { ad: "3D baskı", alt: "Gerçek ölçü, STL ve 3MF dosyası", kredi: ARAC_KREDI_3D.baski },
   indir: { ad: "İndir", alt: "Biçim seç, dosyayı al", kredi: 0 },
 };
 
@@ -43,7 +42,6 @@ function Satir({ sec, ikon: I, kapak, ad, alt, onClick, sag }: { sec: boolean; i
   );
 }
 
-const DemoNot = ({ children }: { children: React.ReactNode }) => <p className="mt-2 text-[12px] leading-snug text-amber-200/90">{children}</p>;
 
 /**
  * Sağdan açılan araç paneli — seçili modele uygulanan işlemler. Her işlem yeni bir sürüm kaydı açar
@@ -59,14 +57,9 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
   const [pbr, setPbr] = useState(true);
   const [tip, setTip] = useState<"quad" | "triangle">(model.topoloji?.tip ?? "quad");
   const [poligon, setPoligon] = useState(10000);
-  const [simetri, setSimetri] = useState(true);
   const [rigTur, setRigTur] = useState("insansi");
   const [boy, setBoy] = useState(1.75);
-  const [kat, setKat] = useState("hepsi");
-  const [anim, setAnim] = useState<string[]>(["Boşta Bekleme", "Yürüme"]);
   const [yukseklik, setYukseklik] = useState(120);
-  const [taban, setTaban] = useState("daire");
-  const [cokRenk, setCokRenk] = useState(false);
   const [calisiyor, setCalisiyor] = useState(false);
   const b = ARAC_BILGI[arac];
   const [boyut, setBoyut] = useState<string | null>(null);
@@ -82,16 +75,19 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
   const olcek = bilgi && bilgi.olcu.y > 0 ? yukseklik / (bilgi.olcu.y * 1000) : 0;
   const mm = (m: number) => Math.round(m * 1000 * olcek);
 
-  const cta = (a: AracAyar | null, etiket: string, engel?: string) => (
+  const cta = (a: AracAyar | null, etiket: string, engelHam?: string) => {
+    const engel = bagli ? engelHam : "3D sağlayıcısı bağlı değil; bu işlem şu an yapılamaz";
+    return (
     <div className="border-t border-white/[0.06] p-3">
       <motion.button whileTap={{ scale: 0.97 }} disabled={!a || !!engel || calisiyor} onClick={() => a && calistir(a)} title={engel}
         className="hf-cta flex h-11 w-full items-center justify-center gap-2 rounded-full text-[14px] font-semibold disabled:opacity-55">
         {calisiyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{etiket}
-        {bagli ? b.kredi > 0 && <span className="tabular-nums">{b.kredi} kredi</span> : <span className="rounded-full bg-black/15 px-2 py-0.5 text-[11.5px]">Ücretsiz</span>}
+        {bagli && b.kredi > 0 && <span className="tabular-nums">{b.kredi} kredi</span>}
       </motion.button>
       {engel && <p className="mt-1.5 text-center text-[12px] text-amber-200/90">{engel}</p>}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-full flex-col">
@@ -143,7 +139,6 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
               <div className="mb-3"><Segment deger={POLIGON_HAZIR.includes(poligon) ? poligon : 0} onDegis={(v) => v && setPoligon(v)} etiket="Poligon" secenekler={[...POLIGON_HAZIR.map((n) => [n, kisaSayi(n)] as const), [0, "Özel"] as const]} /></div>
               <Kaydirici ad="Özel" deger={poligon} min={500} max={200000} adim={500} onDegis={setPoligon} yaz={(v) => kisaSayi(v)} />
             </Bolum>
-            <Bolum baslik="Seçenekler"><AnahtarSatir ad="Simetri" alt="Sol ve sağ yarıyı eşitle" acik={simetri} onDegis={() => setSimetri((v) => !v)} /></Bolum>
           </>
         )}
 
@@ -167,20 +162,7 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
               </div>
             </Bolum>
             <Bolum baslik="Karakter boyu"><Kaydirici ad="Boy" deger={boy} min={0.3} max={4} adim={0.05} onDegis={setBoy} yaz={(v) => `${v.toFixed(2).replace(".", ",")} m`} /></Bolum>
-            <Bolum baslik="Animasyonlar" sag={<span className="flex items-center gap-1.5">{anim.length > 0 && <button onClick={() => setAnim([])} className="h-6 rounded-full px-2 text-[11.5px] font-medium text-metin-3 transition hover:bg-white/[0.085] hover:text-metin">Temizle</button>}<motion.span key={anim.length} initial={{ scale: 0.85 }} animate={{ scale: 1 }} className={cn("rounded-full px-2 py-0.5 text-[12px] font-semibold tabular-nums", anim.length ? "bg-white text-black" : "bg-white/[0.085] text-metin-2")}>{anim.length} seçili</motion.span></span>}>
-              <div role="radiogroup" aria-label="Kategori" className="mb-3 flex flex-wrap gap-1.5">
-                {ANIMASYON_KATEGORILERI.map((k) => (
-                  <button key={k.id} role="radio" aria-checked={kat === k.id} onClick={() => setKat(k.id)} className={cn("relative h-8 shrink-0 rounded-full px-3 text-[12.5px] font-medium ring-1 ring-inset ring-white/[0.08] transition-colors", kat === k.id ? "text-black ring-transparent" : "bg-white/[0.065] text-metin-2 hover:text-metin")}>
-                    {kat === k.id && <motion.span layoutId="ucb-anim-kat" transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }} className="absolute inset-0 rounded-full bg-white" />}<span className="relative">{k.ad}</span>
-                  </button>
-                ))}
-              </div>
-              <motion.div className="grid grid-cols-2 gap-2">
-                {ANIMASYONLAR.filter((a) => kat === "hepsi" || a.kategori === kat).map((a) => (
-                  <AnimKarti key={a.ad} ad={a.ad} sure={a.sure} sec={anim.includes(a.ad)} sira={anim.indexOf(a.ad) + 1} onClick={() => setAnim((l) => (l.includes(a.ad) ? l.filter((x) => x !== a.ad) : [...l, a.ad]))} />
-                ))}
-              </motion.div>
-            </Bolum>
+            <Bolum baslik="Animasyonlar"><p className="text-[13px] leading-relaxed text-metin-2">Rig bitince karakterle birlikte yürüme ve koşu animasyonları gelir. Rig yalnız insansı, yüzü öne bakan karakterlerde çalışır.</p></Bolum>
           </>
         )}
 
@@ -194,12 +176,6 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
                 ))}
               </dl>
             </Bolum>
-            <Bolum baslik="Taban">
-              <div className="space-y-0.5">
-                {TABANLAR.map((t) => <Satir key={t.id} sec={taban === t.id} ad={t.ad} alt={t.alt} kapak={<span className={taban === t.id ? "text-aksan" : "text-metin-2"}><TabanSekli id={t.id} /></span>} onClick={() => setTaban(t.id)} />)}
-              </div>
-            </Bolum>
-            <Bolum baslik="Renk"><AnahtarSatir ad="Çok renkli baskı" alt="Dokudan filament bölgeleri çıkarır (3MF)" acik={cokRenk} onDegis={() => setCokRenk((v) => !v)} /></Bolum>
           </>
         )}
 
@@ -216,6 +192,17 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
                   <motion.button whileTap={{ scale: 0.95 }} onClick={() => onIndir("glb")} disabled={!model.glbUrl}
                     className="flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 text-[13px] font-semibold text-[#0b0c0e] disabled:opacity-40"><Download className="h-4 w-4" />İndir</motion.button>
                 </div>
+                {Object.entries((model.meta?.dosyalar ?? {}) as Record<string, string>).filter(([, u]) => typeof u === "string" && u).map(([bicim]) => (
+                  <div key={bicim} className="flex items-center gap-3 rounded-[14px] bg-white/[0.035] p-2.5 ring-1 ring-inset ring-white/[0.07]">
+                    <BicimRozeti ad={bicim.toUpperCase()} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-semibold text-metin">Baskı dosyası</span>
+                      <span className="block truncate text-[12px] text-metin-2">Dilimleyici için, gerçek ölçüde</span>
+                    </span>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => onIndir(bicim)}
+                      className="flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-medium text-metin ring-1 ring-inset ring-white/[0.12] transition-colors hover:bg-white/[0.075]"><Download className="h-4 w-4" />İndir</motion.button>
+                  </div>
+                ))}
                 <div className="flex items-center gap-3 rounded-[14px] bg-white/[0.035] p-2.5 ring-1 ring-inset ring-white/[0.07]">
                   <span className="h-11 w-11 shrink-0 overflow-hidden rounded-[12px] bg-[radial-gradient(circle_at_50%_40%,#34363b,#16171a)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -235,38 +222,10 @@ export function AracPaneli({ arac, model, bilgi, bagli, onKapat, onCalistir, onI
       </div>
 
       {arac === "doku" && cta({ arac: "doku", istem, stil, cozunurluk: coz, pbr }, "Dokula", istem.trim() ? undefined : "Yeni dokuyu anlat")}
-      {arac === "remesh" && cta({ arac: "remesh", tip, poligon, simetri }, "Remesh")}
-      {arac === "rig" && cta({ arac: "rig", tur: rigTur, boy, animasyonlar: anim }, "Rig'le")}
-      {arac === "baski" && cta({ arac: "baski", yukseklik, taban, cokRenk }, "Baskıya hazırla")}
+      {arac === "remesh" && cta({ arac: "remesh", tip, poligon }, "Remesh")}
+      {arac === "rig" && cta({ arac: "rig", tur: rigTur, boy }, "Rig'le", rigTur === "insansi" ? undefined : "Rig şu an yalnız insansı karakterlerde çalışır")}
+      {arac === "baski" && cta({ arac: "baski", yukseklik }, "Baskıya hazırla")}
     </div>
-  );
-}
-
-function TabanSekli({ id }: { id: string }) {
-  const c = "h-6 w-9 text-current";
-  if (id === "yok") return <svg viewBox="0 0 36 24" className={c} fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3 3"><ellipse cx="18" cy="16" rx="13" ry="4" /></svg>;
-  if (id === "daire") return <svg viewBox="0 0 36 24" className={c} fill="currentColor" fillOpacity=".25" stroke="currentColor" strokeWidth="1.5"><ellipse cx="18" cy="12" rx="14" ry="4.5" /><path d="M4 12v4c0 2.5 6.3 4.5 14 4.5s14-2 14-4.5v-4" fill="none" /></svg>;
-  if (id === "kare") return <svg viewBox="0 0 36 24" className={c} fill="currentColor" fillOpacity=".25" stroke="currentColor" strokeWidth="1.5"><path d="M18 5l14 6-14 6-14-6z" /><path d="M4 11v4l14 6 14-6v-4" fill="none" /></svg>;
-  return <svg viewBox="0 0 36 24" className={c} fill="currentColor" fillOpacity=".25" stroke="currentColor" strokeWidth="1.5"><path d="M10 6h16l6 5-6 5H10l-6-5z" /><path d="M4 11v4l6 5h16l6-5v-4" fill="none" /></svg>;
-}
-
-/** Animasyon kartı: üzerine gelince ya da seçiliyken figür hareketi oynatır. */
-function AnimKarti({ ad, sure, sec, sira, onClick }: { ad: string; sure: string; sec: boolean; sira: number; onClick: () => void }) {
-  const [ust, setUst] = useState(false);
-  return (
-    <motion.button whileTap={{ scale: 0.97 }} onClick={onClick} aria-pressed={sec} onPointerEnter={() => setUst(true)} onPointerLeave={() => setUst(false)} onFocus={() => setUst(true)} onBlur={() => setUst(false)}
-      className="group relative block aspect-[4/5] w-full min-w-0 overflow-hidden rounded-[14px] text-left"
-      style={{ background: "radial-gradient(80% 60% at 50% 40%, #4a4d54 0%, #2a2c31 55%, #17181b 100%)" }}>
-      {/* stüdyo zemini: perspektif ızgara */}
-      <span aria-hidden className="absolute inset-x-0 bottom-0 h-[38%] opacity-60 [background-image:linear-gradient(rgba(255,255,255,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:14px_10px] [mask-image:linear-gradient(to_top,#000,transparent)] [transform:perspective(120px)_rotateX(48deg)] [transform-origin:bottom]" />
-      <AnimOnizleme ad={ad} oynat={ust} className="absolute inset-x-0 top-[2%] h-[88%] origin-[50%_60%] scale-[1.45] transition-transform duration-300 group-hover:scale-[1.52]" />
-      <span className="absolute right-2 top-2 rounded-full bg-black/55 px-1.5 py-px text-[10.5px] font-medium tabular-nums text-white/85 backdrop-blur">{sure}</span>
-      <AnimatePresence>{sec && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }} className="absolute left-2 top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1 text-[11px] font-bold tabular-nums text-black">{sira}</motion.span>}</AnimatePresence>
-      <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent px-2.5 pb-2 pt-5">
-        <span className={cn("block truncate text-[12.5px] font-semibold", sec ? "text-white" : "text-white/80")}>{ad}</span>
-      </span>
-      <span aria-hidden className={cn("pointer-events-none absolute inset-0 rounded-[14px] ring-inset transition-shadow", sec ? "ring-2 ring-white" : "ring-1 ring-white/[0.08] group-hover:ring-white/30")} />
-    </motion.button>
   );
 }
 

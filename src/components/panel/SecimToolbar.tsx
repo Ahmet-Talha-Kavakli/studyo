@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Download, Upload, FolderPlus, Heart, Trash2, X, AudioLines } from "lucide-react";
+import { Download, Upload, FolderPlus, Star, Trash2, X, AudioLines } from "lucide-react";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { toast } from "@/lib/toast";
 import { useSecim } from "@/store/useSecim";
 import { useProjeler } from "@/store/useProjeler";
@@ -88,32 +90,33 @@ export function SecimToolbar({ kapsayiciRef, alttanBosluk }: {
           </span>
           <span className="mx-1 h-6 w-px bg-white/10" />
           <button onClick={indir} className={cn(D, "text-white/75 hover:bg-white/[0.07] hover:text-white")}><Download className="h-4 w-4" />İndir</button>
-          <button onClick={() => toplu((id) => guncelle(id, { yayinda: true }), `${adet} öğe yayınlandı`, "Keşfet akışında görünecek.")} className={cn(D, "text-white/75 hover:bg-white/[0.07] hover:text-white")}><Upload className="h-4 w-4" />{adet > 1 ? "Tümünü yayınla" : "Yayınla"}</button>
+          <button onClick={() => toplu((id) => guncelle(id, { yayinda: true }), `${adet} öğe yayında olarak işaretlendi`, "Keşfet'te senin hesabında görünür; başka kullanıcılarla henüz paylaşılmaz.")} className={cn(D, "text-white/75 hover:bg-white/[0.07] hover:text-white")}><Upload className="h-4 w-4" />{adet > 1 ? "Tümünü yayınla" : "Yayınla"}</button>
           <div className="relative">
-            <button onClick={() => setKlasorAcik((v) => !v)} aria-expanded={klasorAcik} className={cn(D, klasorAcik ? "bg-white/[0.12] text-white" : "text-white/75 hover:bg-white/[0.07] hover:text-white")}><FolderPlus className="h-4 w-4" />Klasöre ekle</button>
+            <button onClick={() => setKlasorAcik((v) => !v)} aria-expanded={klasorAcik} className={cn(D, klasorAcik ? "bg-white/[0.12] text-white" : "text-white/75 hover:bg-white/[0.07] hover:text-white")}><FolderPlus className="h-4 w-4" />Projeye ekle</button>
             <AnimatePresence>
               {klasorAcik && (
                 <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} transition={{ duration: 0.16 }}
                   className="absolute bottom-full left-1/2 mb-3 w-64 -translate-x-1/2 overflow-hidden rounded-[18px] border border-white/[0.09] bg-[#1b1c1f]">
-                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-3.5 py-2.5"><span className="text-[13px] font-semibold text-white">Klasöre ekle</span><span className="ml-auto text-[11.5px] tabular-nums text-white/45">{projeler.length}</span></div>
+                  <div className="flex items-center gap-2 border-b border-white/[0.06] px-3.5 py-2.5"><span className="text-[13px] font-semibold text-white">Projeye ekle</span><span className="ml-auto text-[11.5px] tabular-nums text-white/45">{projeler.length}</span></div>
                   <div className="max-h-[260px] overflow-y-auto p-1.5 [scrollbar-width:thin]">
                     {projeler.map((p) => (
                       <button key={p.id} onClick={() => { projeyeTasi(secililer, p.id); setKlasorAcik(false); temizle(); }} className="flex w-full items-center gap-2.5 rounded-[10px] px-2 py-2 text-left text-[13px] text-white transition-colors hover:bg-white/[0.06]">
                         <FolderPlus className="h-4 w-4 shrink-0 text-white/55" /><span className="min-w-0 flex-1 break-words">{p.ad}</span>
                       </button>
                     ))}
-                    {!projeler.length && <p className="px-2 py-2 text-[12.5px] text-white/55">Henüz klasörün yok. Kitaplık'tan bir tane oluşturabilirsin.</p>}
+                    {!projeler.length && <p className="px-2 py-2 text-[12.5px] text-white/55">Henüz projen yok. Kitaplık'tan bir tane oluşturabilirsin.</p>}
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-          <button onClick={() => toplu((id) => { const u = seciliUretimler.find((x) => x.id === id); if (!hepsiFavori ? !u?.favori : true) favoriToggle(id); }, hepsiFavori ? "Beğeniler kaldırıldı" : `${adet} öğe beğenildi`)}
-            aria-label={hepsiFavori ? "Beğeniyi kaldır" : "Beğen"} className={cn("flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/[0.07] active:scale-95", hepsiFavori ? "text-rose-400" : "text-white/75 hover:text-white")}><Heart className={cn("h-4 w-4", hepsiFavori && "fill-current")} /></button>
-          <button onClick={() => { const n = adet, geriAl = uretimGeriAl(secililer); secililer.forEach((id) => sil(id)); temizle(); mesaj.silindi(`${n} öğe`, geriAl); }}
-            aria-label="Sil" className="flex h-9 w-9 items-center justify-center rounded-full text-rose-300 transition-colors hover:bg-rose-500/10 active:scale-95"><Trash2 className="h-4 w-4" /></button>
+          <KlasoreTasiDugmesi uretimIdler={secililer} onBitti={temizle} className={cn(D, "text-white/75 hover:bg-white/[0.07] hover:text-white")} />
+          <Tooltip label={hepsiFavori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><button onClick={() => toplu((id) => { const u = seciliUretimler.find((x) => x.id === id); if (!hepsiFavori ? !u?.favori : true) favoriToggle(id); }, hepsiFavori ? "Favorilerden çıkarıldı" : `${adet} öğe favorilere eklendi`)}
+            aria-label={hepsiFavori ? "Favorilerden çıkar" : "Favorilere ekle"} className={cn("flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-white/[0.07] active:scale-95", hepsiFavori ? "text-aksan" : "text-white/75 hover:text-white")}><Star className={cn("h-4 w-4", hepsiFavori && "fill-current")} /></button></Tooltip>
+          <Tooltip label="Sil" side="top"><button onClick={() => { const n = adet, geriAl = uretimGeriAl(secililer); secililer.forEach((id) => sil(id)); temizle(); mesaj.silindi(`${n} öğe`, geriAl); }}
+            aria-label="Sil" className="flex h-9 w-9 items-center justify-center rounded-full text-rose-300 transition-colors hover:bg-rose-500/10 active:scale-95"><Trash2 className="h-4 w-4" /></button></Tooltip>
           <span className="mx-1 h-6 w-px bg-white/10" />
-          <button onClick={temizle} aria-label="Seçimi bırak" className="flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95"><X className="h-4 w-4" /></button>
+          <button onClick={temizle} title="Seçimi bırak" aria-label="Seçimi bırak" className="flex h-9 w-9 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/[0.07] hover:text-white active:scale-95"><X className="h-4 w-4" /></button>
         </motion.div>
       )}
     </AnimatePresence>

@@ -2,18 +2,17 @@
 
 /**
  * m49: Görevler & Ödüller sayfası — belli görevleri tamamla, GERÇEK kredi kazan.
- * useGorevler (kalıcı ilerleme + tek-sefer ödül) + useAuth (gerçek kredi ekleme).
+ * useGorevler (kalıcı ilerleme + tek-sefer ödül) + sunucu ödül ucu (/api/odeme/gorev).
  */
 
 import { useEffect, useMemo } from "react";
 import { KrediJeton } from "@/components/ui/KrediHap";
-import { hareketYaz } from "@/store/useHesap";
+import { gorevOdulAl, hesabiTazele } from "@/lib/odeme/istemci";
 import { motion } from "framer-motion";
 import { Check, Gift, Sparkles, Users, Rocket, CalendarDays, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { toast } from "@/lib/toast";
 import { useGorevler, GOREVLER, type GorevTip } from "@/store/useGorevler";
-import { useAuth } from "@/store/useAuth";
 import { cn } from "@/lib/utils";
 
 const TIP_META: Record<GorevTip, { ad: string; ikon: typeof Sparkles; renk: string }> = {
@@ -24,8 +23,7 @@ const TIP_META: Record<GorevTip, { ad: string; ikon: typeof Sparkles; renk: stri
 };
 
 export default function GorevlerSayfasi() {
-  const { ilerleme, alinanlar, ilerlet, odulAl, gunlukKontrol } = useGorevler();
-  const ekKrediEkle = useAuth((s) => s.ekKrediEkle);
+  const { ilerleme, alinanlar, odulAl, gunlukKontrol } = useGorevler();
 
   useEffect(() => { gunlukKontrol(); }, [gunlukKontrol]);
 
@@ -37,11 +35,16 @@ export default function GorevlerSayfasi() {
 
   const gruplar: GorevTip[] = ["gunluk", "baslangic", "sosyal", "uretim"];
 
-  const oduluTeslimAl = (id: string) => {
+  // Ödül sunucuda doğrulanır ve kredi defterine eklenir (tutar ve tekrar kuralı sunucuda); tarayıcı krediyi kendi eklemez.
+  const oduluTeslimAl = async (id: string) => {
     const g = GOREVLER.find((x) => x.id === id);
     if (!g) return;
-    const ok = odulAl(id, (m) => ekKrediEkle(m));
-    if (ok) { hareketYaz({ tur: "odul", aciklama: `Görev ödülü: ${g.baslik}`, kredi: g.odul }); toast.success(`+${g.odul} kredi kazandın`, { description: `"${g.baslik}" görevinin ödülü bakiyene eklendi.` }); }
+    const r = await gorevOdulAl(id);
+    if (!r.ok && r.kod !== "alindi") return toast.error("Ödül alınamadı", { description: r.hata });
+    odulAl(id, () => {});
+    if (!r.ok) return;
+    void hesabiTazele();
+    toast.success(`${r.kredi} kredi kazandın`, { description: `"${g.baslik}" görevinin ödülü bakiyene eklendi.` });
   };
 
   return (
@@ -71,10 +74,10 @@ export default function GorevlerSayfasi() {
         </div>
       </div>
 
-      {/* geliştirici yardımı: görevleri denemek için (gerçek akışta üretim/yorum otomatik ilerletir) */}
       <div className="space-y-8">
         {gruplar.map((tip) => {
           const grupGorevleri = GOREVLER.filter((g) => g.tip === tip);
+          if (!grupGorevleri.length) return null;
           const meta = TIP_META[tip];
           return (
             <div key={tip}>
@@ -112,11 +115,8 @@ export default function GorevlerSayfasi() {
                             Ödülü al
                           </button>
                         ) : (
-                          // Görev deneme butonu — gerçek akışta üretim/yorum/yayın bunu otomatik ilerletir.
-                          <button onClick={() => ilerlet(g.id)}
-                            className="rounded-full border border-white/12 px-3 py-1 text-[12.5px] text-metin-2 transition-colors hover:bg-white/8 hover:text-metin">
-                            İlerlet
-                          </button>
+                          // İlerleme yalnız gerçek eylemle (üretim, yorum, yayın) artar; elle ilerletme düğmesi kaldırıldı.
+                          <span className="text-[12px] text-metin-3">Devam ediyor</span>
                         )}
                       </div>
                     </motion.div>

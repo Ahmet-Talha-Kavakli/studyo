@@ -12,8 +12,8 @@ const ISTATISTIK_ARALIK = 30 * 60_000;
 /**
  * Earn gözcüsü — uygulama kabuğunda bir kez çalışır (bildirim gözcüsüyle birlikte):
  *  1. Earn verisini giriş yapan hesaba bağlar (hesap değişince sıfırlanır).
- *  2. Kazanma süresindeki gönderilerin görüntülenmesini platform API'sinden tazeler.
- *  3. Gönderi ve çekim durum değişimlerini bir kez bildirim olarak düşer.
+ *  2. Başvuru durumlarını sunucudan eşitler; onaylı gönderilerin görüntülenmesini platform API'sinden tazeler.
+ *  3. Sunucudaki inceleme kararlarını ve çekim durum değişimlerini bir kez bildirim olarak düşer.
  */
 export function useEarnGozcusu() {
   const kullanici = useAuth((s) => s.kullanici);
@@ -27,6 +27,9 @@ export function useEarnGozcusu() {
     let iptal = false;
 
     const kontrol = async () => {
+      // Başvuru durumları sunucudaki inceleme kaydından okunur.
+      await useEarn.getState().esitle();
+      if (iptal) return;
       const s = useEarn.getState();
       const simdi = Date.now();
       const bonus = cuzdan(s, simdi).seviye.bonus;
@@ -41,14 +44,9 @@ export function useEarnGozcusu() {
           useEarn.getState().bildirildi(a);
           f();
         };
-        // Gönderinin geçmişteki olaylarına (sayfa açık değilken olanlar) toplu bildirim atmamak için
-        // yalnız son 3 günün olayları bildirilir.
-        const yeni = (t: number) => simdi - t < 3 * 86_400_000;
-        if (h.durum === "kazaniyor" && yeni(h.sonrakiAsama - 7 * 86_400_000)) {
-          bir("onay", () => bildir({ kategori: "earn", tur: "basari", baslik: "Gönderin onaylandı", mesaj: `${k.ad} · Görüntülenmeler artık kazandırıyor. Onay ödemesi: ${tl(k.sabitOdeme ?? 0)}.`, link: "/earn/gonderiler", gorsel: g.uretimGorsel ?? k.kapak }));
-        }
-        if (h.durum === "cekilebilir" && h.kazanc > 0 && yeni(h.sonrakiAsama)) {
-          bir("cekilebilir", () => bildir({ kategori: "earn", tur: "basari", baslik: `${tl(h.kazanc, true)} çekilebilir`, mesaj: `${k.ad} kazancın cüzdanına geçti.`, link: "/earn/cuzdan", eylem: { ad: "Para çek", link: "/earn/cuzdan" } }));
+        // Yalnız sunucudaki inceleme kararı bildirilir (zamanla kendiliğinden onay yoktur).
+        if (h.durum === "onaylandi") {
+          bir("onay", () => bildir({ kategori: "earn", tur: "basari", baslik: "Gönderin onaylandı", mesaj: `${k.ad} · Başvurun incelendi ve kampanya kurallarına uygun bulundu.`, link: "/earn/gonderiler", gorsel: g.uretimGorsel ?? k.kapak }));
         }
         if (h.durum === "reddedildi") {
           bir("red", () => bildir({ kategori: "earn", tur: "hata", baslik: "Gönderin reddedildi", mesaj: `${k.ad} · ${g.red ?? "Gereksinimler karşılanmadı."}`, link: "/earn/gonderiler", eylem: { ad: "İtiraz et", link: "/earn/gonderiler" } }));
@@ -70,7 +68,7 @@ export function useEarnGozcusu() {
       for (const g of s.gonderiler) {
         if (iptal) return;
         const h = gonderiHesap(g, simdi);
-        if (h.durum !== "kazaniyor" || h.kampanya?.tur !== "goruntulenme") continue;
+        if (h.durum !== "onaylandi" || h.kampanya?.tur !== "goruntulenme") continue;
         if (g.istatistik && simdi - g.istatistik.zaman < ISTATISTIK_ARALIK) continue;
         const r = await istatistikIstek(g.platform, g.link);
         if (r.ok && r.gercek && typeof r.goruntulenme === "number") useEarn.getState().istatistikYaz(g.id, r.goruntulenme);

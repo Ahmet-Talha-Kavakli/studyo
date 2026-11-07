@@ -2,9 +2,15 @@
 
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Download, Heart, Loader2, Package, Play, Plus, Repeat, Trash2, TriangleAlert } from "lucide-react";
+import { Download, Loader2, Package, Play, Plus, Trash2, TriangleAlert, Star, Quote } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Uretim } from "@/store/useProjeler";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KartDahaMenusu } from "@/components/galeri/KartEylemleri";
+import { kartOrani, sutunSayisi as gorunumSutun, type Gorunum } from "@/lib/galeri/gorunum";
 
 /**
  * Kampanya ızgarası (K3): her kampanya bir kart — oynayan kapak, varyant sayısı, diğer varyantların
@@ -23,16 +29,20 @@ export function KampanyaIzgarasi({ ks, bilgi, kare, islem, baslik, sag, toplam, 
   ks: Uretim[][]; bilgi: (l: Uretim[]) => KampanyaBilgi; kare: (l: Uretim[]) => string | undefined;
   islem: (l: Uretim[]) => KampanyaIslem; baslik: string; sag?: React.ReactNode; toplam?: number; onYeni?: () => void;
 }) {
+  const [g] = useGorunum("pazarlama");
+  const [alanRef, alanEn] = useAlanGenisligi<HTMLDivElement>(1100);
+  const enYeni = (l: Uretim[]) => Math.max(...l.map((x) => x.olusturma));
+  const sirali = [...ks].sort((a, b) => (g.siralama === "eski" ? 1 : -1) * (enYeni(a) - enYeni(b)));
   return (
     <section className="overflow-hidden rounded-[26px] bg-[#141517] ring-1 ring-inset ring-white/[0.07]">
       <div className="flex items-center gap-2 border-b border-white/[0.06] px-5 py-3.5 max-sm:px-4">
         <h2 className="text-[15.5px] font-semibold text-metin">{baslik}</h2>
         <span className="rounded-full bg-white/[0.085] px-2 text-[12px] tabular-nums leading-5 text-metin-2">{toplam ?? ks.length}</span>
-        <div className="ml-auto">{sag}</div>
+        <div className="ml-auto flex items-center gap-2">{sag}<GorunumAyari sayfa="pazarlama" istemVar={false} /></div>
       </div>
-      <motion.div layout className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 max-sm:gap-2.5 max-sm:p-3">
+      <motion.div ref={alanRef} layout className="grid gap-3 p-4 max-sm:gap-2.5 max-sm:p-3" style={{ gridTemplateColumns: `repeat(${gorunumSutun(alanEn, g, { enCok: 8 })}, minmax(0, 1fr))` }}>
         <AnimatePresence initial={false}>
-          {ks.map((l) => <KampanyaKarti key={l[0].meta?.grupId ?? l[0].id} l={l} bilgi={bilgi(l)} kare={kare(l)} islem={islem(l)} />)}
+          {sirali.map((l) => <KampanyaKarti key={l[0].meta?.grupId ?? l[0].id} g={g} l={l} bilgi={bilgi(l)} kare={kare(l)} islem={islem(l)} />)}
         </AnimatePresence>
         {onYeni && (
           <motion.button layout onClick={onYeni} whileTap={{ scale: 0.98 }}
@@ -46,7 +56,7 @@ export function KampanyaIzgarasi({ ks, bilgi, kare, islem, baslik, sag, toplam, 
   );
 }
 
-function KampanyaKarti({ l, bilgi, kare, islem }: { l: Uretim[]; bilgi: KampanyaBilgi; kare?: string; islem: KampanyaIslem }) {
+function KampanyaKarti({ l, bilgi, kare, islem, g }: { l: Uretim[]; bilgi: KampanyaBilgi; kare?: string; islem: KampanyaIslem; g: Gorunum }) {
   const hazirlar = l.filter((x) => x.durum === "tamam");
   const kapak = hazirlar[0] ?? l[0];
   const surecte = l.filter(surecteMi);
@@ -62,7 +72,7 @@ function KampanyaKarti({ l, bilgi, kare, islem }: { l: Uretim[]; bilgi: Kampanya
       className="group min-w-0 rounded-[20px] bg-white/[0.03] p-1.5 ring-1 ring-inset ring-white/[0.07] transition-colors hover:bg-white/[0.055]">
       <div className="relative">
         <button onClick={() => acilir && islem.onAc(kapak.id)} disabled={!acilir} aria-label={`${bilgi.baslik} kampanyasını aç`}
-          className="relative block aspect-[4/5] w-full overflow-hidden rounded-[15px] bg-black disabled:cursor-default">
+          style={{ aspectRatio: String(kartOrani(g, 4 / 5)) }} className="relative block w-full overflow-hidden rounded-[15px] bg-black disabled:cursor-default">
           {kapak.durum === "tamam" ? (
             <>
               <span className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.03]" style={{ background: kapak.gorselUrl }} />
@@ -75,7 +85,7 @@ function KampanyaKarti({ l, bilgi, kare, islem }: { l: Uretim[]; bilgi: Kampanya
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {kare && <img src={kare} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-md" />}
               <motion.span animate={{ x: ["-100%", "100%"] }} transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }} className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-              <span className="relative text-[26px] font-semibold tabular-nums text-metin">%{ilerleme}</span>
+              <span className="relative text-[26px] font-semibold tabular-nums text-metin">yüzde {ilerleme}</span>
               <span className="relative text-[12px] text-metin-2">{kapak.durum === "kuyrukta" ? "Sırada" : "Hazırlanıyor"}</span>
             </span>
           )}
@@ -88,12 +98,12 @@ function KampanyaKarti({ l, bilgi, kare, islem }: { l: Uretim[]; bilgi: Kampanya
         </button>
 
         {/* Üst rozetler */}
-        <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[11.5px] font-semibold tabular-nums text-white backdrop-blur-md">{l.length} varyant</span>
+        <span className="pointer-events-none absolute right-2 top-2 rounded-full bg-black/60 px-2 py-0.5 transition-opacity group-hover:opacity-0 max-md:hidden text-[11.5px] font-semibold tabular-nums text-white backdrop-blur-md">{l.length} varyant</span>
         {surecte.length > 0 && acilir && (
-          <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11.5px] font-semibold tabular-nums text-white backdrop-blur-md"><Loader2 className="h-3 w-3 animate-spin" />%{ilerleme}</span>
+          <span className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11.5px] font-semibold tabular-nums text-white backdrop-blur-md"><Loader2 className="h-3 w-3 animate-spin" />yüzde {ilerleme}</span>
         )}
         {favori && !surecte.length && (
-          <span className="pointer-events-none absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 backdrop-blur-md"><Heart className="h-3 w-3 fill-rose-400 text-rose-400" /></span>
+          <span className="pointer-events-none absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 backdrop-blur-md"><Star className="h-3 w-3 fill-aksan text-aksan" /></span>
         )}
 
         {/* Diğer varyantlar */}
@@ -112,13 +122,14 @@ function KampanyaKarti({ l, bilgi, kare, islem }: { l: Uretim[]; bilgi: Kampanya
         )}
 
         {/* Üzerine gelince eylemler */}
-        <div className="absolute bottom-2 right-2 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-md:hidden">
-          <button onClick={() => islem.onBegen(kapak.id)} disabled={!acilir} aria-label={kapak.favori ? "Beğeniden çıkar" : "Beğen"} title={kapak.favori ? "Beğeniden çıkar" : "Beğen"}
-            className={cn(dugme, kapak.favori && "text-rose-300", "disabled:opacity-40")}><Heart className={cn("h-3.5 w-3.5", kapak.favori && "fill-current")} /></button>
-          <button onClick={() => (l.length > 1 ? islem.onTumunuIndir() : islem.onIndir(kapak))} disabled={!hazirlar.length} aria-label="İndir" title={l.length > 1 ? "Tüm varyantları indir" : "İndir"}
-            className={cn(dugme, "disabled:opacity-40")}><Download className="h-3.5 w-3.5" /></button>
-          <button onClick={islem.onYeniden} aria-label="Yeni varyant" title="Aynı ayarlarla yeni varyant" className={dugme}><Repeat className="h-3.5 w-3.5" /></button>
-          <button onClick={islem.onHepsiniSil} aria-label="Kampanyayı sil" title="Kampanyayı sil" className={cn(dugme, "hover:text-rose-300")}><Trash2 className="h-3.5 w-3.5" /></button>
+        <div className="absolute right-2 top-2 flex gap-1.5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100">
+          <Tooltip label={kapak.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="bottom"><button onClick={() => islem.onBegen(kapak.id)} disabled={!acilir} aria-label={kapak.favori ? "Favorilerden çıkar" : "Favorilere ekle"}
+            className={cn(dugme, kapak.favori && "text-aksan", "disabled:opacity-40")}><Star className={cn("h-3.5 w-3.5", kapak.favori && "fill-current")} /></button></Tooltip>
+          {acilir && <IndirDugmesi u={kapak} side="bottom" className={dugme} ikonSinif="h-3.5 w-3.5" />}
+          <Tooltip label="Yeniden kullan" side="bottom"><button onClick={islem.onYeniden} aria-label="Yeniden kullan" className={dugme}><Quote className="h-3.5 w-3.5" /></button></Tooltip>
+          {acilir && <KartDahaMenusu u={kapak} side="bottom" className={dugme} boyut="kucuk" onSil={islem.onHepsiniSil}
+            eylemler={[{ ad: "Aç", ikon: Play, fn: () => islem.onAc(kapak.id) }, ...(l.length > 1 && hazirlar.length ? [{ ad: "Tüm varyantları indir", ikon: Download, fn: islem.onTumunuIndir }] : [])]} />}
+          {!acilir && <Tooltip label="Kampanyayı sil" side="bottom"><button onClick={islem.onHepsiniSil} aria-label="Kampanyayı sil" className={cn(dugme, "hover:text-rose-300")}><Trash2 className="h-3.5 w-3.5" /></button></Tooltip>}
         </div>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Loader2, ChevronDown, Wrench, Check, User, Trash2 } from "lucide-react";
+import { Sparkles, Send, Loader2, ChevronDown, Wrench, User, Trash2 } from "lucide-react";
 import { useAdminAi } from "@/store/admin/useAdminAi";
 import { useOnay } from "@/components/admin/ui/Onay";
 import { writeToolUygula } from "@/lib/admin/ai/writeKopru";
@@ -10,7 +10,7 @@ import { AD } from "@/components/admin/ui/temel";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
-const ONERI = ["Bu ayın gelir özeti nedir?", "En çok harcayan 10 kullanıcı kim?", "Hangi modeller zarar ettiriyor?", "Job kuyruğu durumu nasıl?"];
+const ONERI = ["Son 30 günün gelir özeti nedir?", "En çok kredi harcayan 10 kullanıcı kim?", "Üretim işlerinin durumu nasıl?", "Yayına çıkmak için ne eksik?"];
 
 function VeriKarti({ veri }: { veri: unknown }) {
   return (
@@ -27,7 +27,7 @@ function ToolAdim({ tool, girdi, sonuc }: { tool: string; girdi: unknown; sonuc?
       <button onClick={() => setAcik((v) => !v)} className="flex w-full items-center gap-2 px-3 py-2 text-left">
         <Wrench className="h-3.5 w-3.5 text-[color:var(--ad-aksan)]" />
         <span className={cn("flex-1 font-mono text-[12px]", AD.metin2)}>{tool}</span>
-        <Check className="h-3.5 w-3.5 text-emerald-400" />
+        
         <ChevronDown className={cn("h-3.5 w-3.5 text-[color:var(--ad-metin-3)] transition-transform", acik && "rotate-180")} />
       </button>
       {acik && (
@@ -65,7 +65,7 @@ export function AiSohbet({ kompakt }: { kompakt?: boolean }) {
         // WRITE tool — kademeli onay + uygula
         ai.guncelle(asistanId, { metin: data.metin || `\`${data.tool}\` işlemini önerdim.`, adimlar: data.adimlar, yukleniyor: false });
         const sonuc = await writeToolUygula(data.tool, data.girdi, onayIste);
-        ai.ekle({ rol: "asistan", metin: sonuc.onaylandi ? `✓ ${sonuc.sonuc}` : `İşlem iptal edildi. ${sonuc.sonuc}` });
+        ai.ekle({ rol: "asistan", metin: sonuc.onaylandi ? `Uygulandı. ${sonuc.sonuc}` : `İşlem yapılmadı. ${sonuc.sonuc}` });
         if (sonuc.onaylandi) toast.success("Önerilen işlem uygulandı", { description: String(sonuc.sonuc ?? "").slice(0, 140) || undefined });
       } else {
         ai.guncelle(asistanId, { metin: data.metin, adimlar: data.adimlar, veri: data.veri, yukleniyor: false });
@@ -84,8 +84,8 @@ export function AiSohbet({ kompakt }: { kompakt?: boolean }) {
         {ai.mesajlar.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <span className="ad-ikon mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"><Sparkles className="h-6 w-6" /></span>
-            <h3 className={cn("text-[15px] font-bold", AD.metin)}>Vayra AI Asistan</h3>
-            <p className={cn("mt-1 max-w-xs text-[13px]", AD.metin3)}>Panelindeki her şeyi sorabilir, analiz isteyebilir, işlem yaptırabilirsin.</p>
+            <h3 className={cn("text-[15px] font-bold", AD.metin)}>Yönetim asistanı</h3>
+            <p className={cn("mt-1 max-w-xs text-[13px]", AD.metin3)}>Kullanıcı, gelir, üretim ve yayın hazırlığı verisini sorabilir; onayınla hesap işlemi yaptırabilirsin.</p>
             <div className={cn("mt-5 grid gap-2", kompakt ? "grid-cols-1" : "grid-cols-2")}>
               {ONERI.map((o) => (
                 <button key={o} onClick={() => gonder(o)} className="rounded-xl border border-[color:var(--ad-kenar)] px-3 py-2 text-left text-[12px] text-[color:var(--ad-metin-2)] transition-colors hover:border-[color:var(--ad-aksan)]/40 hover:text-[color:var(--ad-metin)]">{o}</button>
@@ -123,7 +123,7 @@ export function AiSohbet({ kompakt }: { kompakt?: boolean }) {
         <div className="flex items-end gap-2">
           <textarea value={girdi} onChange={(e) => setGirdi(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); gonder(girdi); } }}
-            rows={1} placeholder="Bir şey sor veya işlem iste…"
+            rows={1} placeholder="Bir şey sor ya da işlem iste"
             className="ad-ince-scroll max-h-32 flex-1 resize-none rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.03] px-3 py-2.5 text-[13px] text-[color:var(--ad-metin)] outline-none focus:border-[color:var(--ad-aksan)]/50" />
           <button onClick={() => gonder(girdi)} disabled={!girdi.trim() || ai.calisiyor} className="ad-btn-aksan flex h-10 w-10 shrink-0 items-center justify-center rounded-xl disabled:opacity-40">
             {ai.calisiyor ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

@@ -1,10 +1,8 @@
 /**
- * Topluluk presetleri (2026-10-31): Vayra'nın resmi presetlerinin yanında kullanıcıların yayınladığı presetler.
- * Sunucu bağlanana kadar topluluk örnek içerikle dolar (yaratıcılar ve sayılar örnektir; sayfada bir kez belirtilir).
- * Kullanıcının "Toplulukta yayınla" dediği kendi presetleri de bu akışa katılır.
- *
- * Kazanç kuralı (Earn > Marketplace ile aynı): yaratıcı taban bedelin üstüne ek fiyat koyar (0, 8, 16 ya da 24 kredi);
- * ek fiyatın yarısı yaratıcıya, yarısı Vayra'ya gider. Yaratıcının kendi kullanımı kazanç sayılmaz.
+ * Preset kataloğu: Vayra'nın resmi presetleri, Vayra'nın hazırladığı ek tarifler ve kullanıcının kendi presetleri.
+ * 2026-11-07: uydurma yaratıcılar (kişi adları, takipçi sayıları) kaldırıldı. Sunucuda topluluk kaydı, takip, beğeni
+ * ya da satış olmadığı için bu ek tarifler de yaratıcısı "Vayra" olan hazır presetlerdir; ek fiyat yoktur.
+ * Kullanıcının yayınladığı kendi presetleri yalnız kendi galerisinde (bu tarayıcıda) görünür.
  */
 
 import { RESMI_PRESETLER, OZEL_KREDI, type KatalogPreset } from "@/lib/presetKatalog";
@@ -13,16 +11,8 @@ import type { Paylasim } from "@/store/usePaylasim";
 
 export interface Yaratici { kullanici: string; ad: string; ton: number; dogrulanmis?: boolean; takipci: number; bio: string }
 
-export const YARATICILAR: Yaratici[] = [
-  { kullanici: "@neonmancer", ad: "Deniz Arslan", ton: 196, dogrulanmis: true, takipci: 18400, bio: "Neon, gece ve şehir efektleri." },
-  { kullanici: "@velvetlens", ad: "Elif Kaya", ton: 24, dogrulanmis: true, takipci: 12100, bio: "Sinematik portre ve ışık." },
-  { kullanici: "@studio.mira", ad: "Mira Stüdyo", ton: 282, takipci: 9300, bio: "Ürün ve reklam hareketleri." },
-  { kullanici: "@0xrender", ad: "Kerem Ay", ton: 140, takipci: 7600, bio: "3B, dönüşüm ve fizik." },
-  { kullanici: "@auroraflux", ad: "Aurora Flux", ton: 320, dogrulanmis: true, takipci: 15800, bio: "Fantastik ve masalsı sahneler." },
-  { kullanici: "@filmisdead", ad: "Can Demir", ton: 48, takipci: 5200, bio: "Analog film ve eski dokular." },
-  { kullanici: "@matrixcam", ad: "Selin Uçar", ton: 168, takipci: 6900, bio: "Kamera hareketleri ve bullet time." },
-  { kullanici: "@sporvizyon", ad: "Burak Tan", ton: 8, takipci: 4100, bio: "Spor ve aksiyon anları." },
-];
+/** Topluluk yaratıcısı kaydı yok (sunucuda topluluk yok); liste bilerek boş. */
+export const YARATICILAR: Yaratici[] = [];
 export const yaraticiBul = (k?: string) => YARATICILAR.find((y) => y.kullanici === k);
 
 /** Basit deterministik karışım: aynı slug her yerde aynı sayıyı verir. */
@@ -31,7 +21,7 @@ function tohum(s: string) { let h = 2166136261; for (const c of s) { h ^= c.char
 const GUN = 86_400_000;
 const BUGUN = Date.UTC(2026, 9, 31);
 
-/** [ad, açıklama, taban efekt (tarif ve kategori), yaratıcı, ek fiyat, istem görünür mü, gün önce, ek tarif, kapak]. Kapaklar resmi efektlerin görselleriyle çakışmaz. */
+/** Vayra'nın ek hazır tarifleri: [ad, açıklama, taban efekt (tarif ve kategori), eski alan, eski alan, istem görünür mü, gün önce, ek tarif, kapak]. */
 const TOHUMLAR: [string, string, string, string, number, boolean, number, string, string][] = [
   ["Neon Dalış", "Dünyadan neon bir şehre dalıp fotoğrafındaki kişiye inen gece versiyonu.", "earth-zoom", "@neonmancer", 16, false, 2, "Night version: the city below glows with pink and cyan neon signs, wet reflective streets, people with umbrellas.", "/gercek/kesfet/cyberpunk-sokak-yagmurusora-2.webp"],
   ["Altın Saat İkizi", "İkizin gün batımında yanına gelir; sıcak, yumuşak bir ışıkla.", "selfie-twin", "@velvetlens", 4, true, 3, "Golden hour backlight, warm soft haze, lens flare.", "/gercek/kesfet/altin-saat-portresiatlas-creative.webp"],
@@ -52,24 +42,23 @@ const TOHUMLAR: [string, string, string, string, number, boolean, number, string
 ];
 
 function toplulukKatalog(): KatalogPreset[] {
-  return TOHUMLAR.flatMap(([ad, aciklama, taban, yazar, ekKredi, istemGorunur, gun, ek, kapak], i) => {
+  return TOHUMLAR.flatMap(([ad, aciklama, taban, , , istemGorunur, gun, ek, kapak], i) => {
     const t = RESMI_PRESETLER.find((p) => p.slug === taban);
     if (!t) return [];
-    const h = tohum(ad);
+    // Yaratıcı Vayra (yazar yok), ek fiyat yok: bedel taban efektinkiyle aynı.
     return [{
-      ...t, slug: `t-${taban}-${i + 1}`, ad, aciklama, tarif: `${t.tarif} ${ek}`, kredi: t.kredi + ekKredi, kapak, video: undefined,
+      ...t, slug: `t-${taban}-${i + 1}`, ad, aciklama, tarif: `${t.tarif} ${ek}`, kredi: t.kredi, kapak, video: undefined,
       etiket: gun <= 3 ? "Yeni" as const : undefined, oneCikan: false, pro: false, sira: 500 + i,
-      yazar, ekKredi, istemGorunur, gorunurluk: "topluluk" as const, tarih: BUGUN - gun * GUN,
-      kullanimSayi: 900 + (h % 26000), begeniSayi: 120 + (h % 5200), taban,
+      istemGorunur, tarih: BUGUN - gun * GUN,
+      taban,
     }];
   });
 }
 
-/** Resmi presetlere deterministik kullanım ve beğeni sayısı. */
+/** Resmi presetlerin sıralama tarihi (kullanım ve beğeni sayısı uydurulmaz). */
 const RESMI_SAYILI: KatalogPreset[] = RESMI_PRESETLER.map((p) => {
   const h = tohum(p.slug);
-  const carpan = p.etiket === "Trend" ? 3 : p.oneCikan ? 2 : 1;
-  return { ...p, kullanimSayi: (4000 + (h % 30000)) * carpan, begeniSayi: (600 + (h % 7000)) * carpan, tarih: BUGUN - ((h % 60) + (p.etiket === "Yeni" ? 0 : 20)) * GUN };
+  return { ...p, tarih: BUGUN - ((h % 60) + (p.etiket === "Yeni" ? 0 : 20)) * GUN };
 });
 
 export const TOPLULUK_PRESETLERI = toplulukKatalog();

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { KrediYildiz, KrediIsiltiHap } from "@/components/ui/KrediHap";
-import { hareketYaz } from "@/store/useHesap";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight, Check, Clock, Infinity as InfinityIcon, Layers, RefreshCw, ShieldCheck, X,
@@ -18,7 +17,7 @@ import { useTercih } from "@/store/useTercih";
 import { aktifSinirsizlar, useEkler, type HizSeviye } from "@/store/useEkler";
 import type { KrediSekme } from "@/store/useKrediModal";
 import { toast } from "@/lib/toast";
-import { hesapBildirimi } from "@/lib/bildirimler";
+import { odemeyeGec } from "@/components/fiyat/OdemePenceresi";
 import { cn } from "@/lib/utils";
 
 /**
@@ -48,12 +47,12 @@ function OtomatikYuklemeSatiri() {
       <span className="flex items-start gap-2.5">
         <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-white/70" />
         <span>
-          <span className="block text-[13.5px] font-medium text-white">Otomatik yükleme</span>
-          <span className="block text-[12px] leading-snug text-metin-3">{acik ? `Bakiye 100'ün altına inince ${useTercih.getState().otoPaket.toLocaleString("tr-TR")} kredi yüklenir.` : "Bakiye bitince üretim durur."}</span>
+          <span className="block text-[13.5px] font-medium text-white">Yükleme hatırlatması</span>
+          <span className="block text-[12px] leading-snug text-metin-3">{acik ? `Bakiye 100'ün altına inince ${useTercih.getState().otoPaket.toLocaleString("tr-TR")} kredilik paketi yüklemen için hatırlatırız.` : "Bakiye bitince üretim durur."}</span>
         </span>
       </span>
-      <button role="switch" aria-checked={acik} aria-label="Otomatik yükleme"
-        onClick={() => { const y = toggle(); toast.success(y ? "Otomatik yükleme açıldı" : "Otomatik yükleme kapatıldı"); }}
+      <button role="switch" aria-checked={acik} aria-label="Yükleme hatırlatması"
+        onClick={() => { const y = toggle(); toast.success(y ? "Yükleme hatırlatması açıldı" : "Yükleme hatırlatması kapatıldı"); }}
         className={cn("relative h-6 w-11 shrink-0 rounded-full transition-colors", acik ? "bg-vurgu" : "bg-white/15")}>
         <span className={cn("absolute top-0.5 h-5 w-5 rounded-full transition-all", acik ? "left-[22px] bg-white" : "left-0.5 bg-white")} />
       </button>
@@ -71,7 +70,6 @@ function ozelFiyat(kredi: number) {
 
 export function KrediYukleSekmesi({ onSekme }: { onSekme: (s: KrediSekme) => void }) {
   const kullanici = useAuth((s) => s.kullanici);
-  const ekKrediEkle = useAuth((s) => s.ekKrediEkle);
   const [secili, setSecili] = useState<number | "ozel">(KREDI_PAKETLERI.findIndex((p) => p.populer));
   const [ozel, setOzel] = useState(3000);
   // /fiyatlandirma'dan ?paket=<sıra> ile gelinirse o paket seçili açılır.
@@ -89,13 +87,7 @@ export function KrediYukleSekmesi({ onSekme }: { onSekme: (s: KrediSekme) => voi
   const artiBirim = krediBasina(arti.fiyatTRY * 0.8, arti.kredi);
   const enUcuzSinirsiz = Math.min(...SINIRSIZ_TEKLIFLER.map((t) => sinirsizFiyat(t, 0, 0)));
 
-  const satinAl = () => {
-    if (!kullanici) return toast.error("Önce giriş yap", { description: "Kredi yüklemek için hesabınla giriş yapman gerekiyor." });
-    ekKrediEkle(kredi);
-    hareketYaz({ tur: "kredi", aciklama: `${sayi(kredi)} kredi paketi`, kredi, tutar: araToplam, kdv, belge: true });
-    hesapBildirimi(`${sayi(kredi)} kredi yüklendi`, `Demo satın alma (${tl(araToplam + kdv)}), gerçek ödeme alınmadı. Yeni bakiyen ${sayi(bakiye + kredi)} kredi.`, { ad: "Faturaları gör", link: "/panel/ayarlar/faturalar" });
-    toast.success(`${sayi(kredi)} kredi yüklendi`, { description: `${tl(araToplam + kdv)} · Gerçek ödeme alınmadı.` });
-  };
+  const satinAl = () => odemeyeGec({ tur: "kredi", urun: String(kredi) });
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -131,7 +123,7 @@ export function KrediYukleSekmesi({ onSekme }: { onSekme: (s: KrediSekme) => voi
                   <span className="flex flex-wrap items-center gap-2">
                     <span className="text-[20px] font-semibold tracking-[-0.02em] text-white tabular-nums">{sayi(p.kredi)} kredi</span>
                     {p.populer && <span className="rounded-full bg-vurgu px-2 py-0.5 text-[10.5px] font-semibold text-vurgu-ust">En çok alınan</span>}
-                    {tasarruf > 0 && <span className="rounded-full bg-emerald-400/12 px-2 py-0.5 text-[10.5px] font-bold text-emerald-300">%{tasarruf} tasarruf</span>}
+                    {tasarruf > 0 && <span className="rounded-full bg-emerald-400/12 px-2 py-0.5 text-[10.5px] font-bold text-emerald-300">yüzde {tasarruf} tasarruf</span>}
                   </span>
                   <span className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px] text-metin-2">
                     <span className="flex items-center gap-1.5">
@@ -197,7 +189,7 @@ export function KrediYukleSekmesi({ onSekme }: { onSekme: (s: KrediSekme) => voi
           </div>
           <dl className="mt-4 space-y-2 text-[13.5px]">
             <div className="flex justify-between"><dt className="text-metin-2">{sayi(kredi)} kredi</dt><dd className="tabular-nums text-white">{tl(araToplam)}</dd></div>
-            <div className="flex justify-between"><dt className="text-metin-2">KDV (%{KDV * 100})</dt><dd className="tabular-nums text-white">{tl(kdv)}</dd></div>
+            <div className="flex justify-between"><dt className="text-metin-2">KDV, yüzde {KDV * 100}</dt><dd className="tabular-nums text-white">{tl(kdv)}</dd></div>
             <div className="flex justify-between border-t border-white/[0.06] pt-2.5 text-[15px] font-semibold"><dt className="text-white">Toplam</dt><dd className="tabular-nums text-white">{tl(araToplam + kdv)}</dd></div>
           </dl>
           <button onClick={satinAl} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-white text-[14.5px] font-semibold text-zemin transition-opacity hover:opacity-90">
@@ -211,7 +203,7 @@ export function KrediYukleSekmesi({ onSekme }: { onSekme: (s: KrediSekme) => voi
         <button onClick={() => onSekme("plan")} className="group mt-3 flex w-full items-center justify-between gap-3 rounded-[18px] border border-white/[0.07] bg-yuzey px-5 py-4 text-left transition-colors hover:border-white/[0.16]">
           <span>
             <span className="block text-[13.5px] font-semibold text-white">Her ay kredi mi alıyorsun?</span>
-            <span className="block text-[12.5px] text-metin-2">Artı planında kredi {tlKurus(artiBirim)} — paketten %{Math.round((1 - artiBirim / krediBasina(araToplam, kredi)) * 100)} daha ucuz.</span>
+            <span className="block text-[12.5px] text-metin-2">Artı planında kredi {tlKurus(artiBirim)} — paketten yüzde {Math.round((1 - artiBirim / krediBasina(araToplam, kredi)) * 100)} daha ucuz.</span>
           </span>
           <ArrowRight className="h-4 w-4 shrink-0 text-metin-3 transition-transform group-hover:translate-x-0.5" />
         </button>
@@ -323,13 +315,7 @@ export function SinirsizSekmesi() {
           <AnimatePresence mode="wait">
             <motion.div key={teklif.model} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>
               <SinirsizDetay teklif={teklif} planda={PLAN_SINIRSIZ[plan].find((s) => s.model === teklif.model)?.etiket}
-                onAl={(kalite, gun) => {
-                  if (!girisli) return toast.error("Önce giriş yap", { description: "Satın almak için hesabınla giriş yapman gerekiyor." });
-                  ekle(teklif.model, kalite, gun);
-                  { const ki = Math.max(0, teklif.kaliteler.findIndex((k) => k.ad === kalite)), gi = Math.max(0, SINIRSIZ_GUNLER.findIndex((g) => g.gun === gun)); const t = sinirsizFiyat(teklif, ki, gi); hareketYaz({ tur: "sinirsiz", aciklama: `${model(teklif.model).ad} ${kalite} · ${gun} gün sınırsız`, kredi: 0, tutar: t, kdv: Math.round(t * KDV), belge: true }); }
-                  hesapBildirimi(`Sınırsız ${model(teklif.model).ad} etkin`, `${kalite} · ${gun} gün boyunca bu modelde kredi düşmez.`, { ad: "Hemen üret", link: model(teklif.model).tur === "video" ? "/panel/video" : model(teklif.model).tur === "ses" ? "/panel/ses" : "/panel/gorsel" });
-                  toast.success(`Sınırsız ${model(teklif.model).ad} etkin`, { description: `${kalite} · ${gun} gün. Gerçek ödeme alınmadı.` });
-                }} />
+                onAl={(kalite, gun) => odemeyeGec({ tur: "sinirsiz", urun: `${teklif.model}|${kalite}|${gun}` })} />
             </motion.div>
           </AnimatePresence>
         </aside>
@@ -395,7 +381,7 @@ function SinirsizDetay({ teklif, planda, onAl }: { teklif: SinirsizTeklif; pland
                 <span className="flex items-center gap-3">
                   <Radyo secili={gun === i} />
                   <span>
-                    <span className="flex items-center gap-2 text-[14px] font-semibold text-white">{g.gun} gün{tasarruf > 0 && <span className="rounded-full bg-emerald-400/12 px-1.5 py-px text-[10px] font-bold text-emerald-300">%{tasarruf}</span>}</span>
+                    <span className="flex items-center gap-2 text-[14px] font-semibold text-white">{g.gun} gün{tasarruf > 0 && <span className="rounded-full bg-emerald-400/12 px-1.5 py-px text-[10px] font-bold text-emerald-300">yüzde {tasarruf}</span>}</span>
                     <span className="block text-[11.5px] text-metin-3">{g.ozet}</span>
                   </span>
                 </span>
@@ -460,13 +446,12 @@ export function HizSekmesi() {
   const esz = ESZAMANLI[plan];
 
   const uygula = (hiz: HizSeviye, ekAdet: number) => {
-    if (!girisli) return toast.error("Önce giriş yap", { description: "Hızı değiştirmek için hesabınla giriş yapman gerekiyor." });
     const seviye = HIZ_SEVIYELERI.find((h) => h.id === hiz)!;
     const toplam = seviye.fiyat + (EK_ESZAMANLI.find((e) => e.adet === ekAdet)?.fiyat ?? 0);
+    // Ücretli hız 30 günlük süreli haktır ve ödemeyle açılır; standarda dönmek ücretsizdir.
+    if (toplam) return odemeyeGec({ tur: "hiz", urun: `${hiz}:${ekAdet}` });
     hizAyarla(hiz, ekAdet);
-    if (toplam) hareketYaz({ tur: "hiz", aciklama: `${seviye.ad} hız${ekAdet ? ` · +${ekAdet} eşzamanlı` : ""} (aylık)`, kredi: 0, tutar: toplam, kdv: Math.round(toplam * KDV), belge: true });
-    hesapBildirimi(`${seviye.ad} hız etkin`, `Aynı anda ${esz.video + ekAdet} video, ${esz.gorsel + ekAdet} görsel · yoğun saatte bekleme ${sureYaz(HIZ_BEKLEME[hiz]).toLocaleLowerCase("tr-TR")}.`);
-    toast.success(`${seviye.ad} hız etkin`, { description: `${ekAdet ? `+${ekAdet} eşzamanlı iş. ` : ""}${toplam ? `${tl(toplam)} / ay, makbuz Faturalar'da.` : "Ek ücret yok."}` });
+    toast.success("Standart hıza dönüldü", { description: "Ek ücret yok." });
   };
 
   const enUzunBekleme = Math.max(...Object.values(HIZ_BEKLEME));
@@ -542,7 +527,7 @@ export function HizSekmesi() {
               <p className="mt-0.5 text-[13px] text-metin-2">Planında aynı anda <b className="font-medium text-white">{esz.video} video · {esz.gorsel} görsel</b>. Fazlasını ekle, büyük partileri paralel üret.</p>
               <p className="mt-1.5 text-[12.5px] text-metin-3">
                 {ORNEK_PARTI} videoluk parti: <span className="tabular-nums text-metin-2">{sureYaz(partiSimdi).toLocaleLowerCase("tr-TR")}</span>
-                {ek !== mevcutEk && <> → <span className="font-medium tabular-nums text-white">{sureYaz(partiSecim).toLocaleLowerCase("tr-TR")}</span></>}
+                {ek !== mevcutEk && <>, yeni seçimle <span className="font-medium tabular-nums text-white">{sureYaz(partiSecim).toLocaleLowerCase("tr-TR")}</span></>}
               </p>
             </div>
           </div>

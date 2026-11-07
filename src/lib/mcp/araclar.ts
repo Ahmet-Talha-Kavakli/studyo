@@ -39,6 +39,7 @@ export const MCP_ARACLAR: McpArac[] = [
         input: { type: "object", description: "Modele özgü girdiler; en az { \"prompt\": \"…\" }. Alanlar için get_model.", properties: { prompt: { type: "string" } }, required: ["prompt"] },
         wait: { type: "boolean", default: true, description: "Bitene kadar bekle." },
         metadata: { type: "object", description: "Üretime iliştirilecek en çok 16 anahtar." },
+        idempotency_key: { type: "string", description: "İsteğe bağlı işlem anahtarı (8-80 karakter: harf, rakam, _ . : -). Aynı anahtarla yeniden çağrılırsa kredi ikinci kez kesilmez." },
       },
       required: ["model", "input"],
       additionalProperties: false,

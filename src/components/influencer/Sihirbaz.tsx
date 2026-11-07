@@ -406,7 +406,7 @@ function SihirbazIc({ onKapat, duzenle, ilkYol, ilkSablon }: { onKapat: () => vo
                             <span className="text-center"><span className="block text-[14px] font-semibold text-white">Aday {i + 1}</span><span className="block text-[12px] text-white/65">Yüz oluşturuluyor</span></span>
                           </span>
                           <span className="absolute inset-x-4 bottom-4">
-                            <span className="mb-1.5 flex justify-between text-[11.5px] tabular-nums text-white/70"><span>{a.ilerleme < 15 ? "Sırada" : "Üretiliyor"}</span><span>%{Math.round(a.ilerleme)}</span></span>
+                            <span className="mb-1.5 flex justify-between text-[11.5px] tabular-nums text-white/70"><span>{a.ilerleme < 15 ? "Sırada" : "Üretiliyor"}</span><span>yüzde {Math.round(a.ilerleme)}</span></span>
                             <span className="block h-1 overflow-hidden rounded-full bg-white/15"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${Math.max(4, a.ilerleme)}%` }} transition={{ duration: 0.5 }} /></span>
                           </span>
                         </span>

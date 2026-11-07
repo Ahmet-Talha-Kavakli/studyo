@@ -6,12 +6,15 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { useAuth } from "@/store/useAuth";
+import { krediliIstek } from "@/lib/krediIstek";
+import { SABIT_KREDI } from "@/lib/krediTarife";
 import { useElements, type VElement } from "@/store/useElements";
 import { Ipucu } from "@/components/studyo/hf";
 import { KrediYildiz } from "@/components/ui/KrediHap";
 import { dosyaOku, gorselYukle, GORSEL_TURLERI } from "@/components/arac/kit";
 
-export const EGITIM_KREDI = 40;
+/** Derin eğitim bedeli: tek kaynak lib/krediTarife (sunucu da bunu keser). */
+export const EGITIM_KREDI = SABIT_KREDI.loraEgitim;
 const MIN_FOTO = 5, MAKS_FOTO = 20;
 const TETIK_DISI = /[^\p{L}\p{N}_]/gu;
 const sureYaz = (ms: number) => { const s = Math.max(0, Math.round(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -24,7 +27,7 @@ export function useLoraTakip(e: VElement | undefined) {
     let iptal = false;
     const sor = async () => {
       try {
-        const r = (await (await fetch(`/api/karakter/egit?jeton=${encodeURIComponent(e.lora!.jeton!)}`)).json()) as { durum: string; sira?: number; log?: string; url?: string; hata?: string };
+        const r = (await (await fetch(`/api/karakter/egit?jeton=${encodeURIComponent(e.lora!.jeton!)}`)).json()) as { durum: string; sira?: number; log?: string; url?: string; hata?: string; kredi?: { iade?: boolean; bakiye?: number } };
         if (iptal) return;
         const st = useElements.getState();
         const simdi = st.elementler.find((x) => x.id === e.id)?.lora;
@@ -34,8 +37,9 @@ export function useLoraTakip(e: VElement | undefined) {
           toast.success(`@${e.ad} eğitildi`, { description: `Artık “${simdi.tetik}” ile FLUX LoRA üretebilirsin.` });
         } else if (r.durum === "hata") {
           st.guncelle(e.id, { lora: { ...simdi, durum: "hata", hata: r.hata, bitis: Date.now(), jeton: undefined } });
-          useAuth.getState().krediEkle(simdi.kredi);
-          toast.error(`@${e.ad} eğitilemedi`, { description: `${r.hata ?? "Eğitim sağlayıcıda tamamlanamadı."} ${simdi.kredi} kredi iade edildi. Farklı fotoğraflarla yeniden dene.` });
+          // Kesinti sunucuda iade edildi; ekrandaki bakiye sunucununkine eşitlenir.
+          if (typeof r.kredi?.bakiye === "number") useAuth.getState().krediEsitle(r.kredi.bakiye); else void useAuth.getState().esitle();
+          toast.error(`@${e.ad} eğitilemedi`, { description: `${r.hata ?? "Eğitim sağlayıcıda tamamlanamadı."} ${r.kredi?.iade ? `${simdi.kredi} kredi iade edildi.` : "Kesilen kredi sunucuda iade edilir."} Farklı fotoğraflarla yeniden dene.` });
         } else {
           st.guncelle(e.id, { lora: { ...simdi, durum: r.durum === "sirada" ? "sirada" : "egitiliyor", sira: r.sira, log: r.log ?? simdi.log } });
         }
@@ -81,15 +85,16 @@ export function DerinEgitim({ e, fal, gomulu }: { e: VElement; fal: boolean | nu
     if (!fal) return void toast.error("fal.ai bağlı değil", { description: "Derin eğitim için fal.ai bağlantısı gerekli. Ayarlar'dan bağlayıp yeniden dene." });
     if (tum.length < MIN_FOTO) return void toast.error("Fotoğraf sayısı yetersiz", { description: `Derin eğitim için en az ${MIN_FOTO} fotoğraf gerekli. Ek fotoğraf ekle.` });
     if (!/^[\p{L}\p{N}_]{3,24}$/u.test(tetik)) return void toast.error("Tetik kelimesi geçersiz", { description: "Tetik kelimesi 3–24 harf ya da rakam olmalı, boşluk içermemeli." });
-    if (!useAuth.getState().krediDus(EGITIM_KREDI)) return void toast.error("Kredin yetmiyor", { description: `Derin eğitim ${EGITIM_KREDI} kredi. Kredi yükleyip yeniden dene.` });
     try {
-      const j = (await (await fetch("/api/karakter/egit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ gorseller: tum, tetik }) })).json()) as { ok: boolean; jeton?: string; hata?: string };
-      if (!j.ok || !j.jeton) throw new Error(j.hata);
-      useElements.getState().guncelle(e.id, { lora: { durum: "sirada", tetik, kredi: EGITIM_KREDI, baslangic: Date.now(), jeton: j.jeton, ekGorseller: ek.filter((x) => x.durum === "hazir").map((x) => x.url) } });
+      // Kredi iş başlarken sunucuda kesilir; başlatılamazsa ya da sonradan başarısız olursa sunucuda iade edilir.
+      const s = await krediliIstek<{ jeton?: string }>("/api/karakter/egit", { kredi: EGITIM_KREDI, json: { gorseller: tum, tetik } });
+      if (s.durum === 401 || s.durum === 402) return;
+      const j = s.j;
+      if (!j?.ok || !j.jeton) throw new Error(j?.hata);
+      useElements.getState().guncelle(e.id, { lora: { durum: "sirada", tetik, kredi: s.kesilen || EGITIM_KREDI, baslangic: Date.now(), jeton: j.jeton, ekGorseller: ek.filter((x) => x.durum === "hazir").map((x) => x.url) } });
       toast.success("Eğitim başladı", { description: "Birkaç dakika sürer. Bu sırada sayfadan çıkabilirsin." });
     } catch (err) {
-      useAuth.getState().krediEkle(EGITIM_KREDI);
-      toast.error("Eğitim başlatılamadı", { description: `${err instanceof Error ? err.message : "Sağlayıcıya ulaşılamadı."} Kredi iade edildi. Yeniden dene.` });
+      toast.error("Eğitim başlatılamadı", { description: `${err instanceof Error && err.message ? err.message : "Sağlayıcıya ulaşılamadı."} Kredi düşmedi. Yeniden dene.` });
     }
   };
 

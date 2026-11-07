@@ -386,7 +386,7 @@ ${strateji.slice(0, 6000)}
       const ok = g as { url?: string; gercek: boolean };
       const c: SCCikti = { id: `img_${mid}`, tur: "gorsel", url: ok.url, ad: `${(kaynak.ad ?? "Görsel").replace(/ · düzenleme$/, "")} · düzenleme`, durum: "tamam", demo: !ok.gercek };
       mesajGuncelle(id, mid, { ciktilar: [c], is: { tur: "gorsel", bitis: Date.now() },
-        metin: ok.gercek ? `Düzenlendi${maske ? " (yalnız seçtiğin alan)" : ""}. Önceki sürüm panelde duruyor; ← → ile karşılaştırabilirsin.` : "Görsel sağlayıcısı bağlı olmadığı için **düzenleme uygulanmadı**; panelde kaynak görsel gösteriliyor ve kredin iade edildi." });
+        metin: ok.gercek ? `Düzenlendi${maske ? " (yalnız seçtiğin alan)" : ""}. Önceki sürüm panelde duruyor; sol ve sağ ok tuşlarıyla karşılaştırabilirsin.` : "Görsel sağlayıcısı bağlı olmadığı için **düzenleme uygulanmadı**; panelde kaynak görsel gösteriliyor ve kredin iade edildi." });
       setPanel(c); setPanelAcik(true);
     } catch (e) {
       mesajGuncelle(id, mid, { metin: `Görsel düzenlenemedi: ${e instanceof Error ? e.message : "bilinmeyen hata"}.`, is: { tur: "gorsel", bitis: Date.now() } });

@@ -277,10 +277,10 @@ export function GorselGoruntuleyici({
           <span className="glass-cip absolute left-1/2 top-5 z-10 -translate-x-1/2 rounded-full px-3 py-1 text-[12px] tabular-nums text-white/85">{sira.i + 1} / {sira.n}</span>
         )}
         {sira && sira.i > 0 && (
-          <button onClick={() => onGez(-1)} className="hf-btn glass-ikon absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Önceki görsel (←)"><ChevronLeft className="h-6 w-6" /></button>
+          <button onClick={() => onGez(-1)} className="hf-btn glass-ikon absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Önceki görsel (sol ok tuşu)"><ChevronLeft className="h-6 w-6" /></button>
         )}
         {sira && sira.i < sira.n - 1 && (
-          <button onClick={() => onGez(1)} className="hf-btn glass-ikon absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Sonraki görsel (→)"><ChevronRight className="h-6 w-6" /></button>
+          <button onClick={() => onGez(1)} className="hf-btn glass-ikon absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-white" aria-label="Sonraki görsel (sağ ok tuşu)"><ChevronRight className="h-6 w-6" /></button>
         )}
 
         <div className="relative z-[5] flex max-h-full max-w-full items-center justify-center">
@@ -341,7 +341,7 @@ export function GorselGoruntuleyici({
         {!zoomKapali && yuklendi && (
           <div className="glass-cip absolute bottom-4 right-4 z-10 flex items-center gap-0.5 rounded-full p-1 text-[12px] text-white/90" role="group" aria-label="Yakınlaştırma">
             <button onClick={() => yakAyarla(yak / 1.4)} disabled={yak <= 1} aria-label="Uzaklaştır" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-40">−</button>
-            <span className="min-w-[42px] text-center tabular-nums">{Math.round(yak * 100)}%</span>
+            <span className="min-w-[42px] whitespace-nowrap text-center tabular-nums">yüzde {Math.round(yak * 100)}</span>
             <button onClick={() => yakAyarla(yak * 1.4)} disabled={yak >= 8} aria-label="Yakınlaştır" className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-white/10 disabled:opacity-40">+</button>
             <button onClick={birebir} title="Gerçek piksel boyutu" className="rounded-full px-2 py-1 hover:bg-white/10">1:1</button>
             {yak > 1 && <button onClick={() => yakAyarla(1)} className="rounded-full px-2 py-1 hover:bg-white/10">Sığdır</button>}
@@ -456,7 +456,7 @@ function AracPaneli(p: {
       case "inpaint": return inpaintNot.trim().length >= 3 && p.maskeVar ? { islem: "maske", arac: "Bölgesel Düzenleme", baslik: `Düzenleme · ${inpaintNot.trim().slice(0, 30)}`, kredi, not: `İşaretli alanda: ${inpaintNot.trim()}. Maskenin dışını değiştirme.` } : null;
       case "reframe": return { islem: "genislet", arac: "Yeniden Çerçevele", baslik: `Yeniden çerçeve · ${hedefOran}`, kredi, oran: hedefOran, not: `Görseli ${hedefOran} orana genişlet (outpaint); mevcut içeriği koru, yeni kenarları doğal doldur.` };
       case "arkaplan": return { islem: "arkaplan", zemin: zemin === "renk" ? zeminRenk : zemin, arac: "Arka Plan Kaldır", baslik: `Arka plan · ${zemin === "seffaf" ? "şeffaf" : zemin === "beyaz" ? "beyaz" : zeminRenk}`, kredi, not: `Özneyi ayır, arka planı ${zemin === "seffaf" ? "şeffaf yap (PNG)" : zemin === "beyaz" ? "düz beyaz yap" : `düz ${zeminRenk} renk yap`}.` };
-      case "acilar": return { islem: "duzenle", arac: "Kamera Açısı", baslik: `Açı · ${donme}° / ${egim}°`, kredi, not: `Aynı sahneyi kamera ${donme}° döndürülmüş, ${egim}° eğilmiş${yakin ? `, %${yakin} yakınlaştırılmış` : ""} açıdan göster.` };
+      case "acilar": return { islem: "duzenle", arac: "Kamera Açısı", baslik: `Açı · ${donme}° / ${egim}°`, kredi, not: `Aynı sahneyi kamera ${donme}° döndürülmüş, ${egim}° eğilmiş${yakin ? `, yüzde ${yakin} yakınlaştırılmış` : ""} açıdan göster.` };
       default: return null;
     }
   })();
@@ -671,7 +671,7 @@ function AracPaneli(p: {
             </div>
             {([["Döndürme", donme, setDonme, -180, 180, "°"], ["Eğim", egim, setEgim, -90, 90, "°"], ["Yakınlaştır", yakin, setYakin, 0, 100, "%"]] as const).map(([a, d, set, mn, mx, b]) => (
               <label key={a} className="block">
-                <span className="mb-1 flex justify-between text-[12px] text-metin-2">{a}<span className="tabular-nums text-metin">{d}{b}</span></span>
+                <span className="mb-1 flex justify-between text-[12px] text-metin-2">{a}<span className="tabular-nums text-metin">{b === "%" ? `yüzde ${d}` : `${d}${b}`}</span></span>
                 <input type="range" min={mn} max={mx} value={d} onChange={(e) => set(Number(e.target.value))} className="h-1 w-full cursor-pointer appearance-none rounded-full bg-white/12 accent-white" aria-label={a} />
               </label>
             ))}

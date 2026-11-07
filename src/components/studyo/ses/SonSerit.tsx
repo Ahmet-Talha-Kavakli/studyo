@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, FileText, Heart, Loader2, Maximize2, Pause, Play, RefreshCw, RotateCcw, X } from "lucide-react";
+import { FileText, Loader2, Maximize2, Pause, Play, RefreshCw, RotateCcw, Star, X } from "lucide-react";
+import { Tooltip } from "@/components/ui/Tooltip";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
 import { cn } from "@/lib/utils";
 import type { Uretim } from "@/store/useProjeler";
 import { uretimSirasi } from "@/lib/uretimMotoru";
@@ -70,7 +73,7 @@ export function SonSerit({ u, onAc, onBegen, onIndir, onKapat, onYenidenDene, mo
             <div>
               <p className="flex items-center gap-1.5 text-[13px] text-metin-2">
                 {u.durum === "kuyrukta" ? (sira > 0 ? `Sırada · ${sira}. sıradasın` : "Sırada") : "Üretiliyor…"}
-                {u.durum === "isleniyor" && <span className="bg-white/[0.075] rounded-full px-1.5 text-[10.5px] font-semibold tabular-nums text-aksan">%{ilerleme}</span>}
+                {u.durum === "isleniyor" && <span className="bg-white/[0.075] rounded-full px-1.5 text-[10.5px] font-semibold tabular-nums text-aksan">yüzde {ilerleme}</span>}
               </p>
               <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/[0.075]">
                 {u.durum === "isleniyor" && ilerleme > 0
@@ -96,11 +99,14 @@ export function SonSerit({ u, onAc, onBegen, onIndir, onKapat, onYenidenDene, mo
             {ucretsizHak > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-aksan px-1 text-[9.5px] font-bold tabular-nums text-zemin">{ucretsizHak}</span>}
           </button>
         )}
-        {bitti && u.sesUrl && <button onClick={onIndir} aria-label="İndir" title="İndir" className={ikon}><Download className="h-4 w-4" /></button>}
+        {bitti && u.sesUrl && <IndirDugmesi u={u} side="top" yerlesim="ust-sag" className={ikon} />}
+        {bitti && <KlasoreTasiDugmesi uretimIdler={[u.id]} etiketSinif="sr-only" yerlesim="ust-sag" className={ikon} />}
         {bitti && (
-          <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Beğeniyi kaldır" : "Beğen"} className={cn(ikon, u.favori && "text-rose-300 hover:text-rose-300")}>
-            <Heart className={cn("h-4 w-4", u.favori && "fill-current")} />
-          </button>
+          <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top">
+            <button onClick={onBegen} aria-pressed={!!u.favori} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} className={cn(ikon, u.favori && "!text-aksan")}>
+              <Star className={cn("h-4 w-4", u.favori && "fill-current")} />
+            </button>
+          </Tooltip>
         )}
         {bitti && !mobil && <button onClick={onAc} aria-label="Ayrıntıyı aç" title="Ayrıntıyı aç" className={ikon}><Maximize2 className="h-4 w-4" /></button>}
         <button onClick={onKapat} aria-label="Şeridi kapat" className={ikon}><X className="h-4 w-4" /></button>

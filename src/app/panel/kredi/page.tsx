@@ -143,7 +143,7 @@ function BakiyeKarti({ onSekme }: { onSekme: (s: KrediSekme) => void }) {
     <div className="rounded-[22px] bg-black/45 p-5 ring-1 ring-inset ring-white/15 backdrop-blur-xl">
       <div className="flex items-center justify-between text-[12.5px]">
         <span className={dusuk ? "font-medium text-amber-300" : "text-white/55"}>{dusuk ? "Kredin azalıyor" : "Bakiyen"}</span>
-        <span className="tabular-nums text-white/45">%{Math.round(k.oran * 100)} kaldı</span>
+        <span className="tabular-nums text-white/45">yüzde {Math.round(k.oran * 100)} kaldı</span>
       </div>
       <p className="mt-1.5 flex items-center gap-2">
         <KrediJeton boyut={22} az={dusuk} className="kredi-isilti-yildiz" />

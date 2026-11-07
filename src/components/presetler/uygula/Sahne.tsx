@@ -258,7 +258,7 @@ function OnceSonra({ p, ek, foto, oran, girdiAd, ipucu, onFoto }: {
   );
 }
 
-/** Künyede yaratıcı: Vayra ya da topluluk üyesi; takip, beğeni ve yaratıcı payı notu. */
+/** Künyede yaratıcı: Vayra ya da kullanıcının kendisi. Takip ve beğeni sunucuda olmadığı için düğmesi yok. */
 function YaraticiSatiri({ p }: { p: KatalogPreset }) {
   const { begenilen, takip, begeniDegis, takipDegis } = usePresetler();
   const benim = tutamac(useAuth((s) => s.kullanici?.ad));
@@ -268,10 +268,8 @@ function YaraticiSatiri({ p }: { p: KatalogPreset }) {
     <div className="mt-4 flex items-center gap-2 rounded-[18px] bg-white/[0.04] p-2 pl-2.5 ring-1 ring-inset ring-white/[0.07]">
       <Link href={p.yazar ? `/panel/presetler?yaratici=${encodeURIComponent(p.yazar)}` : "/panel/presetler?kim=vayra"} className="flex min-w-0 flex-1 items-center gap-2.5 pr-1">
         <YaraticiAvatar yazar={p.yazar} boyut={36} />
-        <span className="min-w-0 text-left leading-tight"><span className="flex items-center gap-1 text-[14px] font-semibold text-white"><span className="truncate">{p.yazar ? (p.yazar === benim ? "Sen" : y?.ad ?? p.yazar) : "Vayra"}</span>{(!p.yazar || y?.dogrulanmis) && <BadgeCheck className="h-3.5 w-3.5 shrink-0" />}</span><span className="block truncate text-[12px] text-white/55">{p.yazar ? `${sayiKisa(p.kullanimSayi ?? 0)} kullanım${p.ekKredi ? ` · ${yaraticiPayi(p.ekKredi)} kredisi yaratıcıya` : ""}` : `Resmi Vayra efekti · ${sayiKisa(p.kullanimSayi ?? 0)} kullanım`}</span></span>
+        <span className="min-w-0 text-left leading-tight"><span className="flex items-center gap-1 text-[14px] font-semibold text-white"><span className="truncate">{p.yazar ? (p.yazar === benim ? "Sen" : y?.ad ?? p.yazar) : "Vayra"}</span>{(!p.yazar || y?.dogrulanmis) && <BadgeCheck className="h-3.5 w-3.5 shrink-0" />}</span><span className="block truncate text-[12px] text-white/55">{p.yazar ? p.yazar : "Resmi Vayra efekti"}</span></span>
       </Link>
-      <button onClick={() => { const v = begeniDegis(p.slug); if (v) toast.success("Beğendin", { description: p.ad }); }} aria-pressed={begendi} className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-medium tabular-nums transition active:scale-95", begendi ? "bg-white text-rose-500" : "bg-white/[0.07] text-white/80 hover:bg-white/[0.12]")}><Heart className={cn("h-3.5 w-3.5", begendi && "fill-current")} />{sayiKisa((p.begeniSayi ?? 0) + (begendi ? 1 : 0))}</button>
-      {p.yazar && p.yazar !== benim && <button onClick={() => { const v = takipDegis(p.yazar!); toast.success(v ? `${p.yazar} takip ediliyor` : "Takipten çıkıldı"); }} aria-pressed={takipte} className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12.5px] font-semibold transition active:scale-95", takipte ? "bg-white/[0.08] text-white" : "bg-white text-black")}>{takipte ? <><Check className="h-3.5 w-3.5" />Takipte</> : <><UserPlus className="h-3.5 w-3.5" />Takip et</>}</button>}
     </div>
   );
 }

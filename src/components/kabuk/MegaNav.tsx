@@ -33,7 +33,7 @@ import { cn } from "@/lib/utils";
 const G = "/gercek";
 
 type Menu = "gorsel" | "video" | "ses" | "uc" | "studyolar" | "kaynaklar";
-type Baslik = { ad: string; href?: string; menu?: Menu; rozet?: string; eslesme: string[]; genis?: "lg" | "xl" };
+type Baslik = { ad: string; /** Dar ekranda (xl altı) görünen kısa ad. */ kisa?: string; href?: string; menu?: Menu; rozet?: string; eslesme: string[]; genis?: "lg" | "xl" };
 
 const BASLIKLAR: Baslik[] = [
   { ad: "Keşfet", href: "/panel", eslesme: ["/panel"] },
@@ -42,6 +42,7 @@ const BASLIKLAR: Baslik[] = [
   { ad: "Ses", menu: "ses", eslesme: ["/panel/ses", "/panel/muzik"] },
   { ad: "3D", menu: "uc", eslesme: ["/panel/3d"] },
   { ad: "Stüdyolar", menu: "studyolar", eslesme: ["/panel/sinema", "/panel/pazarlama", "/panel/supercomputer", "/panel/uzun-video", "/panel/montaj", "/panel/shorts", "/panel/explainer", "/panel/influencer", "/panel/element", "/panel/canvas", "/panel/projeler"] },
+  { ad: "Vayra Build", kisa: "Build", href: "/panel/build", rozet: "Yeni", eslesme: ["/panel/build"] },
   { ad: "Presetler", href: "/panel/presetler", rozet: "Yeni", eslesme: ["/panel/presetler"], genis: "lg" },
   { ad: "Kaynaklar", menu: "kaynaklar", eslesme: ["/panel/originals", "/panel/api", "/panel/mcp", "/panel/surum"] },
 ];
@@ -297,7 +298,7 @@ export function MegaNav({ path }: { path: string }) {
           const aktif = aktifMi(b);
           const menuAcik = !!b.menu && acik === b.menu;
           const sinif = cn(
-            "relative flex h-10 items-center gap-1.5 rounded-[11px] px-3 text-[15px] font-medium tracking-[-0.005em] transition-colors duration-150 xl:px-3",
+            "relative flex h-10 items-center gap-1.5 whitespace-nowrap rounded-[11px] px-2.5 text-[15px] font-medium tracking-[-0.005em] transition-colors duration-150 xl:px-3",
             ODAK,
             b.genis === "lg" && "hidden lg:flex",
             b.genis === "xl" && "hidden xl:flex",
@@ -305,8 +306,8 @@ export function MegaNav({ path }: { path: string }) {
           );
           const ic = (
             <>
-              {b.ad}
-              {b.rozet && <span className="rounded-[5px] bg-white/[0.08] px-1 py-px text-[10px] font-semibold leading-[14px] text-white/55">{b.rozet}</span>}
+              {b.kisa ? <><span className="max-xl:hidden">{b.ad}</span><span className="xl:hidden">{b.kisa}</span></> : b.ad}
+              {b.rozet && <span className="rounded-[5px] bg-white/[0.08] max-xl:hidden px-1 py-px text-[10px] font-semibold leading-[14px] text-white/55">{b.rozet}</span>}
             </>
           );
           return b.menu ? (

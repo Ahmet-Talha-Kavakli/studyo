@@ -179,7 +179,7 @@ function UcNoktaKarti({ w, acik, onAc, teslimler, yoneticiAnahtar, onDuzenle, on
           </span>
           <div className="min-w-0">
             <p className="truncate font-mono text-[13.5px] text-white">{w.url}</p>
-            <p className="mt-0.5 truncate text-[12.5px] text-white/60">{w.aciklama || "Açıklama yok"} · {w.olaylar.length} olay · {biten ? `%${Math.round((basarili / biten) * 100)} başarılı (${biten})` : "henüz teslim yok"}</p>
+            <p className="mt-0.5 truncate text-[12.5px] text-white/60">{w.aciklama || "Açıklama yok"} · {w.olaylar.length} olay · {biten ? `yüzde ${Math.round((basarili / biten) * 100)} başarılı (${biten})` : "henüz teslim yok"}</p>
           </div>
         </button>
         <Anahtar acik={w.aktif} onDegis={onAktif} etiket="Uç noktayı etkinleştir" />

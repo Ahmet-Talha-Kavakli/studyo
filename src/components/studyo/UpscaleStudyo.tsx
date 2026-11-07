@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Check, ChevronLeft, Columns2, Download, Film, Image as ImageIcon, Images, Info, Loader2, Maximize, RotateCcw,
   SplitSquareHorizontal, Square, Trash2, Upload, X, Wand2, Repeat2, Sparkles, Cpu, Maximize2, Monitor, Tv, Fingerprint, Dices, Ban,
-  ScanFace, Mountain, Zap, Gem, Palette, Volume2, SlidersHorizontal, History, Minimize2, Box, Type, Crown, ChevronDown, PanelRightClose, ScanSearch, Keyboard,
+  ScanFace, Mountain, Zap, Gem, Palette, Volume2, SlidersHorizontal, History, Minimize2, Box, Type, Crown, ChevronDown, PanelRightClose, ScanSearch, Keyboard, Star,
 } from "lucide-react";
 import { cn, saltUrl, gorseliFormatlaIndir } from "@/lib/utils";
 import { KaroSecici, HapKaydirici, AnahtarKart } from "@/components/studyo/hf";
@@ -20,6 +20,7 @@ import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
 import { neden } from "@/components/studyo/bildirim";
 import { useAuth } from "@/store/useAuth";
+import { krediliHata, krediliIstek } from "@/lib/krediIstek";
 import { useAuthKapi } from "@/store/useAuthKapi";
 import { useProjeler } from "@/store/useProjeler";
 import { useMasaustu } from "@/hooks/useMasaustu";
@@ -31,6 +32,13 @@ import { useUpscale, isiIzle, isleriSurdur, basarisiz, kitapligaYansit, medyaBoy
 import { yerelBuyut } from "@/lib/yerelBuyut";
 import { KitaplikPaneli } from "./KitaplikPaneli";
 import { Karsilastirici, type GoruntuMod, type Yakinlik } from "./upscale/Karsilastirici";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, KartDahaMenusu } from "@/components/galeri/KartEylemleri";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { zamanaGoreSirala } from "@/lib/galeri/gorunum";
+import { KlasoreTasiDugmesi } from "@/components/galeri/Klasorler";
+import type { Uretim } from "@/store/useProjeler";
 
 /**
  * Büyüt (Upscale) stüdyosu. Solda kaynak + hazır ayar + model + ölçek + gelişmiş ayarlar, ortada
@@ -71,7 +79,13 @@ export function UpscaleStudyo() {
   const arama = useSearchParams();
   const masaustu = useMasaustu();
   const fal = useFalDurum();
-  const isler = useUpscale((s) => s.isler);
+  const islerHam = useUpscale((s) => s.isler);
+  /* Görünüm ayarı: geçmişin sıralaması sayfa başına kalıcı. */
+  const [galeriGorunum] = useGorunum("upscale");
+  const isler = useMemo(() => zamanaGoreSirala(islerHam, galeriGorunum.siralama), [islerHam, galeriGorunum.siralama]);
+  /* İş kitaplığa yansıdıysa (uretimId) indirme menüsü, favori ve klasör o kayıt üstünden çalışır. */
+  const tumUretimler = useProjeler((s) => s.uretimler);
+  const uretimBul = useCallback((i?: UpscaleIs): Uretim | undefined => (i?.uretimId ? tumUretimler.find((x) => x.id === i.uretimId) : undefined), [tumUretimler]);
   const krediler = useAuth((s) => s.kullanici?.krediler ?? 0);
 
   const [tur, setTur] = useState<UpscaleTur>("gorsel");
@@ -218,7 +232,8 @@ export function UpscaleStudyo() {
   const uretKilit = useRef(0);
   /** Bir kaynak için büyütme işini kurar ve başlatır (tek ve toplu büyütme aynı yolu kullanır). */
   const isBaslat = (k: { url: string; w: number; h: number; sure?: number; ad: string; tur: UpscaleTur; uretimId?: string }, krediTutar: number, sec: boolean): string | null => {
-    if (gercek && !useAuth.getState().krediDus(krediTutar)) {
+    // Kredi sunucuda kesilir (/api/upscale); burada yalnız yerel bakiye denetlenir.
+    if (gercek && (useAuth.getState().kullanici?.krediler ?? 0) < krediTutar) {
       mesaj.yetersizKredi(krediTutar, useAuth.getState().kullanici?.krediler ?? 0);
       return null;
     }
@@ -231,20 +246,25 @@ export function UpscaleStudyo() {
       useUpscale.getState().guncelle(id, { durum: "isleniyor" });
       yerelBuyut(k.url, etkinOlcek, yerelKeskin)
         .then((s) => { useUpscale.getState().guncelle(id, { durum: "tamam", sonucUrl: s.url, sonucW: s.w, sonucH: s.h, bitis: Date.now() }); kitapligaYansit(id); })
-        .catch((e) => basarisiz(id, e instanceof Error ? e.message : "Büyütülemedi"));
+        .catch((e) => basarisiz(id, e instanceof Error ? e.message : "Büyütülemedi", "yok"));
       return id;
     }
     void (async () => {
       try {
-        const r = await fetch("/api/upscale", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model, kaynakUrl: k.url, olcek: etkinOlcek, ayar }),
-        }).then((x) => x.json()) as { ok: boolean; jeton?: string; hata?: string };
-        if (!r.ok || !r.jeton) throw new Error(r.hata ?? "Başlatılamadı");
-        useUpscale.getState().guncelle(id, { jeton: r.jeton });
+        // Ekranda iyimser düşer, sunucu keser; yanıttaki bakiyeyle eşitlenir. Başlatılamazsa sunucu iade eder.
+        const s = await krediliIstek<{ jeton?: string }>("/api/upscale", {
+          kredi: krediTutar, json: { model, kaynakUrl: k.url, olcek: etkinOlcek, ayar, genislik: k.w, yukseklik: k.h, sureSn: k.sure, kredi: krediTutar },
+        });
+        const r = s.j;
+        if (s.durum === 401 || s.durum === 402) {
+          useUpscale.getState().guncelle(id, { durum: "hata", kredi: 0, hata: krediliHata(s, ""), bitis: Date.now() });
+          return;
+        }
+        if (!r?.ok || !r.jeton) { basarisiz(id, r?.hata ?? "Başlatılamadı", r?.kredi?.iade ? { bakiye: r.kredi.bakiye } : "yok"); return; }
+        useUpscale.getState().guncelle(id, { jeton: r.jeton, ...(s.kesilen ? { kredi: s.kesilen } : {}) });
         void isiIzle(id);
       } catch (e) {
-        basarisiz(id, e instanceof Error ? e.message : "Başlatılamadı");
+        basarisiz(id, e instanceof Error ? e.message : "Başlatılamadı", "bilinmiyor");
       }
     })();
     return id;
@@ -710,7 +730,7 @@ export function UpscaleStudyo() {
       <div className="pointer-events-auto flex items-center gap-1.5">
         {gorunenTur === "gorsel" && (
           <div className={cn("flex items-center rounded-full", YUZEY)}>
-            {grup(String(yakinlik), (v) => setYakinlik(v === "sigdir" ? "sigdir" : (Number(v) as 1 | 2)), [["sigdir", "Sığdır", Maximize], ["1", "%100", null], ["2", "%200", null]])}
+            {grup(String(yakinlik), (v) => setYakinlik(v === "sigdir" ? "sigdir" : (Number(v) as 1 | 2)), [["sigdir", "Sığdır", Maximize], ["1", "Gerçek boyut", null], ["2", "İki kat", null]])}
             {masaustu && <><span className="h-5 w-px bg-white/15" />
             <Tooltip label={buyutec ? "Büyüteci kapat · L" : "Büyüteç · imlecin altını 3× gösterir · L"} side="bottom">
               <button onClick={() => setBuyutec((v) => !v)} aria-pressed={buyutec} aria-label="Büyüteç"
@@ -722,7 +742,7 @@ export function UpscaleStudyo() {
           <button onClick={() => setKisayolAcik((v) => !v)} aria-label="Klavye kısayolları" title="Kısayollar · ?" className={cn("flex h-9 w-9 items-center justify-center rounded-full", YUZEY, kisayolAcik ? "text-white" : "text-white/70 hover:text-white")}><Keyboard className="h-4 w-4" /></button>
           <Yuzen acik={kisayolAcik} onKapat={() => setKisayolAcik(false)} yerlesim="alt-sag" bosluk={8} etiket="Kısayollar" className={cn("w-[290px] p-3", POP)}>
             <p className="mb-2 text-[13px] font-semibold text-metin">Klavye kısayolları</p>
-            {([["Önceyi göster (basılı tut)", ["\\"]], ["Sığdır · %100 · %200", ["0", "1", "2"]], ["Büyüteç", ["L"]], ["Büyüt", ["Ctrl", "Enter"]], ["Yakınlaşmayı değiştir", ["Çift tık"]]] as const).map(([ad, t]) => (
+            {([["Önceyi göster (basılı tut)", ["\\"]], ["Sığdır · gerçek boyut · iki kat", ["0", "1", "2"]], ["Büyüteç", ["L"]], ["Büyüt", ["Ctrl", "Enter"]], ["Yakınlaşmayı değiştir", ["Çift tık"]]] as const).map(([ad, t]) => (
               <div key={ad} className="flex items-center justify-between gap-2 py-1 text-[12.5px]"><span className="text-metin-2">{ad}</span><span className="flex gap-1">{t.map((k) => <kbd key={k}>{k}</kbd>)}</span></div>
             ))}
           </Yuzen>
@@ -737,6 +757,11 @@ export function UpscaleStudyo() {
             )}
             <Tooltip label="Sonucu bir kez daha büyüt" side="bottom"><button onClick={() => sonucuKaynakYap(is)} aria-label="Sonucu yeniden büyüt" className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white"><Repeat2 className="h-4 w-4" /></button></Tooltip>
             <Tooltip label="Bu ayarları geri yükle" side="bottom"><button onClick={() => ayarlariYukle(is)} aria-label="Ayarları geri yükle" className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white"><RotateCcw className="h-4 w-4" /></button></Tooltip>
+            {uretimBul(is) && <FavoriDugmesi favori={!!uretimBul(is)!.favori} onClick={() => useProjeler.getState().favoriToggle(is.uretimId!)} side="bottom" className="!h-8 !w-8 !bg-transparent hover:!bg-white/10" />}
+            {uretimBul(is) && <KlasoreTasiDugmesi uretimIdler={[is.uretimId!]} etiketSinif="sr-only" yerlesim="alt-sag" className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white" />}
+            {uretimBul(is) ? (
+              <IndirDugmesi u={uretimBul(is)!} side="bottom" className="ml-0.5 flex h-8 items-center gap-1.5 rounded-full bg-white pl-3.5 pr-3.5 text-[12.5px] font-semibold text-black active:scale-95"><Download className="h-3.5 w-3.5" />İndir</IndirDugmesi>
+            ) : (
             <div className="relative ml-0.5 flex">
               <button onClick={() => void indir(is)} className="flex h-8 items-center gap-1.5 rounded-l-full bg-white pl-3.5 pr-2.5 text-[12.5px] font-semibold text-black active:scale-95"><Download className="h-3.5 w-3.5" />İndir</button>
               {is.tur === "gorsel" && (
@@ -753,6 +778,7 @@ export function UpscaleStudyo() {
                 {is.sonucW && is.sonucH && <p className="mx-1 mt-1 rounded-[10px] bg-white/[0.04] px-2.5 py-1.5 text-[11.5px] text-metin-2">{is.sonucW}×{is.sonucH} px · 300 DPI'da {baskiCm(is.sonucW, is.sonucH)}</p>}
               </Yuzen>
             </div>
+            )}
           </div>
         )}
       </div>
@@ -838,7 +864,7 @@ export function UpscaleStudyo() {
   const sonBolumu = isler.length > 0 && (
     <section className={cn("overflow-hidden rounded-[20px]", YUZEY)}>
       <div className="flex items-center gap-2 border-b border-white/[0.07] px-3.5 py-2.5"><History className="h-4 w-4 text-metin-2" /><span className="text-[13.5px] font-semibold text-metin">Son büyütmeler</span><span className="rounded-full bg-white/[0.08] px-1.5 text-[11px] tabular-nums text-metin-2">{isler.length}</span></div>
-      <div className="space-y-1.5 p-2">{isler.slice(0, 4).map((i) => <GecmisOgesi key={i.id} i={i} secili={false} yatay={false} onAc={() => isiAc(i)} onSil={() => sil(i)} onIndir={() => void indir(i)} />)}</div>
+      <div className="space-y-1.5 p-2">{isler.slice(0, 4).map((i) => <GecmisOgesi key={i.id} i={i} u={uretimBul(i)} secili={false} yatay={false} onAc={() => isiAc(i)} onSil={() => sil(i)} onIndir={() => void indir(i)} />)}</div>
     </section>
   );
   const adimlar = (
@@ -904,7 +930,7 @@ export function UpscaleStudyo() {
 
   const gecmisListe = (yatay: boolean) => (
     <div className={cn(yatay ? "gizli-scroll flex gap-2 overflow-x-auto pb-1" : "space-y-1.5")}>
-      {isler.map((i) => <GecmisOgesi key={i.id} i={i} secili={seciliIs === i.id} yatay={yatay} onAc={() => isiAc(i)} onSil={() => sil(i)} onIndir={() => void indir(i)} />)}
+      {isler.map((i) => <GecmisOgesi key={i.id} i={i} u={uretimBul(i)} secili={seciliIs === i.id} yatay={yatay} onAc={() => isiAc(i)} onSil={() => sil(i)} onIndir={() => void indir(i)} />)}
     </div>
   );
 
@@ -996,7 +1022,7 @@ export function UpscaleStudyo() {
                 {is.tur === "gorsel" ? <img src={is.sonucUrl ?? is.kaynakUrl} alt="" className="h-9 w-9 shrink-0 rounded-[9px] object-cover ring-1 ring-white/10" /> : <span className="flex h-9 w-9 items-center justify-center rounded-[9px] bg-white/[0.08]"><Film className="h-4 w-4" /></span>}
                 <div className="min-w-0">
                   <p className="max-w-[220px] truncate text-[13.5px] font-semibold text-metin">{is.ad}</p>
-                  <p className="text-[11.5px] tabular-nums text-metin-2">Geçmişten · {is.kaynakW}×{is.kaynakH}{is.sonucW ? ` → ${is.sonucW}×${is.sonucH}` : ""}</p>
+                  <p className="text-[11.5px] tabular-nums text-metin-2">Geçmişten · {is.kaynakW}×{is.kaynakH}{is.sonucW ? `, sonuç ${is.sonucW}×${is.sonucH}` : ""}</p>
                 </div>
                 <button onClick={() => ayarlariYukle(is)} className="ml-1 flex h-8 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-[12.5px] text-metin transition hover:bg-white/[0.12] active:scale-95"><RotateCcw className="h-3.5 w-3.5" />Ayarlarla aç</button>
               </div>
@@ -1024,6 +1050,8 @@ export function UpscaleStudyo() {
                   <div className="flex h-12 shrink-0 items-center justify-between px-3">
                     <span className="flex items-center gap-2 text-[13.5px] font-semibold text-metin">Geçmiş <span className="rounded-full bg-white/[0.08] px-1.5 text-[11px] font-semibold tabular-nums text-metin-2">{isler.length}</span>
                       {suren > 0 && <span className="flex items-center gap-1 rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-medium text-metin"><Loader2 className="h-3 w-3 animate-spin" />{suren} sürüyor</span>}</span>
+                    <span className="flex-1" />
+                    <GorunumAyari sayfa="upscale" istemVar={false} yerlesimVar={false} boyutVar={false} dugmeSinif="mr-1 h-8 w-8" />
                     <button onClick={() => setGecmisAcik(false)} aria-label="Geçmişi gizle" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-metin-3 hover:bg-white/[0.06] hover:text-metin"><PanelRightClose className="h-4 w-4" /></button>
                   </div>
                   <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">{gecmisListe(false)}</div>
@@ -1069,7 +1097,7 @@ function Sure({ bas }: { bas: number }) {
   return <>{Math.floor(s / 60)}:{String(s % 60).padStart(2, "0")}</>;
 }
 
-function GecmisOgesi({ i, secili, yatay, onAc, onSil, onIndir }: { i: UpscaleIs; secili: boolean; yatay: boolean; onAc: () => void; onSil: () => void; onIndir: () => void }) {
+function GecmisOgesi({ i, u, secili, yatay, onAc, onSil, onIndir }: { i: UpscaleIs; u?: Uretim; secili: boolean; yatay: boolean; onAc: () => void; onSil: () => void; onIndir: () => void }) {
   const surer = i.durum === "kuyrukta" || i.durum === "isleniyor";
   const gorsel = i.sonucUrl ?? i.kaynakUrl;
   const m = i.model === "yerel" ? "Yerel" : upscaleModel(i.model)?.ad;
@@ -1105,9 +1133,21 @@ function GecmisOgesi({ i, secili, yatay, onAc, onSil, onIndir }: { i: UpscaleIs;
         <span className="flex items-center gap-1 text-[10.5px] text-metin-3">{zamanOnce(i.olusturma)}{i.kredi ? <> · <KrediYildiz className="h-2.5 w-2.5" />{i.kredi}</> : null}</span>
       </span>
       {!surer && (
-        <span className="relative z-10 hidden gap-0.5 group-hover:flex [@media(hover:none)]:flex">
-          {i.durum === "tamam" && <button onClick={onIndir} aria-label="İndir" className="rounded-md p-1 text-metin-3 hover:bg-white/[0.08] hover:text-metin"><Download className="h-3.5 w-3.5" /></button>}
-          <button onClick={onSil} aria-label="Geçmişten kaldır" className="rounded-md p-1 text-metin-3 hover:bg-white/[0.08] hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button>
+        <span className={cn("relative z-10 gap-0.5 [@media(hover:none)]:flex", u?.favori ? "flex" : "hidden group-hover:flex")}>
+          {u && i.durum === "tamam" ? (
+            <>
+              <Tooltip label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} side="top"><button onClick={() => useProjeler.getState().favoriToggle(u.id)} aria-label={u.favori ? "Favorilerden çıkar" : "Favorilere ekle"} className={cn("rounded-md p-1 hover:bg-white/[0.08]", u.favori ? "text-aksan" : "text-metin-3 hover:text-metin")}><Star className={cn("h-3.5 w-3.5", u.favori && "fill-current")} /></button></Tooltip>
+              <span className="hidden group-hover:flex [@media(hover:none)]:flex">
+                <IndirDugmesi u={u} side="top" className="rounded-md p-1 text-metin-3 hover:bg-white/[0.08] hover:text-metin" ikonSinif="h-3.5 w-3.5" />
+                <KartDahaMenusu u={u} side="top" onSil={onSil} className="rounded-md p-1 text-metin-3 hover:bg-white/[0.08] hover:text-metin" boyut="kucuk" eylemler={[{ ad: "Aç", ikon: Maximize2, fn: onAc }]} />
+              </span>
+            </>
+          ) : (
+            <>
+              {i.durum === "tamam" && <Tooltip label="İndir" side="top"><button onClick={onIndir} aria-label="İndir" className="rounded-md p-1 text-metin-3 hover:bg-white/[0.08] hover:text-metin"><Download className="h-3.5 w-3.5" /></button></Tooltip>}
+              <Tooltip label="Geçmişten kaldır" side="top"><button onClick={onSil} aria-label="Geçmişten kaldır" className="rounded-md p-1 text-metin-3 hover:bg-white/[0.08] hover:text-rose-300"><Trash2 className="h-3.5 w-3.5" /></button></Tooltip>
+            </>
+          )}
         </span>
       )}
     </div>

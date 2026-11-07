@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronDown, Copy, Download, Film, ImageIcon, Loader2, Pencil, Pin, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Copy, Download, Film, ImageIcon, Loader2, Pencil, Pin, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { mesaj } from "@/lib/mesaj";
 import { useElements, type VElement } from "@/store/useElements";
@@ -94,7 +94,7 @@ export function ElementDetayPaneli({ e, onKapat, onDuzenle, onKullan }: { e: VEl
 
           {/* Tarif */}
           <div className="rounded-[16px] bg-white/[0.045] p-3.5 ring-1 ring-inset ring-white/[0.05]">
-            {e.aciklama ? <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-metin">{e.aciklama}</p> : <button onClick={onDuzenle} className="text-[13.5px] text-metin-2 hover:text-aksan">Tarif yok. Eklemek modele ne çizeceğini daha net söyler →</button>}
+            {e.aciklama ? <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-metin">{e.aciklama}</p> : <button onClick={onDuzenle} className="text-[13.5px] text-metin-2 hover:text-aksan"><span className="inline-flex items-center gap-1">Tarif yok. Eklemek modele ne çizeceğini daha net söyler<ArrowRight className="h-3.5 w-3.5 shrink-0" /></span></button>}
             <div className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-2.5 text-[12.5px] text-metin-2">
               <span className="min-w-0 flex-1 leading-snug">İstemde <b className="font-semibold text-aksan">{istem}</b> yazınca {g.length ? `${g.length} görseli ve tarifi` : "tarifi"} modele gider.</span>
               <button onClick={() => { void mesaj.kopyala(istem, "Element etiketi"); }} className="flex h-7 shrink-0 items-center gap-1 rounded-full px-2 text-[12px] text-metin-2 ring-1 ring-inset ring-white/[0.08] hover:text-metin"><Copy className="h-3 w-3" />{istem}</button>

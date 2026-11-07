@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
+import { guvenliFetch } from "@/lib/guvenliAg";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,12 +22,15 @@ function metneCevir(html: string): { baslik: string; metin: string } {
 
 /** POST { url } → { baslik, metin } — explainer için kaynak sayfayı okur. */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   const { url } = (await req.json().catch(() => ({}))) as { url?: string };
   let u: URL;
   try { u = new URL(String(url ?? "")); } catch { return NextResponse.json({ ok: false, hata: "Geçerli bir bağlantı gir." }, { status: 400 }); }
   if (!/^https?:$/.test(u.protocol) || IC_AG.test(u.hostname)) return NextResponse.json({ ok: false, hata: "Bu adres okunamaz." }, { status: 400 });
   try {
-    const r = await fetch(u, { headers: { "User-Agent": "Mozilla/5.0 (VayraExplainer)", Accept: "text/html,text/plain" }, redirect: "follow", signal: AbortSignal.timeout(12000) });
+    const r = await guvenliFetch(u, { headers: { "User-Agent": "Mozilla/5.0 (VayraExplainer)", Accept: "text/html,text/plain" }, signal: AbortSignal.timeout(12000) });
     if (!r.ok) return NextResponse.json({ ok: false, hata: `Sayfa açılmadı (${r.status}).` }, { status: 502 });
     const tip = r.headers.get("content-type") ?? "";
     if (!/text\/(html|plain)/.test(tip)) return NextResponse.json({ ok: false, hata: "Yalnız web sayfası ya da düz metin okunur." }, { status: 415 });

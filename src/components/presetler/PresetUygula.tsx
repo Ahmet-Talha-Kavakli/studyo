@@ -29,6 +29,7 @@ import type { ElementReferans } from "@/lib/elementCekirdek";
 import { kopyala } from "@/lib/gercekEylem";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { istemTemizlensinMi } from "@/lib/galeri/gorunum";
 import { ARAC, GIRDI, PRESET_MODELLER, fotoOku, presetBasligi, presetBedel, presetGirdi, presetinMi, usePresetOturum } from "./presetOrtak";
 import { OnizlemeSahnesi } from "./uygula/Sahne";
 import { KomutKutusu } from "./uygula/Komut";
@@ -116,6 +117,7 @@ export function PresetUygula({ slug }: { slug: string }) {
       basarili++;
     }
     if (basarili) {
+      if (istemTemizlensinMi("presetler")) setTalimat("");
       setSahne("sonuc");
       window.scrollTo({ top: 0, behavior: "smooth" });
       toast.success(basarili > 1 ? `${basarili} video üretiliyor` : "Video üretiliyor", { description: `${ek ? `${p.ad} + ${ek.ad}` : p.ad} · ${model.ad} · ${bagli === false ? "Kredi düşmez." : `${birim * basarili} kredi.`}` });

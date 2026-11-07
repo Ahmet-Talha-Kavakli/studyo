@@ -617,7 +617,7 @@ export const useMontaj = create<MontajState>()(
           }
 
           if (komut === "reel") {
-            // 30sn reel: her klipten "en iyi an" dilimi (max 3sn), toplam 30sn'i
+            // 30sn reel: her klibin başından en çok 3 sn'lik dilim (içerik analizi yok), toplam 30sn'i
             // aşmasın; hepsini sıkıştır ve 9:16 dikeye al.
             const payDilim = Math.max(1.2, Math.min(3, 30 / Math.max(1, toplamKlip)));
             katmanlariYaz(projeId, (kats) => kats.map((kat) => {
@@ -636,7 +636,7 @@ export const useMontaj = create<MontajState>()(
               return { ...kat, klipler };
             }));
             set((s) => ({ projeler: s.projeler.map((p) => (p.id === projeId ? { ...p, enBoy: "9:16", altyazi: true } : p)) }));
-            return `yaklaşık 30sn dikey reel hazırlandı · 9:16 + altyazı açık`;
+            return `30 saniyeye kadar dikey reel hazırlandı · 9:16, altyazı açık`;
           }
 
           if (komut === "grade") {
@@ -702,7 +702,7 @@ export const useMontaj = create<MontajState>()(
               id: yid("kl"), ad: `Altyazı: ${k.ad.slice(0, 18)}`, tur: "metin",
               baslangic: k.baslangic, sure: klipSure(k), basKirp: 0, sonKirp: 0,
               hiz: 1, sesDuzey: 0, opaklik: 100, efektler: [], gecis: "fade", gecisSure: 0.2,
-              metin: k.ad, metinBoyut: 38, metinRenk: "#ffffff", metinKonum: "alt",
+              metin: "Altyazı metni", metinBoyut: 38, metinRenk: "#ffffff", metinKonum: "alt",
             }));
             set((s) => ({
               projeler: s.projeler.map((p) => {
@@ -714,7 +714,7 @@ export const useMontaj = create<MontajState>()(
                 return { ...p, katmanlar, altyazi: true, guncelleme: Date.now() };
               }),
             }));
-            return `${metinKlipler.length} altyazı klibi metin katmanına eklendi`;
+            return `${metinKlipler.length} altyazı yeri eklendi; metinleri sen yaz`;
           }
 
           return "Komut uygulanamadı";
@@ -790,12 +790,12 @@ export function aiOnizle(p: MontajProje, komut: AiKomutId): { etkilenen: number;
 
 export const AI_KOMUT_META: Record<AiKomutId, { ad: string; ozet: string }> = {
   kurgu: { ad: "Otomatik kurgula", ozet: "Kısa kesimler, sinematik renk ve geçişler" },
-  reel: { ad: "30 saniyelik reel yap", ozet: "En iyi anlar, dikey, altyazı açık" },
+  reel: { ad: "30 saniyelik reel yap", ozet: "Her klibin başından kısa dilim, dikey, altyazı açık" },
   grade: { ad: "Sinematik renk", ozet: "Yalnız renk, kesimlere dokunmaz" },
   tempo: { ad: "Ritmik tempo", ozet: "Hızlı kesimler arasında ağır çekim vurgu" },
   gecis: { ad: "Geçiş ekle", ozet: "Her kesime yumuşak geçiş" },
-  sessizlik: { ad: "Boşlukları kes", ozet: "Kısa klipleri çıkar, çizelgeyi sıkıştır" },
-  altyazi: { ad: "Altyazı üret", ozet: "Metin katmanına otomatik altyazı klipleri" },
+  sessizlik: { ad: "Boşlukları kapat", ozet: "Bir saniyeden kısa klipleri çıkar, çizelgeyi sıkıştır" },
+  altyazi: { ad: "Altyazı yerleri ekle", ozet: "Her klibin altına yazılacak boş altyazı klibi; konuşmadan altyazı Akıllı panelde" },
 };
 
 /** CSS filter zinciri — önizlemede klip görünümünü GERÇEKTEN değiştirir. */

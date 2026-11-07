@@ -18,6 +18,7 @@ import { sayiKisa, yaraticiBul, yaraticiPayi } from "@/lib/presetTopluluk";
 import { KrediJeton } from "@/components/ui/KrediHap";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { toast } from "@/lib/toast";
+import { useAuth } from "@/store/useAuth";
 import { cn } from "@/lib/utils";
 import { PresetKapak } from "./PresetKarti";
 import { GIRDI, presetGirdi, usePresetOturum } from "./presetOrtak";
@@ -98,7 +99,7 @@ export function PresetPaneli({ p, tumu, benimTutamac, onKapat, onSec, onYaratici
                 {p.pro && <Hap>Pro</Hap>}
                 {p.taslak && <Hap>Taslak</Hap>}
               </span>
-              {p.video && <span className="absolute bottom-3 left-3"><Hap><Play className="h-3 w-3 fill-current" />Örnek sonuç · {p.sureSn} sn</Hap></span>}
+              {p.video && <span className="absolute bottom-3 left-3"><Hap><Play className="h-3 w-3 fill-current" />Efekt videosu · {p.sureSn} sn</Hap></span>}
             </div>
           </div>
 
@@ -108,19 +109,13 @@ export function PresetPaneli({ p, tumu, benimTutamac, onKapat, onSec, onYaratici
               <YaraticiAvatar yazar={p.yazar} boyut={40} />
               <span className="min-w-0">
                 <span className="flex items-center gap-1 text-[14.5px] font-semibold text-white"><span className="truncate">{p.yazar ? (benim ? "Sen" : yaratici?.ad ?? p.yazar) : "Vayra"}</span>{(!p.yazar || yaratici?.dogrulanmis) && <BadgeCheck className="h-4 w-4 shrink-0 text-white" />}</span>
-                <span className="block truncate text-[12.5px] text-white/55">{p.yazar ? `${p.yazar}${yaratici ? ` · ${sayiKisa(yaratici.takipci + (takipte ? 1 : 0))} takipçi` : ""}` : "Resmi Vayra efekti"}</span>
+                <span className="block truncate text-[12.5px] text-white/55">{p.yazar ? p.yazar : "Resmi Vayra efekti"}</span>
               </span>
             </button>
-            {p.yazar && !benim && (
-              <button onClick={takipEt} aria-pressed={takipte} className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition active:scale-[0.96]", takipte ? "bg-white/[0.08] text-white" : "bg-white text-[#0a0a0b]")}>
-                {takipte ? <><Check className="h-3.5 w-3.5" />Takipte</> : <><UserPlus className="h-3.5 w-3.5" />Takip et</>}
-              </button>
-            )}
           </section>
 
           {/* Eylemler: tek sıra hap */}
           <section className="mt-2.5 flex gap-1.5 px-4">
-            <Eylem aktif={begendi} onClick={begen} aria={begendi ? "Beğeniyi geri al" : "Beğen"}><Heart className={cn("h-4 w-4", begendi && "fill-current text-rose-400")} /><span className="tabular-nums">{sayiKisa((p.begeniSayi ?? 0) + (begendi ? 1 : 0))}</span></Eylem>
             <Eylem aktif={kaydetti} onClick={kaydet} aria="Kaydet"><Bookmark className={cn("h-4 w-4", kaydetti && "fill-current")} />{kaydetti ? "Kaydedildi" : "Kaydet"}</Eylem>
             <div className="relative flex">
               <Eylem onClick={() => setPaylasAcik((v) => !v)} aria="Paylaş"><Share2 className="h-4 w-4" />Paylaş</Eylem>
@@ -136,7 +131,16 @@ export function PresetPaneli({ p, tumu, benimTutamac, onKapat, onSec, onYaratici
                 <Yuzen acik={bildirAcik} onKapat={() => setBildirAcik(false)} yerlesim="alt-sag" bosluk={6} etiket="Bildir" className="w-[260px] rounded-[16px] border border-white/[0.09] bg-[#18191c] p-1.5">
                   <p className="px-2.5 pb-1 pt-1.5 text-[12.5px] font-semibold text-white">Neden bildiriyorsun?</p>
                   {BILDIRIM.map((x) => (
-                    <button key={x} onClick={() => { setBildirAcik(false); bildir(p.slug); onKapat(); toast.success("Bildirimin alındı", { description: "Preset senin akışından kaldırıldı; ekibimiz inceleyecek.", action: { label: "Geri al", onClick: () => bildirGeriAl(p.slug) } }); }}
+                    <button key={x} onClick={() => {
+                      setBildirAcik(false); bildir(p.slug); onKapat();
+                      // Bildirim destek kaydı olarak sunucuya gider (yönetim paneli, Destek); gitmezse "inceleyecek" denmez.
+                      const k = useAuth.getState().kullanici;
+                      const geri = { label: "Geri al", onClick: () => bildirGeriAl(p.slug) };
+                      if (!k?.email) return void toast("Preset akışından kaldırıldı", { description: "Ekibe iletmek için giriş yapman gerekiyor.", action: geri });
+                      void fetch("/api/iletisim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ad: k.ad && k.ad.length >= 2 ? k.ad : "Vayra kullanıcısı", email: k.email, konu: "Geri bildirim", mesaj: `Preset bildirimi: ${p.ad} (${p.slug}). Neden: ${x}.`, detay: { tur: "preset-bildirimi", slug: p.slug, neden: x } }) })
+                        .then((r) => r.ok ? toast.success("Bildirimin ekibe iletildi", { description: "Preset senin akışından kaldırıldı.", action: geri }) : toast.error("Bildirim iletilemedi", { description: "Preset senin akışından kaldırıldı; ekibe ulaşmadı. Yeniden dene.", action: geri }))
+                        .catch(() => toast.error("Bildirim iletilemedi", { description: "Sunucuya ulaşılamadı.", action: geri }));
+                    }}
                       className="flex w-full items-center rounded-[10px] px-2.5 py-2 text-left text-[13px] text-white/85 hover:bg-white/[0.06] hover:text-white">{x}</button>
                   ))}
                 </Yuzen>
@@ -147,7 +151,7 @@ export function PresetPaneli({ p, tumu, benimTutamac, onKapat, onSec, onYaratici
           {/* Ayrıntılar */}
           <section className="mx-4 mt-3 overflow-hidden rounded-[18px] bg-white/[0.03] ring-1 ring-inset ring-white/[0.07]">
             <dl className="grid grid-cols-3 divide-x divide-white/[0.06] border-b border-white/[0.06]">
-              {([["Kullanım", sayiKisa(p.kullanimSayi ?? 0)], ["Süre", `${p.sureSn} sn`], ["Girdi", girdi.ad]] as const).map(([k, v]) => (
+              {([...(p.kullanimSayi ? [["Kullanım", sayiKisa(p.kullanimSayi)] as const] : []), ["Süre", `${p.sureSn} sn`], ["Girdi", girdi.ad]] as const).map(([k, v]) => (
                 <div key={k} className="px-3 py-2.5"><dt className="text-[11.5px] text-white/45">{k}</dt><dd className="mt-0.5 truncate text-[14px] font-semibold tabular-nums text-white">{v}</dd></div>
               ))}
             </dl>
@@ -157,7 +161,6 @@ export function PresetPaneli({ p, tumu, benimTutamac, onKapat, onSec, onYaratici
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/[0.07] text-white"><girdi.ikon className="h-4 w-4" /></span>
                 <span className="min-w-0"><span className="block text-[13px] font-medium text-white">{girdi.slot} fotoğrafı gerekir</span><span className="block text-[12px] leading-snug text-white/55">{girdi.iyi}</span></span>
               </div>
-              {ek > 0 && <p className="text-[12.5px] leading-snug text-white/55">Bedelin {ek} kredisi yaratıcının ek fiyatı; <b className="font-semibold text-white">{yaraticiPayi(ek)} kredisi</b> yaratıcıya gider{benim ? ", kendi kullanımın kazanç sayılmaz." : "."}</p>}
               <div className="flex flex-wrap gap-1.5">{p.kategoriler.map((k) => <span key={k} className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[12px] text-white/65">{KATEGORI_AD[k] ?? k}</span>)}</div>
             </div>
             <div className="border-t border-white/[0.06]">

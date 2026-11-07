@@ -52,17 +52,8 @@ export function presetMinFiyat(model?: string): number {
   return Math.ceil(taban * 1.3); // %30 komisyon
 }
 
-// Kurgusal topluluk paylaşımları (deterministik, SSR-güvenli).
-const TOPLULUK_TOHUM: Omit<Paylasim, "id" | "benimMi" | "olusturma">[] = [
-  { tur: "preset", ad: "Neon Yürüyüş", aciklama: "Yağmurlu neon sokakta ağır çekim yürüyüş", tohum: "pl-neon-yuruyus", kategori: "sinematik", yazar: "@neonmancer", kullanim: 48200, begeni: 12400, prompt: "neon rainy street slow walk", model: "Kling 3.0" },
-  { tur: "preset", ad: "Altın Saat Portresi", aciklama: "Sıcak gün batımı ışığında sinematik portre", tohum: "pl-altin-portre", kategori: "portre", yazar: "@velvetlens", kullanim: 31500, begeni: 9800, prompt: "golden hour cinematic portrait", model: "Ruh Sinema" },
-  { tur: "uygulama", ad: "Ürün Reklamı 15sn", aciklama: "Ürün görselinden 15 saniyelik reklam akışı", tohum: "pl-urun-reklam", kategori: "urun", yazar: "@studio.mira", kullanim: 27800, begeni: 7300, prompt: "product ad 15s dynamic", model: "Seedance 2.0" },
-  { tur: "preset", ad: "Anime Dönüşüm", aciklama: "Fotoğrafını anime stiline çevir", tohum: "pl-anime", kategori: "soyut", yazar: "@0xrender", kullanim: 22100, begeni: 6900, prompt: "anime style transform", model: "Nano Banana Pro" },
-  { tur: "uygulama", ad: "Moodboard → Video", aciklama: "Moodboard'dan otomatik atmosfer videosu", tohum: "pl-moodboard-video", kategori: "manzara", yazar: "@auroraflux", kullanim: 18400, begeni: 5100, prompt: "moodboard to atmospheric video", model: "Veo 3.1" },
-  { tur: "preset", ad: "Vintage Film Grain", aciklama: "70'ler analog film dokusu ve renk", tohum: "pl-vintage", kategori: "soyut", yazar: "@filmisdead", kullanim: 15600, begeni: 4400, prompt: "70s vintage film grain", model: "Ruh 2.0" },
-  { tur: "uygulama", ad: "Konuşan Avatar", aciklama: "Fotoğraf + metinden konuşan lipsync avatar", tohum: "pl-avatar", kategori: "portre", yazar: "@vocalize", kullanim: 13200, begeni: 3800, prompt: "talking avatar lipsync", model: "Kling 3.0" },
-  { tur: "preset", ad: "Bullet Time 360", aciklama: "Donmuş anda 360 derece kamera dönüşü", tohum: "pl-bullet-time", kategori: "sinematik", yazar: "@matrixcam", kullanim: 11900, begeni: 3500, prompt: "bullet time 360 freeze", model: "Kling 3.0" },
-];
+// Topluluk paylaşımı sunucuda yok: uydurma kullanıcı ve sayı gösterilmez.
+const TOPLULUK_TOHUM: Omit<Paylasim, "id" | "benimMi" | "olusturma">[] = [];
 
 interface PaylasimState {
   benimPaylasimlar: Paylasim[];
@@ -99,7 +90,7 @@ export const usePaylasim = create<PaylasimState>()(
   ),
 );
 
-/** Kurgusal + kullanıcı paylaşımlarını birleştir (deterministik id'ler). */
+/** Kullanıcının paylaşımları (topluluk kaydı olmadığı için kurgusal paylaşım eklenmez). */
 export function toplulukPaylasimlar(benimPaylasimlar: Paylasim[], gizlenen: string[], begenilenler: string[]): Paylasim[] {
   const kurgusal: Paylasim[] = TOPLULUK_TOHUM.map((p, i) => ({
     ...p,

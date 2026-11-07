@@ -95,7 +95,7 @@ export function KimlikKarti({ k, icerik = 0, onDuzenle, onCogalt, onSil, onTekCu
             <dl className="mt-auto grid grid-cols-2 gap-2 pt-6 lg:grid-cols-4">
               <div className="rounded-[16px] p-3.5 ring-1 ring-inset ring-white/[0.07]" style={YUZ}>
                 <dt className="flex items-center gap-1.5 text-[12.5px] text-metin-3"><ShieldCheck className="h-3.5 w-3.5" />Tutarlılık</dt>
-                <dd className="mt-1 text-[22px] font-semibold tabular-nums text-metin">%{puan}</dd>
+                <dd className="mt-1 text-[22px] font-semibold tabular-nums text-metin">yüzde {puan}</dd>
                 <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/[0.08]"><motion.div initial={{ width: 0 }} animate={{ width: `${puan}%` }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }} className="h-full rounded-full bg-white" /></div>
               </div>
               <div className="rounded-[16px] p-3.5 ring-1 ring-inset ring-white/[0.07]" style={YUZ}>

@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { KURALLAR, kampanyaBul, seviyeBul, type Kampanya, type Platform } from "@/lib/earn/kampanyalar";
 import { kodUret } from "@/lib/earn/dogrulama";
+import { basvuruGonder, basvurularGetir, itirazGonder } from "@/lib/earn/istemci";
 
 /* ============================================================
    useEarn — Vayra Earn verisi (v3).
@@ -11,24 +12,30 @@ import { kodUret } from "@/lib/earn/dogrulama";
    Hesaba bağlıdır: `sahip` (e-posta) değişirse veri sıfırlanır; her kullanıcı
    boş başlar. Örnek/sahte kayıt yoktur.
 
-   Gönderi yaşam döngüsü ZAMANDAN hesaplanır:
-     inceleme (72 sa) → kazanıyor (7 gün) → bekleme (3 gün) → çekilebilir
-   Görev: inceleme → bekleme → çekilebilir (sabit ödül).
-   Yarışma: kampanya bitene kadar "jüride"; derece açıklanınca ödül, yoksa "sonuçlandı".
+   Gönderi durumu SUNUCUDAKİ başvuru kaydından gelir (/api/earn/basvuru,
+   lib/hesap/earnDepo): inceleme → onaylandı ya da reddedildi. Durum yalnız
+   yönetim panelindeki kararla değişir; zamanla kendiliğinden ilerlemez.
+   Yarışma: kampanya bitene kadar "jüride", sonra "sonuçlandı".
 
-   Görüntülenme: platform API'si bağlıysa (bkz. lib/earn/entegrasyon) gerçek değer
-   `istatistik` alanına yazılır ve o kullanılır; değilse takipçiye bağlı
-   deterministik tahmin eğrisi çalışır.
+   Kazanç defteri sunucuda yok: ekranda tahmini TL tutarı gösterilmez, her
+   gönderinin kazancı 0'dır. Görüntülenme yalnız platform API'sinden okunan
+   gerçek değerdir (bkz. lib/earn/entegrasyon); tahmin eğrisi yoktur.
    ============================================================ */
 
-const SA = 3_600_000, GUN = 86_400_000;
+const GUN = 86_400_000;
 
-export type GonderiDurum = "inceleme" | "kazaniyor" | "bekleme" | "cekilebilir" | "reddedildi" | "degerlendirme" | "sonuclandi";
+export type GonderiDurum = "inceleme" | "onaylandi" | "kazaniyor" | "bekleme" | "cekilebilir" | "reddedildi" | "degerlendirme" | "sonuclandi";
 export type GonderiKontrol = { gercek: boolean; sahibiMi: boolean | null; baslik?: string; kucukResim?: string };
+export type SunucuDurum = "inceleme" | "onaylandi" | "reddedildi";
 export type Gonderi = {
   id: string; kampanyaId: string; platform: Platform; link: string; tarih: number;
-  /** Simülasyon için hedef görüntülenme (takipçi + bağlantıdan türetilir). */
-  hedef: number;
+  /** Eski sürümden kalan alan; kullanılmıyor. */
+  hedef?: number;
+  /** Sunucudaki başvuru kaydı (yoksa başvuru sunucuya ulaşmadı). */
+  sunucuId?: string;
+  sunucuDurum?: SunucuDurum;
+  /** Başvuru sunucuya kaydedilemediyse hata metni. */
+  senkronHata?: string;
   /** Gönderide kullanılan Vayra üretimi (kitaplık). */
   uretimId?: string;
   uretimGorsel?: string;
@@ -55,59 +62,32 @@ export type DestekTalep = { id: string; konu: string; mesaj: string; durum: "gon
 /* ── Deterministik yardımcılar ── */
 export function hash(s: string) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
-/** Gönderinin anlık durumu, görüntülenmesi ve kazancı. */
+/**
+ * Gönderinin anlık durumu. Durum sunucudaki inceleme kararından gelir; zaman durumu ilerletmez.
+ * Kazanç defteri olmadığı için kazanç her zaman 0'dır (tahmini tutar gösterilmez).
+ */
 export function gonderiHesap(g: Gonderi, simdi = Date.now(), seviyeBonus = 0) {
+  void seviyeBonus;
   const k = kampanyaBul(g.kampanyaId); // bitiş tarihleri bugüne sabitlidir; geçmiş "simdi" ile kaymaz
-  const gecen = simdi - g.tarih;
-  const inceleme = KURALLAR.incelemeSaat * SA, kazanma = KURALLAR.kazanmaGun * GUN, bekleme = KURALLAR.beklemeGun * GUN;
-  const sonuc = { durum: "inceleme" as GonderiDurum, goruntulenme: 0, kazanc: 0, sabit: 0, bonus24: 0, bonus7: 0, ilerleme: 0, sonrakiAsama: 0, minAltinda: false, gercekVeri: false, kampanya: k };
+  const gercekVeri = !!g.istatistik;
+  const goruntulenme = g.istatistik?.goruntulenme ?? 0;
+  const sonuc = { durum: "inceleme" as GonderiDurum, goruntulenme, kazanc: 0, sabit: 0, bonus24: 0, bonus7: 0, ilerleme: 0, sonrakiAsama: 0, minAltinda: false, gercekVeri, kampanya: k };
   if (!k) return sonuc;
-  if (g.red && g.itiraz !== "inceleniyor") return { ...sonuc, durum: "reddedildi" as GonderiDurum };
-
+  const reddedildi = g.sunucuDurum === "reddedildi" || !!g.red;
+  if (reddedildi && g.itiraz !== "inceleniyor") return { ...sonuc, durum: "reddedildi" as GonderiDurum };
   if (k.tur === "yarisma") {
     if (k.bitis > simdi) return { ...sonuc, durum: "degerlendirme" as GonderiDurum, sonrakiAsama: k.bitis };
-    if (!g.derece) return { ...sonuc, durum: "sonuclandi" as GonderiDurum };
-    const odul = k.dereceler?.[g.derece - 1] ?? 0;
-    const tamam = k.bitis + bekleme;
-    return { ...sonuc, durum: (simdi >= tamam ? "cekilebilir" : "bekleme") as GonderiDurum, kazanc: odul, sonrakiAsama: tamam };
+    return { ...sonuc, durum: "sonuclandi" as GonderiDurum };
   }
-  if (gecen < inceleme) return { ...sonuc, ilerleme: gecen / inceleme, sonrakiAsama: g.tarih + inceleme };
-
-  if (k.tur === "gorev") {
-    const odul = Math.round((k.odul ?? 0) * (1 + seviyeBonus));
-    const tamam = g.tarih + inceleme + bekleme;
-    return { ...sonuc, durum: (simdi >= tamam ? "cekilebilir" : "bekleme") as GonderiDurum, kazanc: odul, sabit: odul, ilerleme: Math.min(1, (gecen - inceleme) / bekleme), sonrakiAsama: tamam };
-  }
-
-  // Görüntülenme kampanyası
-  const t = Math.min(gecen - inceleme, kazanma);
-  const tau = (1.2 + (g.hedef % 7) / 5) * GUN;
-  const egri = (x: number) => 1 - Math.exp(-x / tau);
-  const tahmin = Math.round(g.hedef * egri(t) / egri(kazanma));
-  const gercekVeri = !!g.istatistik;
-  const goruntulenme = gercekVeri ? g.istatistik!.goruntulenme : tahmin;
-  // 24. saat bonusu: ilk 24 saatin payı eğriyle oranlanır (gerçek veride de).
-  const pay24 = egri(Math.min(t, GUN)) / Math.max(1e-9, egri(t));
-  const g24 = Math.round(goruntulenme * Math.min(1, pay24));
-  const oran = k.oran ?? 0, sabit = k.sabitOdeme ?? 0;
-  const ham = (goruntulenme / 1000) * oran;
-  const bonus24 = t >= GUN ? (g24 / 1000) * oran * KURALLAR.bonus24 : 0;
-  const bonus7 = t >= kazanma ? ham * KURALLAR.bonus7 : 0;
-  let kazanc = (sabit + ham + bonus24 + bonus7) * (1 + seviyeBonus);
-  kazanc = Math.min(kazanc, k.maxOdeme ?? Infinity);
-  const bitti = gecen >= inceleme + kazanma;
-  const minAltinda = bitti && kazanc < (k.minOdeme ?? 0);
-  if (minAltinda) kazanc = 0;
-  kazanc = Math.round(kazanc * 100) / 100;
-  if (!bitti) return { ...sonuc, durum: "kazaniyor" as GonderiDurum, goruntulenme, kazanc, sabit, bonus24, bonus7, gercekVeri, ilerleme: t / kazanma, sonrakiAsama: g.tarih + inceleme + kazanma };
-  const tamam = g.tarih + inceleme + kazanma + bekleme;
-  return { ...sonuc, durum: (simdi >= tamam ? "cekilebilir" : "bekleme") as GonderiDurum, goruntulenme, kazanc, sabit, bonus24, bonus7, gercekVeri, minAltinda, ilerleme: Math.min(1, (gecen - inceleme - kazanma) / bekleme), sonrakiAsama: tamam };
+  if (g.sunucuDurum === "onaylandi" && g.itiraz !== "inceleniyor") return { ...sonuc, durum: "onaylandi" as GonderiDurum, ilerleme: 1 };
+  return sonuc;
 }
 
-/** Çekimin durumu. Papara (gerçek) anında sonuçlanır; banka havalesi 1 iş günü içinde. */
+/** Çekimin durumu. Yalnız sağlayıcının onayladığı çekim "odendi" olur; süre geçince kendiliğinden ödendi sayılmaz. */
 export function cekimDurum(c: Cekim, simdi = Date.now()): CekimDurum {
+  void simdi;
   if (c.durum) return c.durum;
-  return simdi - c.tarih >= 24 * SA ? "odendi" : "isleniyor";
+  return c.gercek ? "isleniyor" : "basarisiz";
 }
 
 /** Cüzdan özeti. */
@@ -196,6 +176,8 @@ interface EarnState extends EarnVeri {
   sahipAyarla: (email: string, ad: string) => void;
   katil: (kampanyaId: string) => void;
   gonder: (g: { kampanyaId: string; platform: Platform; link: string; uretimId?: string; uretimGorsel?: string; kontrol?: GonderiKontrol }) => string;
+  /** Sunucudaki başvurularla eşitler (durum, red gerekçesi, itiraz; başka cihazdan yapılan başvurular). */
+  esitle: () => Promise<void>;
   istatistikYaz: (id: string, goruntulenme: number) => void;
   itirazEt: (id: string) => void;
   hesapEkle: (platform: Platform, kadi: string) => void;
@@ -235,14 +217,34 @@ export const useEarn = create<EarnState>()(
       katil: (id) => set((s) => (s.katilimlar.includes(id) ? s : { katilimlar: [...s.katilimlar, id] })),
       gonder: ({ kampanyaId, platform, link, uretimId, uretimGorsel, kontrol }) => {
         const id = yeniId("go");
-        const takipci = get().hesaplar.find((h) => h.platform === platform)?.takipci ?? 1000;
-        // Tahmini hedef: takipçinin 0,4–2,4 katı (bağlantıdan türeyen sabit tohum).
-        const hedef = Math.max(500, Math.round(takipci * (0.4 + (hash(link) % 200) / 100)));
-        set((s) => ({ gonderiler: [{ id, kampanyaId, platform, link, tarih: Date.now(), hedef, uretimId, uretimGorsel, kontrol }, ...s.gonderiler] }));
+        set((s) => ({ gonderiler: [{ id, kampanyaId, platform, link, tarih: Date.now(), uretimId, uretimGorsel, kontrol }, ...s.gonderiler] }));
+        // Başvuru sunucuya kaydedilir; inceleme durumu oradan okunur.
+        void basvuruGonder({ kampanyaId, platform, link, kontrol: kontrol ? { gercek: kontrol.gercek, sahibiMi: kontrol.sahibiMi } : undefined }).then((r) => {
+          set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id !== id ? g : r.ok ? { ...g, sunucuId: r.basvuru.id, sunucuDurum: r.basvuru.durum, tarih: r.basvuru.tarih, senkronHata: undefined } : { ...g, senkronHata: r.hata })) }));
+        });
         return id;
       },
+      esitle: async () => {
+        const r = await basvurularGetir();
+        if (!r.ok) return;
+        set((s) => {
+          const yerel = new Map(s.gonderiler.filter((g) => g.sunucuId).map((g) => [g.sunucuId!, g]));
+          const sunucudan: Gonderi[] = r.basvurular.map((b) => {
+            const y = yerel.get(b.id);
+            return { ...(y ?? { id: yeniId("go"), kampanyaId: b.kampanyaId, platform: b.platform, link: b.link, tarih: b.tarih }), sunucuId: b.id, sunucuDurum: b.durum, red: b.red, itiraz: b.itiraz, kontrol: y?.kontrol ?? (b.kontrol ? { ...b.kontrol } : undefined), senkronHata: undefined };
+          });
+          // Sunucuya hiç ulaşamamış yerel gönderiler hatalarıyla listede kalır (yeniden gönderilebilir).
+          const ulasmayan = s.gonderiler.filter((g) => !g.sunucuId);
+          return { gonderiler: [...ulasmayan, ...sunucudan].sort((a, b) => b.tarih - a.tarih) };
+        });
+      },
       istatistikYaz: (id, goruntulenme) => set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id === id ? { ...g, istatistik: { goruntulenme, zaman: Date.now() } } : g)) })),
-      itirazEt: (id) => set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id === id && !g.itiraz ? { ...g, itiraz: "inceleniyor" } : g)) })),
+      itirazEt: (id) => {
+        const g0 = get().gonderiler.find((g) => g.id === id);
+        if (!g0?.sunucuId || g0.itiraz) return;
+        set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id === id ? { ...g, itiraz: "inceleniyor" } : g)) }));
+        void itirazGonder(g0.sunucuId).then((r) => { if (!r.ok) set((s) => ({ gonderiler: s.gonderiler.map((g) => (g.id === id ? { ...g, itiraz: undefined } : g)) })); });
+      },
 
       hesapEkle: (platform, kadi) => set((s) => ({
         hesaplar: [...s.hesaplar.filter((h) => h.platform !== platform),
@@ -273,9 +275,13 @@ export const useEarn = create<EarnState>()(
     }),
     {
       name: "vayra-earn",
-      version: 3,
-      // v2 → v3: örnek (demo) veriler kaldırıldı; hesap bazlı, boş başlangıç.
-      migrate: () => bos() as EarnState,
+      version: 4,
+      // v3 → v4: gönderi durumu sunucudaki başvuru kaydından gelir; tarayıcıda biriken simülasyon kayıtları
+      // (sunucuda karşılığı olmayan gönderiler, hesaplanmış kazançlar) bırakılır. Hesaplar ve ödeme yöntemleri korunur.
+      migrate: (eski) => {
+        const e = (eski ?? {}) as Partial<EarnVeri>;
+        return { ...bos(), sahip: e.sahip ?? null, davetKodu: e.davetKodu ?? "", kuponKodu: e.kuponKodu ?? "", hesaplar: e.hesaplar ?? [], kimlik: e.kimlik ?? null, odemeYontemleri: e.odemeYontemleri ?? [], katilimlar: e.katilimlar ?? [], karsilamaKapali: !!e.karsilamaKapali } as EarnState;
+      },
     },
   ),
 );

@@ -83,7 +83,9 @@ function useSatirParlat(path: string) {
   }, [path]);
 }
 
-function aktifMi(path: string, href: string) { return path === href || path.startsWith(href + "/"); }
+/** Alt sayfası ayrı menü satırı olan sayfalar (Çalışma alanı, Genel) yalnız tam eşleşmede seçilir. */
+const TAM_ESLESME = new Set(["/panel/ayarlar/alan"]);
+function aktifMi(path: string, href: string) { return path === href || (!TAM_ESLESME.has(href) && path.startsWith(href + "/")); }
 
 /**
  * Sol menü ("A · Beyaz hap"): sitenin sekme dili. Seçili satır beyaz hap, siyah yazı; seçim zemini satırlar

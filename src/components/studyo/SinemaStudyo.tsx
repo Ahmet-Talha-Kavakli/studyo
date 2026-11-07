@@ -1,5 +1,6 @@
 "use client";
 
+import { Iskelet } from "@/components/ui/Iskelet";
 /**
  * Sinema stüdyosu — kendi çalışma alanı olan bir film seti.
  *
@@ -20,7 +21,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, Reorder, motion } from "framer-motion";
 import {
   ArrowLeftRight, AtSign, Check, ChevronDown, ChevronRight, Clapperboard, Clock, Feather, Film, FastForward, Hash, Heart, Image as ImageIcon, Images, Info, Layers,
-  ArrowDown, ArrowUp, Link2, Rewind, MessageSquareQuote, RotateCcw, Maximize2, Repeat2, ScanFace, UserRound, LayoutGrid, Lightbulb, Loader2, Lock, Menu, Minus, Palette, Plus, Rows3, ScanEye, ScrollText, Sparkles, Sun, SwitchCamera, Upload, Volume2, VolumeX, X, Infinity as Sonsuz, Camera, Wand2,
+  ArrowDown, ArrowUp, Link2, Rewind, MessageSquareQuote, RotateCcw, Maximize2, Repeat2, ScanFace, UserRound, LayoutGrid, Star, Lightbulb, Loader2, Lock, Menu, Minus, Palette, Plus, Rows3, ScanEye, ScrollText, Sparkles, Sun, SwitchCamera, Upload, Volume2, VolumeX, X, Infinity as Sonsuz, Camera, Wand2,
 } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { mesaj } from "@/lib/mesaj";
@@ -55,6 +56,9 @@ import { ElementKutuphanesi, ElementDetay, type Kapsam } from "@/components/pane
 import { ElementDuzenleModal } from "@/components/panel/element/ElementDuzenleModal";
 import { YeniProjeModalHF } from "@/components/panel/StudyoModallari";
 import { SecimToolbar } from "@/components/panel/SecimToolbar";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useAlanGenisligi, useGorunum } from "@/components/galeri/useGorunum";
+import { istemTemizlensinMi, kartOrani, sutunSayisi, zamanaGoreSirala } from "@/lib/galeri/gorunum";
 import { Yuzen } from "@/components/ui/Yuzen";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { KrediYildiz } from "@/components/ui/KrediHap";
@@ -238,7 +242,9 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const [gonderiliyor, setGonderiliyor] = useState(false);
   const [surukle, setSurukle] = useState(false);
   const [filtre, setFiltre] = useState<"tumu" | "kare" | "video">("tumu");
-  const [yogunluk, setYogunluk] = useState<"rahat" | "sik">("rahat");
+  /* Görünüm ayarı (yerleşim, boyut, sıralama, istemi temizle) sayfa başına kalıcı. */
+  const [gorunum] = useGorunum("sinema", { boyut: "buyuk" });
+  const [izgaraRef, izgaraEn] = useAlanGenisligi<HTMLDivElement>(1200);
   const [seciliId, setSeciliId] = useState<string | null>(null);
   const [yorum, setYorum] = useState("");
   const [favModeller, setFavModeller] = useState<string[]>([]);
@@ -553,6 +559,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
       if (!idler.length) return void (sonHata && uretimHataToast(sonHata));
       if (sonHata) uretimHataToast(sonHata);
       const yerlesti = mod === "video" && kaynak && (kaynak.devam || kaynak.yon) ? sahneyeYerlestir(idler, kaynak.id, kaynak.yon === "oncesi") : false;
+      if (istemTemizlensinMi("sinema")) setPrompt("");
       if (!gomulu) { setSayfa("ana"); setFiltre("tumu"); }
       const n = idler.length, b = taslak ? taslakBirim : birim;
       toast.success(mod === "gorsel" ? (n > 1 ? `${n} kare çekiliyor` : "Kare çekiliyor") : taslak ? "Taslak çekim üretiliyor" : n > 1 ? `${n} çekim üretiliyor` : "Çekim üretiliyor", {
@@ -564,7 +571,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   /* ═════════════ Kart ve görüntüleyici eylemleri ═════════════ */
   const sinemaUretimleri = useMemo(() => tumUretimler.filter((u) => u.arac === ARAC && !u.id.startsWith("seed_")), [tumUretimler]);
   const favoriler = useMemo(() => sinemaUretimleri.filter((u) => u.favori), [sinemaUretimleri]);
-  const gorunenler = (sayfa === "favori" ? favoriler : sinemaUretimleri).filter((u) => filtre === "tumu" || (filtre === "kare" ? u.tur === "gorsel" : u.tur === "video"));
+  const gorunenler = zamanaGoreSirala((sayfa === "favori" ? favoriler : sinemaUretimleri).filter((u) => filtre === "tumu" || (filtre === "kare" ? u.tur === "gorsel" : u.tur === "video")), gorunum.siralama);
   const gezListe = useMemo(() => gorunenler.filter((u) => u.durum === "tamam"), [gorunenler]);
   const seciliUretim = seciliId ? tumUretimler.find((u) => u.id === seciliId) : undefined;
   const lbIndex = seciliUretim ? gezListe.findIndex((u) => u.id === seciliUretim.id) : -1;
@@ -1176,7 +1183,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const oneriPaneli = (
     <MenuKart baslik="Kareden istem önerileri">
       <div className="p-1">
-        {oneriYukleniyor ? <div className="space-y-1.5 p-1">{[0, 1, 2].map((i) => <span key={i} className="block h-12 animate-pulse rounded-[10px] bg-white/[0.05]" />)}</div>
+        {oneriYukleniyor ? <div aria-busy aria-label="Öneriler hazırlanıyor">{[0, 1, 2].map((i) => <span key={i} className="block space-y-1.5 px-2 py-2.5"><Iskelet className="h-3 w-full rounded-full" /><Iskelet className={i === 1 ? "h-3 w-1/2 rounded-full" : "h-3 w-3/4 rounded-full"} /></span>)}</div>
           : oneriler?.liste.map((o) => <button key={o} onClick={() => { setPrompt(o); setAcik(null); odakla(); }} className="block w-full rounded-[10px] px-2 py-2 text-left text-[12.5px] leading-snug text-metin-2 hover:bg-white/[0.05] hover:text-metin">{o}</button>)}
       </div>
     </MenuKart>
@@ -1257,7 +1264,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
           </div>
         );
       })()}
-      {oz.sesToggle && cip({ ust: "Ses", etiket: sesli ? "Açık" : "Kapalı", ikon: sesli ? <Volume2 className="h-3.5 w-3.5 text-metin" /> : <VolumeX className="h-3.5 w-3.5 text-metin-3" />, onClick: () => setSesli((v) => !v), title: sesli ? "Ses: diyalog, efekt, ortam · kredi %25 artar" : "Sesi aç", ariaLabel: `Ses ${sesli ? "açık" : "kapalı"}` })}
+      {oz.sesToggle && cip({ ust: "Ses", etiket: sesli ? "Açık" : "Kapalı", ikon: sesli ? <Volume2 className="h-3.5 w-3.5 text-metin" /> : <VolumeX className="h-3.5 w-3.5 text-metin-3" />, onClick: () => setSesli((v) => !v), title: sesli ? "Ses: diyalog, efekt, ortam · kredi yüzde 25 artar" : "Sesi aç", ariaLabel: `Ses ${sesli ? "açık" : "kapalı"}` })}
       {sesAcik && (
         <div className="relative">
           {cip({ ust: "Diyalog", etiket: diyalog.some((d) => d.metin.trim()) ? `${diyalog.filter((d) => d.metin.trim()).length} satır` : sesNotu.trim() ? "Ortam sesi" : "Ekle", ikon: <MessageSquareQuote className={cn("h-3.5 w-3.5", diyalog.some((d) => d.metin.trim()) || sesNotu.trim() ? "text-metin" : "text-metin-3")} />, acikMi: acik === "diyalog", onClick: () => { if (!diyalog.length) setDiyalog([{ id: `d${Date.now().toString(36)}`, kim: istemKisileri[0] ?? "", metin: "", ton: "dogal" }]); ac("diyalog"); } })}
@@ -1424,7 +1431,8 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     </div>
   );
 
-  const izgaraSutun = yogunluk === "rahat" ? "columns-1 sm:columns-2 xl:columns-3" : "columns-2 md:columns-3 xl:columns-4 2xl:columns-5";
+  const izgaraSutun = sutunSayisi(izgaraEn, gorunum, { enCok: 8 });
+  const kartOran = gorunum.yerlesim === "ozgun" ? undefined : kartOrani(gorunum, 16 / 9);
   const gruplar = useMemo(() => {
     const l: { etiket: string; oge: Uretim[] }[] = [];
     for (const u of gorunenler) { const e = gunEtiketi(u.olusturma); const s = l[l.length - 1]; if (s && s.etiket === e) s.oge.push(u); else l.push({ etiket: e, oge: [u] }); }
@@ -1496,15 +1504,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
             </button>
           ))}
         </div>
-        <div role="radiogroup" aria-label="Izgara yoğunluğu" className="flex h-10 items-center gap-0.5 rounded-full bg-white/[0.06] p-1 max-md:hidden">
-          {([["rahat", Rows3, "Büyük kartlar"], ["sik", LayoutGrid, "Sık ızgara"]] as const).map(([k, I, a]) => (
-            <button key={k} role="radio" aria-checked={yogunluk === k} onClick={() => setYogunluk(k)} aria-label={a} title={a}
-              className={cn("relative isolate flex h-8 w-9 items-center justify-center rounded-full transition-colors active:scale-[0.95]", yogunluk === k ? "text-[#0a0a0b]" : "text-metin-2 hover:text-metin")}>
-              {yogunluk === k && <motion.span layoutId="sinema-yogunluk" className="absolute inset-0 -z-10 rounded-full bg-white" transition={{ type: "spring", stiffness: 480, damping: 38 }} />}
-              <I className="h-4 w-4" />
-            </button>
-          ))}
-        </div>
+        <GorunumAyari sayfa="sinema" taban={{ boyut: "buyuk" }} dugmeSinif="h-10 w-10" />
       </div>
     </div>
   );
@@ -1567,7 +1567,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
     </div>
   );
   const akis = (
-    <div className="mx-auto max-w-[1440px] px-6 pt-1 max-md:px-3">
+    <div ref={izgaraRef} className="mx-auto max-w-[1440px] px-6 pt-1 max-md:px-3">
       {gruplar.map((g) => {
         const tamamlar = g.oge.filter((u) => u.durum === "tamam");
         const hepsi = tamamlar.length > 0 && tamamlar.every((u) => secililer.includes(u.id));
@@ -1580,11 +1580,11 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
               <span className="h-px flex-1 bg-gradient-to-r from-white/[0.08] to-transparent" />
               {tamamlar.length > 1 && <button onClick={() => tamamlar.forEach((u) => { if (hepsi === secililer.includes(u.id)) secimToggle(u.id); })} className="shrink-0 text-[12px] text-metin-3 transition-colors hover:text-metin">{hepsi ? "Seçimi kaldır" : "Tümünü seç"}</button>}
             </div>
-            <div className={cn("gap-3", izgaraSutun)}>
+            <div className="gap-3" style={gorunum.yerlesim === "ozgun" ? { columnCount: izgaraSutun } : { display: "grid", gridTemplateColumns: `repeat(${izgaraSutun}, minmax(0, 1fr))`, rowGap: 0 }}>
               <AnimatePresence initial={false}>
                 {g.oge.map((u) => (
                   <motion.div key={u.id} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.25 }} className="mb-3 break-inside-avoid">
-                    <SinemaKart u={u} secili={secililer.includes(u.id)} secimModu={secimModu} sahnede={sahnedeMi(u.id)} {...kartEylem(u)} />
+                    <SinemaKart u={u} oran={kartOran} secili={secililer.includes(u.id)} secimModu={secimModu} sahnede={sahnedeMi(u.id)} {...kartEylem(u)} />
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -1595,7 +1595,7 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
       {sayfa === "ana" && gorunenler.length > 0 && gorunenler.length < 9 && sonrakiAdim}
       {!gorunenler.length && (
         <BosYelpaze
-          rozet={sayfa === "favori" ? <Heart className="h-5 w-5 fill-current" /> : filtre === "video" ? <Film className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
+          rozet={sayfa === "favori" ? <Star className="h-5 w-5 fill-current" /> : filtre === "video" ? <Film className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
           rozetZemin={sayfa === "favori" ? "linear-gradient(140deg,#fda4af,#f43f5e)" : filtre === "video" ? "linear-gradient(140deg,#c4b5fd,#7c3aed)" : "linear-gradient(140deg,#a5f3fc,#0891b2)"}
           baslik={sayfa === "favori" ? (filtre === "video" ? "Favori videon yok" : "Favori karen yok") : filtre === "video" ? "Henüz videon yok" : "Henüz karen yok"}
           aciklama={sayfa === "favori" ? "Bu türde kalbe dokunduğun bir çekim yok. Tüm favorilerine dönebilir ya da yeni bir çekim yapabilirsin."
@@ -1611,8 +1611,8 @@ export function SinemaStudyo({ gomulu, projeId, onUretildi }: StudyoGomuluProps 
   const demoVar = sinemaUretimleri.some((u) => u.gercek === false);
   /** Favoriler boşken: üç film karesi yelpazesi, kalp rozeti ve iki yol. */
   const favoriBos = (
-    <BosYelpaze rozet={<Heart className="h-5 w-5 fill-current" />} rozetZemin="linear-gradient(140deg,#fda4af,#f43f5e)" baslik="Henüz favorin yok"
-      aciklama="Bir çekimin üzerindeki kalbe dokun; en iyi karelerin ve videoların burada toplanır. Sahneye dizmek ve yeniden üretmek buradan kolay."
+    <BosYelpaze rozet={<Star className="h-5 w-5 fill-current" />} rozetZemin="linear-gradient(140deg,#ffe49a,#f2b632)" baslik="Henüz favorin yok"
+      aciklama="Bir çekimin üzerindeki yıldıza dokun; en iyi karelerin ve videoların burada toplanır. Sahneye dizmek ve yeniden üretmek buradan kolay."
       birincil={{ ad: akisVar ? "Çekimlerime dön" : "İlk çekimini yap", ikon: <Clapperboard className="h-4 w-4" />, onClick: () => { setSayfa("ana"); odakla(); } }}
       ikincil={{ ad: "Örnek kurulumla başla", ikon: <Wand2 className="h-4 w-4" />, onClick: () => tekrarla(VITRIN[0]) }} />
   );

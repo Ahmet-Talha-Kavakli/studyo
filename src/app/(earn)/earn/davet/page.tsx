@@ -34,7 +34,7 @@ export default function DavetSayfasi() {
   const indirim = Math.round(DAVET_INDIRIM * 100);
   const arti = planBul("arti")!.fiyatTRY;
   const paylas = async () => {
-    const metin = `Vayra'da üretiyorum; bu bağlantıyla katılırsan ilk plan ödemende %${indirim} indirim kazanırsın:`;
+    const metin = `Vayra'da üretiyorum; bu bağlantıyla katılırsan ilk plan ödemende yüzde ${indirim} indirim kazanırsın:`;
     if (navigator.share) { try { await navigator.share({ title: "Vayra daveti", text: metin, url: link }); } catch { /* vazgeçti */ } }
     else { try { await navigator.clipboard.writeText(`${metin} ${link}`); } catch { /* izin yok */ } }
   };
@@ -54,7 +54,7 @@ export default function DavetSayfasi() {
         <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.45, ease }} className="relative mx-auto mt-6 max-w-[680px] text-[34px] font-semibold leading-[1.06] tracking-[-0.045em] text-white sm:text-[52px]">
           Arkadaşını davet et, <span className="bg-gradient-to-r from-[#55d6fd] to-[#a5ecff] bg-clip-text text-transparent">aboneliğinden pay al</span>
         </motion.h1>
-        <p className="relative mx-auto mt-4 max-w-[540px] text-[15.5px] leading-relaxed text-white/60">İlk üretiminde {tl(DAVET_KAYIT_ODULU)}, abone olursa {KOMISYON_SURE_AY} ay boyunca her ödemesinden %{oran}. Arkadaşın da ilk ödemesinde %{indirim} indirim alır.</p>
+        <p className="relative mx-auto mt-4 max-w-[540px] text-[15.5px] leading-relaxed text-white/60">İlk üretiminde {tl(DAVET_KAYIT_ODULU)}, abone olursa {KOMISYON_SURE_AY} ay boyunca her ödemesinden yüzde {oran}. Arkadaşın da ilk ödemesinde yüzde {indirim} indirim alır.</p>
         <div className="relative mx-auto mt-8 max-w-[580px]"><BaglantiKutusu deger={link} gorunen={link.replace(/^https?:\/\//, "")} /></div>
         <div className="relative mt-4"><PaylasDugmeleri link={link} /></div>
         <div className="relative mt-6"><KuponSatiri /></div>
@@ -73,7 +73,7 @@ export default function DavetSayfasi() {
                   <p className="px-3 pt-2 text-[12px] font-semibold text-white">Vayra · yapay zekâ stüdyosu</p><p className="truncate px-3 pb-2 text-[11px] text-white/50">{link.replace(/^https?:\/\//, "")}</p>
                 </div>
               </div>) },
-            { ad: "Arkadaşın katılır", alt: `İlk üretiminde sana ${tl(DAVET_KAYIT_ODULU)}; ilk ödemesinde ona %${indirim} indirim.`, G: () => (
+            { ad: "Arkadaşın katılır", alt: `İlk üretiminde sana ${tl(DAVET_KAYIT_ODULU)}; ilk ödemesinde ona yüzde ${indirim} indirim.`, G: () => (
               <div className="relative w-[250px]">
                 <div className="mx-3 -mb-2 rounded-[18px] bg-white/[0.04] p-3 opacity-70 ring-1 ring-white/[0.06]">
                   <div className="flex items-center gap-2.5">
@@ -95,7 +95,7 @@ export default function DavetSayfasi() {
               <div className="w-[230px] rounded-[20px] bg-[linear-gradient(135deg,#55d6fd,#2bb5e0_55%,#8f9cff)] p-4 text-[#05222b]">
                 <p className="text-[12px] font-semibold opacity-70">Bu ay komisyon</p>
                 <p className="mt-1 text-[30px] font-bold leading-none tracking-[-0.04em]"><Sayac hedef={arti * k.oran} bicim={(v) => `+${tl(v, true)}`} /></p>
-                <p className="mt-1.5 text-[11px] font-semibold opacity-60">Örnek: 1 Artı abone, %{oran}</p>
+                <p className="mt-1.5 text-[11px] font-semibold opacity-60">Örnek: 1 Artı abone, yüzde {oran}</p>
               </div>) },
           ].map((x, i) => (
             <motion.div key={x.ad} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08, ease, duration: 0.5 }}>

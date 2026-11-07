@@ -176,21 +176,21 @@ export function KazancMerdiveni({ k, benim, simdi, bonus }: { k: Kampanya; benim
   const o = kampanyaOdul(k);
   const basamak: { a: string; c: string; b: string }[] =
     k.tur === "goruntulenme" ? [
-      { a: "Onay", c: `${KURALLAR.incelemeSaat} saatte`, b: `${tl(k.sabitOdeme ?? 0)} sabit` },
+      { a: "Onay", c: "Vayra ekibinin incelemesiyle", b: `${tl(k.sabitOdeme ?? 0)} sabit` },
       { a: "Her 1.000 izlenme", c: `${KURALLAR.kazanmaGun} gün sayılır`, b: o.deger },
-      { a: "24. saat", c: "ilk günün kazancına", b: `+%${Math.round(KURALLAR.bonus24 * 100)}` },
-      { a: "7. gün", c: "toplam kazanca", b: `+%${Math.round(KURALLAR.bonus7 * 100)}` },
+      { a: "24. saat", c: "ilk günün kazancına", b: `yüzde ${Math.round(KURALLAR.bonus24 * 100)} ek` },
+      { a: "7. gün", c: "toplam kazanca", b: `yüzde ${Math.round(KURALLAR.bonus7 * 100)} ek` },
       { a: "Sınırlar", c: "gönderi başına", b: `${tl(k.minOdeme ?? 0)} ile ${tl(k.maxOdeme ?? 0)}` },
     ] : k.tur === "gorev" ? [
-      { a: "Onaylı teslim", c: `${KURALLAR.incelemeSaat} saatte incelenir`, b: o.deger },
+      { a: "Onaylı teslim", c: "Vayra ekibi inceler", b: o.deger },
       { a: "Güvenlik beklemesi", c: "sonra cüzdana", b: `${KURALLAR.beklemeGun} gün` },
       { a: "Kontenjan", c: "kişi başı bir teslim", b: `${k.kotaKalan}/${k.kota}` },
     ] : (k.dereceler ?? []).slice(0, 5).map((v, i) => ({ a: `${i + 1}. sıra`, c: i === 0 ? "jüri seçimi" : "", b: tl(v) }));
   return (
     <div className="rounded-[26px] bg-[#0f1013] p-5 ring-1 ring-white/[0.08]">
-      <p className="text-[13px] text-white/55">Bu kampanyadan kazancın</p>
-      <p className="mt-1 text-[34px] font-semibold leading-none tabular-nums tracking-[-0.04em] text-white"><Sayac hedef={toplam} bicim={(v) => tl(v, true)} /></p>
-      <p className="mt-1.5 text-[12.5px] text-white/45">{benim.length ? `${benim.length} gönderi` : "Henüz gönderi yok"}</p>
+      <p className="text-[13px] text-white/55">Bu kampanyadaki gönderilerin</p>
+      <p className="mt-1 text-[34px] font-semibold leading-none tabular-nums tracking-[-0.04em] text-white">{benim.length}</p>
+      <p className="mt-1.5 text-[12.5px] text-white/45">{benim.length ? "Ödeme sistemi açılınca kazanç tutarı yazılır" : "Henüz gönderi yok"}</p>
       <p className="mb-2.5 mt-5 flex items-center gap-1.5 text-[13px] font-medium text-white/75">{k.tur === "yarisma" && <Trophy className="h-3.5 w-3.5 text-amber-300" />}{k.tur === "yarisma" ? `${tl(k.havuz ?? 0)} ödül havuzu` : "Bir gönderi nasıl ödenir"}</p>
       <ol className="space-y-1.5">
         {basamak.map((x, i) => (

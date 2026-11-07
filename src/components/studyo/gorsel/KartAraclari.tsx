@@ -7,11 +7,14 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowUpRight, AtSign, Box, Briefcase, Check, ChevronRight, Copy, Download, FileArchive, FileImage, FileType2, FolderPlus, Heart, ImagePlus, Link2,
-  Expand, Maximize2, MessageCircle, MoreHorizontal, Pin, Plus, RefreshCw, Share2, Shuffle, Trash2, Upload, Video as VideoIcon,
+  Expand, FolderInput, Maximize2, MessageCircle, MoreHorizontal, Pin, Plus, Quote, RefreshCw, Share2, Shuffle, Star, Trash2, Upload, Video as VideoIcon,
 } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { kopyala } from "@/lib/gercekEylem";
 import { cn, saltUrl } from "@/lib/utils";
+import type { Uretim } from "@/store/useProjeler";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { KlasoreTasiListesi } from "@/components/galeri/Klasorler";
 
 /* ═══ KART ARAÇLARI — hover'da çıkan araç ray'ı. Kartın GERÇEK boyutuna göre
    ölçeklenir (Y2), üç-nokta menüsü Higgsfield birebir (Y4), paylaş alt-menüsü
@@ -19,8 +22,10 @@ import { cn, saltUrl } from "@/lib/utils";
 export function KartAraclari({
   begenili, onBegen, onIndir, onKopyala, onAc, onYenidenUret,
   onReferans, onAnimate, on3d, onVaryasyon, onBuyut, onElement, onYayinla, onKlasor, onSil,
-  klasorler, onKlasoreEkle, onYeniKlasor, indirmeFormatlari, onFormatIndir, gorselUrl, klasorAdi = "klasör",
+  klasorler, onKlasoreEkle, onYeniKlasor, indirmeFormatlari, onFormatIndir, gorselUrl, klasorAdi = "klasör", uretim,
 }: {
+  /** Kaydı olan üretim: İndir menüsü (önce ve sonra, filigran) ve "Klasöre taşı" açılır. */
+  uretim?: Uretim;
   /** Hedef adı: stüdyoda "klasör", kitaplıkta "proje". */
   klasorAdi?: "klasör" | "proje";
   begenili: boolean;
@@ -46,6 +51,7 @@ export function KartAraclari({
   const [paylasAcik, setPaylasAcik] = useState(false);
   const [klasorAcik, setKlasorAcik] = useState(false);
   const [indirAcik, setIndirAcik] = useState(false);
+  const [tasiAcik, setTasiAcik] = useState(false);
   const menuBtnRef = useRef<HTMLButtonElement>(null);
   const kokRef = useRef<HTMLDivElement>(null);
   const [menuKonum, setMenuKonum] = useState<{ top: number; left: number; paylasSaga: boolean } | null>(null);
@@ -174,23 +180,27 @@ export function KartAraclari({
     {begenili && (
       <span aria-hidden
         className={cn(
-          "kart-begeni pointer-events-none absolute z-20 flex items-center justify-center rounded-full transition-opacity group-hover:opacity-0",
+          "kart-begeni pointer-events-none absolute z-20 flex items-center justify-center rounded-full bg-black/45 backdrop-blur-md transition-opacity group-hover:opacity-0",
           // Rayın ilk butonuyla AYNI konum: hover'da rozet solup yerine ray
           // kalbi gelir, kayma hissi olmaz.
           boyutSinif === "kucuk" ? "right-1.5 top-1.5 h-6 w-6" : "right-2 top-2 h-8 w-8",
         )}>
-        <Heart className={cn("fill-rose-400 text-rose-400", boyutSinif === "kucuk" ? "h-3 w-3" : "h-4 w-4")} />
+        <Star className={cn("fill-aksan text-aksan", boyutSinif === "kucuk" ? "h-3 w-3" : "h-4 w-4")} />
       </span>
     )}
     <div className={cn("pointer-events-none absolute z-20 flex opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100", menuAcik && "pointer-events-auto opacity-100", rayYon, yerlesim)}>
-      {IK(Heart, begenili ? "Beğeniyi kaldır" : "Beğen", onBegen, begenili ? "text-rose-400 [&>svg]:fill-current" : "")}
-      {IK(Download, "İndir", onIndir)}
-      {onKopyala && IK(Copy, "Yeniden kullan", onKopyala)}
+      {IK(Star, begenili ? "Favorilerden çıkar" : "Favorilere ekle", onBegen, begenili ? "text-aksan [&>svg]:fill-current" : "")}
+      {uretim ? (
+        <IndirDugmesi u={uretim} className={cn("hf-btn glass-ikon flex items-center justify-center rounded-full text-white", btn)} ikonSinif={ik} side="left" />
+      ) : IK(Download, "İndir", onIndir)}
+      {onKopyala && IK(Quote, "Yeniden kullan", onKopyala)}
       <div className="relative">
+        <Tooltip label="Daha fazla" side="left">
         <button ref={menuBtnRef} onClick={(e) => { e.stopPropagation(); menuAc(); }} aria-label="Daha fazla"
           className={cn("hf-btn glass-ikon flex items-center justify-center rounded-full text-white", btn)}>
           <MoreHorizontal className={ik} />
         </button>
+        </Tooltip>
         {typeof document !== "undefined" && createPortal(
         <AnimatePresence>
           {menuAcik && menuKonum && (
@@ -202,14 +212,14 @@ export function KartAraclari({
                 className="menu-surface z-[91] w-56 rounded-2xl p-1.5">
                 {menuSatir(ArrowUpRight, "Aç", onAc)}
                 {onYenidenUret && menuSatir(RefreshCw, "Yeniden üret", onYenidenUret)}
-                {onKopyala && menuSatir(Copy, "Yeniden kullan", onKopyala)}
+                {onKopyala && menuSatir(Quote, "Yeniden kullan", onKopyala)}
                 {onVaryasyon && menuSatir(Shuffle, "Hafif varyasyon", () => onVaryasyon("hafif"))}
                 {onVaryasyon && menuSatir(Shuffle, "Güçlü varyasyon", () => onVaryasyon("guclu"))}
                 {onBuyut && menuSatir(Expand, "Büyüt", onBuyut)}
                 {onReferans && menuSatir(ImagePlus, "Referans olarak ekle", onReferans)}
                 {/* Bu kart bir ÜRETİM kaydı değilse (örnek görsel) ilgili eylem verilmez ve satır hiç çıkmaz. */}
                 {onElement && menuSatir(AtSign, "Element oluştur", onElement)}
-                {menuSatir(Heart, "Beğen", onBegen)}
+                {menuSatir(Star, begenili ? "Favorilerden çıkar" : "Favorilere ekle", onBegen)}
                 {/* Paylaş → alt-menü (Higgsfield Share birebir) — Y3: konuma göre sağa/sola */}
                 <div className="relative"
                   onMouseEnter={() => setPaylasAcik(true)} onMouseLeave={() => setPaylasAcik(false)}>
@@ -272,6 +282,22 @@ export function KartAraclari({
                   </div>
                 ) : (
                   onKlasor ? menuSatir(FolderPlus, "Klasöre ekle", onKlasor) : null
+                )}
+                {uretim && (
+                  <div className="relative" onMouseEnter={() => setTasiAcik(true)} onMouseLeave={() => setTasiAcik(false)}>
+                    <button onClick={() => setTasiAcik((v) => !v)} className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2 text-[15px] font-medium text-white transition-colors hover:bg-white/8">
+                      <FolderInput className="h-[18px] w-[18px] text-white/70" /> Klasöre taşı
+                      <ChevronRight className="ml-auto h-4 w-4 text-white/40" />
+                    </button>
+                    <AnimatePresence>
+                      {tasiAcik && (
+                        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={{ duration: 0.12 }}
+                          className={cn("galeri-cam absolute bottom-0 w-64 rounded-2xl border border-white/[0.09] p-0.5", menuKonum.paylasSaga ? "left-full ml-1.5" : "right-full mr-1.5")}>
+                          <KlasoreTasiListesi uretimIdler={[uretim.id]} onBitti={() => { setTasiAcik(false); setMenuAcik(false); }} />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 )}
                 {onYayinla && menuSatir(Upload, "Yayınla", onYayinla)}
                 {/* İNDİR → alt-menü (madde 2). Hover'da format seçenekleri açılır;

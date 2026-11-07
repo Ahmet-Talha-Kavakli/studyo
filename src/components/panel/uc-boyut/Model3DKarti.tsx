@@ -198,18 +198,8 @@ export function IndirmeModal({ acik, onKapat, baslik, glbUrl }: { acik: boolean;
       dosyaIndir(glbUrl, format.toLowerCase());
       toast.success(`Model ${format} olarak indiriliyor`, { description: baslik });
     } else {
-      // Demo modelde: seçilen formatta GERÇEK, geçerli bir dosya üret ve indir.
-      const icerik = format === "OBJ"
-        ? `# Vayra 3D — ${baslik}\n# Format: OBJ · ${anim === "tum" ? "tüm animasyonlar" : "mevcut animasyon"}\no ${baslik.replace(/\s/g, "_")}\nv -1 -1 -1\nv 1 -1 -1\nv 1 1 -1\nv -1 1 -1\nv -1 -1 1\nv 1 -1 1\nv 1 1 1\nv -1 1 1\nf 1 2 3 4\nf 5 6 7 8\nf 1 2 6 5\nf 3 4 8 7\nf 1 4 8 5\nf 2 3 7 6\n`
-        : format === "STL"
-        ? `solid ${baslik.replace(/\s/g, "_")}\n  facet normal 0 0 -1\n    outer loop\n      vertex -1 -1 -1\n      vertex 1 -1 -1\n      vertex 1 1 -1\n    endloop\n  endfacet\nendsolid ${baslik.replace(/\s/g, "_")}\n`
-        : JSON.stringify({ vayra3d: true, ad: baslik, bicim: format, duzenlenmisKarakter: duzenlenmis, animasyon: anim, tekDosya, uretici: "Vayra 3D Studio", not: "Örnek çıktı — gerçek GLB için üretim motorunu bir 3D sağlayıcıya bağla." }, null, 2);
-      const uzanti = format === "OBJ" ? "obj" : format === "STL" ? "stl" : format === "GLB" ? "gltf" : format.toLowerCase();
-      const blob = new Blob([icerik], { type: "application/octet-stream" });
-      const url = URL.createObjectURL(blob);
-      dosyaIndir(url, uzanti);
-      setTimeout(() => URL.revokeObjectURL(url), 4000);
-      toast.success(`Model ${format} olarak indirildi`, { description: `Örnek dosya: ${baslik.slice(0, 40)}. Gerçek model için 3D sağlayıcısı gerekli.` });
+      // Sağlayıcıdan gelmiş bir model dosyası yoksa yer tutucu dosya üretilmez.
+      return void toast.error("İndirilecek model dosyası yok", { description: "Bu kayıtta sağlayıcıdan gelmiş bir 3D dosyası bulunmuyor." });
     }
     onKapat();
   };

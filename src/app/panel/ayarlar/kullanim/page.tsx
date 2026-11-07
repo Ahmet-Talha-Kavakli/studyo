@@ -114,7 +114,7 @@ export default function KrediKullanim() {
       {erkenBiter && (
         <div className="mt-5 flex flex-wrap items-center gap-3 rounded-[14px] bg-amber-400/[0.07] px-4 py-3 ring-1 ring-inset ring-amber-400/15">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" />
-          <p className="min-w-0 flex-1 text-[13.5px] text-amber-100/90">Bu hızla kredin yenilemeden önce bitebilir. Otomatik yüklemeyi açabilirsin.</p>
+          <p className="min-w-0 flex-1 text-[13.5px] text-amber-100/90">Bu hızla kredin yenilemeden önce bitebilir. Yükleme hatırlatmasını açabilirsin.</p>
           {!otomatik && <a href="#oto-yukleme" className="text-[13px] font-semibold text-white hover:underline">Aç</a>}
         </div>
       )}
@@ -181,8 +181,8 @@ export default function KrediKullanim() {
         <Satir id="esik" ad="Düşük kredi uyarısı" alt="Bakiyen bu sayının altına inince bildirim alırsın.">
           <Segment deger={String(esik)} onSec={(v) => tAyarla({ krediEsigi: +v })} secenekler={[50, 100, 200, 500].map((n) => ({ deger: String(n), ad: n }))} />
         </Satir>
-        <Satir ad="Otomatik kredi yükleme" alt={`Bakiye ${OTO_YUKLEME_ESIGI} kredinin altına inince seçtiğin paket yüklenir ve makbuzu Faturalar'a düşer. Üretimin yarıda kalmaz.`}>
-          <Anahtar acik={otomatik} kayit={false} onDegis={() => { const y = otoToggle(); kaydedildi(); toast.success(y ? "Otomatik yükleme açıldı" : "Otomatik yükleme kapatıldı"); }} etiket="Otomatik kredi yükleme" />
+        <Satir ad="Yükleme hatırlatması" alt={`Bakiye ${OTO_YUKLEME_ESIGI} kredinin altına inince seçtiğin paketi yüklemen için bildirim gelir. Kredi kendiliğinden yüklenmez, ödeme alınmaz.`}>
+          <Anahtar acik={otomatik} kayit={false} onDegis={() => { const y = otoToggle(); kaydedildi(); toast.success(y ? "Yükleme hatırlatması açıldı" : "Yükleme hatırlatması kapatıldı"); }} etiket="Yükleme hatırlatması" />
         </Satir>
         <motion.div initial={false} animate={{ opacity: otomatik ? 1 : 0.45 }} className="px-6 pb-6 pt-1">
           <div role="radiogroup" aria-label="Yüklenecek paket" className="grid grid-cols-2 gap-2 sm:grid-cols-3">

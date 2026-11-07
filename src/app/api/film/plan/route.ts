@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { oturumGerekli } from "@/lib/hesap/yetki";
 import { istemHazir, filmPlani } from "@/lib/saglayicilar/istem";
 import { icerikDenetle } from "@/lib/moderasyon";
 
@@ -12,6 +13,9 @@ export function GET() {
 
 /** { logline, tur, ton, hedefDk, bolumSayisi, cekimBasina } → { bolumler } */
 export async function POST(req: NextRequest) {
+  // Oturum gerekir: sağlayıcı maliyeti olan uç misafire açık değil (bu iş kredi harcamaz).
+  const oturum = await oturumGerekli(req);
+  if (oturum instanceof Response) return oturum;
   if (!istemHazir()) return NextResponse.json({ ok: false, hata: "Planlayıcı (Gemini) bağlı değil." }, { status: 503 });
   const g = (await req.json().catch(() => ({}))) as { logline?: string; tur?: string; ton?: string; hedefDk?: number; bolumSayisi?: number; cekimBasina?: number };
   const logline = (g.logline ?? "").trim();

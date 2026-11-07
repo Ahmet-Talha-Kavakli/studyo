@@ -221,7 +221,7 @@ function Uygula({ etiket, oran, onUygula, kapali, not }: { etiket: string; oran:
     <div className="shrink-0 space-y-2 border-t border-white/8 p-3">
       {oran !== null ? (
         <div className="rounded-[12px] bg-white/[0.04] p-2.5 ring-1 ring-inset ring-white/[0.07]">
-          <p className="flex items-center gap-2 text-[12.5px] font-medium text-metin"><Loader2 className="h-3.5 w-3.5 animate-spin" />Klip işleniyor, %{Math.round(oran * 100)}</p>
+          <p className="flex items-center gap-2 text-[12.5px] font-medium text-metin"><Loader2 className="h-3.5 w-3.5 animate-spin" />Klip işleniyor, yüzde {Math.round(oran * 100)}</p>
           <span className="mt-2 block h-1 overflow-hidden rounded-full bg-white/10"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${oran * 100}%` }} transition={{ duration: 0.2 }} /></span>
           <p className="mt-1.5 text-[11.5px] text-metin-3">Klip gerçek hızında oynatılarak kaydedilir; sekmeyi açık tut.</p>
         </div>
@@ -305,7 +305,7 @@ export function KadrajPaneli({ k, setK, kaynakOran, videoRef, oran, onUygula, on
   }, [k, R, videoRef]);
   const surgu = (ad: string, deger: number, f: (n: number) => void, min = 0, max = 1, sol = "", sag = "") => (
     <label className="block">
-      <span className="flex items-center justify-between text-[12.5px]"><span className="font-medium text-metin">{ad}</span><span className="tabular-nums text-metin-3">{max > 1 ? `${deger.toFixed(2).replace(".", ",")}×` : `%${Math.round(deger * 100)}`}</span></span>
+      <span className="flex items-center justify-between text-[12.5px]"><span className="font-medium text-metin">{ad}</span><span className="tabular-nums text-metin-3">{max > 1 ? `${deger.toFixed(2).replace(".", ",")}×` : `yüzde ${Math.round(deger * 100)}`}</span></span>
       <input type="range" min={min} max={max} step={0.01} value={deger} aria-label={ad} onChange={(e) => f(Number(e.target.value))}
         className="mt-1.5 h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
         style={{ background: `linear-gradient(to right,#fff ${((deger - min) / (max - min)) * 100}%,rgba(255,255,255,0.14) 0)` }} />

@@ -93,7 +93,7 @@ export function ArVideoPaneli({ glb, ad, poster, onKapat, onVideo }: {
                 : poster ? <img src={poster} alt="" className="absolute inset-0 h-full w-full object-contain p-6 opacity-70" /> : null}
               {oran !== null && (
                 <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/55 text-[13px] font-medium text-white">
-                  <Loader2 className="h-5 w-5 animate-spin" />Kaydediliyor, %{Math.round(oran * 100)}
+                  <Loader2 className="h-5 w-5 animate-spin" />Kaydediliyor, yüzde {Math.round(oran * 100)}
                   <span className="h-1 w-32 overflow-hidden rounded-full bg-white/15"><motion.span className="block h-full rounded-full bg-white" animate={{ width: `${oran * 100}%` }} transition={{ duration: 0.2 }} /></span>
                 </span>
               )}

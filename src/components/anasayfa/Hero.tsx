@@ -11,8 +11,8 @@ import { Komut, OrnekCipleri, TURLER, YuzenKomut, useKomut, type KomutDurum } fr
 import { cn } from "@/lib/utils";
 
 const G = "/gercek";
-/** Yalnız şu an kullanılabilen modeller sayılır ("Yakında" ve "Kapandı" hariç). */
-const MODEL_SAYISI = KATALOG.filter((m) => m.rozet !== "Yakında" && m.rozet !== "Kapandı").length;
+/** Yalnız şu an kullanılabilen modeller sayılır ("Bağlı değil" ve "Kapandı" hariç). */
+const MODEL_SAYISI = KATALOG.filter((m) => m.rozet !== "Bağlı değil" && m.rozet !== "Kapandı").length;
 /** Duyuru hapındaki en yeni model (stüdyoda gerçekten var olan). */
 const YENI_MODEL = KATALOG.find((m) => /^seedance 2\.5/i.test(m.ad)) ?? KATALOG.find((m) => m.tur === "video")!;
 /** Kullanıcı dokunana dek kutu türler arasında döner; her türde bir örnek yazılır. */

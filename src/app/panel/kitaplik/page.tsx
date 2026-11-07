@@ -45,12 +45,19 @@ import { OranSekli } from "@/components/arac/kit";
 import { Hap, KART } from "@/components/kitaplik/KitaplikKarti";
 import { KitaplikRayi, URETIM_SURUKLE } from "@/components/kitaplik/KitaplikRayi";
 import { KitaplikBaslik } from "@/components/kitaplik/KitaplikBaslik";
+import { KitaplikIskelet } from "@/components/kitaplik/KitaplikIskelet";
 import { gorseleGorePuanla } from "@/components/kitaplik/gorselBenzer";
 import { useKenarGenisligi } from "@/components/ui/KenarTutamac";
 import { cn } from "@/lib/utils";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { kartOrani, sutunSayisi as gorunumSutun } from "@/lib/galeri/gorunum";
+import { FavoriKutusu, SiralamaMenusu, TurMenusu, useKlasorIdleri, type OzelSira } from "@/components/galeri/SuzgecCubugu";
+import { KlasorMenusu, YeniKlasorDugmesi } from "@/components/galeri/Klasorler";
+import { TarihAraligi, aralikYazisi, aralikta, type Aralik } from "@/components/galeri/TarihAraligi";
+import { useKoleksiyon } from "@/store/useKoleksiyon";
 
 const GUN = 86_400_000;
-const SIRALAR: [Siralama, string, React.ElementType][] = [["yeni", "En yeni", CalendarClock], ["eski", "En eski", History], ["ad", "İsme göre", ArrowDownAZ], ["kredi", "Krediye göre", Coins]];
 /** Stüdyo galerisiyle aynı 3 yoğunluk adımı (büyük · orta · sık). */
 const YOGUNLUK: [number, string, number][] = [[85, "Büyük kartlar", 2], [45, "Orta kartlar", 3], [10, "Sık ızgara", 4]];
 /** Hızlı kalite etiketleri: seçiliyken 1, 2, 3 tuşuyla (fotoğrafçı ayıklama akışı). */
@@ -84,6 +91,12 @@ function Kitaplik() {
   const [favori, setFavori] = useState(false);
   const [demoGizle, setDemoGizle] = useState(false);
   const [suzgec, setSuzgec] = useState<Suzgec>(BOS_SUZGEC);
+  /* Süzgeç çubuğu: tarih aralığı (iki aylık takvim) ve gerçek klasörler (useKoleksiyon). */
+  const [tarih, setTarih] = useState<Aralik>({});
+  const [klasor, setKlasor] = useState<string | null>(null);
+  const klasorIdleri = useKlasorIdleri(klasor);
+  const klasorAdi = useKoleksiyon((s) => s.koleksiyonlar.find((k) => k.id === klasor)?.ad);
+  const [gorunumAyar] = useGorunum("kitaplik");
   const [secili, setSecili] = useState<string[]>([]);
   const [acikId, setAcikId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ u: Uretim; x: number; y: number } | null>(null);
@@ -181,8 +194,9 @@ function Kitaplik() {
     const kaynak: Uretim[] = copModu ? cop : uretimler;
     return kaynak.filter((u) =>
       (akilliKlasor ? kapsamUyar(u, akilliKlasor.kapsam) && suzgecUyar(u, akilliKlasor.suzgec, simdi) : kapsamUyar(u, kapsam))
-      && suzgecUyar(u, suzgec, simdi) && (!favori || u.favori) && (!demoGizle || u.gercek !== false));
-  }, [uretimler, cop, copModu, kapsam, akilliKlasor, suzgec, favori, demoGizle, kapsamUyar, suzgecUyar]);
+      && suzgecUyar(u, suzgec, simdi) && (!favori || u.favori) && (!demoGizle || u.gercek !== false)
+      && (!tarih.bas || aralikta(u.olusturma, tarih)) && (!klasorIdleri || klasorIdleri.has(u.id)));
+  }, [uretimler, cop, copModu, kapsam, akilliKlasor, suzgec, favori, demoGizle, kapsamUyar, suzgecUyar, tarih, klasorIdleri]);
 
   /* Üst kart yalnız kapsamı yansıtır; arama ve süzgeçler onu boşaltmaz. */
   const kapsamListesi = useMemo(() => {
@@ -200,13 +214,13 @@ function Kitaplik() {
     const l = kapsamdakiler.filter((u) => !tur || uretimTuru(u) === tur);
     const sirala = (a: Uretim, b: Uretim) =>
       kapsam === "gorselara" ? (gorselAra?.skor.get(b.id) ?? 0) - (gorselAra?.skor.get(a.id) ?? 0) :
-      benzerKaynak ? (benzerSkor.get(b.id) ?? 0) - (benzerSkor.get(a.id) ?? 0) : siralama === "eski" ? a.olusturma - b.olusturma : siralama === "ad" ? a.baslik.localeCompare(b.baslik, "tr") : siralama === "kredi" ? (b.kredi ?? 0) - (a.kredi ?? 0) : b.olusturma - a.olusturma;
+      benzerKaynak ? (benzerSkor.get(b.id) ?? 0) - (benzerSkor.get(a.id) ?? 0) : siralama === "eski" ? a.olusturma - b.olusturma : siralama === "ad" ? a.baslik.localeCompare(b.baslik, "tr") : siralama === "kredi" ? (b.kredi ?? 0) - (a.kredi ?? 0) : siralama === "tur" ? uretimTuru(a).localeCompare(uretimTuru(b)) || b.olusturma - a.olusturma : siralama === "model" ? a.model.localeCompare(b.model, "tr") || b.olusturma - a.olusturma : b.olusturma - a.olusturma;
     return { suranlar: copModu ? [] : l.filter(suruyorMu), liste: l.filter((u) => !suruyorMu(u)).sort(sirala) };
   }, [kapsamdakiler, tur, siralama, copModu, benzerKaynak, benzerSkor, kapsam, gorselAra]);
 
   const gruplar = useMemo(() => {
     if (!hazir) return [];
-    if (siralama === "ad" || siralama === "kredi" || copModu || benzerKaynak || kapsam === "gorselara") return [{ anahtar: "hepsi", etiket: "", ogeler: liste }];
+    if (siralama === "ad" || siralama === "kredi" || siralama === "tur" || siralama === "model" || copModu || benzerKaynak || kapsam === "gorselara") return [{ anahtar: "hepsi", etiket: "", ogeler: liste }];
     const simdi = Date.now();
     const m: { anahtar: string; etiket: string; ogeler: Uretim[] }[] = [];
     for (const u of liste) {
@@ -421,7 +435,9 @@ function Kitaplik() {
     ro.observe(el);
     return () => ro.disconnect();
   }, [hazir]);
-  const sutunSayisi = en < 640 ? 2 : Math.max(2, Math.round(en / (120 + boyut * 2.4)));
+  /* Görünüm ayarı (yerleşim, boyut) sayfa başına kalıcı; eski yoğunluk değeri yalnız ilk açılışta yön verir. */
+  void boyut;
+  const sutunSayisi = gorunumSutun(en, gorunumAyar);
 
   const modeller = useMemo(() => Array.from(new Set(uretimler.map((u) => u.model))).sort((a, b) => a.localeCompare(b, "tr")), [uretimler]);
   const etiketler = useMemo(() => Array.from(new Set(uretimler.flatMap((u) => u.etiketler ?? []))).sort(), [uretimler]);
@@ -475,7 +491,7 @@ function Kitaplik() {
     const n = sirali.filter((v) => v >= esik).length;
     toast(n ? `${n} benzer üretim bulundu` : "Benzer üretim bulunamadı", { description: n ? "En benzerden başlayarak sıralandı." : "Renk ve yerleşimi yakın bir görselle yeniden dene." });
   };
-  const suzgecAktif = !!(suzgec.q.trim() || suzgec.modeller.length || suzgec.etiketler.length || suzgec.oranlar.length || suzgec.zaman !== "tumu" || suzgec.durum !== "tumu" || favori || demoGizle);
+  const suzgecAktif = !!(suzgec.q.trim() || suzgec.modeller.length || suzgec.etiketler.length || suzgec.oranlar.length || suzgec.zaman !== "tumu" || suzgec.durum !== "tumu" || favori || demoGizle || tarih.bas || klasor);
   /** Etkin süzgeçlerin her biri tek tıkla kalkan çip olarak görünür. */
   const cipler: { ad: string; kaldir: () => void }[] = [
     ...(suzgec.q.trim() ? [{ ad: `"${suzgec.q.trim()}"`, kaldir: () => setSuzgec({ ...suzgec, q: "" }) }] : []),
@@ -485,9 +501,11 @@ function Kitaplik() {
     ...suzgec.oranlar.map((o) => ({ ad: o, kaldir: () => setSuzgec({ ...suzgec, oranlar: suzgec.oranlar.filter((x) => x !== o) }) })),
     ...(suzgec.durum !== "tumu" ? [{ ad: suzgec.durum === "hata" ? "Başarısız" : "Tamamlanan", kaldir: () => setSuzgec({ ...suzgec, durum: "tumu" }) }] : []),
     ...suzgec.etiketler.map((e) => ({ ad: `#${e}`, kaldir: () => setSuzgec({ ...suzgec, etiketler: suzgec.etiketler.filter((x) => x !== e) }) })),
-    ...(demoGizle ? [{ ad: "Demolar gizli", kaldir: () => setDemoGizle(false) }] : []),
+    ...(demoGizle ? [{ ad: "Eski kayıtlar gizli", kaldir: () => setDemoGizle(false) }] : []),
+    ...(tarih.bas ? [{ ad: aralikYazisi(tarih), kaldir: () => setTarih({}) }] : []),
+    ...(klasor && klasorAdi ? [{ ad: `Klasör: ${klasorAdi}`, kaldir: () => setKlasor(null) }] : []),
   ];
-  const temizle = () => { setSuzgec(BOS_SUZGEC); setFavori(false); setDemoGizle(false); };
+  const temizle = () => { setSuzgec(BOS_SUZGEC); setFavori(false); setDemoGizle(false); setTarih({}); setKlasor(null); };
   const toplam = Object.values(turSayilari).reduce((a, b) => a + b, 0);
   const aktifIs = uretimler.filter(suruyorMu).length;
 
@@ -499,7 +517,7 @@ function Kitaplik() {
     const boy = new Array(sutunSayisi).fill(0);
     for (const u of ogeler) {
       const t = uretimTuru(u);
-      const oran = t === "ses" || t === "muzik" ? 4 / 3 : t === "video" ? oranDegeri(u.meta?.oran) : oranSayi(u);
+      const oran = kartOrani(gorunumAyar, t === "ses" || t === "muzik" ? 4 / 3 : t === "video" ? oranDegeri(u.meta?.oran) : oranSayi(u));
       let i = 0; for (let k = 1; k < sutunSayisi; k++) if (boy[k] < boy[i] - 0.02) i = k;
       cols[i].push(u); boy[i] += 1 / Math.max(0.2, oran || 1) + 0.02;
     }
@@ -508,7 +526,7 @@ function Kitaplik() {
   const kart = (u: Uretim) => (
     <div key={u.id} className="mb-1 break-inside-avoid" draggable={!copModu}
       onDragStart={(e) => { const ids = seciliSet.has(u.id) ? secili : [u.id]; e.dataTransfer.setData(URETIM_SURUKLE, JSON.stringify(ids)); e.dataTransfer.effectAllowed = "move"; const g = kapakUrl(u); if (g) { const im = new Image(); im.src = g; e.dataTransfer.setDragImage(im, 24, 24); } }}>
-      <GaleriKart u={u} secili={seciliSet.has(u.id)} secimModu={secimModu} calan={oynatma.id === u.id && oynatma.oynuyor} ilerleme={oynatma.id === u.id ? oynatma.ilerleme : 0}
+      <GaleriKart u={u} oran={gorunumAyar.yerlesim === "ozgun" ? undefined : kartOrani(gorunumAyar, 1)} secili={seciliSet.has(u.id)} secimModu={secimModu} calan={oynatma.id === u.id && oynatma.oynuyor} ilerleme={oynatma.id === u.id ? oynatma.ilerleme : 0}
         copKalan={copModu ? copKalanGun(u as Uretim & { silinme?: number }) : undefined} o={olaylar} />
     </div>
   );
@@ -532,21 +550,8 @@ function Kitaplik() {
 
         {/* Yapışkan araç çubuğu: tür segmenti, arama, süzgeçler, görünüm */}
         {(uretimler.length > 0 || kapsam !== "tumu") && <div className="sticky top-[var(--ust-nav)] z-30 mt-3 bg-zemin">
-          <div className="gizli-scroll flex items-center gap-2 overflow-x-auto px-3 py-2.5 sm:px-5">
-            <LayoutGroup id="kitaplik-tur">
-              <div role="tablist" aria-label="Tür" className="flex shrink-0 gap-0.5 rounded-full bg-white/[0.05] p-1 ring-1 ring-inset ring-white/[0.06]">
-                {[{ id: null as Tur | null, ad: "Tümü", n: toplam }, ...TURLER.map((t) => ({ id: t.id as Tur | null, ad: t.ad, n: turSayilari[t.id] }))]
-                  .filter((t) => t.id === null || t.n > 0 || tur === t.id)
-                  .map((t) => (
-                    <button key={t.id ?? "tumu"} role="tab" aria-selected={tur === t.id} onClick={() => { setTur(t.id); setSecili([]); }}
-                      className={cn("relative flex h-8 items-center gap-1.5 rounded-full px-3.5 text-[13.5px] font-medium transition-colors", tur === t.id ? "text-black" : "text-white/75 hover:text-white")}>
-                      {tur === t.id && <motion.span layoutId="kitaplikSekme" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-                      <span className="relative">{t.ad}</span>
-                      <span className={cn("relative text-[12px] tabular-nums", tur === t.id ? "text-black/55" : "text-white/45")}>{t.n}</span>
-                    </button>
-                  ))}
-              </div>
-            </LayoutGroup>
+          <div className="gizli-scroll flex items-center gap-2 overflow-x-auto px-3 py-2.5 sm:flex-wrap sm:overflow-visible sm:px-5">
+            <TurMenusu deger={tur} onDegis={(t) => { setTur(t); setSecili([]); }} sayilar={turSayilari} />
 
             <label className="group flex h-10 w-[180px] shrink-0 items-center gap-2 rounded-full bg-white/[0.05] px-3.5 ring-1 ring-inset ring-white/[0.06] transition-[width,background-color] focus-within:w-[260px] focus-within:bg-white/[0.08] hover:bg-white/[0.07] min-[1700px]:w-[280px]">
               <Search className="h-4 w-4 shrink-0 text-white/55 group-focus-within:text-white" />
@@ -561,9 +566,11 @@ function Kitaplik() {
                 <button onClick={() => gorselRef.current?.click()} aria-pressed={kapsam === "gorselara"} title="Bir görsel seç; renk ve yerleşimi benzeyen üretimler sıralansın" className={dugme(kapsam === "gorselara")}>
                   <ScanSearch className="h-4 w-4" /><span className="max-[1600px]:hidden">Görselle ara</span>
                 </button>
-                <button onClick={() => setFavori((v) => !v)} aria-pressed={favori} className={cn(dugme(favori), "lg:hidden")}>
-                  <Heart className={cn("h-4 w-4", favori && "fill-rose-500 text-rose-500")} />Favoriler
-                </button>
+                <FavoriKutusu acik={favori} onDegis={setFavori} />
+                <YeniKlasorDugmesi uretimIdler={secili.length ? secili : undefined} onOlustu={(id) => { if (secili.length) { setKlasor(id); setSecili([]); } }} />
+                <KlasorMenusu secili={klasor} onSec={(id) => { setKlasor(id); setSecili([]); }} />
+                <TarihAraligi deger={tarih} onDegis={(a) => { setTarih(a); setSuzgec((x) => ({ ...x, zaman: "tumu" })); }} />
+                <SiralamaMenusu deger={siralama === "yeni" || siralama === "eski" ? siralama : "ozel"} ozel={(siralama === "yeni" || siralama === "eski" ? "ad" : siralama) as OzelSira} onDegis={(s2, o) => setSiralama(s2 === "ozel" ? (o ?? "ad") : s2)} />
                 <ModelMenusu modeller={modeller} secili={suzgec.modeller[0] ?? null} sayilar={uretimler} onSec={(m) => setSuzgec({ ...suzgec, modeller: m ? [m] : [] })} />
                 <SuzgecMenusu demoVar={uretimler.some((u) => u.gercek === false)} demoGizle={demoGizle} setDemoGizle={setDemoGizle} suzgec={suzgec} setSuzgec={setSuzgec} oranlar={ORANLAR.filter((o) => uretimler.some((u) => u.meta?.oran === o))} />
                 <div className="lg:hidden"><ProjeMenusu secenekler={projeSecenek} aktif={aktifProjeId} onSec={(id) => setKapsam(id ? `proje:${id}` : "tumu")} /></div>
@@ -577,20 +584,7 @@ function Kitaplik() {
             )}
 
             <div className="ml-auto flex shrink-0 items-center gap-2 pl-1">
-              <div role="radiogroup" aria-label="Görünüm" className="flex items-center gap-0.5 rounded-full bg-white/[0.05] p-1 ring-1 ring-inset ring-white/[0.06]">
-                {YOGUNLUK.map(([d, ad, n]) => {
-                  const s = gorunum === "izgara" && boyut === d;
-                  return (
-                    <button key={d} role="radio" aria-checked={s} aria-label={ad} title={ad} onClick={() => { setGorunum("izgara"); setYogunluk(d); }}
-                      className={cn("relative flex h-8 w-8 items-center justify-center rounded-full transition-colors", s ? "text-black" : "text-white/55 hover:text-white")}>
-                      {s && <motion.span layoutId="kitaplikYogunluk" className="absolute inset-0 rounded-full bg-white" transition={{ type: "spring", stiffness: 420, damping: 34 }} />}
-                      <span className="relative grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}>
-                        {Array.from({ length: n * n }).map((_, k) => <span key={k} className="rounded-[1.5px] bg-current" style={{ width: 12 / n, height: 12 / n }} />)}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <GorunumAyari sayfa="kitaplik" istemVar={false} siralamaVar={false} dugmeSinif="h-10 w-10" />
               <DahaMenusu liste={gorunum === "liste"} onListe={() => setGorunum(gorunum === "liste" ? "izgara" : "liste")} siralama={siralama} setSiralama={setSiralama} kaynaklar={kaynakSecenek} etiketler={etiketler} seciliEtiket={suzgec.etiketler}
                 onEtiket={(e) => setSuzgec({ ...suzgec, etiketler: e })} akilli={akilli} aktif={kapsam} copSayi={cop.length} suzgecVar={!!(suzgec.q.trim() || suzgec.modeller.length || suzgec.etiketler.length)}
                 onKapsam={setKapsam} onKisayol={() => setKisayol(true)}
@@ -786,21 +780,16 @@ function DahaMenusu({ liste, onListe, siralama, setSiralama, kaynaklar, etiketle
   const karo = (s: boolean) => cn("flex items-center gap-2 rounded-[11px] px-2.5 py-2 text-left text-[13px] font-medium ring-1 ring-inset transition-[background-color,transform] active:scale-[0.98]", s ? "bg-white text-black ring-white" : "bg-white/[0.03] text-white/75 ring-white/[0.06] hover:bg-white/[0.06] hover:text-white");
   return (
     <div className="relative">
-      <button onClick={() => setAcik((v) => !v)} aria-expanded={acik} aria-label="Diğer seçenekler" title="Görünüm, sıralama, kaynak, akıllı klasörler, çöp kutusu"
+      <button onClick={() => setAcik((v) => !v)} aria-expanded={acik} aria-label="Diğer seçenekler" title="Liste görünümü, kaynak, etiketler, akıllı klasörler, çöp kutusu"
         className={cn("relative flex h-10 w-10 items-center justify-center rounded-full ring-1 ring-inset transition-colors", acik ? "bg-white text-black ring-white" : "bg-white/[0.05] text-white/85 ring-white/[0.06] hover:bg-white/[0.09] hover:text-white")}>
         <MoreHorizontal className="h-4 w-4" />
-        {(liste || siralama !== "yeni" || seciliEtiket.length > 0) && !acik && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-white ring-2 ring-[#0b0b0c]" />}
+        {(liste || seciliEtiket.length > 0) && !acik && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-white ring-2 ring-[#0b0b0c]" />}
       </button>
       <Yuzen acik={acik} onKapat={() => setAcik(false)} yerlesim="alt-sag" bosluk={6} etiket="Kitaplık seçenekleri" className={cn(MENU, "max-h-[78vh] w-[340px] overflow-y-auto [scrollbar-width:thin]")}>
         <MenuKart baslik="Görünüm">
           <div className="grid grid-cols-2 gap-1.5 p-2">
             <button onClick={() => { if (liste) onListe(); }} aria-pressed={!liste} className={karo(!liste)}><LayoutGrid className="h-4 w-4" />Izgara</button>
             <button onClick={() => { if (!liste) onListe(); }} aria-pressed={liste} className={karo(liste)}><List className="h-4 w-4" />Liste</button>
-          </div>
-        </MenuKart>
-        <MenuKart baslik="Sırala">
-          <div className="grid grid-cols-2 gap-1.5 p-2">
-            {SIRALAR.map(([k, ad, I]) => <button key={k} onClick={() => setSiralama(k)} aria-pressed={siralama === k} className={karo(siralama === k)}><I className="h-4 w-4 shrink-0" />{ad}</button>)}
           </div>
         </MenuKart>
         <MenuKart baslik="Kaynak" sag={aktif !== "tumu" && kaynaklar.some((k) => k.id === aktif) ? <button onClick={() => onKapsam("tumu")} className="rounded-full px-2 py-0.5 text-[12px] font-medium text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white">Temizle</button> : undefined}>
@@ -857,7 +846,7 @@ function DahaMenusu({ liste, onListe, siralama, setSiralama, kaynaklar, etiketle
 
 function SuzgecMenusu({ suzgec, setSuzgec, oranlar, demoVar, demoGizle, setDemoGizle }: { suzgec: Suzgec; setSuzgec: (s: Suzgec) => void; oranlar: string[]; demoVar: boolean; demoGizle: boolean; setDemoGizle: (v: boolean) => void }) {
   const [acik, setAcik] = useState(false);
-  const n = (suzgec.zaman !== "tumu" ? 1 : 0) + suzgec.oranlar.length + (suzgec.durum !== "tumu" ? 1 : 0) + (demoGizle ? 1 : 0);
+  const n = suzgec.oranlar.length + (suzgec.durum !== "tumu" ? 1 : 0) + (demoGizle ? 1 : 0);
   const karo = (s: boolean) => cn("flex h-9 items-center justify-center gap-1.5 rounded-[10px] px-2 text-[12.5px] font-medium ring-1 ring-inset transition-[background-color,transform] active:scale-95", s ? "bg-white text-black ring-white" : "bg-white/[0.03] text-white/75 ring-white/[0.06] hover:bg-white/[0.06] hover:text-white");
   return (
     <div className="relative">
@@ -865,11 +854,6 @@ function SuzgecMenusu({ suzgec, setSuzgec, oranlar, demoVar, demoGizle, setDemoG
         <SlidersHorizontal className="h-4 w-4" /><span>Süzgeç</span>{n > 0 && <span className="rounded-full bg-black/10 px-1.5 text-[11.5px] tabular-nums">{n}</span>}<ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", acik && "rotate-180")} />
       </button>
       <Yuzen acik={acik} onKapat={() => setAcik(false)} yerlesim="alt-sol" bosluk={6} etiket="Süzgeçler" className={cn(MENU, "w-[320px]")}>
-        <MenuKart baslik="Tarih">
-          <div className="grid grid-cols-4 gap-1.5 p-2">
-            {ZAMANLAR.map(([k, a]) => <button key={k} onClick={() => setSuzgec({ ...suzgec, zaman: k })} aria-pressed={suzgec.zaman === k} className={cn(karo(suzgec.zaman === k), k === "tumu" && "col-span-4")}>{a}</button>)}
-          </div>
-        </MenuKart>
         {oranlar.length > 0 && (
           <MenuKart baslik="Oran" sag={suzgec.oranlar.length ? <button onClick={() => setSuzgec({ ...suzgec, oranlar: [] })} className="rounded-full px-2 py-0.5 text-[12px] font-medium text-white/70 hover:bg-white/[0.06] hover:text-white">Temizle</button> : <span className="text-[11.5px] text-white/45">Birden çok seçilebilir</span>}>
             <div className="grid grid-cols-4 gap-1.5 p-2">
@@ -959,14 +943,7 @@ function BosDurum({ kapsam, toplam, suzgecAktif, onTemizle }: { kapsam: string; 
   );
 }
 
+/** Yükleme: gerçek düzenin birebir iskeleti (components/kitaplik/KitaplikIskelet). */
 function Yukleniyor() {
-  return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-zemin px-3 pt-4 sm:px-5 sm:pt-5">
-      <div className={cn(KART, "h-[330px] animate-pulse")} />
-      <div className="mt-3 flex gap-2 py-2.5">{[260, 220, 110, 130, 110].map((w, i) => <div key={i} className="h-10 animate-pulse rounded-full bg-white/[0.05]" style={{ width: w }} />)}</div>
-      <div className="mt-2 [column-fill:balance]" style={{ columnCount: 5, columnGap: 4 }}>
-        {Array.from({ length: 15 }).map((_, i) => <div key={i} className="mb-1 animate-pulse rounded-[4px] bg-white/[0.05]" style={{ aspectRatio: String([0.8, 1.3, 0.75, 1.6, 1, 0.9][i % 6]) }} />)}
-      </div>
-    </div>
-  );
+  return <KitaplikIskelet />;
 }

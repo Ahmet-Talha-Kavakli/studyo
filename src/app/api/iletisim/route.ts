@@ -1,12 +1,14 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
+import { talepKaydet } from "@/lib/admin/destekDepo";
+
+export const runtime = "nodejs";
 
 /**
  * İletişim formu uç noktası. Kurumsal /iletisim formu buraya POST eder.
  * Sunucu tarafında doğrular, talep numarası üretir, mesajı kaydeder ve günlüğe yazar.
  *
- * Not: gerçek e-posta gönderimi bir SMTP/servis anahtarı gerektirir; anahtar yoksa
- * talep sunucu belleğinde ve günlükte kalır (kaybolmaz).
+ * Talep .veri/destek altında saklanır; yönetim panelinin Destek bölümünde görünür ve oradan yanıtlanır.
  */
 const KONULAR = ["Genel", "Destek", "Faturalama", "Satış & Kurumsal", "İş ortaklığı", "Basın", "Güvenlik", "Geri bildirim"];
 /** Konuya göre hedef ilk yanıt süresi. */
@@ -44,7 +46,9 @@ export async function POST(req: Request) {
   }
 
   const referans = `VYR-T-${randomBytes(3).toString("hex").toUpperCase()}`;
-  talepler.set(referans, { referans, ad, email, konu, mesaj, detay, ekler, zaman: Date.now() });
+  const talep = { referans, ad, email, konu, mesaj, detay, ekler, zaman: Date.now() };
+  talepler.set(referans, talep);
+  try { await talepKaydet(talep); } catch (e) { console.error("[iletisim] talep kaydedilemedi:", (e as Error).message); }
   console.log(`[iletisim] ${referans} · ${konu} · ${ad} <${email}> · ${Object.entries(detay).map(([k, v]) => `${k}=${v}`).join(" ")} · ${ekler.length} ek: ${mesaj.slice(0, 500)}`);
   return NextResponse.json({ ok: true, referans, yanit: YANIT[konu] });
 }

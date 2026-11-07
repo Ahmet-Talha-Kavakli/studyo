@@ -1,162 +1,119 @@
 "use client";
 
-import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Scale, Download, Trash2, Clock, ShieldCheck, FileText, Check, X,
-} from "lucide-react";
+import { Scale, Download, Trash2, Archive, Clock, MailWarning } from "lucide-react";
 import { RotaGuard } from "@/components/admin/RotaGuard";
-import { BolumBaslik, MetrikKart, Kart, Sekmeler, Rozet, Dugme, AD } from "@/components/admin/ui/temel";
-import { useOnay } from "@/components/admin/ui/Onay";
-import { useAdminOturum } from "@/store/admin/useAdminOturum";
-import { useAdminAksiyon } from "@/store/admin/useAdminAksiyon";
-import { useAdminKvkk } from "@/store/admin/useAdminKvkk";
-import { veri } from "@/lib/admin/seed";
-import { kullaniciVeriExport } from "@/lib/admin/seed/kvkkExport";
-import { prng, tohumla, tamsayi, sec, agirlikliSec, BUGUN, GUN, goreceZaman, tarihEtiket } from "@/lib/admin/cekirdek";
-import { aksiyonRisk } from "@/lib/admin/guvenlik/roller";
-import { toast } from "@/lib/toast";
+import { AD, BolumBaslik, Bos, HataKutusu, Kart, KartBaslik, MetrikKart, Yukleniyor } from "@/components/admin/ui/temel";
+import { BasitTablo, hucre, satirSinif } from "@/components/admin/ui/BasitTablo";
+import { useAdminVeri, sayi, tarih, tarihSaat, gorece } from "@/lib/admin/istemci";
 import { cn } from "@/lib/utils";
 
-interface Talep {
-  id: string;
-  kullaniciId: string;
-  ad: string;
-  tur: "erisim" | "silme" | "duzeltme" | "tasima";
-  durum: "beklemede" | "isleniyor" | "tamamlandi" | "reddedildi";
-  tarih: number;
-  slaGun: number; // 30 gün SLA'dan kalan
+interface Rapor {
+  indirme: { zaman: number; uid: string; email: string; cihaz: string }[];
+  yoneticiSilme: { id: string; zaman: number; admin: { email: string }; hedef?: { uid?: string; email?: string }; ayrinti?: string }[];
+  kimliksizSiparis: number;
+  dogrulanmamisEski: { uid: string; email: string; olusturma: number; son: number }[];
+  hesapSayisi: number;
 }
 
-function talepler(evren: ReturnType<typeof veri>): Talep[] {
-  return Array.from({ length: 16 }, (_, i) => {
-    const r = prng(tohumla(`kvkk-${i}`));
-    const k = sec(r, evren.kullanicilar);
-    const yasGun = tamsayi(r, 1, 35);
-    return {
-      id: `dsr_${i}`, kullaniciId: k.id, ad: k.ad,
-      tur: sec(r, ["erisim", "silme", "duzeltme", "tasima"] as const),
-      durum: agirlikliSec(r, [["beklemede", 30], ["isleniyor", 25], ["tamamlandi", 35], ["reddedildi", 10]] as const),
-      tarih: BUGUN - yasGun * GUN, slaGun: 30 - yasGun,
-    };
-  }).sort((a, b) => a.slaGun - b.slaGun);
-}
-
-const TUR_AD = { erisim: "Veri erişimi", silme: "Silme talebi", duzeltme: "Düzeltme", tasima: "Veri taşıma" };
+/* Saklama süreleri kodun kendisinden (sabitler); burada yalnız açıklanır. */
+const SAKLAMA = [
+  { veri: "Oturum", sure: "30 gün; bitince ilk temizlikte silinir", yer: "hesap/oturum" },
+  { veri: "Hesap güvenlik olayları", sure: "Son 200 olay, hesapla birlikte silinir", yer: "hesap/kullanici" },
+  { veri: "Tek kullanımlık bağlantılar", sure: "Doğrulama 24 saat, sıfırlama 1 saat; süresi geçen saatlik temizlenir", yer: "hesap/belirtec" },
+  { veri: "Kredi defteri", sure: "Hesap durdukça; hesap silinince silinir", yer: "hesap/kredi" },
+  { veri: "Siparişler (mali kayıt)", sure: "Hesap silinince kimlik, fatura ve IP atılır; tutar ve tarih saklanır", yer: "odeme/siparis" },
+  { veri: "Ödeme sağlayıcı bildirimleri", sure: "45 gün (tekrar oynatma koruması)", yer: "odeme/olay" },
+  { veri: "Build ajan çalışmaları", sure: "Ajan başına son 2000 çalışma", yer: "build/ajan-calisma" },
+  { veri: "Destek talepleri", sure: "Elle kapatılana ve silinene kadar", yer: "destek" },
+  { veri: "Yönetici denetim günlüğü", sure: "Süresiz, yalnız sona eklenir", yer: "yonetim/denetim.ndjson" },
+  { veri: "Engellenen istemler", sure: "İstemin ilk 200 karakteri, kullanıcı kimliği olmadan", yer: "yonetim/moderasyon.ndjson" },
+];
 
 export default function Kvkk() {
-  const { onayIste } = useOnay();
-  const oturum = useAdminOturum();
-  const aks = useAdminAksiyon();
-  const kvkkStore = useAdminKvkk();
-  const evren = veri();
-  const [sekme, setSekme] = useState("talep");
-  const tumTalepBaz = useMemo(() => talepler(evren), [evren]);
-  // Efektif durum: store delta seed üstüne
-  const tumTalep = useMemo(
-    () => tumTalepBaz.map((t) => ({ ...t, durum: (kvkkStore.durumGetir(t.id) ?? t.durum) as Talep["durum"] })),
-    [tumTalepBaz, kvkkStore],
-  );
-
-  const admin = oturum.aktifAdmin ?? "admin";
-  const denetle = (eylem: string, onem: "bilgi" | "uyari" | "kritik", hedef?: string) =>
-    oturum.denetle({ admin, rol: oturum.aktifRol!, eylem, hedef, onem, arac: "manuel" });
-
-  const veriIndir = async (t: Talep) => {
-    const ok = await onayIste({ baslik: "Kullanıcı verisini dışa aktar", aciklama: `${t.ad} tüm verisi (profil, ledger, üretim, oturum, gezinme) JSON olarak indirilir (KVKK md.11 erişim talebi).`, risk: 0, eylemEtiket: "İndir" });
-    if (!ok) return;
-    const basarili = kullaniciVeriExport(t.kullaniciId, t.ad);
-    if (!basarili) { toast.error("Kullanıcı bulunamadı", { description: `${t.ad} kaydı silinmiş olabilir. Talebi kontrol et.` }); return; }
-    kvkkStore.durumDegistir(t.id, "tamamlandi", "Veri erişim paketi indirildi", admin);
-    denetle("KVKK veri erişimi karşılandı (dosya indirildi)", "uyari", t.ad);
-    toast.success("Veri paketi indirildi", { description: `${t.ad} için erişim talebi tamamlandı.` });
-  };
-
-  const anonimlestir = async (t: Talep) => {
-    const risk = aksiyonRisk("hesap_anonimlestir");
-    const ok = await onayIste({ baslik: "Hesabı anonimleştir (KVKK silme)", aciklama: `${t.ad} kişisel verileri (PII) kalıcı silinir. Finansal kayıtlar yasal saklama için kalır. GERİ ALINAMAZ.`, risk: risk.risk, onayMetin: risk.onayMetin, eylemEtiket: "ANONİMLEŞTİR" });
-    if (!ok) return;
-    aks.durumDegistir(t.kullaniciId, "silinme_talebi"); // kullanıcı gerçekten anonimleşir
-    kvkkStore.durumDegistir(t.id, "tamamlandi", "Hesap anonimleştirildi (PII silindi)", admin);
-    denetle("KVKK silme talebi karşılandı (anonimleştirildi)", "kritik", t.ad);
-    toast.success("Hesap anonimleştirildi", { description: `${t.ad} kişisel verileri silindi; finansal kayıtlar saklanıyor.` });
-  };
-
-  const talepIsle = (t: Talep) => {
-    kvkkStore.durumDegistir(t.id, "tamamlandi", `${TUR_AD[t.tur]} karşılandı`, admin);
-    denetle(`KVKK ${TUR_AD[t.tur]} karşılandı`, "uyari", t.ad);
-    toast.success("Talep tamamlandı", { description: `${TUR_AD[t.tur]} · ${t.ad}` });
-  };
-
-  const bekleyen = tumTalep.filter((t) => t.durum === "beklemede" || t.durum === "isleniyor").length;
-  const slaGecen = tumTalep.filter((t) => t.slaGun < 0 && t.durum !== "tamamlandi").length;
-
-  const sekmeler = [
-    { id: "talep", ad: "Veri Talepleri", sayi: tumTalep.length },
-    { id: "silme", ad: "Silme Kuyruğu", sayi: tumTalep.filter((t) => t.tur === "silme").length },
-    { id: "politika", ad: "Saklama Politikası" },
-  ];
-
-  const listele = (l: Talep[]) => (
-    <div className="space-y-2">
-      {l.map((t) => (
-        <Kart key={t.id} className="!p-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: t.tur === "silme" ? "rgba(248,113,113,0.12)" : "rgba(85,214,253,0.12)", color: t.tur === "silme" ? "var(--ad-tehlike)" : "var(--ad-aksan)" }}>
-              {t.tur === "silme" ? <Trash2 className="h-4 w-4" /> : t.tur === "erisim" ? <Download className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
-            </span>
-            <div className="min-w-0 flex-1"><Link href={`/admin/kullanicilar/${t.kullaniciId}`} className={cn("text-[13px] font-medium hover:text-[color:var(--ad-aksan)]", AD.metin)}>{t.ad}</Link><div className={cn("text-[11px]", AD.metin3)}>{TUR_AD[t.tur]} · {goreceZaman(t.tarih)}</div></div>
-            <span className={cn("text-[12px] tabular-nums", t.slaGun < 0 ? "text-rose-400" : t.slaGun < 7 ? "text-amber-400" : AD.metin3)}>SLA {t.slaGun < 0 ? `${-t.slaGun}g geçti` : `${t.slaGun}g`}</span>
-            <Rozet ton={t.durum === "tamamlandi" ? "basari" : t.durum === "reddedildi" ? "tehlike" : t.durum === "isleniyor" ? "aksan" : "uyari"}>{t.durum}</Rozet>
-            {(t.durum === "beklemede" || t.durum === "isleniyor") && (
-              <div className="flex gap-1">
-                {t.tur === "erisim" && <Dugme boyut="sm" ikon={Download} onClick={() => veriIndir(t)}>Veri üret</Dugme>}
-                {t.tur === "silme" && <Dugme boyut="sm" tur="tehlike" ikon={Trash2} onClick={() => anonimlestir(t)}>Anonimleştir</Dugme>}
-                {(t.tur === "duzeltme" || t.tur === "tasima") && <Dugme boyut="sm" onClick={() => talepIsle(t)}>İşle</Dugme>}
-              </div>
-            )}
-          </div>
-        </Kart>
-      ))}
-    </div>
-  );
-
+  const { veri: r, hata, yenile } = useAdminVeri<Rapor>("/api/admin/kvkk");
   return (
     <RotaGuard modul="kvkk">
-      <BolumBaslik baslik="KVKK / Veri Koruma" ozet="Veri talepleri, silme kuyruğu ve saklama politikası" ikon={Scale} />
+      <BolumBaslik baslik="KVKK" ozet="Erişim ve silme hakları, saklama süreleri. Bir hesabın kişisel veri dökümü kullanıcı ayrıntısından indirilir." ikon={Scale} />
+      {hata && <HataKutusu hata={hata} yenile={yenile} />}
+      {!r && !hata && <Yukleniyor satir={4} />}
+      {r && (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetrikKart etiket="Kullanıcının indirdiği veri" deger={sayi(r.indirme.length)} ikon={Download} alt="Ayarlar, Hesap üzerinden" />
+            <MetrikKart etiket="Yöneticinin sildiği hesap" deger={sayi(r.yoneticiSilme.length)} ikon={Trash2} alt="denetim günlüğünden" />
+            <MetrikKart etiket="Kimliksiz sipariş" deger={sayi(r.kimliksizSiparis)} ikon={Archive} alt="silinen hesaplardan kalan mali kayıt" />
+            <MetrikKart etiket="30 günden eski, doğrulanmamış" deger={sayi(r.dogrulanmamisEski.length)} ikon={MailWarning} alt={`toplam ${sayi(r.hesapSayisi)} hesap`} />
+          </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <MetrikKart etiket="Bekleyen talep" deger={String(bekleyen)} ikon={Clock} renk="uyari" />
-        <MetrikKart etiket="SLA geçen" deger={String(slaGecen)} ikon={ShieldCheck} alt="30 gün limiti" renk={slaGecen ? "tehlike" : "basari"} />
-        <MetrikKart etiket="Silme talebi" deger={String(tumTalep.filter((t) => t.tur === "silme").length)} ikon={Trash2} renk="tehlike" />
-        <MetrikKart etiket="Bu ay tamamlanan" deger={String(tumTalep.filter((t) => t.durum === "tamamlandi").length)} ikon={Check} renk="basari" />
-      </div>
+          <Kart className="mt-4">
+            <KartBaslik ikon={Scale}>Talep geldiğinde</KartBaslik>
+            <ol className={cn("list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed", AD.metin2)}>
+              <li>Kullanıcılar sayfasında hesabı bul. Kimliği talep e-postasıyla eşleştir.</li>
+              <li>Erişim talebinde hesap ayrıntısında Veri dökümü ile JSON dosyasını indir ve kullanıcıya ilet. Gizli alanlar (şifre özeti, iki adım sırrı, oturum belirteçleri) dosyada yoktur.</li>
+              <li>Silme talebinde Hesabı sil işlemini kullan; neden alanına talep numarasını yaz. Kullanıcı kendisi de Ayarlar, Hesap bölümünden silebilir.</li>
+              <li>Her iki işlem de denetim günlüğüne yazılır.</li>
+            </ol>
+          </Kart>
 
-      <div className="mb-3"><Sekmeler sekmeler={sekmeler} aktif={sekme} sec={setSekme} /></div>
+          <div className="mt-4 grid gap-4 lg:grid-cols-2">
+            <div>
+              <h3 className={cn("mb-3 text-sm font-bold", AD.metin)}>Veri indirme kayıtları</h3>
+              {r.indirme.length === 0 ? <Bos ikon={Download} baslik="Henüz veri indirilmedi" /> : (
+                <BasitTablo baslik={["Zaman", "Hesap", "Cihaz"]} enAz={460}>
+                  {r.indirme.map((x, i) => (
+                    <tr key={i} className={satirSinif}>
+                      <td className={cn(hucre, "whitespace-nowrap", AD.metin2)}>{tarihSaat(x.zaman)}</td>
+                      <td className={hucre}><Link href={`/admin/kullanicilar/${x.uid}`} className="text-[color:var(--ad-aksan)] hover:underline">{x.email}</Link></td>
+                      <td className={cn(hucre, AD.metin3)}>{x.cihaz}</td>
+                    </tr>
+                  ))}
+                </BasitTablo>
+              )}
+            </div>
+            <div>
+              <h3 className={cn("mb-3 text-sm font-bold", AD.metin)}>Yöneticinin sildiği hesaplar</h3>
+              {r.yoneticiSilme.length === 0 ? <Bos ikon={Trash2} baslik="Yönetici tarafından silinen hesap yok" /> : (
+                <BasitTablo baslik={["Zaman", "Hesap", "Yönetici", "Neden"]} enAz={560}>
+                  {r.yoneticiSilme.map((x) => (
+                    <tr key={x.id} className={satirSinif}>
+                      <td className={cn(hucre, "whitespace-nowrap", AD.metin2)}>{tarihSaat(x.zaman)}</td>
+                      <td className={cn(hucre, AD.metin)}>{x.hedef?.email ?? ""}</td>
+                      <td className={cn(hucre, AD.metin2)}>{x.admin.email}</td>
+                      <td className={cn(hucre, AD.metin3)}>{x.ayrinti ?? ""}</td>
+                    </tr>
+                  ))}
+                </BasitTablo>
+              )}
+            </div>
+          </div>
 
-      {sekme === "talep" && listele(tumTalep)}
-      {sekme === "silme" && listele(tumTalep.filter((t) => t.tur === "silme"))}
-
-      {sekme === "politika" && (
-        <Kart className="max-w-2xl">
-          <h3 className={cn("mb-4 text-sm font-bold", AD.metin)}>Veri saklama politikası</h3>
-          <div className="space-y-2.5 text-[13px]">
-            {[
-              ["Üretim çıktıları", "90 gün sonra soğuk depolamaya taşınır"],
-              ["Kişisel veri (PII)", "Silme talebinde anonimleştirilir"],
-              ["Finansal kayıtlar", "Yasal saklama süresi (10 yıl) korunur"],
-              ["Log kayıtları", "180 gün sonra silinir"],
-              ["Silme talebi SLA", "30 gün içinde karşılanır"],
-            ].map(([k, v]) => (
-              <div key={k} className="flex items-center justify-between rounded-xl border border-[color:var(--ad-kenar)] p-3">
-                <span className={AD.metin}>{k}</span><span className={cn("text-right", AD.metin3)}>{v}</span>
-              </div>
+          <h3 className={cn("mb-3 mt-6 flex items-center gap-2 text-sm font-bold", AD.metin)}><Clock className="h-4 w-4 text-[color:var(--ad-aksan)]" /> Saklama süreleri</h3>
+          <BasitTablo baslik={["Veri", "Süre", "Konum"]} enAz={640}>
+            {SAKLAMA.map((s) => (
+              <tr key={s.veri} className={satirSinif}>
+                <td className={cn(hucre, AD.metin)}>{s.veri}</td>
+                <td className={cn(hucre, AD.metin2)}>{s.sure}</td>
+                <td className={cn(hucre, "font-mono text-[12px]", AD.metin3)}>{s.yer}</td>
+              </tr>
             ))}
-          </div>
-          <div className={cn("mt-4 flex items-start gap-2 rounded-xl border border-[color:var(--ad-kenar)] bg-white/[0.02] p-3 text-[12px]", AD.metin3)}>
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" /> Anonimleştirmede PII (ad, e-posta, IP) silinir; finansal kayıtlar yasal yükümlülük gereği ID'siz saklanır.
-          </div>
-        </Kart>
+          </BasitTablo>
+
+          {r.dogrulanmamisEski.length > 0 && (
+            <>
+              <h3 className={cn("mb-3 mt-6 text-sm font-bold", AD.metin)}>30 günden eski, e-postası doğrulanmamış hesaplar</h3>
+              <BasitTablo baslik={["Hesap", "Kayıt", "Son görülme"]} enAz={460}>
+                {r.dogrulanmamisEski.map((x) => (
+                  <tr key={x.uid} className={satirSinif}>
+                    <td className={hucre}><Link href={`/admin/kullanicilar/${x.uid}`} className="text-[color:var(--ad-aksan)] hover:underline">{x.email}</Link></td>
+                    <td className={cn(hucre, AD.metin2)}>{tarih(x.olusturma)}</td>
+                    <td className={cn(hucre, AD.metin2)}>{gorece(x.son)}</td>
+                  </tr>
+                ))}
+              </BasitTablo>
+            </>
+          )}
+        </>
       )}
     </RotaGuard>
   );

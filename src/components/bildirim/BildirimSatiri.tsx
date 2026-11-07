@@ -264,7 +264,7 @@ export function Suruyor({ onGit, en = 3 }: { onGit?: () => void; en?: number }) 
             <span className="min-w-0 flex-1">
               <span className="flex items-center justify-between gap-2 text-[13px]">
                 <span className="truncate font-medium text-white">{u.baslik}</span>
-                <span className="shrink-0 tabular-nums text-white/55">{yuzde ? `%${yuzde}` : "Sırada"}</span>
+                <span className="shrink-0 tabular-nums text-white/55">{yuzde ? `yüzde ${yuzde}` : "Sırada"}</span>
               </span>
               <span className="relative mt-1.5 block h-1 overflow-hidden rounded-full bg-white/[0.08]">
                 {yuzde ? <motion.span className="block h-full rounded-full bg-[#55d6fd]" initial={false} animate={{ width: `${yuzde}%` }} transition={{ duration: 0.5 }} />
@@ -400,7 +400,7 @@ export function SadeSuruyor({ onGit }: { onGit?: () => void }) {
               {yuzde ? <motion.span className="block h-full rounded-full bg-[#55d6fd]" initial={false} animate={{ width: `${yuzde}%` }} transition={{ duration: 0.5 }} />
                 : <span className="bildirim-kayan absolute inset-y-0 w-1/3 rounded-full bg-white/30" />}
             </span>
-            <span className="w-11 shrink-0 text-right text-[12px] tabular-nums text-white/50">{yuzde ? `%${yuzde}` : "Sırada"}</span>
+            <span className="min-w-11 shrink-0 whitespace-nowrap text-right text-[12px] tabular-nums text-white/50">{yuzde ? `yüzde ${yuzde}` : "Sırada"}</span>
           </Link>
         );
       })}

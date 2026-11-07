@@ -12,11 +12,11 @@ export const IADE_GECMIS = [
 export const IADE: YasalBolum[] = [
   {
     id: "ozet", baslik: "Özet",
-    kisaca: "Aboneliğini istediğin an iptal edebilirsin. İlk 7 günde ve kredilerin %10'undan azını kullandıysan tam iade alırsın. Hata yüzünden tamamlanmayan üretimlerin kredisi otomatik geri yüklenir.",
+    kisaca: "Aboneliğini istediğin an iptal edebilirsin. İlk 7 günde ve kredilerin yüzde 10'undan azını kullandıysan tam iade alırsın. Hata yüzünden tamamlanmayan üretimlerin kredisi otomatik geri yüklenir.",
     bloklar: [
       { t: "tablo", basliklar: ["Durum", "Ne olur"], satirlar: [
         ["Aboneliği iptal ettim", "Yenileme durur; dönem sonuna kadar planın açık kalır."],
-        ["İlk ödememden itibaren 7 gün geçmedi ve plan kredilerimin %10'undan azını kullandım", "Talebin üzerine ödemenin tamamı iade edilir."],
+        ["İlk ödememden itibaren 7 gün geçmedi ve plan kredilerimin yüzde 10'undan azını kullandım", "Talebin üzerine ödemenin tamamı iade edilir."],
         ["Yıllık plandayım ve ilk 7 günü geçtim", "Kalan tam aylar için orantılı iade talep edebilirsin (kullanılan aylar ve yıllık indirim farkı düşülür)."],
         ["Ek kredi paketi aldım, hiç kullanmadım", "Satın alma tarihinden itibaren 14 gün içinde tam iade."],
         ["Üretim teknik bir hata nedeniyle tamamlanmadı", "Kredisi otomatik ve anında bakiyene iade edilir."],

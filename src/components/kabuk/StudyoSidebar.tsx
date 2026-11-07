@@ -7,7 +7,7 @@ import { ReactNode, useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Home, Images, Shapes, Heart, Users, Search, ArrowDownUp,
+  Home, Images, Shapes, Star, Users, Search, ArrowDownUp,
   Plus, PanelLeft, ChevronDown, GraduationCap, Globe,
   MoreVertical, Pin, Pencil, FolderPlus, Link2, Trash2, Check, Archive,
 } from "lucide-react";
@@ -134,7 +134,7 @@ export function StudyoSidebar({
     { ad: "Ana Sayfa", href: temel, ikon: Home, g: null, grad: "linear-gradient(180deg,#eef0f2,#c4c8cd)", ikonRenk: "#3a3d42" },
     { ad: "Üretimlerim", href: `${temel}?g=uretim`, ikon: Images, g: "uretim", grad: "linear-gradient(180deg,#7fe3f5,#22b8d6)", ikonRenk: "#0a3540" },
     { ad: "Elementlerim", href: `${temel}?g=element`, ikon: Shapes, g: "element", grad: "linear-gradient(180deg,#8ea0ff,#5a5cf0)", ikonRenk: "#fff" },
-    { ad: "Favorilerim", href: `${temel}?g=favori`, ikon: Heart, g: "favori", grad: "linear-gradient(180deg,#ff9ecb,#f0568f)", ikonRenk: "#fff" },
+    { ad: "Favorilerim", href: `${temel}?g=favori`, ikon: Star, g: "favori", grad: "linear-gradient(180deg,#ffe49a,#f2b632)", ikonRenk: "#3b2a05" },
   ];
 
   return (

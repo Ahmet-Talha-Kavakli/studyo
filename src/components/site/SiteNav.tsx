@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 const urunler = [
   { ad: "Sinema Stüdyosu", href: "/urunler/sinema", ozet: "AI Yönetmen & kamera kontrolü" },
   { ad: "Pazarlama Stüdyosu", href: "/urunler/pazarlama", ozet: "URL'den yayına hazır reklam" },
-  { ad: "3D Stüdyo", href: "/urunler/3d", ozet: "Meshy ile metin/görsel → 3D", fark: true },
+  { ad: "3D Stüdyo", href: "/urunler/3d", ozet: "Meshy ile metinden ya da görselden 3D", fark: true },
   { ad: "Ses Stüdyosu", href: "/urunler/ses", ozet: "Seslendirme, klon, müzik", fark: true },
   { ad: "Akış — Görsel Workflow", href: "/urunler/akis", ozet: "Düğüm tabanlı akış editörü", fark: true },
   { ad: "Kimlik — Ruh ID", href: "/urunler/kimlik", ozet: "Karakter tutarlılığı" },

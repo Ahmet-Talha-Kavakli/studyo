@@ -36,7 +36,7 @@ export const SARTLAR: YasalBolum[] = [
     kisaca: "Vayra; görsel, video, ses, müzik ve 3D üretmek için farklı yapay zekâ modellerini tek yerde sunar. Modeller ve özellikler zamanla değişebilir.",
     bloklar: [
       { t: "p", m: "Vayra, kendi geliştirdiği ve üçüncü taraf sağlayıcılardan lisansladığı yapay zekâ modellerine tek bir arayüz, API ve iş akışı araçları üzerinden erişim sağlar. Hizmeti sürekli geliştiririz: model ekleyebilir, kaldırabilir, güncelleyebilir ya da bir özelliği değiştirebiliriz. Ücretli planında yer alan temel bir özelliği kaldırırsak en az 30 gün önce haber veririz." },
-      { t: "p", m: "Hizmetin %99,9 erişilebilirlik hedefiyle çalışmasını amaçlarız; ancak ücretsiz ve bireysel planlarda kesintisiz erişim garanti edilmez. Kurumsal planlardaki hizmet seviyesi taahhüdü (SLA) ayrı sözleşmede yer alır." },
+      { t: "p", m: "Hizmetin yüzde 99,9 erişilebilirlik hedefiyle çalışmasını amaçlarız; ancak ücretsiz ve bireysel planlarda kesintisiz erişim garanti edilmez. Kurumsal planlardaki hizmet seviyesi taahhüdü (SLA) ayrı sözleşmede yer alır." },
     ],
   },
   {

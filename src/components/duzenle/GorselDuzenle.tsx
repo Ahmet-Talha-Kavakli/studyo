@@ -7,7 +7,7 @@ import { KenarTutamac, useKenarGenisligi } from "@/components/ui/KenarTutamac";
 import {
   Wand2, Eraser, ImageOff, Sun, Brush, Square, MousePointerClick, Hand, Undo2, Redo2, FlipHorizontal2, Trash2, ZoomIn, ZoomOut, Maximize,
   Images, Upload, Loader2, Download, Maximize2, Crop, Lock, ArrowLeft, X, Layers, RefreshCw, ScanSearch, ChevronDown,
-  ChevronLeft, Eye, EyeOff, PanelRightClose, PanelRightOpen, ClipboardPaste, ArrowUp, History, Sparkles, Keyboard, SlidersHorizontal, RotateCcw, Expand, Lasso, UserRound, Mountain, ImagePlus, Video as VideoIcon, type LucideIcon,
+  ChevronLeft, Eye, EyeOff, Star, Quote, PanelRightClose, PanelRightOpen, ClipboardPaste, ArrowUp, History, Sparkles, Keyboard, SlidersHorizontal, RotateCcw, Expand, Lasso, UserRound, Mountain, ImagePlus, Video as VideoIcon, type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
@@ -26,6 +26,11 @@ import { MarkaKare } from "@/components/studyo/hf";
 import { useGorselBaglanti, dosyaOku, gorselYukle, uretimGorseli, GORSEL_TURLERI, krediYaz } from "@/components/arac/kit";
 import { MaskeTuvali, type MaskeArac, type MaskeTuvaliRef } from "./MaskeTuvali";
 import { uretimGeriYukle } from "@/components/studyo/bildirim";
+import { GorunumAyari } from "@/components/galeri/GorunumAyari";
+import { useGorunum } from "@/components/galeri/useGorunum";
+import { IndirDugmesi } from "@/components/galeri/IndirMenusu";
+import { FavoriDugmesi, KartDahaMenusu, eylemDugmesi } from "@/components/galeri/KartEylemleri";
+import { istemTemizlensinMi, kartOrani } from "@/lib/galeri/gorunum";
 
 /**
  * Görsel düzenle (inpaint) — tam ekran düzenleyici.
@@ -200,6 +205,9 @@ export function GorselDuzenle() {
   const surumler = useMemo(() => (kaynak ? uretimler.filter((u) => u.arac === ARAC && u.meta?.gorselUrl === kaynak.url).sort((a, c) => a.olusturma - c.olusturma) : []), [uretimler, kaynak]);
   const secili = surumler.find((u) => u.id === seciliSonuc);
   const surumlerRef = useRef(surumler); surumlerRef.current = surumler;
+  const [gorunum] = useGorunum("inpaint");
+  const favoriToggle = useProjeler((s) => s.favoriToggle);
+  const gorunenSurumler = gorunum.siralama === "yeni" ? [...surumler].reverse() : surumler;
   const seciliRef = useRef(seciliSonuc); seciliRef.current = seciliSonuc;
   const seciliGorsel = secili && secili.durum === "tamam" ? uretimGorseli(secili) ?? null : null;
   // Genişletme sonucu farklı orandadır: orijinal çerçevede kırpılmasın diye kendi oranında, karşılaştırmasız gösterilir.
@@ -269,6 +277,7 @@ export function GorselDuzenle() {
       basarili++; bekleyen.current = r.id ?? null;
     }
     setGonderiliyor(false);
+    if (basarili && istemTemizlensinMi("inpaint")) setIstem("");
     if (basarili) { setSurumAcik(true); toast.success(basarili > 1 ? `${basarili} varyasyon hazırlanıyor` : "Düzenleniyor", { description: `${motorAdi} · ${birim ? `${krediYaz(birim * basarili)} kredi.` : "Kredi düşmez."}` }); }
   };
   calistirRef.current = () => void calistir();
@@ -567,7 +576,7 @@ export function GorselDuzenle() {
         <span className="text-[12.5px] text-white/75">{arac === "kutu" ? "Sürükleyerek dikdörtgen seçim çiz" : arac === "kement" ? "Alanın çevresini çiz, bırakınca dolar (Alt ile çıkar)" : "Sürükleyerek kaydır, tekerlekle yakınlaş"}</span>
       )}
       <span className={cn("flex h-8 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold tabular-nums transition-colors", durum.alan ? "bg-white text-black" : "bg-white/[0.06] text-white/55")}>
-        <span className={cn("h-2 w-2 rounded-full", durum.alan ? "bg-black" : "bg-white/25")} />%{Math.round(durum.alan * 100)} seçili
+        <span className={cn("h-2 w-2 rounded-full", durum.alan ? "bg-black" : "bg-white/25")} />Yüzde {Math.round(durum.alan * 100)} seçili
       </span>
       <Tooltip label={maskeGizli ? "Seçimi göster · M" : "Seçimi gizle · M"} side="bottom">
         <button onClick={() => setMaskeGizli((v) => !v)} aria-pressed={maskeGizli} aria-label="Seçimi göster/gizle"
@@ -606,7 +615,7 @@ export function GorselDuzenle() {
   const zoomCubugu = (
     <div className={cn("flex items-center gap-0.5 rounded-full p-1", YUZEY)}>
       <button onClick={() => tuval.current?.yakinlas(0.8)} aria-label="Uzaklaş" className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white"><ZoomOut className="h-4 w-4" /></button>
-      <button onClick={() => tuval.current?.sigdir()} title="Sığdır" className="w-12 text-center text-[12px] tabular-nums text-white/80 hover:text-white">%{Math.round(durum.zoom * 100)}</button>
+      <button onClick={() => tuval.current?.sigdir()} title="Sığdır" className="w-12 text-center text-[12px] tabular-nums text-white/80 hover:text-white">{Math.round(durum.zoom * 100)}</button>
       <button onClick={() => tuval.current?.yakinlas(1.25)} aria-label="Yakınlaş" className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white"><ZoomIn className="h-4 w-4" /></button>
       <button onClick={() => tuval.current?.sigdir()} aria-label="Sığdır" className="flex h-8 w-8 items-center justify-center rounded-full text-white/75 hover:bg-white/10 hover:text-white"><Maximize className="h-4 w-4" /></button>
       <span className="mx-0.5 h-5 w-px bg-white/15" />
@@ -616,7 +625,7 @@ export function GorselDuzenle() {
           className="w-[300px] rounded-[18px] border border-white/[0.09] bg-[#1b1c1f] p-3">
           <p className="mb-2 text-[13px] font-semibold text-metin">Klavye kısayolları</p>
           {([["Fırça · Silgi · Kutu", ["B", "E", "R"]], ["Akıllı seçim · Kaydır", ["S", "H"]], ["Fırça boyutu", ["[", "]"]], ["Kaydır (basılı tut)", ["Space"]], ["Geri al · Yinele", ["Ctrl", "Z"]],
-            ["Kement", ["L"]], ["Seçimi göster/gizle", ["M"]], ["Mod değiştir", ["1", "5"]], ["Sürümler arasında gez", ["←", "→"]], ["Üret", ["Ctrl", "Enter"]], ["Yakınlaş", ["Tekerlek"]]] as const).map(([ad, t]) => (
+            ["Kement", ["L"]], ["Seçimi göster/gizle", ["M"]], ["Mod değiştir", ["1", "5"]], ["Sürümler arasında gez", ["Sol", "Sağ"]], ["Üret", ["Ctrl", "Enter"]], ["Yakınlaş", ["Tekerlek"]]] as const).map(([ad, t]) => (
             <div key={ad} className="flex items-center justify-between gap-2 py-1 text-[12.5px]">
               <span className="text-metin-2">{ad}</span>
               <span className="flex items-center gap-1">{t.map((k) => <kbd key={k}>{k}</kbd>)}</span>
@@ -633,8 +642,10 @@ export function GorselDuzenle() {
     const sec = u ? seciliSonuc === u.id : !seciliSonuc;
     const calisiyor = u && (u.durum === "kuyrukta" || u.durum === "isleniyor");
     return (
-      <button key={u?.id ?? "orijinal"} title={u ? u.prompt : "Orijinal görsel"} onClick={() => { if (!u) setSeciliSonuc(null); else if (u.durum === "tamam") { setSeciliSonuc(u.id); setKarsi(50); } }}
-        className={cn("group relative aspect-square w-full overflow-hidden rounded-[12px] bg-white/[0.03] ring-inset transition-shadow", sec ? "ring-2 ring-white" : "ring-1 ring-white/[0.08] hover:ring-white/25")}>
+      <div role="button" tabIndex={0} key={u?.id ?? "orijinal"} title={u ? u.prompt : "Orijinal görsel"} onClick={() => { if (!u) setSeciliSonuc(null); else if (u.durum === "tamam") { setSeciliSonuc(u.id); setKarsi(50); } }}
+        onKeyDown={(e) => { if (e.key === "Enter" && e.target === e.currentTarget) { if (!u) setSeciliSonuc(null); else if (u.durum === "tamam") { setSeciliSonuc(u.id); setKarsi(50); } } }}
+        style={{ aspectRatio: String(kartOrani(gorunum, 1)) }}
+        className={cn("group relative w-full cursor-pointer overflow-hidden rounded-[12px] bg-white/[0.03] ring-inset transition-shadow", sec ? "ring-2 ring-white" : "ring-1 ring-white/[0.08] hover:ring-white/25")}>
         {u?.durum === "hata" ? (
           <span className="flex h-full flex-col items-center justify-center gap-1.5 p-2 text-center">
             <X className="h-4 w-4 text-rose-300" /><span className="text-[10.5px] leading-tight text-rose-200/80">Başarısız · kredi iade</span>
@@ -658,24 +669,36 @@ export function GorselDuzenle() {
             onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); silUretim(u.id); mesaj.silindi("Sürüm", () => uretimGeriYukle(u)); } }}
             className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white/85 opacity-0 backdrop-blur transition hover:bg-rose-500/80 group-hover:opacity-100 [@media(hover:none)]:opacity-100"><Trash2 className="h-3 w-3" /></span>
         )}
-        
-      </button>
+        {u && u.favori && u.durum === "tamam" && <Star className="pointer-events-none absolute bottom-1.5 left-1.5 h-3.5 w-3.5 fill-aksan text-aksan transition-opacity group-hover:opacity-0" />}
+        {u && u.durum === "tamam" && (
+          <span onClick={(e) => e.stopPropagation()} className="absolute inset-x-1.5 bottom-1.5 flex justify-end gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+            <FavoriDugmesi favori={!!u.favori} onClick={() => favoriToggle(u.id)} boyut="kucuk" side="top" className="[@media(hover:none)]:hidden" />
+            <IndirDugmesi u={u} className={eylemDugmesi("kucuk")} ikonSinif="h-3.5 w-3.5" side="top" />
+            <KartDahaMenusu u={u} boyut="kucuk" side="top" onSil={() => { if (seciliSonuc === u.id) setSeciliSonuc(null); silUretim(u.id); mesaj.silindi("Sürüm", () => uretimGeriYukle(u)); }}
+              eylemler={[{ ad: u.favori ? "Favorilerden çıkar" : "Favorilere ekle", ikon: Star, fn: () => favoriToggle(u.id) }, { ad: "Üzerinde devam et", ikon: RefreshCw, fn: () => kaynakYap(u) }, { ad: "Yeniden kullan", ikon: Quote, fn: () => { setIstem((u.meta?.hamIstem ?? u.prompt).slice(0, 500)); istemRef.current?.focus(); } }]} />
+          </span>
+        )}
+      </div>
     );
   };
   const seciliEylemler = secili && secili.durum === "tamam" && (
     <div className="space-y-2 border-t border-white/[0.06] p-3">
       <p className="text-[12px] font-semibold text-metin">V{surumler.indexOf(secili) + 1} · <span className="font-normal text-metin-3">{secili.prompt.slice(0, 40)}</span></p>
       <div className="grid grid-cols-2 gap-1.5">
-        {([[RefreshCw, "Üzerinde devam et", () => kaynakYap(secili), secili.gercek === false], [Download, "İndir", () => uretimIndir(secili), false],
+        {([[RefreshCw, "Üzerinde devam et", () => kaynakYap(secili), secili.gercek === false],
           [Maximize2, "Büyüt", () => { const g = uretimGorseli(secili); if (g) router.push(`/panel/upscale?kaynak=${encodeURIComponent(g)}&uretim=${secili.id}`); }, secili.gercek === false],
           [Crop, "Çerçevele", () => { const g = uretimGorseli(secili); if (g) router.push(`/panel/reframe?kaynak=${encodeURIComponent(g)}&uretim=${secili.id}`); }, secili.gercek === false],
           [VideoIcon, "Videoya çevir", () => { const g = uretimGorseli(secili); if (g) { sessionStorage.setItem("vayra-animate-ref", g); router.push("/panel/video"); } }, secili.gercek === false]] as const).map(([I, a, f, k], j) => (
           <button key={a} onClick={f} disabled={k}
-            className={cn("flex h-9 items-center justify-center gap-1.5 rounded-[10px] text-[12px] font-medium transition-colors disabled:opacity-35", j === 0 || j === 4 ? "col-span-2 " + (j === 0 ? "bg-white font-semibold text-black hover:bg-white/90" : "bg-white/[0.05] text-metin-2 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.09] hover:text-metin") : "bg-white/[0.05] text-metin-2 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.09] hover:text-metin")}>
+            className={cn("flex h-9 items-center justify-center gap-1.5 rounded-[10px] text-[12px] font-medium transition-colors disabled:opacity-35", j === 0 || j === 3 ? "col-span-2 " + (j === 0 ? "bg-white font-semibold text-black hover:bg-white/90" : "bg-white/[0.05] text-metin-2 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.09] hover:text-metin") : "bg-white/[0.05] text-metin-2 ring-1 ring-inset ring-white/[0.07] hover:bg-white/[0.09] hover:text-metin")}>
             <I className="h-3.5 w-3.5" />{a}
           </button>
         ))}
       </div>
+      <IndirDugmesi u={secili} yerlesim="ust-sag" side="top" etiket="İndir ya da önce ve sonra"
+        className="flex h-9 w-full items-center justify-center gap-1.5 rounded-[10px] bg-white/[0.05] text-[12px] font-medium text-metin-2 ring-1 ring-inset ring-white/[0.07] transition-colors hover:bg-white/[0.09] hover:text-metin">
+        <Download className="h-3.5 w-3.5" />İndir · önce ve sonra
+      </IndirDugmesi>
     </div>
   );
   const surumPaneli = kaynak && (
@@ -687,12 +710,13 @@ export function GorselDuzenle() {
           <motion.div style={{ width: surumEn }} className="flex h-full flex-col">
           <div className="flex h-12 shrink-0 items-center justify-between px-3">
             <span className="flex items-center gap-2 text-[13.5px] font-semibold text-metin">Sürümler <span className="rounded-full bg-white/[0.08] px-1.5 text-[11px] font-semibold tabular-nums text-metin-2">{surumler.length + 1}</span></span>
-            <button onClick={() => setSurumAcik(false)} aria-label="Sürümleri gizle" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-metin-3 hover:bg-white/[0.06] hover:text-metin"><PanelRightClose className="h-4 w-4" /></button>
+            <span className="flex items-center gap-1"><GorunumAyari sayfa="inpaint" dugmeSinif="h-8 w-8" />
+            <button onClick={() => setSurumAcik(false)} aria-label="Sürümleri gizle" className="flex h-8 w-8 items-center justify-center rounded-[9px] text-metin-3 hover:bg-white/[0.06] hover:text-metin"><PanelRightClose className="h-4 w-4" /></button></span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 [scrollbar-width:thin]">
-            <div className="grid gap-2" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))" }}>
+            <div className="grid gap-2" style={{ gridTemplateColumns: gorunum.boyut === "ozel" ? `repeat(${Math.min(4, gorunum.sutun)}, minmax(0, 1fr))` : `repeat(auto-fill, minmax(${gorunum.boyut === "kucuk" ? 72 : gorunum.boyut === "buyuk" ? 180 : 100}px, 1fr))` }}>
               {surumKarti(null, 0)}
-              {surumler.map((u, i) => surumKarti(u, i + 1))}
+              {gorunenSurumler.map((u) => surumKarti(u, surumler.indexOf(u) + 1))}
             </div>
             {!surumler.length && <div className="mt-3 rounded-[14px] bg-white/[0.04] p-3 ring-1 ring-inset ring-white/[0.07]"><p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-metin"><History className="h-3.5 w-3.5 text-metin-2" />Henüz düzenleme yok</p><p className="mt-1 text-[12px] leading-relaxed text-metin-2">Her düzenleme burada yeni bir sürüm olur; birini seçip öncesiyle karşılaştırırsın.</p></div>}
           </div>
@@ -962,7 +986,7 @@ export function GorselDuzenle() {
                 <div className="flex items-center gap-3 px-1">
                   <span className="text-[12px] text-metin-2">Boyut</span>
                   <input type="range" min={4} max={firçaMaks} value={boyut} onChange={(e) => setBoyut(Number(e.target.value))} aria-label="Fırça boyutu" className="vy-aralik-beyaz flex-1 appearance-none rounded-full" style={{ ["--d" as string]: `${((boyut - 4) / (firçaMaks - 4)) * 100}%` }} />
-                  <span className="w-14 text-right text-[12px] tabular-nums text-metin-3">%{Math.round(durum.alan * 100)} seçili</span>
+                  <span className="w-14 text-right text-[12px] tabular-nums text-metin-3">Yüzde {Math.round(durum.alan * 100)} seçili</span>
                 </div>
               )}
               {arac === "akilli" && (
@@ -970,11 +994,11 @@ export function GorselDuzenle() {
                   <span className="text-[12px] text-metin-2">{akilliMesgul ? "Seçiliyor…" : "Nesneye dokun ya da:"}</span>
                   <button onClick={() => void akilliSec(undefined, "main subject")} disabled={akilliMesgul} className="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-[12px] font-medium text-metin disabled:opacity-40"><UserRound className="h-3.5 w-3.5" />Özne</button>
                   <button onClick={() => void akilliSec(undefined, "background")} disabled={akilliMesgul} className="flex h-8 items-center gap-1.5 rounded-full bg-white/[0.08] px-3 text-[12px] font-medium text-metin disabled:opacity-40"><Mountain className="h-3.5 w-3.5" />Arka plan</button>
-                  <span className="ml-auto text-[12px] tabular-nums text-metin-3">%{Math.round(durum.alan * 100)} seçili</span>
+                  <span className="ml-auto text-[12px] tabular-nums text-metin-3">Yüzde {Math.round(durum.alan * 100)} seçili</span>
                 </div>
               )}
               {(arac === "kutu" || arac === "kement") && (
-                <p className="px-1 text-[12px] text-metin-2">{arac === "kutu" ? "Parmağınla sürükleyerek alanı çerçevele" : "Alanın çevresini çiz, bırakınca dolar"} · <span className="tabular-nums">%{Math.round(durum.alan * 100)} seçili</span></p>
+                <p className="px-1 text-[12px] text-metin-2">{arac === "kutu" ? "Parmağınla sürükleyerek alanı çerçevele" : "Alanın çevresini çiz, bırakınca dolar"} · <span className="tabular-nums">Yüzde {Math.round(durum.alan * 100)} seçili</span></p>
               )}
             </div>
           )}
